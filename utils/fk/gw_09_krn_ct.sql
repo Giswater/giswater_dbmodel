@@ -9,8 +9,8 @@ SET search_path = "SCHEMA_NAME", public, pg_catalog;
 --DROP CHECK
 
 ALTER TABLE "value_state" DROP CONSTRAINT IF EXISTS "value_state_check";
-ALTER TABLE "man_addfields_cat_datatype" DROP CONSTRAINT IF EXISTS "man_addfields_cat_datatype_check";
-ALTER TABLE "man_addfields_cat_widgettype" DROP CONSTRAINT IF EXISTS "man_addfields_cat_widgettype_check";
+--ALTER TABLE "man_addfields_cat_datatype" DROP CONSTRAINT IF EXISTS "man_addfields_cat_datatype_check";
+--ALTER TABLE "man_addfields_cat_widgettype" DROP CONSTRAINT IF EXISTS "man_addfields_cat_widgettype_check";
 
 -- ADD CHECK
 

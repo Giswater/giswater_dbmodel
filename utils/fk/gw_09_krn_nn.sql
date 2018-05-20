@@ -85,11 +85,11 @@ ALTER TABLE value_state ALTER COLUMN name DROP NOT NULL;
 ALTER TABLE value_state_type ALTER COLUMN name DROP NOT NULL;
 ALTER TABLE value_state_type ALTER COLUMN "state" DROP NOT NULL;
 
-ALTER TABLE man_addfields_parameter ALTER COLUMN param_name DROP NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN is_mandatory DROP NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN datatype_id DROP NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN form_label DROP NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN widgettype_id DROP NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN param_name DROP NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN is_mandatory DROP NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN datatype_id DROP NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN form_label DROP NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN widgettype_id DROP NOT NULL;
 
 ALTER TABLE man_addfields_value ALTER COLUMN feature_id DROP NOT NULL;
 ALTER TABLE man_addfields_value ALTER COLUMN parameter_id DROP NOT NULL;
@@ -153,11 +153,11 @@ ALTER TABLE value_state ALTER COLUMN name SET NOT NULL;
 
 ALTER TABLE value_state_type ALTER COLUMN name SET NOT NULL;
 
-ALTER TABLE man_addfields_parameter ALTER COLUMN param_name SET NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN is_mandatory SET NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN datatype_id SET NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN form_label SET NOT NULL;
-ALTER TABLE man_addfields_parameter ALTER COLUMN widgettype_id SET NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN param_name SET NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN is_mandatory SET NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN datatype_id SET NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN form_label SET NOT NULL;
+--ALTER TABLE man_addfields_parameter ALTER COLUMN widgettype_id SET NOT NULL;
 
 ALTER TABLE man_addfields_value ALTER COLUMN feature_id SET NOT NULL;
 ALTER TABLE man_addfields_value ALTER COLUMN parameter_id SET NOT NULL;
