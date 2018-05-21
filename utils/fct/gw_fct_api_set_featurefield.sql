@@ -1,4 +1,6 @@
-﻿CREATE OR REPLACE FUNCTION "SCHEMA_NAME"."gw_fct_api_set_featurefield"(
+﻿
+
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME"."gw_fct_api_set_featurefield"(
 p_table_id varchar, 
 p_id varchar, 
 p_column_name varchar, 

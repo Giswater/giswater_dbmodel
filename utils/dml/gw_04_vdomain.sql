@@ -163,7 +163,31 @@ FROM information_schema.columns, information_schema.tables
 	
 	
 
-update SCHEMA_NAME.config_api_layer_field set dv_table='cat_node', dv_id_column='id', dv_name_column='id' , sys_api_cat_widgettype_id=2 WHERE column_id='nodecat_id';	
+update SCHEMA_NAME.config_api_layer_field set dv_table='cat_node', dv_id_column='id', dv_name_column='id',form_label='nodecat_id', sys_api_cat_widgettype_id=2 WHERE column_id='nodecat_id';	
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='exploitation', dv_id_column='expl_id', dv_name_column='name', form_label='exploitation' , sys_api_cat_widgettype_id=2 WHERE column_id='expl_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='dma', dv_id_column='dma_id', dv_name_column='name', form_label='dma' , sys_api_cat_widgettype_id=2 WHERE column_id='dma_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_presszone', dv_id_column='id', dv_name_column='id', form_label='cat_presszone' , sys_api_cat_widgettype_id=2 WHERE column_id='presszonecat_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='value_state', dv_id_column='id', dv_name_column='name', form_label='state' , sys_api_cat_widgettype_id=2 WHERE column_id='state';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='value_state_type', dv_id_column='id', dv_name_column='name', form_label='state' , sys_api_cat_widgettype_id=2 WHERE column_id='state_type';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='inp_node_type', dv_id_column='id', dv_name_column='id', form_label='epa type' , sys_api_cat_widgettype_id=2 WHERE column_id='epa_type';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='sector', dv_id_column='sector_id', dv_name_column='name', form_label='sector' , sys_api_cat_widgettype_id=2 WHERE column_id='sector_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='arc', dv_id_column='arc_id', dv_name_column='arc_id', form_label='arc_id' , sys_api_cat_widgettype_id=2 WHERE column_id='arc_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='node', dv_id_column='node_id', dv_name_column='node_id', form_label='parent_id' , sys_api_cat_widgettype_id=2 WHERE column_id='parent_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_soil', dv_id_column='id', dv_name_column='name', form_label='soilcat_id' , sys_api_cat_widgettype_id=2 WHERE column_id='soilcat_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='man_type_function', dv_id_column='function_type', dv_name_column='function_type', form_label='function_type' , sys_api_cat_widgettype_id=2 WHERE column_id='function_type';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='fluid_type', dv_name_column='fluid_type', form_label='fluid_type' , sys_api_cat_widgettype_id=2 WHERE column_id='fluid_type';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='man_type_category', dv_id_column='category_type', dv_name_column='category_type', form_label='category_type' , sys_api_cat_widgettype_id=2 WHERE column_id='category_type';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='man_type_location', dv_id_column='location_type', dv_name_column='location_type', form_label='location_type' , sys_api_cat_widgettype_id=2 WHERE column_id='location_type';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_work', dv_id_column='id', dv_name_column='id', form_label='work_id' , sys_api_cat_widgettype_id=2 WHERE column_id='workcat_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_work', dv_id_column='id', dv_name_column='id', form_label='work_id_end' , sys_api_cat_widgettype_id=2 WHERE column_id='workcat_id_end';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_buildet', dv_id_column='id', dv_name_column='id', form_label='builder' , sys_api_cat_widgettype_id=2 WHERE column_id='buildercat_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_owner', dv_id_column='id', dv_name_column='id', form_label='owner' , sys_api_cat_widgettype_id=2 WHERE column_id='ownercat_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='ext_municipality', dv_id_column='muni_id', dv_name_column='name', form_label='municipality' , sys_api_cat_widgettype_id=2 WHERE column_id='muni_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='ext_streetaxis', dv_id_column='id', dv_name_column='name', form_label='streetaxis_id' , sys_api_cat_widgettype_id=2 WHERE column_id='streetaxis_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='ext_streetaxis', dv_id_column='id', dv_name_column='name', form_label='streetaxis_id2' , sys_api_cat_widgettype_id=2 WHERE column_id='streetaxis_id2';
+UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='value_verified', dv_id_column='id', dv_name_column='id', form_label='verified' , sys_api_cat_widgettype_id=2 WHERE column_id='verified';
+	
+	
 
 	
 	
