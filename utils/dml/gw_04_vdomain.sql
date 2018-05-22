@@ -158,7 +158,7 @@ FROM information_schema.columns, information_schema.tables
 	WHERE tables.table_schema='SCHEMA_NAME' 
 	AND columns.table_name=tables.table_name and columns.table_schema=tables.table_schema 
 	AND tables.table_name in (select distinct table_name FROM information_schema.columns where table_schema='SCHEMA_NAME')
-	--AND tables.table_name= 'TABLENAME'
+	AND tables.table_name ilike 've_node%' OR tables.table_name ilike 've_arc%' OR tables.table_name ilike 've_connec%'
 	AND udt_name!='geometry';
 	
 	
