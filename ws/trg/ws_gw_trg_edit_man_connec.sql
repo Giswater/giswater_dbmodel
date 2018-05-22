@@ -13,21 +13,33 @@ $BODY$
 DECLARE 
     v_sql varchar;
     v_sql2 varchar;
-	man_table varchar;
+	P_man_table varchar;
 	new_man_table varchar;
 	old_man_table varchar;
     connec_id_seq int8;
 	code_autofill_bool boolean;
-	man_table_2 varchar;
+	P_man_table_2 varchar;
 	rec Record;
 	count_aux integer;
 	promixity_buffer_aux double precision;
-	
+	v_addfields record;
+	v_customfeature text;
+	v_id_last int8;
+	v_parameter_name text;
+	v_new_value_param text;
+	v_old_value_param text;
+
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
-    man_table:= TG_ARGV[0];
-	man_table_2:=man_table;
+    
+    v_customfeature = TG_ARGV[0];
+
+	EXECUTE 'SELECT man_table FROM node_type WHERE id=$1'
+	INTO p_man_table
+	USING v_customfeature;
+
+	p_man_table_2:=P_man_table;
 	
 	--Get data from config table
 	SELECT * INTO rec FROM config;	
@@ -48,20 +60,20 @@ BEGIN
 				RETURN audit_function(1022,1316);
 			END IF;
 			
-			IF man_table='man_greentap' THEN
+			IF p_man_table='man_greentap' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='greentapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			ELSIF man_table='man_wjoin' THEN
+			ELSIF p_man_table='man_wjoin' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='wjoincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			ELSIF man_table='man_fountain' OR man_table='man_fountain_pol' THEN
+			ELSIF p_man_table='man_fountain' OR man_table='man_fountain_pol' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='fountaincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
-			ELSIF man_table='man_tap' THEN
+			ELSIF p_man_table='man_tap' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='tapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
 			END IF;
 				
 			IF (NEW.connecat_id IS NULL) THEN
 				PERFORM audit_function(1086,1316);
 			END IF;				
-			IF (NEW.connecat_id NOT IN (select cat_connec.id FROM cat_connec JOIN connec_type ON cat_connec.connectype_id=connec_type.id WHERE connec_type.man_table=man_table_2)) THEN 
+			IF (NEW.connecat_id NOT IN (select cat_connec.id FROM cat_connec JOIN connec_type ON cat_connec.connectype_id=connec_type.id WHERE connec_type.man_table=p_man_table_2)) THEN 
 				PERFORM audit_function(1088,1316);
 			END IF;
         END IF;
@@ -187,10 +199,10 @@ BEGIN
 		NEW.function_type, NEW.category_type, NEW.fluid_type,  NEW.location_type, NEW.workcat_id, NEW.workcat_id_end,  NEW.buildercat_id, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.streetaxis2_id, NEW.postnumber, NEW.postnumber2, 
 		NEW.muni_id, NEW.streetaxis_id, NEW.postcode, NEW.postcomplement, NEW.postcomplement2, NEW.descript, NEW.rotation, NEW.verified, NEW.the_geom,NEW.undelete,NEW.label_x,NEW.label_y,NEW.label_rotation,  NEW.expl_id, NEW.publish, NEW.inventory, NEW.num_value, NEW.connec_length, NEW.arc_id);
 		 
-		IF man_table='man_greentap' THEN
+		IF p_man_table='man_greentap' THEN
 			INSERT INTO man_greentap (connec_id, linked_connec) VALUES(NEW.connec_id, NEW.linked_connec); 
 		
-		ELSIF man_table='man_fountain' THEN 
+		ELSIF p_man_table='man_fountain' THEN 
 			IF (rec.insert_double_geometry IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
@@ -209,16 +221,30 @@ BEGIN
 			
 			END IF;
 		 
-		ELSIF man_table='man_tap' THEN		
+		ELSIF p_man_table='man_tap' THEN		
 			INSERT INTO man_tap(connec_id, linked_connec, cat_valve, drain_diam, drain_exit, drain_gully, drain_distance, arq_patrimony, com_state) 
 			VALUES (NEW.connec_id,  NEW.linked_connec, NEW.cat_valve,  NEW.drain_diam, NEW.drain_exit,  NEW.drain_gully, NEW.drain_distance, NEW.arq_patrimony, NEW.com_state);
 		  
-		ELSIF man_table='man_wjoin' THEN  
+		ELSIF p_man_table='man_wjoin' THEN  
 		 	INSERT INTO man_wjoin (connec_id, top_floor, cat_valve) 
 			VALUES (NEW.connec_id, NEW.top_floor, NEW.cat_valve);
 			
 		END IF;		 
 		
+
+			-- man addfields insert
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+
+			IF v_value_param IS NOT NULL THEN
+				EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
+					USING NEW.connec_id, v_addfields.id, v_new_value_param;
+			END IF;	
+		END LOOP;
+
 		RETURN NEW;
 
 	
@@ -266,26 +292,52 @@ BEGIN
 			publish=NEW.publish, inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, connec_length=NEW.connec_length, arc_id=NEW.arc_id
 			WHERE connec_id=OLD.connec_id;
 			
-        IF man_table ='man_greentap' THEN
+        IF p_man_table ='man_greentap' THEN
 		    UPDATE man_greentap SET linked_connec=NEW.linked_connec
 			WHERE connec_id=OLD.connec_id;
 			
-        ELSIF man_table ='man_wjoin' THEN
+        ELSIF p_man_table ='man_wjoin' THEN
 			UPDATE man_wjoin SET top_floor=NEW.top_floor,cat_valve=NEW.cat_valve
 			WHERE connec_id=OLD.connec_id;
 			
-		ELSIF man_table ='man_tap' THEN
+		ELSIF p_man_table ='man_tap' THEN
 			UPDATE man_tap SET linked_connec=NEW.linked_connec, drain_diam=NEW.drain_diam,drain_exit=NEW.drain_exit,drain_gully=NEW.drain_gully,
 			drain_distance=NEW.drain_distance, arq_patrimony=NEW.arq_patrimony, com_state=NEW.com_state
 			WHERE connec_id=OLD.connec_id;
 			
-        ELSIF man_table ='man_fountain' THEN 			
+        ELSIF p_man_table ='man_fountain' THEN 			
 			UPDATE man_fountain SET vmax=NEW.vmax,vtotal=NEW.vtotal,container_number=NEW.container_number,pump_number=NEW.pump_number,power=NEW.power,
 			regulation_tank=NEW.regulation_tank,name=NEW.name,chlorinator=NEW.chlorinator, linked_connec=NEW.linked_connec, arq_patrimony=NEW.arq_patrimony,
 			pol_id=NEW.pol_id
 			WHERE connec_id=OLD.connec_id;	
 			
 		END IF;
+
+			-- man addfields update
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+ 
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING OLD
+				INTO v_old_value_param;
+
+			IF v_new_value_param IS NOT NULL THEN 
+
+				EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
+					ON CONFLICT (feature_id, parameter_id)
+					DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
+					USING NEW.connec_id, v_addfields.id, v_new_value_param;	
+
+			ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
+
+				EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
+					USING NEW.connec_id, v_addfields.id;
+			END IF;
+		
+		END LOOP;
 
         RETURN NEW;
     
@@ -294,7 +346,7 @@ BEGIN
 	
 			PERFORM gw_fct_check_delete(OLD.connec_id, 'CONNEC');
 		
-			IF man_table ='man_fountain'  THEN
+			IF p_man_table ='man_fountain'  THEN
 				DELETE FROM connec WHERE connec_id=OLD.connec_id;
 				DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_fountain WHERE connec_id=OLD.connec_id );
 			ELSE
@@ -311,14 +363,14 @@ $BODY$
   COST 100;
 
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_greentap ON "SCHEMA_NAME".v_edit_man_greentap;
-CREATE TRIGGER gw_trg_edit_man_greentap INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_greentap FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('man_greentap');
+DROP TRIGGER IF EXISTS gw_trg_edit_connec_greentap ON "SCHEMA_NAME".ve_connec_greentap;
+CREATE TRIGGER gw_trg_edit_connec_greentap INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_connec_greentap FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('GREENTAP');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_wjoin ON "SCHEMA_NAME".v_edit_man_wjoin;
-CREATE TRIGGER gw_trg_edit_man_wjoin INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_wjoin FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('man_wjoin');
+DROP TRIGGER IF EXISTS gw_trg_edit_connec_wjoin ON "SCHEMA_NAME".ve_connec_wjoin;
+CREATE TRIGGER gw_trg_edit_connec_wjoin INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_connec_wjoin FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('WJOIN');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_tap ON "SCHEMA_NAME".v_edit_man_tap;
-CREATE TRIGGER gw_trg_edit_man_tap INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_tap FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('man_tap');
+DROP TRIGGER IF EXISTS gw_trg_edit_connec_tap ON "SCHEMA_NAME".ve_connec_tap;
+CREATE TRIGGER gw_trg_edit_connec_tap INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_connec_tap FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('TAP');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_fountain ON "SCHEMA_NAME".v_edit_man_fountain;
-CREATE TRIGGER gw_trg_edit_man_fountain INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_fountain FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('man_fountain');
+DROP TRIGGER IF EXISTS gw_trg_edit_connec_fountain ON "SCHEMA_NAME".ve_connec_fountain;
+CREATE TRIGGER gw_trg_edit_connec_fountain INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_connec_fountain FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_connec('FOUNTAIN');

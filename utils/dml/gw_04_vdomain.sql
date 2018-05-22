@@ -163,7 +163,7 @@ FROM information_schema.columns, information_schema.tables
 	
 	
 
-update SCHEMA_NAME.config_api_layer_field set dv_table='cat_node', dv_id_column='id', dv_name_column='id',form_label='nodecat_id', sys_api_cat_widgettype_id=2 WHERE column_id='nodecat_id';	
+update SCHEMA_NAME.config_api_layer_field set dv_table='cat_node', dv_id_column='id', dv_name_column='id',form_label='nodecat_id', sys_api_cat_widgettype_id=2, ismandatory=TRUE WHERE column_id='nodecat_id';	
 UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='exploitation', dv_id_column='expl_id', dv_name_column='name', form_label='exploitation' , sys_api_cat_widgettype_id=2 WHERE column_id='expl_id';
 UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='dma', dv_id_column='dma_id', dv_name_column='name', form_label='dma' , sys_api_cat_widgettype_id=2 WHERE column_id='dma_id';
 UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='cat_presszone', dv_id_column='id', dv_name_column='id', form_label='cat_presszone' , sys_api_cat_widgettype_id=2 WHERE column_id='presszonecat_id';
@@ -188,6 +188,13 @@ UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='ext_streetaxis', dv_id_c
 UPDATE SCHEMA_NAME.config_api_layer_field SET dv_table='value_verified', dv_id_column='id', dv_name_column='id', form_label='verified' , sys_api_cat_widgettype_id=2 WHERE column_id='verified';
 	
 	
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='cat_matcat_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='cat_pnom';	
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='cat_dnom';	
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='nodetype_id';		
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='macrosector_id';		
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='link';			
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=TRUE, iseditable=FALSE WHERE column_id='node_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=TRUE, iseditable=FALSE WHERE column_id='connec_id';
+UPDATE SCHEMA_NAME.config_api_layer_field SET ismandatory=TRUE, iseditable=FALSE WHERE column_id='arc_id';
 
-	
-	
