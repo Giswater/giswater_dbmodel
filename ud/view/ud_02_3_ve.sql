@@ -1,7 +1,15 @@
-﻿--node
+﻿/*
+This file is part of Giswater 3
+The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This version of Giswater is provided by Giswater Association
+*/
 
+SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_chamber AS 
+--NODE
+
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_chamber;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_chamber AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -72,8 +80,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_chamber AS
     a.chamber_param_1,
     a.chamber_param_2,
     a.chamber_param_3
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_chamber ON man_chamber.node_id::text = v_node.node_id::text;
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_chamber ON man_chamber.node_id::text = v_node.node_id::text
      LEFT JOIN ( SELECT ct.feature_id, ct.chamber_param_1,ct.chamber_param_2, ct.chamber_param_3
             FROM crosstab('SELECT feature_id, parameter_id, value_param
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CHAMBER''
@@ -83,7 +91,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_chamber AS
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_weir AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_weir;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_weir AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -151,12 +160,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_weir AS
     man_chamber.bottom_channel,
     man_chamber.accessibility,
     man_chamber.name
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_chamber ON man_chamber.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_chamber ON man_chamber.node_id::text = v_node.node_id::text
       WHERE node_type = 'WEIR';
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_pumpstation AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_pumpstation;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pumpstation AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -224,13 +234,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_pumpstation AS
     man_chamber.bottom_channel,
     man_chamber.accessibility,
     man_chamber.name
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_chamber ON man_chamber.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_chamber ON man_chamber.node_id::text = v_node.node_id::text
      WHERE node_type = 'PUMP-STATION';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_register AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_register;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_register AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -288,12 +299,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_register AS
     v_node.macrodma_id,
     v_node.expl_id,
     v_node.num_value
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_junction ON man_junction.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_junction ON man_junction.node_id::text = v_node.node_id::text
      WHERE node_type = 'REGISTER';
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_change AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_change;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_change AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -351,12 +363,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_change AS
     v_node.macrodma_id,
     v_node.expl_id,
     v_node.num_value
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_junction ON man_junction.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_junction ON man_junction.node_id::text = v_node.node_id::text
      WHERE node_type = 'CHANGE';
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_vnode AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_vnode;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_vnode AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -414,12 +427,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_vnode AS
     v_node.macrodma_id,
     v_node.expl_id,
     v_node.num_value
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_junction ON man_junction.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_junction ON man_junction.node_id::text = v_node.node_id::text
      WHERE node_type = 'VNODE';
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_junction AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_junction;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_junction AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -477,12 +491,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_junction AS
     v_node.macrodma_id,
     v_node.expl_id,
     v_node.num_value
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_junction ON man_junction.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_junction ON man_junction.node_id::text = v_node.node_id::text
      WHERE node_type = 'JUNCTION';
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_highpoint AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_highpoint;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_highpoint AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -540,13 +555,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_highpoint AS
     v_node.macrodma_id,
     v_node.expl_id,
     v_node.num_value
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_junction ON man_junction.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_junction ON man_junction.node_id::text = v_node.node_id::text
      WHERE node_type = 'HIGHPOINT';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_circmanhole AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_circmanhole;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_circmanhole AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -614,8 +630,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_circmanhole AS
     a.circmanhole_param_1,
     a.circmanhole_param_2,
     a.circmanhole_param_3
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_manhole ON man_manhole.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_manhole ON man_manhole.node_id::text = v_node.node_id::text
      LEFT JOIN ( SELECT ct.feature_id, ct.circmanhole_param_1,ct.circmanhole_param_2, ct.circmanhole_param_3
             FROM crosstab('SELECT feature_id, parameter_id, value_param
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CIRC-MANHOLE''
@@ -624,7 +640,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_circmanhole AS
                     WHERE v_node.node_type::text = 'CIRC-MANHOLE'::text;
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_rectmanhole AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_rectmanhole;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_rectmanhole AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -691,8 +708,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_rectmanhole AS
     man_manhole.accessibility,
     a.rectmanhole_param_1,
     a.rectmanhole_param_2
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_manhole ON man_manhole.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_manhole ON man_manhole.node_id::text = v_node.node_id::text
      LEFT JOIN ( SELECT ct.feature_id, ct.rectmanhole_param_1,ct.rectmanhole_param_2
             FROM crosstab('SELECT feature_id, parameter_id, value_param
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''RECT-MANHOLE''
@@ -702,7 +719,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_rectmanhole AS
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_netelement AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_netelement;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netelement AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -761,13 +779,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_netelement AS
     v_node.expl_id,
     v_node.num_value,
     man_netelement.serial_number
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_netelement ON man_netelement.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_netelement ON man_netelement.node_id::text = v_node.node_id::text
      WHERE node_type = 'NETELEMENT';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_netgully AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_netgully;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netgully AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -831,13 +850,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_netgully AS
     man_netgully.units,
     man_netgully.groove,
     man_netgully.siphon
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_netgully ON man_netgully.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_netgully ON man_netgully.node_id::text = v_node.node_id::text
      WHERE node_type = 'NETGULLY';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_sandbox AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_sandbox;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_sandbox AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -902,13 +922,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_sandbox AS
     man_netinit.accessibility,
     man_netinit.name,
     man_netinit.sander_depth
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_netinit ON man_netinit.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_netinit ON man_netinit.node_id::text = v_node.node_id::text
      WHERE node_type = 'SANDBOX';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_outfall AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_outfall;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_outfall AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -967,14 +988,15 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_outfall AS
     v_node.expl_id,
     v_node.num_value,
     man_outfall.name
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_outfall ON man_outfall.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_outfall ON man_outfall.node_id::text = v_node.node_id::text
      WHERE node_type = 'OUFALL';
 
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_overflowstorage AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_overflowstorage;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_overflowstorage AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -1041,13 +1063,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_overflowstorage AS
     man_storage.min_height,
     man_storage.accessibility,
     man_storage.name
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_storage ON man_storage.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_storage ON man_storage.node_id::text = v_node.node_id::text
      WHERE node_type = 'OWERFLOW-STORAGE';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_sewerstorage AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_sewerstorage;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_sewerstorage AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -1116,8 +1139,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_sewerstorage AS
     man_storage.name,
     a.sewerstorage_param_1,
     a.sewerstorage_param_2
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_storage ON man_storage.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_storage ON man_storage.node_id::text = v_node.node_id::text
      LEFT JOIN ( SELECT ct.feature_id, ct.sewerstorage_param_1,ct.sewerstorage_param_2
             FROM crosstab('SELECT feature_id, parameter_id, value_param
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''SEWER-STORAGE''
@@ -1127,7 +1150,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_sewerstorage AS
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_valve AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_valve;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_valve AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -1188,8 +1212,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_valve AS
     man_valve.name,
     a.valve_param_1,
     a.valve_param_2
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_valve ON man_valve.node_id::text = v_node.node_id::text;
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_valve ON man_valve.node_id::text = v_node.node_id::text
      LEFT JOIN ( SELECT ct.feature_id, ct.valve_param_1,ct.valve_param_2
             FROM crosstab('SELECT feature_id, parameter_id, value_param
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''VALVE''
@@ -1199,7 +1223,8 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_valve AS
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_jump AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_jump;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_jump AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -1263,13 +1288,14 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_jump AS
     man_wjump.prot_surface,
     man_wjump.accessibility,
     man_wjump.name
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_wjump ON man_wjump.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_wjump ON man_wjump.node_id::text = v_node.node_id::text
      WHERE node_type = 'JUMP';
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_node_wwtp AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_wwtp;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_wwtp AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.top_elev,
@@ -1329,14 +1355,15 @@ CREATE OR REPLACE VIEW ud_sample.ve_node_wwtp AS
     v_node.num_value,
     man_wwtp.pol_id,
     man_wwtp.name
-   FROM ud_sample.v_node
-     JOIN ud_sample.man_wwtp ON man_wwtp.node_id::text = v_node.node_id::text
+   FROM SCHEMA_NAME.v_node
+     JOIN SCHEMA_NAME.man_wwtp ON man_wwtp.node_id::text = v_node.node_id::text
      WHERE node_type = 'WWTP';
 
 
 --arc
 
-CREATE OR REPLACE VIEW ud_sample.ve_arc_pumppipe AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_arc_pumppipe;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_pumppipe AS 
  SELECT v_arc_x_node.arc_id,
     v_arc_x_node.code,
     v_arc_x_node.node_1,
@@ -1407,14 +1434,15 @@ CREATE OR REPLACE VIEW ud_sample.ve_arc_pumppipe AS
     v_arc_x_node.macrodma_id,
     v_arc_x_node.expl_id,
     v_arc_x_node.num_value
-   FROM ud_sample.v_arc_x_node
-     JOIN ud_sample.man_conduit ON man_conduit.arc_id::text = v_arc_x_node.arc_id::text
+   FROM SCHEMA_NAME.v_arc_x_node
+     JOIN SCHEMA_NAME.man_conduit ON man_conduit.arc_id::text = v_arc_x_node.arc_id::text
      WHERE arc_type = 'PUMP-PIPE';
 
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_arc_conduit AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_arc_conduit;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_conduit AS 
  SELECT v_arc_x_node.arc_id,
     v_arc_x_node.code,
     v_arc_x_node.node_1,
@@ -1487,18 +1515,19 @@ CREATE OR REPLACE VIEW ud_sample.ve_arc_conduit AS
     v_arc_x_node.num_value,
     a.conduit_param_1,
     a.conduit_param_2
-   FROM ud_sample.v_arc_x_node
-     JOIN ud_sample.man_conduit ON man_conduit.arc_id::text = v_arc_x_node.arc_id::text
+   FROM SCHEMA_NAME.v_arc_x_node
+     JOIN SCHEMA_NAME.man_conduit ON man_conduit.arc_id::text = v_arc_x_node.arc_id::text
      LEFT JOIN ( SELECT ct.feature_id, ct.conduit_param_1,ct.conduit_param_2
             FROM crosstab('SELECT feature_id, parameter_id, value_param
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CONDUIT''
                     ORDER  BY 1,2'::text, ' VALUES (''30''),(''31'')'::text) 
-                    ct(feature_id character varying, conduit_param_1 text, conduit_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.node_type::text = 'CONDUIT'::text;
+                    ct(feature_id character varying, conduit_param_1 text, conduit_param_2 text)) a ON a.feature_id::text = v_arc_x_node.arc_id::text
+                    WHERE v_arc_x_node.arc_type::text = 'CONDUIT'::text;
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_arc_siphon AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_arc_siphon;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_siphon AS 
  SELECT v_arc_x_node.arc_id,
     v_arc_x_node.code,
     v_arc_x_node.node_1,
@@ -1570,14 +1599,15 @@ CREATE OR REPLACE VIEW ud_sample.ve_arc_siphon AS
     v_arc_x_node.expl_id,
     v_arc_x_node.num_value,
     man_siphon.name
-   FROM ud_sample.v_arc_x_node
-     JOIN ud_sample.man_siphon ON man_siphon.arc_id::text = v_arc_x_node.arc_id::text
+   FROM SCHEMA_NAME.v_arc_x_node
+     JOIN SCHEMA_NAME.man_siphon ON man_siphon.arc_id::text = v_arc_x_node.arc_id::text
      WHERE arc_type = 'SIPHON';
 
 
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_arc_varc AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_arc_varc;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_varc AS 
  SELECT v_arc_x_node.arc_id,
     v_arc_x_node.code,
     v_arc_x_node.node_1,
@@ -1648,12 +1678,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_arc_varc AS
     v_arc_x_node.macrodma_id,
     v_arc_x_node.expl_id,
     v_arc_x_node.num_value
-   FROM ud_sample.v_arc_x_node
-     JOIN ud_sample.man_varc ON man_varc.arc_id::text = v_arc_x_node.arc_id::text
+   FROM SCHEMA_NAME.v_arc_x_node
+     JOIN SCHEMA_NAME.man_varc ON man_varc.arc_id::text = v_arc_x_node.arc_id::text
      WHERE arc_type = 'VARC';
 
 
-CREATE OR REPLACE VIEW ud_sample.ve_arc_waccel AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_arc_waccel;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_waccel AS 
  SELECT v_arc_x_node.arc_id,
     v_arc_x_node.node_1,
     v_arc_x_node.node_2,
@@ -1729,14 +1760,15 @@ CREATE OR REPLACE VIEW ud_sample.ve_arc_waccel AS
     man_waccel.prot_surface,
     man_waccel.name,
     man_waccel.accessibility
-   FROM ud_sample.v_arc_x_node
-     JOIN ud_sample.man_waccel ON man_waccel.arc_id::text = v_arc_x_node.arc_id::text
+   FROM SCHEMA_NAME.v_arc_x_node
+     JOIN SCHEMA_NAME.man_waccel ON man_waccel.arc_id::text = v_arc_x_node.arc_id::text
      WHERE arc_type = 'WACCEL';
 
 
 --connec
 
-CREATE OR REPLACE VIEW ud_sample.ve_connec AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_connec;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_connec AS 
  SELECT v_edit_connec.connec_id,
     v_edit_connec.code,
     v_edit_connec.customer_code,
@@ -1799,12 +1831,13 @@ CREATE OR REPLACE VIEW ud_sample.ve_connec AS
     v_edit_connec.macrodma_id,
     v_edit_connec.expl_id,
     v_edit_connec.num_value
-   FROM ud_sample.v_edit_connec;
+   FROM SCHEMA_NAME.v_edit_connec;
 
 
 --gully
 
-CREATE OR REPLACE VIEW ud_sample.ve_gully AS 
+DROP VIEW IF EXISTS SCHEMA_NAME.ve_gully;
+CREATE OR REPLACE VIEW SCHEMA_NAME.ve_gully AS 
  SELECT v_edit_gully.gully_id,
     v_edit_gully.code,
     v_edit_gully.top_elev,
@@ -1867,4 +1900,4 @@ CREATE OR REPLACE VIEW ud_sample.ve_gully AS
     v_edit_gully.macrodma_id,
     v_edit_gully.uncertain,
     v_edit_gully.num_value
-   FROM ud_sample.v_edit_gully;
+   FROM SCHEMA_NAME.v_edit_gully;
