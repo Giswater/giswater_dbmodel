@@ -65,6 +65,51 @@ INSERT INTO config_param_user VALUES (94, 'statetype_plan_vdefault', 3, current_
 
 
 
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('SHUTOFF-VALVE', 've_node_shutoffvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('CHECK-VALVE', 've_node_checkoffvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('PR-BREAK.VALVE', 've_node_prbkvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('FL-CONTR.VALVE', 've_node_flcontrvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('GEN-PURP.VALVE', 've_node_genpurpvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('THROTTLE-VALVE', 've_node_throttlevalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('PR-REDUC.VALVE', 've_node_prreducvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('PR-SUSTA.VALVE', 've_node_prsustavalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('AIR-VALVE', 've_node_airvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('GREEN-VALVE', 've_node_greenvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('OUTFALL-VALVE', 've_node_outfallvalve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('REGISTER', 've_node_register');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('BYPASS-REGISTER', 've_node_bypassregister');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('VALVE-REGISTER', 've_node_valveregister');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('CONTROL-REGISTER', 've_node_controlregister');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('EXPANTANK', 've_node_expansiontank');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('FILTER', 've_node_filter');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('FLEXUNION', 've_node_flexunion');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('HYDRANT', 've_node_hydrant');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('X', 've_node_x');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('ADAPTATION', 've_node_adaptation');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('ENDLINE', 've_node_endline');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('T', 've_node_t');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('CURVE', 've_node_curve');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('JUNCTION', 've_node_junction');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('MANHOLE', 've_node_manhole');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('FLOWMETER', 've_node_flowmeter');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('PRESSURE-METER', 've_node_pressuremeter');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('NETELEMENT', 've_node_netelement');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('NETSAMPLEPOINT', 've_node_netsamplepoint');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('WATER-CONNECTION', 've_node_waterconnection');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('PUMP', 've_node_pump');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('REDUCTION', 've_node_reduction');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('SOURCE', 've_node_source');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('TANK', 've_node_tank');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('WATERWELL', 've_node_waterwell');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('WTP', 've_node_wtp');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('PIPE', 've_arc_pipe');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('VARC', 've_arc_varc');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('WJOIN', 've_connec_wjoin');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('FOUNTAIN', 've_connec_fountain');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('TAP', 've_connec_tap');
+INSERT INTO config_api_layer_child (featurecat_id, tableinfo_id) VALUES ('GREENTAP', 've_connec_greentap');
+
+
 
 
 INSERT INTO macroexploitation VALUES (1, 'Macroexploitation-1', 'Macroexploitation-1', NULL);

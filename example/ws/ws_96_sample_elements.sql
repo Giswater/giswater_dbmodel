@@ -11183,5 +11183,29 @@ INSERT INTO man_wtp VALUES (18);
 
 
 
+------------------------------------
+--man_addfields_parameter
+------------------------------------
+
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (22, 'shtvalve_param_1', 'SHUTOFF-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (23, 'shtvalve_param_2', 'SHUTOFF-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (11, 'outfallvalve_param_1', 'OUTFALL-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (12, 'outfallvalve_param_2', 'OUTFALL-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (24, 'greenvalve_param_1', 'GREEN-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (25, 'greenvalve_param_2', 'GREEN-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (47, 'checkvalve_param_1', 'CHECK-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (48, 'checkvalve_param_2', 'CHECK-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (26, 'airvalve_param_1', 'AIR-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (27, 'airvalve_param_2', 'AIR-VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (28, 'ctrlregister_param_1', 'CONTROL-REGISTER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (29, 'ctrlregister_param_2', 'CONTROL-REGISTER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (49, 'pipe_param_1', 'PIPE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (50, 'pipe_param_2', 'PIPE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (35, 'hydrant_param_1', 'HYDRANT');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (36, 'hydrant_param_2', 'HYDRANT');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (3, 'register_param_1', 'REGISTER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (4, 'register_param_2', 'REGISTER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (5, 'tank_param_1', 'TANK');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (6, 'tank_param_2', 'TANK');
 
 

@@ -10375,28 +10375,23 @@ INSERT INTO man_wwtp VALUES ('N236');
 
 
 
-INSERT INTO man_addfields_parameter VALUES (29, 'register_param_2', 'REGISTER', false, 'integer', NULL, NULL, NULL, 'Register param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (3, 'chamber_param_1', 'CHAMBER', false, 'text', 255, NULL, NULL, 'Chamber param_1', 'QComboBox', NULL, NULL, 'SELECT value FROM man_addfields_cat_combo WHERE parameter_id=3');
-INSERT INTO man_addfields_parameter VALUES (5, 'cirmanhole_param_1', 'CIRC-MANHOLE', false, 'integer', NULL, NULL, NULL, 'Cmanhole param_1', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (4, 'chamber_param_2', 'CHAMBER', false, 'date', NULL, NULL, NULL, 'Chamber param_2', 'QDateEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (6, 'cirmanhole_param_2', 'CIRC-MANHOLE', false, 'text', 255, NULL, NULL, 'Cmanhole param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (22, 'owestorage_param_1', 'OWERFLOW-STORAGE', false, 'text', 255, NULL, NULL, 'Owstorage param_1', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (23, 'owestorage_param_2', 'OWERFLOW-STORAGE', false, 'text', 255, NULL, NULL, 'Owstorage param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (11, 'grate_param_1', 'PGULLY', false, 'text', NULL, NULL, NULL, 'Grate param_1', 'QComboBox', NULL, NULL, 'SELECT value FROM man_addfields_cat_combo WHERE parameter_id=11');
-INSERT INTO man_addfields_parameter VALUES (24, 'pumpipe_param_1', 'PUMP-PIPE', false, 'boolean', NULL, NULL, NULL, 'Ppipe param_1', 'QCheckBox', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (25, 'pumpipe_param_2', 'PUMP-PIPE', false, 'text', 255, NULL, NULL, 'Ppipe param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (12, 'grate_param_2', 'PGULLY', false, 'boolean', NULL, NULL, NULL, 'Grate param_2', 'QCheckBox', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (26, 'recmanhole_param_1', 'RECT-MANHOLE', false, 'text', 255, NULL, NULL, 'Rect. mhole param_1', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (47, 'weir_param_1', 'WEIR', false, 'integer', NULL, NULL, NULL, 'Weir param_1', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (48, 'weir_param_2', 'WEIR', false, 'text', 255, NULL, NULL, 'Weir param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (27, 'recmanhole_param_2', 'RECT-MANHOLE', false, 'text', 255, NULL, NULL, 'Rect. mhole param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (35, 'sewstorage_param_1', 'SEWER-STORAGE', false, 'text', 255, NULL, NULL, 'Sstorage param_1', 'QComboBox', NULL, NULL, 'SELECT value FROM man_addfields_cat_combo WHERE parameter_id=35');
-INSERT INTO man_addfields_parameter VALUES (36, 'sewstorage_param_2', 'SEWER-STORAGE', false, 'integer', NULL, NULL, NULL, 'Storage param_2', 'QTextEdit', NULL, NULL, NULL);
-INSERT INTO man_addfields_parameter VALUES (28, 'register_param_1', 'REGISTER', false, 'date', NULL, NULL, NULL, 'Register param_1', 'QDateEdit', NULL, NULL, NULL);
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (3, 'chamber_param_1', 'CHAMBER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (4, 'chamber_param_2', 'CHAMBER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (5, 'chamber_param_3', 'CHAMBER');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (11, 'circmanhole_param_2', 'CIRC-MANHOLE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (12, 'circmanhole_param_3', 'CIRC-MANHOLE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (22, 'rectmanhole_param_1', 'RECT-MANHOLE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (23, 'rectmanhole_param_2', 'RECT-MANHOLE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (10, 'circmanhole_param_1', 'CIRC-MANHOLE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (24, 'sewerstorage_param_1', 'SEWER-STORAGE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (25, 'sewerstorage_param_2', 'SEWER-STORAGE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (26, 'valve_param_1', 'VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (27, 'valve_param_2', 'VALVE');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (30, 'conduit_param_1', 'CONDUIT');
+INSERT INTO man_addfields_parameter (id, idval, cat_feature_id) VALUES (31, 'conduit_param_2', 'CONDUIT');
 
 
-
-
+/*
 INSERT INTO man_addfields_cat_combo VALUES (11, 'combo1', NULL);
 INSERT INTO man_addfields_cat_combo VALUES (11, 'combo2', NULL);
 INSERT INTO man_addfields_cat_combo VALUES (11, 'combo3', NULL);
@@ -10410,7 +10405,7 @@ INSERT INTO man_addfields_cat_combo VALUES (35, 'combo2', NULL);
 INSERT INTO man_addfields_cat_combo VALUES (35, 'combo3', NULL);
 INSERT INTO man_addfields_cat_combo VALUES (35, 'combo4', NULL);
 
-
+*/
 
 
 
