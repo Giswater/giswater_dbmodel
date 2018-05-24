@@ -208,7 +208,7 @@
 					USING NEW
 					INTO v_new_value_param;
 
-				IF v_value_param IS NOT NULL THEN
+				IF v_new_value_param IS NOT NULL THEN
 					EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
 						USING NEW.node_id, v_addfields.id, v_new_value_param;
 				END IF;	

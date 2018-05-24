@@ -14,7 +14,12 @@ DECLARE
     gully_id_seq int8;
 	count_aux integer;
 	promixity_buffer_aux double precision;
-
+	v_addfields record;
+	v_customfeature text;
+	v_id_last int8;
+	v_parameter_name text;
+	v_new_value_param text;
+	v_old_value_param text;
 
 BEGIN
 
@@ -204,6 +209,20 @@ BEGIN
         END IF;  
 
 
+		-- man addfields insert
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+
+			IF v_new_value_param IS NOT NULL THEN
+				EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
+					USING NEW.gully_id, v_addfields.id, v_new_value_param;
+			END IF;	
+		END LOOP;
+
+
 		--PERFORM audit_function (1,850);
         RETURN NEW;
 
@@ -261,7 +280,33 @@ BEGIN
 			muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber,expl_id=NEW.expl_id, uncertain=NEW.uncertain, num_value=NEW.num_value
 			WHERE gully_id = OLD.gully_id;
         END IF;  
-                
+
+-- man addfields update
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+ 
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING OLD
+				INTO v_old_value_param;
+
+			IF v_new_value_param IS NOT NULL THEN 
+
+				EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
+					ON CONFLICT (feature_id, parameter_id)
+					DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
+					USING NEW.gully_id, v_addfields.id, v_new_value_param;	
+
+			ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
+
+				EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
+					USING NEW.gully_id, v_addfields.id;
+			END IF;
+		
+		END LOOP;
+
         RETURN NEW;
     
 
@@ -283,6 +328,5 @@ $BODY$
 
 
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_gully ON "SCHEMA_NAME".v_edit_man_gully;
-CREATE TRIGGER gw_trg_edit_man_gully INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_gully
-FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_gully(gully);
+DROP TRIGGER IF EXISTS gw_trg_edit_gully ON "SCHEMA_NAME".ve_gully;
+CREATE TRIGGER gw_trg_edit_gully INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_gully FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_gully();

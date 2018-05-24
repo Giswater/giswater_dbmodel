@@ -341,7 +341,7 @@ BEGIN
 				USING NEW
 				INTO v_new_value_param;
 
-			IF v_value_param IS NOT NULL THEN
+			IF v_new_value_param IS NOT NULL THEN
 				EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
 					USING NEW.node_id, v_addfields.id, v_new_value_param;
 			END IF;	
@@ -672,7 +672,7 @@ DROP TRIGGER IF EXISTS gw_trg_edit_node_curve ON "SCHEMA_NAME".ve_node_curve;
 CREATE TRIGGER gw_trg_edit_node_curve INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_curve FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('CURVE');
 
 DROP TRIGGER IF EXISTS gw_trg_edit_node_junction ON "SCHEMA_NAME".ve_node_junction;
-CREATE TRIGGER gw_trg_edit_node_junction INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_t FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('JUNCTION');
+CREATE TRIGGER gw_trg_edit_node_junction INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_junction FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('JUNCTION');
 
 DROP TRIGGER IF EXISTS gw_trg_edit_node_manhole ON "SCHEMA_NAME".ve_node_manhole;
 CREATE TRIGGER gw_trg_edit_node_manhole INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_manhole FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('MANHOLE');

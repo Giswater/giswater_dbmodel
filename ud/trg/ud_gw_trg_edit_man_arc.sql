@@ -11,22 +11,33 @@ This version of Giswater is provided by Giswater Association
 	$BODY$
 	DECLARE 
 		inp_table varchar;
-		man_table varchar;
+		p_man_table varchar;
 		new_man_table varchar;
 		old_man_table varchar;
 		v_sql varchar;
 		v_sql2 varchar;
-		man_table_2 varchar;
+		p_man_table_2 varchar;
 		arc_id_seq int8;
 		count_aux integer;
 		promixity_buffer_aux double precision;
 		edit_enable_arc_nodes_update_aux boolean;
+		v_customfeature text;
+		v_addfields record;
+		v_id_last int8;
+		v_parameter_name text;
+		v_new_value_param text;
+		v_old_value_param text;
 		
 	BEGIN
 
 		EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
-		man_table:= TG_ARGV[0];
-		man_table_2:=man_table;
+		v_customfeature = TG_ARGV[0];
+
+		EXECUTE 'SELECT man_table FROM arc_type WHERE id=$1'
+		INTO p_man_table
+		USING v_customfeature;
+
+		p_man_table_2:=p_man_table;
 		
 		promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
 		edit_enable_arc_nodes_update_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='edit_enable_arc_nodes_update');
@@ -42,7 +53,7 @@ This version of Giswater is provided by Giswater Association
 				IF ((SELECT COUNT(*) FROM arc_type) = 0) THEN
 					RETURN audit_function(1018,1212);  
 				END IF;
-				NEW.arc_type:= (SELECT id FROM arc_type WHERE arc_type.man_table=man_table_2 LIMIT 1);   
+				NEW.arc_type:= (SELECT id FROM arc_type WHERE arc_type.man_table=p_man_table_2 LIMIT 1);   
 			END IF;
 
 			 -- Epa type
@@ -185,26 +196,39 @@ This version of Giswater is provided by Giswater Association
 				UPDATE arc SET node_1=NEW.node_1, node_2=NEW.node_2 WHERE arc_id=NEW.arc_id;
 			END IF;
 				
-			IF man_table='man_conduit' THEN
+			IF p_man_table='man_conduit' THEN
 				
 				INSERT INTO man_conduit (arc_id) VALUES (NEW.arc_id);
 			
-			ELSIF man_table='man_siphon' THEN
+			ELSIF p_man_table='man_siphon' THEN
 								
 				INSERT INTO man_siphon (arc_id,name) VALUES (NEW.arc_id,NEW.name);
 				
-			ELSIF man_table='man_waccel' THEN
+			ELSIF p_man_table='man_waccel' THEN
 				
 				INSERT INTO man_waccel (arc_id, sander_length,sander_depth,prot_surface,name) 
 				VALUES (NEW.arc_id, NEW.sander_length, NEW.sander_depth,NEW.prot_surface,NEW.name);
 				
-			ELSIF man_table='man_varc' THEN
+			ELSIF p_man_table='man_varc' THEN
 						
 				INSERT INTO man_varc (arc_id) VALUES (NEW.arc_id);
 				
 			END IF;
 							
-							
+		-- man addfields insert
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+
+			IF v_new_value_param IS NOT NULL THEN
+				EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
+				USING NEW.arc_id, v_addfields.id, v_new_value_param;
+			END IF;	
+		END LOOP;
+
+
 			-- EPA INSERT
         IF (NEW.epa_type = 'CONDUIT') THEN 
             INSERT INTO inp_conduit (arc_id, q0, qmax) VALUES (NEW.arc_id,0,0); 
@@ -316,28 +340,53 @@ This version of Giswater is provided by Giswater Association
 				code=NEW.code, publish=NEW.publish, inventory=NEW.inventory, enddate=NEW.enddate, uncertain=NEW.uncertain, expl_id=NEW.expl_id
 				WHERE arc_id=OLD.arc_id;	
 		   
-			IF man_table='man_conduit' THEN
+			IF p_man_table='man_conduit' THEN
 								
 				UPDATE man_conduit SET arc_id=NEW.arc_id
 				WHERE arc_id=OLD.arc_id;
 			
-			ELSIF man_table='man_siphon' THEN			
+			ELSIF p_man_table='man_siphon' THEN			
 								
 				UPDATE man_siphon SET  name=NEW.name
 				WHERE arc_id=OLD.arc_id;
 			
-			ELSIF man_table='man_waccel' THEN
+			ELSIF p_man_table='man_waccel' THEN
 							
 				UPDATE man_waccel SET  sander_length=NEW.sander_length, sander_depth=NEW.sander_depth, prot_surface=NEW.prot_surface,name=NEW.name
 				WHERE arc_id=OLD.arc_id;
 			
-			ELSIF man_table='man_varc' THEN
+			ELSIF p_man_table='man_varc' THEN
 								
 				UPDATE man_varc SET arc_id=NEW.arc_id
 				WHERE arc_id=OLD.arc_id;
 			
 			END IF;
+
+			FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+			LOOP
+				EXECUTE 'SELECT $1.' || v_addfields.idval
+					USING NEW
+					INTO v_new_value_param;
+	 
+				EXECUTE 'SELECT $1.' || v_addfields.idval
+					USING OLD
+					INTO v_old_value_param;
+
+				IF v_new_value_param IS NOT NULL THEN 
+
+					EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
+						ON CONFLICT (feature_id, parameter_id)
+						DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
+						USING NEW.arc_id, v_addfields.id, v_new_value_param;	
+
+				ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
+
+					EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
+						USING NEW.arc_id, v_addfields.id;
+				END IF;
 			
+			END LOOP;
+		
 			RETURN NEW;
 
 		 ELSIF TG_OP = 'DELETE' THEN
@@ -358,15 +407,18 @@ This version of Giswater is provided by Giswater Association
 
 
 
-	DROP TRIGGER IF EXISTS gw_trg_edit_man_conduit ON "SCHEMA_NAME".v_edit_man_conduit;
-	CREATE TRIGGER gw_trg_edit_man_conduit INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_conduit FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('man_conduit');     
+	DROP TRIGGER IF EXISTS gw_trg_edit_arc_pumppipe ON "SCHEMA_NAME".ve_arc_pumppipe;
+	CREATE TRIGGER gw_trg_edit_arc_pumppipe INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_arc_pumppipe FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('PUMP-PIPE');     
 
-	DROP TRIGGER IF EXISTS gw_trg_edit_man_siphon ON "SCHEMA_NAME".v_edit_man_siphon;
-	CREATE TRIGGER gw_trg_edit_man_siphon INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_siphon FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('man_siphon');   
+	DROP TRIGGER IF EXISTS gw_trg_edit_arc_conduit ON "SCHEMA_NAME".ve_arc_conduit;
+	CREATE TRIGGER gw_trg_edit_arc_conduit INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_arc_conduit FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('CONDUIT');   
 
-	DROP TRIGGER IF EXISTS gw_trg_edit_man_waccel ON "SCHEMA_NAME".v_edit_man_waccel;
-	CREATE TRIGGER gw_trg_edit_man_waccel INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_waccel FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('man_waccel'); 
+	DROP TRIGGER IF EXISTS gw_trg_edit_arc_siphon ON "SCHEMA_NAME".ve_arc_siphon;
+	CREATE TRIGGER gw_trg_edit_arc_siphon INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_arc_siphon FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('SIPHON'); 
 
-	DROP TRIGGER IF EXISTS gw_trg_edit_man_varc ON "SCHEMA_NAME".v_edit_man_varc;
-	CREATE TRIGGER gw_trg_edit_man_varc INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_varc FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('man_varc'); 
+	DROP TRIGGER IF EXISTS gw_trg_edit_arc_varc ON "SCHEMA_NAME".ve_arc_varc;
+	CREATE TRIGGER gw_trg_edit_arc_varc INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_arc_varc FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('VARC'); 
+
+	DROP TRIGGER IF EXISTS gw_trg_edit_arc_waccel ON "SCHEMA_NAME".ve_arc_waccel;
+	CREATE TRIGGER gw_trg_edit_arc_waccel INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_arc_waccel FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_arc('WACCEL'); 
 		  

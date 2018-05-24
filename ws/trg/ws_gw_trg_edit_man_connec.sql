@@ -35,7 +35,7 @@ BEGIN
     
     v_customfeature = TG_ARGV[0];
 
-	EXECUTE 'SELECT man_table FROM node_type WHERE id=$1'
+	EXECUTE 'SELECT man_table FROM connec_type WHERE id=$1'
 	INTO p_man_table
 	USING v_customfeature;
 
@@ -64,7 +64,7 @@ BEGIN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='greentapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			ELSIF p_man_table='man_wjoin' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='wjoincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			ELSIF p_man_table='man_fountain' OR man_table='man_fountain_pol' THEN
+			ELSIF p_man_table='man_fountain' OR p_man_table='man_fountain_pol' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='fountaincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
 			ELSIF p_man_table='man_tap' THEN
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='tapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
@@ -239,7 +239,7 @@ BEGIN
 				USING NEW
 				INTO v_new_value_param;
 
-			IF v_value_param IS NOT NULL THEN
+			IF v_new_value_param IS NOT NULL THEN
 				EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
 					USING NEW.connec_id, v_addfields.id, v_new_value_param;
 			END IF;	

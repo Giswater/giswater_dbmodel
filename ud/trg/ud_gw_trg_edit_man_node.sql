@@ -14,26 +14,36 @@ CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_man_node()
 $BODY$
 DECLARE 
     inp_table varchar;
-    man_table varchar;
+    p_man_table varchar;
     new_man_table varchar;
     old_man_table varchar;
     v_sql varchar;
     v_sql2 varchar;
     old_nodetype varchar;
     new_nodetype varchar;
-    man_table_2 varchar;
+    p_man_table_2 varchar;
 	rec Record;
     node_id_seq int8;
 	code_autofill_bool boolean;
 	count_aux integer;
 	promixity_buffer_aux double precision;
-
+	v_addfields record;
+	v_customfeature text;
+	v_id_last int8;
+	v_parameter_name text;
+	v_new_value_param text;
+	v_old_value_param text;
 
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
-    man_table:= TG_ARGV[0];
-    man_table_2:=man_table;
+    v_customfeature = TG_ARGV[0];
+
+    EXECUTE 'SELECT man_table FROM node_type WHERE id=$1'
+	INTO p_man_table
+	USING v_customfeature;
+
+    p_man_table_2:=p_man_table;
 
 
 	--Get data from config table
@@ -52,10 +62,10 @@ BEGIN
       
         -- Node type
         IF (NEW.node_type IS NULL) THEN
-            IF ((SELECT COUNT(*) FROM node_type WHERE node_type.man_table=man_table_2) = 0) THEN
+            IF ((SELECT COUNT(*) FROM node_type WHERE node_type.man_table=p_man_table_2) = 0) THEN
                 RETURN audit_function(1004,1218);  
             END IF;
-            NEW.node_type:= (SELECT id FROM node_type WHERE node_type.man_table=man_table_2 LIMIT 1);
+            NEW.node_type:= (SELECT id FROM node_type WHERE node_type.man_table=p_man_table_2 LIMIT 1);
         END IF;
 
          -- Epa type
@@ -193,19 +203,19 @@ BEGIN
 				NEW.descript, NEW.rotation,NEW.link, NEW.verified, NEW.undelete, NEW.label_x,NEW.label_y,NEW.label_rotation,NEW.the_geom,
 				NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.xyz_date, NEW.unconnected, NEW.num_value);	
 				
-		IF man_table='man_junction' THEN
+		IF p_man_table='man_junction' THEN
 					
 			INSERT INTO man_junction (node_id) VALUES (NEW.node_id);
 			        
-		ELSIF man_table='man_outfall' THEN
+		ELSIF p_man_table='man_outfall' THEN
 
 			INSERT INTO man_outfall (node_id, name) VALUES (NEW.node_id,NEW.name);
         
-		ELSIF man_table='man_valve' THEN
+		ELSIF p_man_table='man_valve' THEN
 
 			INSERT INTO man_valve (node_id, name) VALUES (NEW.node_id,NEW.name);	
 		
-		ELSIF man_table='man_storage' THEN
+		ELSIF p_man_table='man_storage' THEN
 			
 			IF (rec.insert_double_geometry IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
@@ -222,7 +232,7 @@ BEGIN
 				VALUES(NEW.node_id, NEW.pol_id, NEW.length, NEW.width,NEW.custom_area, NEW.max_volume, NEW.util_volume, NEW.min_height,NEW.accessibility, NEW.name);
 			END IF;
 						
-		ELSIF man_table='man_netgully' THEN
+		ELSIF p_man_table='man_netgully' THEN
 					
 			IF (rec.insert_double_geometry IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
@@ -239,7 +249,7 @@ BEGIN
 				INSERT INTO man_netgully (node_id) VALUES(NEW.node_id);
 			END IF;
 					 			
-		ELSIF man_table='man_chamber' THEN
+		ELSIF p_man_table='man_chamber' THEN
 
 			IF (rec.insert_double_geometry IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
@@ -257,22 +267,22 @@ BEGIN
 				NEW.inlet, NEW.bottom_channel, NEW.accessibility,NEW.name);
 			END IF;	
 						
-		ELSIF man_table='man_manhole' THEN
+		ELSIF p_man_table='man_manhole' THEN
 		
 				INSERT INTO man_manhole (node_id,length, width, sander_depth,prot_surface, inlet, bottom_channel, accessibility) 
 				VALUES (NEW.node_id,NEW.length, NEW.width, NEW.sander_depth,NEW.prot_surface, NEW.inlet, NEW.bottom_channel, NEW.accessibility);	
 		
-		ELSIF man_table='man_netinit' THEN
+		ELSIF p_man_table='man_netinit' THEN
 			
 			INSERT INTO man_netinit (node_id,length, width, inlet, bottom_channel, accessibility, name) 
 			VALUES (NEW.node_id, NEW.length,NEW.width,NEW.inlet, NEW.bottom_channel, NEW.accessibility, NEW.name);
 			
-		ELSIF man_table='man_wjump' THEN
+		ELSIF p_man_table='man_wjump' THEN
 	
 			INSERT INTO man_wjump (node_id, length, width,sander_depth,prot_surface, accessibility, name) 
 			VALUES (NEW.node_id, NEW.length,NEW.width, NEW.sander_depth,NEW.prot_surface,NEW.accessibility, NEW.name);	
 
-		ELSIF man_table='man_wwtp' THEN
+		ELSIF p_man_table='man_wwtp' THEN
 		
 			IF (rec.insert_double_geometry IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
@@ -287,12 +297,26 @@ BEGIN
 				INSERT INTO man_wwtp (node_id, name) VALUES (NEW.node_id,NEW.name);
 			END IF;	
 						
-		ELSIF man_table='man_netelement' THEN
+		ELSIF p_man_table='man_netelement' THEN
 					
 			INSERT INTO man_netelement (node_id, serial_number) VALUES(NEW.node_id, NEW.serial_number);		
 			
 		END IF;
-		
+
+		-- man addfields insert
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+
+			IF v_new_value_param IS NOT NULL THEN
+				EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
+					USING NEW.node_id, v_addfields.id, v_new_value_param;
+			END IF;	
+		END LOOP;
+
+
 		-- EPA INSERT
         IF (NEW.epa_type = 'JUNCTION') THEN
 			INSERT INTO inp_junction (node_id, y0, ysur, apond) VALUES (NEW.node_id, 0, 0, 0);
@@ -308,7 +332,7 @@ BEGIN
 		
 		
         END IF;
-          
+ 
         RETURN NEW;
 
 
@@ -398,74 +422,99 @@ BEGIN
 		 publish=NEW.publish, inventory=NEW.inventory, uncertain=NEW.uncertain, xyz_date=NEW.xyz_date, unconnected=NEW.unconnected, expl_id=NEW.expl_id, num_value=NEW.num_value
 		WHERE node_id = OLD.node_id;
 			
-		IF man_table ='man_junction' THEN			
+		IF p_man_table ='man_junction' THEN			
             UPDATE man_junction SET node_id=NEW.node_id
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_netgully' THEN
+		ELSIF p_man_table='man_netgully' THEN
 			UPDATE man_netgully SET pol_id=NEW.pol_id, sander_depth=NEW.sander_depth, gratecat_id=NEW.gratecat_id, units=NEW.units, groove=NEW.groove, siphon=NEW.siphon
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_outfall' THEN
+		ELSIF p_man_table='man_outfall' THEN
 			UPDATE man_outfall SET name=NEW.name
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_storage' THEN
+		ELSIF p_man_table='man_storage' THEN
 			UPDATE man_storage SET pol_id=NEW.pol_id, length=NEW.length, width=NEW.width, custom_area=NEW.custom_area, max_volume=NEW.max_volume, util_volume=NEW.util_volume,min_height=NEW.min_height, 
 			accessibility=NEW.accessibility, name=NEW.name
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_valve' THEN
+		ELSIF p_man_table='man_valve' THEN
 			UPDATE man_valve SET name=NEW.name
 			WHERE node_id=OLD.node_id;
 
 		
-		ELSIF man_table='man_chamber' THEN
+		ELSIF p_man_table='man_chamber' THEN
 			UPDATE man_chamber SET pol_id=NEW.pol_id, length=NEW.length, width=NEW.width, sander_depth=NEW.sander_depth, max_volume=NEW.max_volume, util_volume=NEW.util_volume,
 			inlet=NEW.inlet, bottom_channel=NEW.bottom_channel, accessibility=NEW.accessibility, name=NEW.name
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_manhole' THEN
+		ELSIF p_man_table='man_manhole' THEN
 			UPDATE man_manhole SET length=NEW.length, width=NEW.width, sander_depth=NEW.sander_depth, prot_surface=NEW.prot_surface, inlet=NEW.inlet, bottom_channel=NEW.bottom_channel, accessibility=NEW.accessibility
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_netinit' THEN
+		ELSIF p_man_table='man_netinit' THEN
 			UPDATE man_netinit SET length=NEW.length, width=NEW.width, inlet=NEW.inlet, bottom_channel=NEW.bottom_channel, accessibility=NEW.accessibility, name=NEW.name
 			WHERE node_id=OLD.node_id;
 			
-		ELSIF man_table='man_wjump' THEN
+		ELSIF p_man_table='man_wjump' THEN
 			UPDATE man_wjump SET length=NEW.length, width=NEW.width, sander_depth=NEW.sander_depth, prot_surface=NEW.prot_surface, accessibility=NEW.accessibility, name=NEW.name
 			WHERE node_id=OLD.node_id;
 		
-		ELSIF man_table='man_wwtp' THEN
+		ELSIF p_man_table='man_wwtp' THEN
 			UPDATE man_wwtp SET pol_id=NEW.pol_id, name=NEW.name
 			WHERE node_id=OLD.node_id;
 				
-		ELSIF man_table ='man_netelement' THEN
+		ELSIF p_man_table ='man_netelement' THEN
 			UPDATE man_netelement SET serial_number=NEW.serial_number
 			WHERE node_id=OLD.node_id;	
 		
 		END IF;
+
+		-- man addfields update
+		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
+		LOOP
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING NEW
+				INTO v_new_value_param;
+ 
+			EXECUTE 'SELECT $1.' || v_addfields.idval
+				USING OLD
+				INTO v_old_value_param;
+
+			IF v_new_value_param IS NOT NULL THEN 
+
+				EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
+					ON CONFLICT (feature_id, parameter_id)
+					DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
+					USING NEW.node_id, v_addfields.id, v_new_value_param;	
+
+			ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
+
+				EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
+					USING NEW.node_id, v_addfields.id;
+			END IF;
 		
+		END LOOP;		
         RETURN NEW;
 			
     ELSIF TG_OP = 'DELETE' THEN
 	
 		PERFORM gw_fct_check_delete(OLD.node_id, 'NODE');
 	
-		IF man_table='man_chamber' THEN
+		IF p_man_table='man_chamber' THEN
 			DELETE FROM node WHERE node_id=OLD.node_id;
 			DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_chamber WHERE node_id=OLD.node_id );
 			
-		ELSIF man_table='man_storage' THEN
+		ELSIF p_man_table='man_storage' THEN
 			DELETE FROM node WHERE node_id=OLD.node_id;
 			DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_storage WHERE node_id=OLD.node_id );
 			
-		ELSIF man_table='man_wwtp' THEN
+		ELSIF p_man_table='man_wwtp' THEN
 			DELETE FROM node WHERE node_id=OLD.node_id;
 			DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_wwtp WHERE node_id=OLD.node_id );
 			
-		ELSIF man_table='man_netgully' THEN
+		ELSIF p_man_table='man_netgully' THEN
 			DELETE FROM node WHERE node_id=OLD.node_id;
 			DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_netgully WHERE node_id=OLD.node_id );
 		
@@ -484,35 +533,66 @@ $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_chamber ON "SCHEMA_NAME".v_edit_man_chamber;
-CREATE TRIGGER gw_trg_edit_man_chamber INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_chamber FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_chamber');     
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_junction ON "SCHEMA_NAME".v_edit_man_junction;
-CREATE TRIGGER gw_trg_edit_man_junction INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_junction FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_junction');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_manhole ON "SCHEMA_NAME".v_edit_man_manhole;
-CREATE TRIGGER gw_trg_edit_man_manhole INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_manhole FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_manhole');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_netgully ON "SCHEMA_NAME".v_edit_man_netgully;
-CREATE TRIGGER gw_trg_edit_man_netgully INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_netgully FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_netgully');  
+DROP TRIGGER IF EXISTS gw_trg_edit_node_chamber ON "SCHEMA_NAME".ve_node_chamber;
+CREATE TRIGGER gw_trg_edit_node_chamber INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_chamber FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('CHAMBER');     
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_netinit ON "SCHEMA_NAME".v_edit_man_netinit;
-CREATE TRIGGER gw_trg_edit_man_netinit INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_netinit FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_netinit');  
+DROP TRIGGER IF EXISTS gw_trg_edit_node_weir ON "SCHEMA_NAME".ve_node_weir;
+CREATE TRIGGER gw_trg_edit_node_weir INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_weir FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('WEIR');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_outfall ON "SCHEMA_NAME".v_edit_man_outfall;
-CREATE TRIGGER gw_trg_edit_man_outfall INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_outfall FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_outfall');
+DROP TRIGGER IF EXISTS gw_trg_edit_node_pumpstation ON "SCHEMA_NAME".ve_node_pumpstation;
+CREATE TRIGGER gw_trg_edit_node_pumpstation INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_pumpstation FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('PUMP-STATION');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_storage ON "SCHEMA_NAME".v_edit_man_storage;
-CREATE TRIGGER gw_trg_edit_man_storage INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_storage FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_storage');
+DROP TRIGGER IF EXISTS gw_trg_edit_node_register ON "SCHEMA_NAME".ve_node_register;
+CREATE TRIGGER gw_trg_edit_node_register INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_register FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('REGISTER');  
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_valve ON "SCHEMA_NAME".v_edit_man_valve;
-CREATE TRIGGER gw_trg_edit_man_valve INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_valve FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_valve');   
+DROP TRIGGER IF EXISTS gw_trg_edit_node_change ON "SCHEMA_NAME".ve_node_change;
+CREATE TRIGGER gw_trg_edit_node_change INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_change FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('CHANGE');  
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_wjump ON "SCHEMA_NAME".v_edit_man_wjump;
-CREATE TRIGGER gw_trg_edit_man_wjump INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_wjump FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_wjump');   
+DROP TRIGGER IF EXISTS gw_trg_edit_node_vnode ON "SCHEMA_NAME".ve_node_vnode;
+CREATE TRIGGER gw_trg_edit_node_vnode INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_vnode FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('VNODE');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_man_wwtp ON "SCHEMA_NAME".v_edit_man_wwtp;
-CREATE TRIGGER gw_trg_edit_man_wwtp INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_wwtp FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_wwtp');
+DROP TRIGGER IF EXISTS gw_trg_edit_node_junction ON "SCHEMA_NAME".ve_node_junction;
+CREATE TRIGGER gw_trg_edit_node_junction INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_junction FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('JUNCTION');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_highpoint ON "SCHEMA_NAME".ve_node_highpoint;
+CREATE TRIGGER gw_trg_edit_node_highpoint INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_highpoint FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('HIGHPOINT');   
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_circmanhole ON "SCHEMA_NAME".ve_node_circmanhole;
+CREATE TRIGGER gw_trg_edit_node_circmanhole INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_circmanhole FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('CIRC-MANHOLE');   
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_rectmanhole ON "SCHEMA_NAME".ve_node_rectmanhole;
+CREATE TRIGGER gw_trg_edit_node_rectmanhole INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_rectmanhole FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('RECT-MANHOLE');
      
-DROP TRIGGER IF EXISTS gw_trg_edit_man_netelement ON "SCHEMA_NAME".v_edit_man_netelement;
-CREATE TRIGGER gw_trg_edit_man_netelement INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_man_netelement FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('man_netelement');   
+DROP TRIGGER IF EXISTS gw_trg_edit_node_netelement ON "SCHEMA_NAME".ve_node_netelement;
+CREATE TRIGGER gw_trg_edit_node_netelement INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_netelement FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('NETELEMENT');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_netgully ON "SCHEMA_NAME".ve_node_netgully;
+CREATE TRIGGER gw_trg_edit_node_netgully INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_netgully FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('NETGULLY'); 
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_sandbox ON "SCHEMA_NAME".ve_node_sandbox;
+CREATE TRIGGER gw_trg_edit_node_sandbox INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_sandbox FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('SANDBOX'); 
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_outfall ON "SCHEMA_NAME".ve_node_outfall;
+CREATE TRIGGER gw_trg_edit_node_outfall INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_outfall FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('OUTFALL'); 
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_overflowstorage ON "SCHEMA_NAME".ve_node_overflowstorage;
+CREATE TRIGGER gw_trg_edit_node_overflowstorage INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_overflowstorage FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('OWERFLOW-STORAGE'); 
+
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_sewerstorage ON "SCHEMA_NAME".ve_node_sewerstorage;
+CREATE TRIGGER gw_trg_edit_node_sewerstorage INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_sewerstorage FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('SEWER-STORAGE');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_valve ON "SCHEMA_NAME".ve_node_valve;
+CREATE TRIGGER gw_trg_edit_node_valve INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_valve FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('VALVE');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_jump ON "SCHEMA_NAME".ve_node_jump;
+CREATE TRIGGER gw_trg_edit_node_jump INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_jump FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('JUMP');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_node_wwtp ON "SCHEMA_NAME".ve_node_wwtp;
+CREATE TRIGGER gw_trg_edit_node_wwtp INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_node_wwtp FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_node('WWTP');
+
+
+
