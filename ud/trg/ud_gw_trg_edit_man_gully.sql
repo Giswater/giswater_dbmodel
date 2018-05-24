@@ -40,7 +40,7 @@ BEGIN
 
 		
 		-- gully type 
-		   IF (NEW.gully_type IS NULL) THEN
+		IF (NEW.gully_type IS NULL) THEN
 			   NEW.gully_type:= (SELECT "value" FROM config_param_user WHERE "parameter"='gullycat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			IF (NEW.gully_type IS NULL) THEN
 				NEW.gully_type:=(SELECT id FROM gully_type LIMIT 1);
@@ -56,7 +56,7 @@ BEGIN
 			END IF;
         END IF;
 
-        
+/*        
         -- Arc Catalog ID
         IF (NEW.connec_arccat_id IS NULL) THEN
 				NEW.connec_arccat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='arccat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
@@ -65,7 +65,7 @@ BEGIN
 
 			END IF;
 			
-        END IF;
+        END IF;*/
 
         -- Sector ID
         IF (NEW.sector_id IS NULL) THEN
@@ -208,8 +208,7 @@ BEGIN
 					NEW.undelete,NEW.featurecat_id, NEW.feature_id,NEW.label_x, NEW.label_y,NEW.label_rotation,  NEW.expl_id , NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value);
         END IF;  
 
-
-		-- man addfields insert
+-- man addfields insert
 		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
 		LOOP
 			EXECUTE 'SELECT $1.' || v_addfields.idval
@@ -221,7 +220,6 @@ BEGIN
 					USING NEW.gully_id, v_addfields.id, v_new_value_param;
 			END IF;	
 		END LOOP;
-
 
 		--PERFORM audit_function (1,850);
         RETURN NEW;
@@ -280,8 +278,9 @@ BEGIN
 			muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber,expl_id=NEW.expl_id, uncertain=NEW.uncertain, num_value=NEW.num_value
 			WHERE gully_id = OLD.gully_id;
         END IF;  
+	
 
--- man addfields update
+	-- man addfields update
 		FOR v_addfields IN SELECT * FROM man_addfields_parameter WHERE cat_feature_id = v_customfeature
 		LOOP
 			EXECUTE 'SELECT $1.' || v_addfields.idval
@@ -304,9 +303,8 @@ BEGIN
 				EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
 					USING NEW.gully_id, v_addfields.id;
 			END IF;
-		
 		END LOOP;
-
+		             
         RETURN NEW;
     
 
@@ -329,4 +327,5 @@ $BODY$
 
 
 DROP TRIGGER IF EXISTS gw_trg_edit_gully ON "SCHEMA_NAME".ve_gully;
-CREATE TRIGGER gw_trg_edit_gully INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_gully FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_gully();
+CREATE TRIGGER gw_trg_edit_gully INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_gully
+FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_man_gully(gully);
