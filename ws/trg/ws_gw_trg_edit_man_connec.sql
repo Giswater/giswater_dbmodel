@@ -60,19 +60,13 @@ BEGIN
 				RETURN audit_function(1022,1316);
 			END IF;
 			
-			IF p_man_table='man_greentap' THEN
-				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='greentapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			ELSIF p_man_table='man_wjoin' THEN
-				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='wjoincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			ELSIF p_man_table='man_fountain' OR p_man_table='man_fountain_pol' THEN
-				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='fountaincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
-			ELSIF p_man_table='man_tap' THEN
-				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='tapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
-			END IF;
-				
 			IF (NEW.connecat_id IS NULL) THEN
-				PERFORM audit_function(1086,1316);
-			END IF;				
+				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
+				IF (NEW.connecat_id IS NULL) THEN
+					PERFORM audit_function(1086,1316);
+				END IF;	
+			END IF;
+						
 			IF (NEW.connecat_id NOT IN (select cat_connec.id FROM cat_connec JOIN connec_type ON cat_connec.connectype_id=connec_type.id WHERE connec_type.man_table=p_man_table_2)) THEN 
 				PERFORM audit_function(1088,1316);
 			END IF;
