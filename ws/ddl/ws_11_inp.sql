@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -481,7 +481,15 @@ CREATE TABLE "inp_valve" (
 );
 
 
+CREATE TABLE inp_typevalue (
+typevalue varchar(50),
+id varchar(30),
+id_value (18),
+CONSTRAINT inp_typevalue_pkey PRIMARY KEY (typevalue,id)
+);
 
+
+/*
 CREATE TABLE "inp_typevalue_energy" (
 "id" varchar(18)   NOT NULL
 );
@@ -612,7 +620,7 @@ CREATE TABLE "inp_value_yesno" (
 CREATE TABLE "inp_value_yesnofull" (
 "id" varchar(18)   NOT NULL
 );
-
+*/
 
 
 
