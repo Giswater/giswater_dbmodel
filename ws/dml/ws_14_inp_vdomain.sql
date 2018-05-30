@@ -8,27 +8,102 @@ SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
 
 -- ----------------------------
+-- Records of inp_typevalue
+-- ----------------------------
+
+
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_energy', 'DEMAND CHARGE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_energy', 'GLOBAL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'HEAD', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'PATTERN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'POWER', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'SPEED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_reactions_gl', 'GLOBAL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_reactions_gl', 'LIMITING POTENTIAL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_reactions_gl', 'ORDER', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_reactions_gl', 'ROUGHNESS CORRELATION', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'CONCEN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'FLOWPACED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'MASS', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'SETPOINT', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_ampm', 'AM', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_ampm', 'PM', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'EFFICIENCY', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'HEADLOSS', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'PUMP', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'VOLUME', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_mixing', '2COMP', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_mixing', 'FIFO', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_mixing', 'LIFO', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_mixing', 'MIXED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_noneall', 'ALL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_noneall', 'NONE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_headloss', 'C-M', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_headloss', 'D-W', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_headloss', 'H-W', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_hyd', ' ', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_hyd', 'SAVE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_hyd', 'USE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_qual', 'AGE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_qual', 'CHEMICAL mg/L', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_qual', 'CHEMICAL ug/L', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_qual', 'NONE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_qual', 'TRACE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_rtc_coef', 'MIN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_rtc_coef', 'AVG', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_rtc_coef', 'MAX', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_unbal', 'CONTINUE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_unbal', 'STOP', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'AFD', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'CMD', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'CMH', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'GPM', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'IMGD', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'LPM', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'LPS', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'MGD', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_units', 'MLD', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_valvemode', 'EPA TABLES', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_valvemode', 'INVENTORY VALUES', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_valvemode', 'MINCUT RESULTS', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_param_energy', 'EFFIC', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_param_energy', 'PATTERN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_param_energy', 'PRICE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_reactions_el', 'BULK', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_reactions_el', 'TANK', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_reactions_el', 'WALL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_reactions_gl', 'BULK', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_reactions_gl', 'TANK', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_reactions_gl', 'WALL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_pipe', 'CLOSED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_pipe', 'CV', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_pipe', 'OPEN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_pump', 'CLOSED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_pump', 'OPEN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_valve', 'ACTIVE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_valve', 'CLOSED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_status_valve', 'OPEN', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_times', 'AVERAGED', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_times', 'MAXIMUM', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_times', 'MINIMUM', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_times', 'NONE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_times', 'RANGE', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_yesno', 'NO', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_yesno', 'YES', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_yesnofull', 'FULL', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_yesnofull', 'NO', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_yesnofull', 'YES', NULL, NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_valve', 'GPV', NULL, 'General Purpose Valve');
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_valve', 'FCV', NULL, 'Flow Control Valve');
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_valve', 'PBV', NULL, 'Pressure Break Valve');
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_valve', 'PRV', NULL, 'Pressure Reduction Valve');
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_valve', 'PSV', NULL, 'Pressure Sustain Valve');
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_valve', 'TCV', NULL, 'Throttle Control Valve');
+-- ----------------------------
 -- Records of inp_options
 -- ----------------------------
  
 INSERT INTO inp_options VALUES (1,'LPS', 'H-W', NULL, 1.000000, 1.000000, 40.000000, 0.001000, 'CONTINUE', 2.000000, 10.000000, 0.000000, '1', 1.000000, 0.500000, 'NONE', 1.000000, 0.010000, '', 40.000000, NULL, 'EPA TABLES', NULL, 'f', NULL, NULL);
-
-
--- ----------------------------
--- Records of inp_value_opti_valvemodeoptions
--- ----------------------------
-INSERT INTO "inp_value_opti_valvemode" VALUES ('EPA TABLES');
-INSERT INTO "inp_value_opti_valvemode" VALUES ('INVENTORY VALUES');
-INSERT INTO "inp_value_opti_valvemode" VALUES ('MINCUT RESULTS');
-
-
--- ----------------------------
--- Records of inp_value_opti_rtc_coef
--- ----------------------------
-INSERT INTO "inp_value_opti_rtc_coef" VALUES ('MIN');
-INSERT INTO "inp_value_opti_rtc_coef" VALUES ('AVG');
-INSERT INTO "inp_value_opti_rtc_coef" VALUES ('MAX');
-
 
 
 -- ----------------------------
@@ -63,232 +138,4 @@ INSERT INTO "inp_node_type" VALUES ('PUMP');
 INSERT INTO "inp_node_type" VALUES ('VALVE');
 INSERT INTO "inp_node_type" VALUES ('SHORTPIPE');
 INSERT INTO "inp_node_type" VALUES ('NOT DEFINED');
-
-
--- ----------------------------
--- Records of inp_typevalue_energy
--- ----------------------------
- 
-INSERT INTO "inp_typevalue_energy" VALUES ('DEMAND CHARGE');
-INSERT INTO "inp_typevalue_energy" VALUES ('GLOBAL');
- 
-
--- ----------------------------
--- Records of inp_typevalue_pump
--- ----------------------------
- 
-INSERT INTO "inp_typevalue_pump" VALUES ('HEAD');
-INSERT INTO "inp_typevalue_pump" VALUES ('PATTERN');
-INSERT INTO "inp_typevalue_pump" VALUES ('POWER');
-INSERT INTO "inp_typevalue_pump" VALUES ('SPEED');
- 
-
--- ----------------------------
--- Records of inp_typevalue_reactions_gl
--- ----------------------------
- 
-INSERT INTO "inp_typevalue_reactions_gl" VALUES ('GLOBAL');
-INSERT INTO "inp_typevalue_reactions_gl" VALUES ('LIMITING POTENTIAL');
-INSERT INTO "inp_typevalue_reactions_gl" VALUES ('ORDER');
-INSERT INTO "inp_typevalue_reactions_gl" VALUES ('ROUGHNESS CORRELATION');
- 
-
--- ----------------------------
--- Records of inp_typevalue_source
--- ----------------------------
- 
-INSERT INTO "inp_typevalue_source" VALUES ('CONCEN');
-INSERT INTO "inp_typevalue_source" VALUES ('FLOWPACED');
-INSERT INTO "inp_typevalue_source" VALUES ('MASS');
-INSERT INTO "inp_typevalue_source" VALUES ('SETPOINT');
- 
-
--- ----------------------------
--- Records of inp_typevalue_valve
--- ----------------------------
- 
-INSERT INTO "inp_typevalue_valve" VALUES ('FCV', 'Flow Control Valve', 'Flow');
-INSERT INTO "inp_typevalue_valve" VALUES ('PBV', 'Pressure Break Valve', 'Pressure');
-INSERT INTO "inp_typevalue_valve" VALUES ('PRV', 'Pressure Reduction Valve', 'Pressure');
-INSERT INTO "inp_typevalue_valve" VALUES ('PSV', 'Pressure Sustain Valve', 'Pressure');
-INSERT INTO "inp_typevalue_valve" VALUES ('TCV', 'Throttle Control Valve', 'Losses');
-INSERT INTO "inp_typevalue_valve" VALUES ('GPV', 'General Purpose Valve', 'Losses');
-
-
--- ----------------------------
--- Records of inp_value_ampm
--- ----------------------------
- 
-INSERT INTO "inp_value_ampm" VALUES ('AM');
-INSERT INTO "inp_value_ampm" VALUES ('PM');
- 
-
--- ----------------------------
--- Records of inp_value_curve
--- ----------------------------
- 
-INSERT INTO "inp_value_curve" VALUES ('EFFICIENCY');
-INSERT INTO "inp_value_curve" VALUES ('HEADLOSS');
-INSERT INTO "inp_value_curve" VALUES ('PUMP');
-INSERT INTO "inp_value_curve" VALUES ('VOLUME');
- 
-
--- ----------------------------
--- Records of inp_value_mixing
--- ----------------------------
- 
-INSERT INTO "inp_value_mixing" VALUES ('2COMP');
-INSERT INTO "inp_value_mixing" VALUES ('FIFO');
-INSERT INTO "inp_value_mixing" VALUES ('LIFO');
-INSERT INTO "inp_value_mixing" VALUES ('MIXED');
- 
-
--- ----------------------------
--- Records of inp_value_noneall
--- ----------------------------
- 
-INSERT INTO "inp_value_noneall" VALUES ('ALL');
-INSERT INTO "inp_value_noneall" VALUES ('NONE');
- 
-
--- ----------------------------
--- Records of inp_value_opti_headloss
--- ----------------------------
- 
-INSERT INTO "inp_value_opti_headloss" VALUES ('C-M');
-INSERT INTO "inp_value_opti_headloss" VALUES ('D-W');
-INSERT INTO "inp_value_opti_headloss" VALUES ('H-W');
- 
-
--- ----------------------------
--- Records of inp_value_opti_hyd
--- ----------------------------
- 
-INSERT INTO "inp_value_opti_hyd" VALUES (' ');
-INSERT INTO "inp_value_opti_hyd" VALUES ('SAVE');
-INSERT INTO "inp_value_opti_hyd" VALUES ('USE');
- 
-
--- ----------------------------
--- Records of inp_value_opti_qual
--- ----------------------------
- 
-INSERT INTO "inp_value_opti_qual" VALUES ('AGE');
-INSERT INTO "inp_value_opti_qual" VALUES ('CHEMICAL mg/L');
-INSERT INTO "inp_value_opti_qual" VALUES ('CHEMICAL ug/L');
-INSERT INTO "inp_value_opti_qual" VALUES ('NONE');
-INSERT INTO "inp_value_opti_qual" VALUES ('TRACE');
- 
-
--- ----------------------------
--- Records of inp_value_opti_unb
--- ----------------------------
- 
- 
-
--- ----------------------------
--- Records of inp_value_opti_unbal
--- ----------------------------
- 
-INSERT INTO "inp_value_opti_unbal" VALUES ('CONTINUE');
-INSERT INTO "inp_value_opti_unbal" VALUES ('STOP');
- 
-
--- ----------------------------
--- Records of inp_value_opti_units
--- ----------------------------
- 
-INSERT INTO "inp_value_opti_units" VALUES ('AFD');
-INSERT INTO "inp_value_opti_units" VALUES ('CMD');
-INSERT INTO "inp_value_opti_units" VALUES ('CMH');
-INSERT INTO "inp_value_opti_units" VALUES ('GPM');
-INSERT INTO "inp_value_opti_units" VALUES ('IMGD');
-INSERT INTO "inp_value_opti_units" VALUES ('LPM');
-INSERT INTO "inp_value_opti_units" VALUES ('LPS');
-INSERT INTO "inp_value_opti_units" VALUES ('MGD');
-INSERT INTO "inp_value_opti_units" VALUES ('MLD');
- 
-
--- ----------------------------
--- Records of inp_value_param_energy
--- ----------------------------
- 
-INSERT INTO "inp_value_param_energy" VALUES ('EFFIC');
-INSERT INTO "inp_value_param_energy" VALUES ('PATTERN');
-INSERT INTO "inp_value_param_energy" VALUES ('PRICE');
- 
-
--- ----------------------------
--- Records of inp_value_reactions_el
--- ----------------------------
- 
-INSERT INTO "inp_value_reactions_el" VALUES ('BULK');
-INSERT INTO "inp_value_reactions_el" VALUES ('TANK');
-INSERT INTO "inp_value_reactions_el" VALUES ('WALL');
- 
-
--- ----------------------------
--- Records of inp_value_reactions_gl
--- ----------------------------
- 
-INSERT INTO "inp_value_reactions_gl" VALUES ('BULK');
-INSERT INTO "inp_value_reactions_gl" VALUES ('TANK');
-INSERT INTO "inp_value_reactions_gl" VALUES ('WALL');
- 
-
--- ----------------------------
--- Records of inp_value_status_pipe
--- ----------------------------
- 
-INSERT INTO "inp_value_status_pipe" VALUES ('CLOSED');
-INSERT INTO "inp_value_status_pipe" VALUES ('CV');
-INSERT INTO "inp_value_status_pipe" VALUES ('OPEN');
- 
-
--- ----------------------------
--- Records of inp_value_status_pump
--- ----------------------------
- 
-INSERT INTO "inp_value_status_pump" VALUES ('CLOSED');
-INSERT INTO "inp_value_status_pump" VALUES ('OPEN');
-
-
--- ----------------------------
--- Records of inp_value_status_valve
--- ----------------------------
- 
-INSERT INTO "inp_value_status_valve" VALUES ('ACTIVE');
-INSERT INTO "inp_value_status_valve" VALUES ('CLOSED');
-INSERT INTO "inp_value_status_valve" VALUES ('OPEN');
- 
-
--- ----------------------------
--- Records of inp_value_times
--- ----------------------------
- 
-INSERT INTO "inp_value_times" VALUES ('AVERAGED');
-INSERT INTO "inp_value_times" VALUES ('MAXIMUM');
-INSERT INTO "inp_value_times" VALUES ('MINIMUM');
-INSERT INTO "inp_value_times" VALUES ('NONE');
-INSERT INTO "inp_value_times" VALUES ('RANGE');
- 
-
--- ----------------------------
--- Records of inp_value_yesno
--- ----------------------------
- 
-INSERT INTO "inp_value_yesno" VALUES ('NO');
-INSERT INTO "inp_value_yesno" VALUES ('YES');
- 
-
--- ----------------------------
--- Records of inp_value_yesnofull
--- ----------------------------
- 
-INSERT INTO "inp_value_yesnofull" VALUES ('FULL');
-INSERT INTO "inp_value_yesnofull" VALUES ('NO');
-INSERT INTO "inp_value_yesnofull" VALUES ('YES');
-
-
-
 
