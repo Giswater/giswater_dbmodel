@@ -1037,7 +1037,7 @@ inp_weir.cd,
 inp_weir.flap, 
 inp_weir.ec, 
 inp_weir.cd2, 
-inp_value_weirs.shape, 
+inp_typevalue.idval as shape, 
 inp_weir.geom1, 
 inp_weir.geom2, 
 inp_weir.geom3, 
@@ -1045,7 +1045,7 @@ inp_weir.geom4,
 inp_weir.surcharge
 FROM inp_selector_result, rpt_inp_arc
 	JOIN inp_weir ON inp_weir.arc_id = rpt_inp_arc.arc_id
-	JOIN inp_value_weirs ON inp_weir.weir_type = inp_value_weirs.id
+	JOIN inp_typevalue ON inp_weir.weir_type = inp_typevalue.id and inp_typevalue.typevalue='inp_value_weirs'
 	WHERE rpt_inp_arc.result_id=inp_selector_result.result_id AND inp_selector_result.cur_user="current_user"()
 UNION
 SELECT 
@@ -1058,7 +1058,7 @@ inp_flwreg_weir.cd,
 inp_flwreg_weir.flap, 
 inp_flwreg_weir.ec, 
 inp_flwreg_weir.cd2, 
-inp_value_weirs.shape, 
+inp_typevalue.idval as shape,
 inp_flwreg_weir.geom1, 
 inp_flwreg_weir.geom2, 
 inp_flwreg_weir.geom3, 
@@ -1066,7 +1066,7 @@ inp_flwreg_weir.geom4,
 inp_flwreg_weir.surcharge
 FROM inp_selector_result, rpt_inp_arc
 	JOIN inp_flwreg_weir ON rpt_inp_arc.flw_code = concat(node_id,'_', to_arc,'_weir_', flwreg_id)
-	JOIN inp_value_weirs ON inp_flwreg_weir.weir_type = inp_value_weirs.id
+	JOIN inp_typevalue ON inp_flwreg_weir.weir_type = inp_typevalue.id and inp_typevalue.typevalue='inp_value_weirs'
 	WHERE rpt_inp_arc.result_id=inp_selector_result.result_id AND inp_selector_result.cur_user="current_user"();
 
 	
