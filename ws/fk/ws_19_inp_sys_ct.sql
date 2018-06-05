@@ -60,9 +60,42 @@ ALTER TABLE inp_typevalue ADD CONSTRAINT inp_typevalue_check CHECK
 (typevalue='inp_value_yesnofull' AND id IN ('FULL','NO','YES')) OR
 (typevalue='inp_typevalue_valve' AND id IN ('FCV','GPV','PBV','PRV','PSV','TCV')));
 
+--check typevalue
+ALTER TABLE inp_energy_el ADD CONSTRAINT inp_energy_el_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
+ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
+ALTER TABLE inp_mixing ADD CONSTRAINT inp_mixing_mix_type_check CHECK ( mix_type IN ('2COMP','FIFO','LIFO','MIXED'));
+
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_units_check CHECK ( units IN ('AFD','CMD','CMH','GPM','IMGD','LPM','LPS','MGD','MLD'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_hydraulics_check CHECK ( hydraulics IN (' ','SAVE','USE'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_headloss_check CHECK ( headloss IN ('C-M','D-W','H-W'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_quality_check CHECK ( quality IN ('AGE','CHEMICAL mg/L','CHEMICAL ug/L','NONE','TRACE'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_unbalanced_check CHECK ( unbalanced IN ('CONTINUE','STOP'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_rtc_coefficient_check CHECK ( rtc_coefficient IN ('AVG','MAX','MIN','REAL'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_valve_mode_check CHECK ( valve_mode IN ('EPA TABLES','INVENTORY VALUES','MINCUT RESULTS'));
+
+ALTER TABLE inp_reactions_el ADD CONSTRAINT inp_reactions_el_parameter_check CHECK ( parameter IN ('BULK','TANK','WALL'));
+ALTER TABLE inp_reactions_gl ADD CONSTRAINT inp_reactions_gl_parameter_check CHECK ( parameter IN ('BULK','TANK','WALL'));
+
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_pressure_check CHECK ( pressure IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_demand_check CHECK ( demand IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_status_check CHECK ( status IN ('FULL','NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_summary_check CHECK ( summary IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_energy_check CHECK ( energy IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_elevation_check CHECK ( elevation IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_head_check CHECK ( head IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_quality_check CHECK ( quality IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_length_check CHECK ( length IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_diameter_check CHECK ( diameter IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_flow_check CHECK ( flow IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_velocity_check CHECK ( velocity IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_headloss_check CHECK ( headloss IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_setting_check CHECK ( setting IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_reaction_check CHECK ( reaction IN ('NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_f_factor_check CHECK ( f_factor IN ('NO','YES'));
+
+ALTER TABLE inp_times ADD CONSTRAINT inp_times_f_statistic_check CHECK ( statistic IN ('AVERAGED','MAXIMUM','MINIMUM','NONE','RANGE'));
+ALTER TABLE inp_pump_additional ADD CONSTRAINT inp_pump_additional_pattern_check CHECK ( pattern IN ('CLOSED','OPEN'));
+
 
 -- ADD UNIQUE
 ALTER TABLE "inp_pump_additional" ADD CONSTRAINT "inp_pump_additional_unique" UNIQUE (node_id, order_id);
-
-
-

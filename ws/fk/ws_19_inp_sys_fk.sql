@@ -151,9 +151,9 @@ ALTER TABLE "inp_demand" ADD CONSTRAINT "inp_demand_pattern_id_fkey" FOREIGN KEY
 ALTER TABLE "inp_emitter" ADD CONSTRAINT "inp_emitter_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_energy_el" ADD CONSTRAINT "inp_energy_el_pump_id_fkey" FOREIGN KEY ("pump_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_energy_el" ADD CONSTRAINT "inp_energy_el_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_value_param_energy" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_energy_el" ADD CONSTRAINT "inp_energy_el_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_energy_gl" ADD CONSTRAINT "inp_energy_gl_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_value_param_energy" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_energy_gl" ADD CONSTRAINT "inp_energy_gl_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_junction" ADD CONSTRAINT "inp_junction_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_junction" ADD CONSTRAINT "inp_junction_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -161,17 +161,17 @@ ALTER TABLE "inp_junction" ADD CONSTRAINT "inp_junction_pattern_id_fkey" FOREIGN
 ALTER TABLE "inp_label" ADD CONSTRAINT "inp_label_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_mixing" ADD CONSTRAINT "inp_mixing_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_mixing" ADD CONSTRAINT "inp_mixing_mix_type_fkey" FOREIGN KEY ("mix_type") REFERENCES "inp_value_mixing" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_mixing" ADD CONSTRAINT "inp_mixing_mix_type_fkey" FOREIGN KEY ("mix_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_units_fkey" FOREIGN KEY ("units") REFERENCES "inp_value_opti_units" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_hydraulics_fkey" FOREIGN KEY ("hydraulics") REFERENCES "inp_value_opti_hyd" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_headloss_fkey" FOREIGN KEY ("headloss") REFERENCES "inp_value_opti_headloss" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_quality_fkey" FOREIGN KEY ("quality") REFERENCES "inp_value_opti_qual" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_unbalanced_fkey" FOREIGN KEY ("unbalanced") REFERENCES "inp_value_opti_unbal" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_units_fkey" FOREIGN KEY ("units") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_hydraulics_fkey" FOREIGN KEY ("hydraulics") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_headloss_fkey" FOREIGN KEY ("headloss") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_quality_fkey" FOREIGN KEY ("quality") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_unbalanced_fkey" FOREIGN KEY ("unbalanced") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_period_id_fkey" FOREIGN KEY ("rtc_period_id") REFERENCES "ext_cat_period" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_coefficient_fkey" FOREIGN KEY ("rtc_coefficient") REFERENCES "inp_value_opti_rtc_coef" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_coefficient_fkey" FOREIGN KEY ("rtc_coefficient") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_valve_mode_mincut_result_fkey" FOREIGN KEY ("valve_mode_mincut_result") REFERENCES "anl_mincut_result_cat" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_valve_mode_fkey" FOREIGN KEY ("valve_mode") REFERENCES "inp_value_opti_valvemode" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_options" ADD CONSTRAINT "inp_options_valve_mode_fkey" FOREIGN KEY ("valve_mode") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_pattern_value" ADD CONSTRAINT "inp_pattern_value_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -186,27 +186,27 @@ ALTER TABLE "inp_pump" ADD CONSTRAINT "inp_pump_to_arc_fkey" FOREIGN KEY ("to_ar
 ALTER TABLE "inp_quality" ADD CONSTRAINT "inp_quality_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_reactions_el" ADD CONSTRAINT "inp_reactions_el_arc_id_fkey" FOREIGN KEY ("arc_id") REFERENCES "arc" ("arc_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_reactions_el" ADD CONSTRAINT "inp_reactions_el_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_value_reactions_el" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_reactions_el" ADD CONSTRAINT "inp_reactions_el_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_reactions_gl" ADD CONSTRAINT "inp_reactions_gl_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_value_reactions_gl" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_reactions_gl" ADD CONSTRAINT "inp_reactions_gl_react_type_fkey" FOREIGN KEY ("react_type") REFERENCES "inp_typevalue_reactions_gl" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_reactions_gl" ADD CONSTRAINT "inp_reactions_gl_parameter_fkey" FOREIGN KEY ("parameter") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_reactions_gl" ADD CONSTRAINT "inp_reactions_gl_react_type_fkey" FOREIGN KEY ("react_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_pressure_fkey" FOREIGN KEY ("pressure") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_demand_fkey" FOREIGN KEY ("demand") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_status_fkey" FOREIGN KEY ("status") REFERENCES "inp_value_yesnofull" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_summary_fkey" FOREIGN KEY ("summary") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_energy_fkey" FOREIGN KEY ("energy") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_elevation_fkey" FOREIGN KEY ("elevation") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_head_fkey" FOREIGN KEY ("head") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_quality_fkey" FOREIGN KEY ("quality") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_length_fkey" FOREIGN KEY ("length") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_diameter_fkey" FOREIGN KEY ("diameter") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_flow_fkey" FOREIGN KEY ("flow") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_velocity_fkey" FOREIGN KEY ("velocity") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_headloss_fkey" FOREIGN KEY ("headloss") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_setting_fkey" FOREIGN KEY ("setting") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_reaction_fkey" FOREIGN KEY ("reaction") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_f_factor_fkey" FOREIGN KEY ("f_factor") REFERENCES "inp_value_yesno" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_pressure_fkey" FOREIGN KEY ("pressure") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_demand_fkey" FOREIGN KEY ("demand") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_status_fkey" FOREIGN KEY ("status") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_summary_fkey" FOREIGN KEY ("summary") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_energy_fkey" FOREIGN KEY ("energy") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_elevation_fkey" FOREIGN KEY ("elevation") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_head_fkey" FOREIGN KEY ("head") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_quality_fkey" FOREIGN KEY ("quality") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_length_fkey" FOREIGN KEY ("length") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_diameter_fkey" FOREIGN KEY ("diameter") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_flow_fkey" FOREIGN KEY ("flow") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_velocity_fkey" FOREIGN KEY ("velocity") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_headloss_fkey" FOREIGN KEY ("headloss") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_setting_fkey" FOREIGN KEY ("setting") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_reaction_fkey" FOREIGN KEY ("reaction") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_f_factor_fkey" FOREIGN KEY ("f_factor") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE "inp_reservoir" ADD CONSTRAINT "inp_reservoir_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_reservoir" ADD CONSTRAINT "inp_reservoir_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -217,24 +217,24 @@ ALTER TABLE "inp_rules_x_arc" ADD CONSTRAINT "inp_rules_x_arc_id_fkey" FOREIGN K
 
 ALTER TABLE "inp_source" ADD CONSTRAINT "inp_source_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_source" ADD CONSTRAINT "inp_source_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_source" ADD CONSTRAINT "inp_source_sourc_type_fkey" FOREIGN KEY ("sourc_type") REFERENCES "inp_typevalue_source" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_source" ADD CONSTRAINT "inp_source_sourc_type_fkey" FOREIGN KEY ("sourc_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_tags" ADD CONSTRAINT "inp_tags_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_tank" ADD CONSTRAINT "inp_tank_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_tank" ADD CONSTRAINT "inp_tank_curve_id_fkey" FOREIGN KEY ("curve_id") REFERENCES "inp_curve_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_times" ADD CONSTRAINT "inp_times_statistic_fkey" FOREIGN KEY ("statistic") REFERENCES "inp_value_times" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "inp_times" ADD CONSTRAINT "inp_times_statistic_fkey" FOREIGN KEY ("statistic") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE "inp_valve" ADD CONSTRAINT "inp_valve_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_valve" ADD CONSTRAINT "inp_valve_curve_id_fkey" FOREIGN KEY ("curve_id") REFERENCES "inp_curve_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_valve" ADD CONSTRAINT "inp_valve_to_arc_fkey" FOREIGN KEY ("to_arc") REFERENCES "arc" ("arc_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_valve" ADD CONSTRAINT "inp_valve_valv_type_fkey" FOREIGN KEY ("valv_type") REFERENCES "inp_typevalue_valve" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_valve" ADD CONSTRAINT "inp_valve_valv_type_fkey" FOREIGN KEY ("valv_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_pump_additional" ADD CONSTRAINT "inp_pump_additional_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_pump_additional" ADD CONSTRAINT "inp_pump_additional_curve_id_fkey" FOREIGN KEY ("curve_id") REFERENCES "inp_curve_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_pump_additional" ADD CONSTRAINT "inp_pump_additional_pattern_id_fkey" FOREIGN KEY ("pattern") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_pump_additional" ADD CONSTRAINT "inp_pump_additional_status_fkey" FOREIGN KEY ("pattern") REFERENCES "inp_value_status_pump" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_pump_additional" ADD CONSTRAINT "inp_pump_additional_status_fkey" FOREIGN KEY ("pattern") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 --RPT
 
