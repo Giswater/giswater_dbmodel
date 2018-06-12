@@ -2724,6 +2724,16 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_varc AS
 
 --connec
 
+DROP VIEW IF EXISTS v_rtc_hydrometer_x_connec CASCADE;
+CREATE OR REPLACE VIEW v_rtc_hydrometer_x_connec AS
+SELECT 
+connec_id,
+count(hydrometer_id)::integer as n_hydrometer
+FROM rtc_hydrometer_x_connec
+group by connec_id;
+
+
+
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_connec_wjoin;
 CREATE OR REPLACE VIEW SCHEMA_NAME.ve_connec_wjoin AS 
  SELECT connec.connec_id,

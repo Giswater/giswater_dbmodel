@@ -37,27 +37,27 @@ ALTER TABLE inp_typevalue ADD CONSTRAINT inp_typevalue_check CHECK
 ((typevalue='inp_value_curve' AND id IN ('EFFICIENCY','HEADLOSS','PUMP','VOLUME')) OR
 (typevalue='inp_value_yesno'  and id IN ('NO','YES')) OR
 (typevalue='inp_typevalue_energy' AND id IN ('DEMAND CHARGE','GLOBAL')) OR
-(typevalue='inp_typevalue_pump' AND id IN ('HEAD','PATTERN','POWER','SPEED')) OR
-(typevalue='inp_typevalue_reactions_gl' AND id IN ('GLOBAL','LIMITING POTENTIAL','ORDER','ROUGHNESS CORRELATION')) OR
+(typevalue='inp_typevalue_pump' AND id IN ('HEAD_PUMP','PATTERN_PUMP','POWER_PUMP','SPEED_PUMP')) OR
+(typevalue='inp_typevalue_reactions_gl' AND id IN ('GLOBAL_GL','LIMITING POTENTIAL','ORDER','ROUGHNESS CORRELATION')) OR
 (typevalue='inp_typevalue_source' AND id IN ('CONCEN','FLOWPACED','MASS','SETPOINT')) OR
 (typevalue='inp_value_ampm' AND id IN ('AM','PM')) OR
 (typevalue='inp_value_mixing' AND id IN  ('2COMP','FIFO','LIFO','MIXED')) OR
 (typevalue='inp_value_noneall' AND id IN ('ALL','NONE')) OR
 (typevalue='inp_value_opti_headloss' AND id IN ('C-M','D-W','H-W')) OR
 (typevalue='inp_value_opti_hyd' AND id IN (' ','SAVE','USE')) OR
-(typevalue='inp_value_opti_qual' AND id IN ('AGE','CHEMICAL mg/L','CHEMICAL ug/L','NONE','TRACE')) OR
+(typevalue='inp_value_opti_qual' AND id IN ('AGE','CHEMICAL mg/L','CHEMICAL ug/L','NONE_QUAL','TRACE')) OR
 (typevalue='inp_value_opti_rtc_coef' AND id IN ('AVG','MAX','MIN','REAL')) OR
 (typevalue='inp_value_opti_unbal' AND id IN ('CONTINUE','STOP')) OR
 (typevalue='inp_value_opti_units' AND id IN ('AFD','CMD','CMH','GPM','IMGD','LPM','LPS','MGD','MLD')) OR
 (typevalue='inp_value_opti_valvemode' AND id IN ('EPA TABLES','INVENTORY VALUES','MINCUT RESULTS')) OR
 (typevalue='inp_value_param_energy' AND id IN ('EFFIC','PATTERN','PRICE')) OR
-(typevalue='inp_value_reactions_el' AND id IN ('BULK','TANK','WALL')) OR
-(typevalue='inp_value_reactions_gl' AND id IN ('BULK','TANK','WALL')) OR
-(typevalue='inp_value_status_pipe' AND id IN ('CLOSED','CV','OPEN')) OR
-(typevalue='inp_value_status_pump' AND id IN ('CLOSED','OPEN')) OR
-(typevalue='inp_value_status_valve' AND id IN ('ACTIVE','CLOSED','OPEN')) OR
-(typevalue='inp_value_times' AND id IN ('AVERAGED','MAXIMUM','MINIMUM','NONE','RANGE')) OR
-(typevalue='inp_value_yesnofull' AND id IN ('FULL','NO','YES')) OR
+(typevalue='inp_value_reactions_el' AND id IN ('BULK_EL','TANK_EL','WALL_EL')) OR
+(typevalue='inp_value_reactions_gl' AND id IN ('BULK_GL','TANK_GL','WALL_GL')) OR
+(typevalue='inp_value_status_pipe' AND id IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE')) OR
+(typevalue='inp_value_status_pump' AND id IN ('CLOSED_PUMP','OPEN_PUMP')) OR
+(typevalue='inp_value_status_valve' AND id IN ('ACTIVE_VALVE','CLOSED_VALVE','OPEN_VALVE')) OR
+(typevalue='inp_value_times' AND id IN ('AVERAGED','MAXIMUM','MINIMUM','NONE_TIMES','RANGE')) OR
+(typevalue='inp_value_yesnofull' AND id IN ('FULL_YNF','NO_YNF','YES_YNF')) OR
 (typevalue='inp_typevalue_valve' AND id IN ('FCV','GPV','PBV','PRV','PSV','TCV')));
 
 --check typevalue
@@ -68,17 +68,18 @@ ALTER TABLE inp_mixing ADD CONSTRAINT inp_mixing_mix_type_check CHECK ( mix_type
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_units_check CHECK ( units IN ('AFD','CMD','CMH','GPM','IMGD','LPM','LPS','MGD','MLD'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_hydraulics_check CHECK ( hydraulics IN (' ','SAVE','USE'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_headloss_check CHECK ( headloss IN ('C-M','D-W','H-W'));
-ALTER TABLE inp_options ADD CONSTRAINT inp_options_quality_check CHECK ( quality IN ('AGE','CHEMICAL mg/L','CHEMICAL ug/L','NONE','TRACE'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_quality_check CHECK ( quality IN ('AGE','CHEMICAL mg/L','CHEMICAL ug/L','NONE_QUAL','TRACE'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_unbalanced_check CHECK ( unbalanced IN ('CONTINUE','STOP'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_rtc_coefficient_check CHECK ( rtc_coefficient IN ('AVG','MAX','MIN','REAL'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_valve_mode_check CHECK ( valve_mode IN ('EPA TABLES','INVENTORY VALUES','MINCUT RESULTS'));
 
-ALTER TABLE inp_reactions_el ADD CONSTRAINT inp_reactions_el_parameter_check CHECK ( parameter IN ('BULK','TANK','WALL'));
-ALTER TABLE inp_reactions_gl ADD CONSTRAINT inp_reactions_gl_parameter_check CHECK ( parameter IN ('BULK','TANK','WALL'));
+ALTER TABLE inp_reactions_el ADD CONSTRAINT inp_reactions_el_parameter_check CHECK ( parameter IN ('BULK_EL','TANK_EL','WALL_EL'));
+ALTER TABLE inp_reactions_gl ADD CONSTRAINT inp_reactions_gl_parameter_check CHECK ( parameter IN ('BULK_GL','TANK_GL','WALL_GL'));
+ALTER TABLE inp_reactions_gl ADD CONSTRAINT inp_reactions_gl_react_type_check CHECK ( react_type IN  ('GLOBAL_GL','LIMITING POTENTIAL','ORDER','ROUGHNESS CORRELATION'));
 
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_pressure_check CHECK ( pressure IN ('NO','YES'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_demand_check CHECK ( demand IN ('NO','YES'));
-ALTER TABLE inp_report ADD CONSTRAINT inp_report_status_check CHECK ( status IN ('FULL','NO','YES'));
+ALTER TABLE inp_report ADD CONSTRAINT inp_report_status_check CHECK ( status IN ('FULL_YNF','NO_YNF','YES_YNF'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_summary_check CHECK ( summary IN ('NO','YES'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_energy_check CHECK ( energy IN ('NO','YES'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_elevation_check CHECK ( elevation IN ('NO','YES'));
@@ -93,8 +94,8 @@ ALTER TABLE inp_report ADD CONSTRAINT inp_report_setting_check CHECK ( setting I
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_reaction_check CHECK ( reaction IN ('NO','YES'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_f_factor_check CHECK ( f_factor IN ('NO','YES'));
 
-ALTER TABLE inp_times ADD CONSTRAINT inp_times_f_statistic_check CHECK ( statistic IN ('AVERAGED','MAXIMUM','MINIMUM','NONE','RANGE'));
-ALTER TABLE inp_pump_additional ADD CONSTRAINT inp_pump_additional_pattern_check CHECK ( pattern IN ('CLOSED','OPEN'));
+ALTER TABLE inp_times ADD CONSTRAINT inp_times_f_statistic_check CHECK ( statistic IN ('AVERAGED','MAXIMUM','MINIMUM','NONE_TIMES','RANGE'));
+ALTER TABLE inp_pump_additional ADD CONSTRAINT inp_pump_additional_pattern_check CHECK ( pattern IN ('CLOSED_PUMP','OPEN_PUMP'));
 
 
 -- ADD UNIQUE

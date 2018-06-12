@@ -133,6 +133,10 @@ ALTER TABLE "rpt_node" DROP CONSTRAINT IF EXISTS "rpt_node_result_id_fkey";
 ALTER TABLE rpt_selector_hourly DROP CONSTRAINT IF EXISTS time_cur_user_unique;
 --ADD
 --INP
+
+
+ALTER TABLE  ws_sample.inp_typevalue add CONSTRAINT inp_typevalue_id_unique UNIQUE(id);
+
 ALTER TABLE inp_selector_dscenario ADD CONSTRAINT dscenario_id_cur_user_unique UNIQUE(dscenario_id, cur_user);
 ALTER TABLE "inp_selector_dscenario" ADD CONSTRAINT "inp_selector_dscenario_dscenario_id_fkey" FOREIGN KEY ("dscenario_id") REFERENCES "cat_dscenario" ("dscenario_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -251,10 +255,6 @@ ALTER TABLE "rpt_hydraulic_status" ADD CONSTRAINT "rpt_hydraulic_status_result_i
 ALTER TABLE "rpt_node" ADD CONSTRAINT "rpt_node_result_id_fkey" FOREIGN KEY ("result_id") REFERENCES "rpt_cat_result" ("result_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE rpt_selector_hourly ADD CONSTRAINT time_cur_user_unique UNIQUE(time, cur_user);
-
-
-
-
 
 
 

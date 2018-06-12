@@ -384,7 +384,7 @@ CONSTRAINT inp_reactions_gl_pkey PRIMARY KEY (id)
 CREATE TABLE "inp_report" (
 "pagesize" numeric,
 "file" varchar(254)  ,
-"status" varchar(4)  ,
+"status" varchar(10)  ,
 "summary" varchar(3)  ,
 "energy" varchar(3)  ,
 "nodes" varchar(254)  ,
@@ -484,7 +484,7 @@ CREATE TABLE "inp_valve" (
 CREATE TABLE inp_typevalue (
 typevalue varchar(50),
 id varchar(30),
-idval varchar(18),
+idval varchar(30),
 descript text,
 CONSTRAINT inp_typevalue_pkey PRIMARY KEY (typevalue,id)
 );
@@ -673,26 +673,6 @@ ALTER TABLE "inp_source" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_tags" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_tank" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_times" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_typevalue_energy" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_typevalue_pump" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_typevalue_reactions_gl" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_typevalue_source" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_typevalue_valve" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_ampm" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_curve" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_mixing" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_noneall" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_opti_headloss" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_opti_hyd" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_opti_qual" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_opti_unbal" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_opti_units" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_param_energy" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_reactions_el" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_reactions_gl" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_times" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_yesno" ADD PRIMARY KEY ("id");
-ALTER TABLE "inp_value_yesnofull" ADD PRIMARY KEY ("id");
 ALTER TABLE "rpt_cat_result" ADD PRIMARY KEY ("result_id");
 ALTER TABLE "rpt_arc" ADD PRIMARY KEY ("id");
 ALTER TABLE "rpt_energy_usage" ADD PRIMARY KEY ("id");

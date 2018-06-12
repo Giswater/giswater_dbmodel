@@ -251,6 +251,7 @@ ALTER TABLE "rpt_timestep_critelem" DROP CONSTRAINT IF EXISTS "rpt_timestep_crit
 
 --ADD
 --INP
+ALTER TABLE "inp_typevalue" ADD CONSTRAINT "inp_typevalue_typevalue_id" UNIQUE(typevalue,id);
 --ALTER TABLE "raingage" ADD CONSTRAINT "raingage_timser_id_fkey" FOREIGN KEY ("timser_id") REFERENCES "inp_timser_id" ("timser_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "raingage" ADD CONSTRAINT "raingage_expl_id_fkey" FOREIGN KEY ("expl_id") REFERENCES "exploitation" ("expl_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "raingage" ADD CONSTRAINT "raingage_form_type_fkey" FOREIGN KEY ("form_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
