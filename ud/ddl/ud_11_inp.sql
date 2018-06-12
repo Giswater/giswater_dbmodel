@@ -1137,7 +1137,7 @@ CREATE TABLE "inp_windspeed" (
 CREATE TABLE inp_typevalue (
 typevalue varchar(50),
 id varchar(30),
-idval varchar(18),
+idval varchar(30),
 descript text,
 CONSTRAINT inp_typevalue_pkey PRIMARY KEY (typevalue,id)
 );
