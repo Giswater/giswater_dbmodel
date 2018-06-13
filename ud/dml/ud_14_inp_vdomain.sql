@@ -163,7 +163,7 @@ INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_op
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_weirs', 'TRAPEZOIDAL_WEIR', 'TRAPEZOIDAL', 'TRAPEZOIDAL');
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_lidcontrol', 'STORAGE_LID', 'STORAGE', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_lidcontrol', 'SURFACE_LID', 'SURFACE', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_timserid', 'Temperature_TIME', 'Temperature', NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_timserid', 'Temperature_time', 'Temperature', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_washoff', 'EXP_WASHOFF', 'EXP', NULL);
 
 
@@ -173,7 +173,7 @@ INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_wa
 -- ----------------------------
  
 INSERT INTO inp_options 
-VALUES (1,'CMS', 'DYNWAVE', 'ELEVATION', 'H-W', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', '01/01/2017', '00:00:00', '01/02/2017', '00:00:00', '01/01/2001', '00:00:00', '01/01', '12/31', 10, '00:05:00', '00:05:00', '01:00:00', '00:00:02', NULL, NULL, 'NONE', 'BOTH', 0.000000, 0.000000, 'YES', NULL, 0, 0.0000, 5, 5);
+VALUES (1,'CMS', 'DYNWAVE', 'ELEVATION', 'H-W', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', '01/01/2017', '00:00:00', '01/02/2017', '00:00:00', '01/01/2001', '00:00:00', '01/01', '12/31', 10, '00:05:00', '00:05:00', '01:00:00', '00:00:02', NULL, NULL, 'NONE_OPTION', 'BOTH', 0.000000, 0.000000, 'YES', NULL, 0, 0.0000, 5, 5);
 
 -- ----------------------------
 -- Records of inp_report

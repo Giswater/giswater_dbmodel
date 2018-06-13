@@ -43,43 +43,43 @@ ALTER TABLE inp_flwreg_outlet ADD CONSTRAINT inp_flwreg_outlet_check CHECK (flwr
 
 
 ALTER TABLE inp_typevalue ADD CONSTRAINT inp_typevalue_check CHECK 
-((typevalue='inp_typevalue_divider' AND id IN ('CUTOFF','OVERFLOW','TABULAR','WEIR')) OR
-(typevalue='inp_typevalue_evap' AND id IN ('CONSTANT','FILE','MONTHLY','RECOVERY','TEMPERATURE','TIMESERIES')) OR
+((typevalue='inp_typevalue_divider' AND id IN ('CUTOFF','OVERFLOW','TABULAR_DIVIDER','WEIR')) OR
+(typevalue='inp_typevalue_evap' AND id IN ('CONSTANT','FILE_EVAP','MONTHLY_EVAP','RECOVERY','TEMPERATURE_EVAP','TIMESERIES_EVAP')) OR
 (typevalue='inp_typevalue_orifice' AND id IN ('BOTTOM','SIDE')) OR
-(typevalue='inp_typevalue_outfall' AND id IN  ('FIXED','FREE','NORMAL','TIDAL','TIMESERIES')) OR
+(typevalue='inp_typevalue_outfall' AND id IN  ('FIXED','FREE','NORMAL','TIDAL_OUTFALL','TIMESERIES_OUTFALL')) OR
 (typevalue='inp_typevalue_outlet' AND id IN ('FUNCTIONAL/DEPTH','FUNCTIONAL/HEAD','TABULAR/DEPTH','TABULAR/HEAD')) OR
-(typevalue='inp_typevalue_pattern' AND id IN ('DAILY','HOURLY','MONTHLY','WEEKEND')) OR
-(typevalue='inp_typevalue_raingage' AND id IN ('FILE','TIMESERIES')) OR
-(typevalue='inp_typevalue_storage' AND id IN ('FUNCTIONAL','TABULAR')) OR
-(typevalue='inp_typevalue_temp' AND id IN ('FILE','TIMESERIES')) OR
-(typevalue='inp_typevalue_timeseries' AND id IN ('ABSOLUTE','FILE','RELATIVE')) OR
-(typevalue='inp_typevalue_windsp' AND id IN ('FILE','MONTHLY')) OR
+(typevalue='inp_typevalue_pattern' AND id IN ('DAILY','HOURLY','MONTHLY_PATTERN','WEEKEND')) OR
+(typevalue='inp_typevalue_raingage' AND id IN ('FILE_RAIN','TIMESERIES_RAIN')) OR
+(typevalue='inp_typevalue_storage' AND id IN ('FUNCTIONAL','TABULAR_STORAGE')) OR
+(typevalue='inp_typevalue_temp' AND id IN ('FILE_TEMP','TIMESERIES_TEMP')) OR
+(typevalue='inp_typevalue_timeseries' AND id IN ('ABSOLUTE','FILE_TIME','RELATIVE')) OR
+(typevalue='inp_typevalue_windsp' AND id IN ('FILE_WINDSP','MONTHLY_WINDSP')) OR
 (typevalue='inp_value_allnone' AND id IN ('ALL','NONE')) OR
-(typevalue='inp_value_buildup' AND id IN ('EXP','EXT','POW','SAT')) OR
+(typevalue='inp_value_buildup' AND id IN ('EXP_BUILDUP','EXT_BUILDUP','POW','SAT')) OR
 (typevalue='inp_value_catarc' AND id IN ('ARCH','BASKETHANDLE','CIRCULAR','CUSTOM','DUMMY','EGG','FILLED_CIRCULAR','FORCE_MAIN','HORIZ_ELLIPSE','HORSESHOE',
 	'IRREGULAR','MODBASKETHANDLE','PARABOLIC','POWER','RECT_CLOSED','RECT_OPEN','RECT_ROUND','RECT_TRIANGULAR','SEMICIRCULAR','SEMIELLIPTICAL','TRAPEZOIDAL','TRIANGULAR','VIRTUAL')) OR
-(typevalue='inp_value_curve' AND id IN ('CONTROL','DIVERSION','PUMP1','PUMP2','PUMP3','PUMP4','RATING','SHAPE','STORAGE','TIDAL')) OR
+(typevalue='inp_value_curve' AND id IN ('CONTROL','DIVERSION','PUMP1','PUMP2','PUMP3','PUMP4','RATING','SHAPE','STORAGE_CURVE','TIDAL_CURVE')) OR
 (typevalue='inp_value_files_actio' AND id IN ('SAVE','USE')) OR
 (typevalue='inp_value_files_type' AND id IN ('HOTSTART','INFLOWS','OUTFLOWS','RAINFALL','RDII','RUNOFF')) OR
-(typevalue='inp_value_inflows' AND id IN ('CONCEN','MASS')) OR
-(typevalue='inp_value_lidcontrol' AND id IN ('BC','DRAIN','DRAINMAT','GR','IT','PAVEMENT','PP','RB','SOIL','STORAGE','SURFACE','VS')) OR
-(typevalue='inp_value_mapunits' AND id IN ('DEGREES','FEET','METERS','NONE')) OR
+(typevalue='inp_value_inflows' AND id IN ('CONCEN_INFLOWS','MASS')) OR
+(typevalue='inp_value_lidcontrol' AND id IN ('BC','DRAIN','DRAINMAT','GR','IT','PAVEMENT','PP','RB','SOIL','STORAGE_LID','SURFACE_LID','VS')) OR
+(typevalue='inp_value_mapunits' AND id IN ('DEGREES','FEET','METERS','NONE_MAP')) OR
 (typevalue='inp_value_options_fme' AND id IN ('D-W','H-W')) OR
 (typevalue='inp_value_options_fr' AND id IN ('DYNWAVE','KINWAVE','STEADY')) OR
 (typevalue='inp_value_options_fu' AND id IN ('CFS','CMS','GPM','LPS','MGD','MLD')) OR
-(typevalue='inp_value_options_id' AND id IN ('FULL','NONE','PARTIAL')) OR
+(typevalue='inp_value_options_id' AND id IN ('FULL','NONE_OPTION','PARTIAL')) OR
 (typevalue='inp_value_options_in' AND id IN ('CURVE_NUMBER','GREEN_AMPT','HORTON','GREEN_AMPT','MODIFIED_HORTON')) OR
 (typevalue='inp_value_options_lo' AND id IN ('DEPTH','ELEVATION')) OR
 (typevalue='inp_value_options_nfl' AND id IN ('BOTH','FROUD','SLOPE')) OR
-(typevalue='inp_value_orifice' AND id IN ('CIRCULAR','RECT-CLOSED')) OR
+(typevalue='inp_value_orifice' AND id IN ('CIRCULAR_ORIFICE','RECT-CLOSED_ORIFICE')) OR
 (typevalue='inp_value_pollutants' AND id IN ('#/L','MG/L','UG/L')) OR
 (typevalue='inp_value_raingage' AND id IN ('CUMULATIVE','INTENSITY','VOLUME')) OR
 (typevalue='inp_value_routeto' AND id IN ('IMPERVIOUS','OUTLET','PERVIOUS')) OR
 (typevalue='inp_value_status' AND id IN ('OFF','ON')) OR
-(typevalue='inp_value_timserid' AND id IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature') OR
-(typevalue='inp_value_treatment' AND id IN ('CONCEN','RATE','REMOVAL')) OR
-(typevalue='inp_value_washoff' AND id IN ('EMC','EXP','RC')) OR
-(typevalue='inp_value_weirs' AND id IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL','V-NOTCH')) OR
+(typevalue='inp_value_timserid' AND id IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature_time') OR
+(typevalue='inp_value_treatment' AND id IN ('CONCEN_TREAT','RATE','REMOVAL')) OR
+(typevalue='inp_value_washoff' AND id IN ('EMC','EXP_WASHOFF','RC')) OR
+(typevalue='inp_value_weirs' AND id IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL_WEIR','V-NOTCH')) OR
 (typevalue='inp_value_yesno' AND id IN ('YES','NO'))));
 
 
@@ -92,16 +92,16 @@ ALTER TABLE "inp_flwreg_outlet" ADD CONSTRAINT "inp_flwreg_outlet_unique" UNIQUE
 
 
 ALTER TABLE raingage ADD CONSTRAINT raingage_form_type_check CHECK (form_type IN ('CUMULATIVE','INTENSITY','VOLUME'));
-ALTER TABLE raingage ADD CONSTRAINT raingage_rgage_type_check CHECK (rgage_type IN ('FILE','TIMESERIES'));
+ALTER TABLE raingage ADD CONSTRAINT raingage_rgage_type_check CHECK (rgage_type IN ('FILE_RAIN','TIMESERIES_RAIN'));
 
 ALTER TABLE cat_hydrology ADD CONSTRAINT cat_hydrology_infiltration_check CHECK (infiltration IN ('CURVE_NUMBER','GREEN_AMPT','HORTON','GREEN_AMPT','MODIFIED_HORTON'));
-ALTER TABLE inp_curve_id ADD CONSTRAINT inp_curve_id_curve_type_check CHECK (curve_type IN ('CONTROL','DIVERSION','PUMP1','PUMP2','PUMP3','PUMP4','RATING','SHAPE','STORAGE','TIDAL'));
-ALTER TABLE inp_inflows_pol_x_node ADD CONSTRAINT inp_inflows_pol_x_node_form_type_check CHECK (form_type IN ('CONCEN','MASS'));
-ALTER TABLE inp_lid_control ADD CONSTRAINT inp_lid_control_lidco_type_check CHECK (lidco_type IN ('BC','DRAIN','DRAINMAT','GR','IT','PAVEMENT','PP','RB','SOIL','STORAGE','SURFACE','VS'));
+ALTER TABLE inp_curve_id ADD CONSTRAINT inp_curve_id_curve_type_check CHECK (curve_type IN ('CONTROL','DIVERSION','PUMP1','PUMP2','PUMP3','PUMP4','RATING','SHAPE','STORAGE_CURVE','TIDAL_CURVE'));
+ALTER TABLE inp_inflows_pol_x_node ADD CONSTRAINT inp_inflows_pol_x_node_form_type_check CHECK (form_type IN ('CONCEN_INFLOWS','MASS'));
+ALTER TABLE inp_lid_control ADD CONSTRAINT inp_lid_control_lidco_type_check CHECK (lidco_type IN ('BC','DRAIN','DRAINMAT','GR','IT','PAVEMENT','PP','RB','SOIL','STORAGE_LID','SURFACE_LID','VS'));
 
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_allow_ponding_check CHECK (allow_ponding IN ('YES','NO'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_normal_flow_limited_check CHECK (normal_flow_limited IN ('BOTH','FROUD','SLOPE'));
-ALTER TABLE inp_options ADD CONSTRAINT inp_options_inertial_damping_check CHECK (inertial_damping IN ('FULL','NONE','PARTIAL'));
+ALTER TABLE inp_options ADD CONSTRAINT inp_options_inertial_damping_check CHECK (inertial_damping IN ('FULL','NONE_OPTION','PARTIAL'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_skip_steady_state_check CHECK (skip_steady_state IN ('YES','NO'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_ignore_quality_check CHECK (ignore_quality IN ('YES','NO'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_ignore_routing_check CHECK (ignore_routing IN ('YES','NO'));
@@ -123,10 +123,10 @@ ALTER TABLE inp_report ADD CONSTRAINT inp_report_input_check CHECK (input IN ('Y
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_continuity_check CHECK (continuity IN ('YES','NO'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_flowstats_check CHECK (flowstats IN ('YES','NO'));
 
-ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timser_type_check CHECK (timser_type IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature'));
+ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timser_type_check CHECK (timser_type IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature_time'));
 ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timses_type_check CHECK (times_type IN ('ABSOLUTE','FILE','RELATIVE'));
 
-ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_weir_type_check CHECK (weir_type IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL','V-NOTCH'));
+ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_weir_type_check CHECK (weir_type IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL_WEIR','V-NOTCH'));
 ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_flap_check CHECK (flap IN ('YES','NO'));
 
 ALTER TABLE inp_flwreg_orifice ADD CONSTRAINT inp_flwreg_orifice_shape_check CHECK (shape IN ('CIRCULAR','RECT-CLOSED'));
@@ -136,12 +136,12 @@ ALTER TABLE inp_flwreg_weir ADD CONSTRAINT inp_flwreg_weir_flap_check CHECK (fla
 ALTER TABLE inp_flwreg_orifice ADD CONSTRAINT inp_flwreg_orifice_ori_type_check CHECK (ori_type IN ('BOTTOM','SIDE'));
 ALTER TABLE inp_flwreg_outlet ADD CONSTRAINT inp_flwreg_outlet_outlet_type_check CHECK (outlet_type IN ('FUNCTIONAL/DEPTH','FUNCTIONAL/HEAD','TABULAR/DEPTH','TABULAR/HEAD'));
 
-ALTER TABLE inp_divider ADD CONSTRAINT inp_divider_divider_type_check CHECK (divider_type IN ('CUTOFF','OVERFLOW','TABULAR','WEIR'));
-ALTER TABLE inp_evaporation ADD CONSTRAINT inp_evaporation_evap_type_check CHECK (evap_type IN ('CUTOFF','OVERFLOW','TABULAR','WEIR'));
-ALTER TABLE inp_outfall ADD CONSTRAINT inp_outfall_outfall_type_check CHECK (outfall_type IN ('FIXED','FREE','NORMAL','TIDAL','TIMESERIES'));
+ALTER TABLE inp_divider ADD CONSTRAINT inp_divider_divider_type_check CHECK (divider_type IN ('CUTOFF','OVERFLOW','TABULAR_DIVIDER','WEIR'));
+ALTER TABLE inp_evaporation ADD CONSTRAINT inp_evaporation_evap_type_check CHECK (evap_type IN('CONSTANT','FILE_EVAP','MONTHLY_EVAP','RECOVERY','TEMPERATURE_EVAP','TIMESERIES_EVAP'));
+ALTER TABLE inp_outfall ADD CONSTRAINT inp_outfall_outfall_type_check CHECK (outfall_type IN ('FIXED','FREE','NORMAL','TIDAL_OUTFALL','TIMESERIES_OUTFALL'));
 ALTER TABLE inp_outlet ADD CONSTRAINT inp_outlet_outlet_type_check CHECK (outlet_type IN ('FUNCTIONAL/DEPTH','FUNCTIONAL/HEAD','TABULAR/DEPTH','TABULAR/HEAD'));
-ALTER TABLE inp_pattern ADD CONSTRAINT inp_pattern_pattern_type_check CHECK (pattern_type IN ('DAILY','HOURLY','MONTHLY','WEEKEND'));
-ALTER TABLE inp_storage ADD CONSTRAINT inp_storage_storage_type_check CHECK (storage_type IN ('FUNCTIONAL','TABULAR'));
-ALTER TABLE inp_windspeed ADD CONSTRAINT inp_windspeed_wind_type_check CHECK (wind_type IN ('FILE','MONTHLY'));
+ALTER TABLE inp_pattern ADD CONSTRAINT inp_pattern_pattern_type_check CHECK (pattern_type IN ('DAILY','HOURLY','MONTHLY_PATTERN','WEEKEND'));
+ALTER TABLE inp_storage ADD CONSTRAINT inp_storage_storage_type_check CHECK (storage_type IN ('FUNCTIONAL','TABULAR_STORAGE'));
+ALTER TABLE inp_windspeed ADD CONSTRAINT inp_windspeed_wind_type_check CHECK (wind_type IN ('FILE_WINDSP','MONTHLY_WINDSP'));
 
 
