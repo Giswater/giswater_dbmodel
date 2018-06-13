@@ -262,7 +262,10 @@ UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='locat
 dv_querytext='SELECT location_type as id, location_type as idval FROM man_type_location WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
 WHERE column_id='location_type' and table_id ilike 've_connec%';
 
-	
+
+update config_api_layer_field set isnavigationbutton=TRUE where column_id='arc_id' OR  column_id='node_id' OR  column_id='conenc_id' OR  column_id='node_1' 
+	OR column_id='node_2' OR  column_id='gully_id' OR  column_id='workcat_id' OR  column_id='workcat_id_end';
+
 UPDATE config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='cat_matcat_id';
 UPDATE config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='cat_pnom';	
 UPDATE config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='cat_dnom';		
