@@ -141,125 +141,125 @@ FROM information_schema.columns, information_schema.tables
 
 
 update config_api_layer_field set dv_table='cat_node', dv_id_column='id', dv_name_column='id',form_label='nodecat_id', sys_api_cat_widgettype_id=2, ismandatory=TRUE, 
-dv_querytext='SELECT id FROM cat_node WHERE id IS NOT NULL', dv_filterbyfield= 'nodetype_id' WHERE column_id='nodecat_id';	
+dv_querytext='SELECT id, id as idval FROM cat_node WHERE id IS NOT NULL', dv_filterbyfield= 'nodetype_id' WHERE column_id='nodecat_id';	
 
 update config_api_layer_field set dv_table='cat_arc', dv_id_column='id', dv_name_column='id',form_label='arccat_id', sys_api_cat_widgettype_id=2, ismandatory=TRUE, 
-dv_querytext='SELECT id FROM cat_node WHERE id IS NOT NULL', dv_filterbyfield= 'arctype_id' WHERE column_id='arccat_id';
+dv_querytext='SELECT id, id as idval FROM cat_arc WHERE id IS NOT NULL', dv_filterbyfield= 'arctype_id' WHERE column_id='arccat_id';
 
 update config_api_layer_field set dv_table='cat_connec', dv_id_column='id', dv_name_column='id',form_label='connecat_id', sys_api_cat_widgettype_id=2, ismandatory=TRUE, 
-dv_querytext='SELECT id FROM cat_node WHERE id IS NOT NULL', dv_filterbyfield= 'connectype_id' WHERE column_id='connecat_id';
+dv_querytext='SELECT id, id as idval FROM cat_connec WHERE id IS NOT NULL', dv_filterbyfield= 'connectype_id' WHERE column_id='connecat_id';
 
 UPDATE config_api_layer_field SET dv_table='exploitation', dv_id_column='expl_id', dv_name_column='name', form_label='exploitation' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT expl_id, name FROM exploitation WHERE expl_id IS NOT NULL' WHERE column_id='expl_id';
+dv_querytext='SELECT expl_id as id, name as idval FROM exploitation WHERE expl_id IS NOT NULL' WHERE column_id='expl_id';
 
 UPDATE config_api_layer_field SET dv_table='dma', dv_id_column='dma_id', dv_name_column='name', form_label='dma' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT dma_id, name FROM dma WHERE dma_id IS NOT NULL', dv_filterbyfield='expl_id' WHERE column_id='dma_id';
+dv_querytext='SELECT dma_id as id, name as idval FROM dma WHERE dma_id IS NOT NULL', dv_filterbyfield='expl_id' WHERE column_id='dma_id';
 
 UPDATE config_api_layer_field SET dv_table='cat_presszone', dv_id_column='id', dv_name_column='id', form_label='cat_presszone' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM cat_presszone WHERE id IS NOT NULL', dv_filterbyfield='expl_id' WHERE column_id='presszonecat_id';
+dv_querytext='SELECT id, id as idval FROM cat_presszone WHERE id IS NOT NULL', dv_filterbyfield='expl_id' WHERE column_id='presszonecat_id';
 
 UPDATE config_api_layer_field SET dv_table='value_state', dv_id_column='id', dv_name_column='name', form_label='state' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id, name FROM value_state WHERE id IS NOT NULL' WHERE column_id='state';
+dv_querytext='SELECT id, name as idval FROM value_state WHERE id IS NOT NULL' WHERE column_id='state';
 
 UPDATE config_api_layer_field SET dv_table='value_state_type', dv_id_column='id', dv_name_column='name', form_label='state' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id, name FROM value_state_type WHERE id IS NOT NULL',  dv_filterbyfield='state' WHERE column_id='state_type';
+dv_querytext='SELECT id, name as idval FROM value_state_type WHERE id IS NOT NULL',  dv_filterbyfield='state' WHERE column_id='state_type';
 
 UPDATE config_api_layer_field SET dv_table='inp_node_type', dv_id_column='id', dv_name_column='id', form_label='epa type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT id FROM inp_node_type WHERE id IS NOT NULL'WHERE column_id='epa_type' and table_id ilike 've_node%';
+dv_querytext='SELECT id, id as idval FROM inp_node_type WHERE id IS NOT NULL'WHERE column_id='epa_type' and table_id ilike 've_node%';
 
 UPDATE config_api_layer_field SET dv_table='inp_arc_type', dv_id_column='id', dv_name_column='id', form_label='epa type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT id FROM inp_arc_type WHERE id IS NOT NULL'WHERE column_id='epa_type' and table_id ilike 've_arc%';
+dv_querytext='SELECT id, id as idval FROM inp_arc_type WHERE id IS NOT NULL'WHERE column_id='epa_type' and table_id ilike 've_arc%';
 
 UPDATE config_api_layer_field SET dv_table='sector', dv_id_column='sector_id', dv_name_column='name', form_label='sector' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT sector_id,name FROM sector WHERE sector_id IS NOT NULL', dv_filterbyfield='macrosector_id' WHERE column_id='sector_id';
+dv_querytext='SELECT sector_id as id,name as idval FROM sector WHERE sector_id IS NOT NULL', dv_filterbyfield='macrosector_id' WHERE column_id='sector_id';
 
 UPDATE config_api_layer_field SET dv_table='macrosector', dv_id_column='macrosector_id', dv_name_column='name', form_label='macrosector' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT macrosector_id,name FROM macrosector WHERE macrosector_id IS NOT NULL' WHERE column_id='macrosector_id';
+dv_querytext='SELECT macrosector_id as id,name as idval FROM macrosector WHERE macrosector_id IS NOT NULL' WHERE column_id='macrosector_id';
 
 UPDATE config_api_layer_field SET dv_table='arc', dv_id_column='arc_id', dv_name_column='arc_id', form_label='arc_id' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT arc_id FROM arc WHERE arc_id IS NOT NULL' WHERE column_id='arc_id' and (table_id ilike 've_node%' or table_id ilike 've_connec%');
+dv_querytext='SELECT arc_id as id, arc_id as idval FROM arc WHERE arc_id IS NOT NULL' WHERE column_id='arc_id' and (table_id ilike 've_node%' or table_id ilike 've_connec%');
 
 
 UPDATE config_api_layer_field SET dv_table='cat_soil', dv_id_column='id', dv_name_column='name', form_label='soilcat_id' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM cat_soil WHERE id IS NOT NULL' WHERE column_id='soilcat_id';
+dv_querytext='SELECT id, id as idval FROM cat_soil WHERE id IS NOT NULL' WHERE column_id='soilcat_id';
 
 UPDATE config_api_layer_field SET dv_table='cat_work', dv_id_column='id', dv_name_column='id', form_label='work_id' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM cat_work WHERE id IS NOT NULL' WHERE column_id='workcat_id';
+dv_querytext='SELECT id, id as idval FROM cat_work WHERE id IS NOT NULL' WHERE column_id='workcat_id';
 
 UPDATE config_api_layer_field SET dv_table='cat_work', dv_id_column='id', dv_name_column='id', form_label='work_id_end' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM cat_work WHERE id IS NOT NULL' WHERE column_id='workcat_id_end';
+dv_querytext='SELECT id, id as idval FROM cat_work WHERE id IS NOT NULL' WHERE column_id='workcat_id_end';
 
 UPDATE config_api_layer_field SET dv_table='cat_buildet', dv_id_column='id', dv_name_column='id', form_label='builder' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM cat_builder WHERE id IS NOT NULL' WHERE column_id='buildercat_id';
+dv_querytext='SELECT id, id as idval FROM cat_builder WHERE id IS NOT NULL' WHERE column_id='buildercat_id';
 
 UPDATE config_api_layer_field SET dv_table='cat_owner', dv_id_column='id', dv_name_column='id', form_label='owner' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM cat_owner WHERE id IS NOT NULL' WHERE column_id='ownercat_id';
+dv_querytext='SELECT id, id as idval FROM cat_owner WHERE id IS NOT NULL' WHERE column_id='ownercat_id';
 
 UPDATE config_api_layer_field SET dv_table='ext_municipality', dv_id_column='muni_id', dv_name_column='name', form_label='municipality' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT muni_id FROM ext_municipality WHERE muni_id IS NOT NULL' WHERE column_id='muni_id';
+dv_querytext='SELECT muni_id as id, name as idval FROM ext_municipality WHERE muni_id IS NOT NULL' WHERE column_id='muni_id';
 
 UPDATE config_api_layer_field SET dv_table='ext_streetaxis', dv_id_column='id', dv_name_column='name', form_label='streetaxis_id' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id,name FROM ext_streetaxis WHERE id IS NOT NULL', dv_filterbyfield='muni_id'  WHERE column_id='streetaxis_id';
+dv_querytext='SELECT id,name as idval FROM ext_streetaxis WHERE id IS NOT NULL', dv_filterbyfield='muni_id'  WHERE column_id='streetaxis_id';
 
 UPDATE config_api_layer_field SET dv_table='ext_streetaxis', dv_id_column='id', dv_name_column='name', form_label='streetaxis_id2' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id,name FROM ext_streetaxis WHERE id IS NOT NULL', dv_filterbyfield='muni_id'  WHERE column_id='streetaxis_id2';
+dv_querytext='SELECT id,name as idval FROM ext_streetaxis WHERE id IS NOT NULL', dv_filterbyfield='muni_id'  WHERE column_id='streetaxis_id2';
 
 UPDATE config_api_layer_field SET dv_table='value_verified', dv_id_column='id', dv_name_column='id', form_label='verified' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT id FROM value_verified WHERE id IS NOT NULL' WHERE column_id='verified';
+dv_querytext='SELECT id, id as idval FROM value_verified WHERE id IS NOT NULL' WHERE column_id='verified';
 
 
 
 
 UPDATE config_api_layer_field SET dv_table='man_type_function', dv_id_column='function_type', dv_name_column='function_type', form_label='function_type' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT function_type FROM man_type_function WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
+dv_querytext='SELECT function_type as id, function_type as idval FROM man_type_function WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
 WHERE column_id='function_type' and table_id ilike 've_node%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_function', dv_id_column='function_type', dv_name_column='function_type', form_label='function_type' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT function_type FROM man_type_function WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id' 
+dv_querytext='SELECT function_type as id, function_type as idval FROM man_type_function WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id' 
 WHERE column_id='function_type' and table_id ilike 've_arc%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_function', dv_id_column='function_type', dv_name_column='function_type', form_label='function_type' , sys_api_cat_widgettype_id=2,
-dv_querytext='SELECT function_type FROM man_type_function WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id' 
+dv_querytext='SELECT function_type as id, function_type as idval FROM man_type_function WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id' 
 WHERE column_id='function_type' and table_id ilike 've_connec%';
 
 
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='fluid_type', dv_name_column='fluid_type', form_label='fluid_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT fluid_type FROM man_type_fluid WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
+dv_querytext='SELECT fluid_type as id, fluid_type as idval FROM man_type_fluid WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
 WHERE column_id='fluid_type' and table_id ilike 've_node%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='fluid_type', dv_name_column='fluid_type', form_label='fluid_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT fluid_type FROM man_type_fluid WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id'
+dv_querytext='SELECT  fluid_type as id, fluid_type as idval FROM man_type_fluid WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id'
 WHERE column_id='fluid_type' and table_id ilike 've_arc%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='category_type', dv_name_column='fluid_type', form_label='fluid_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT fluid_type FROM man_type_fluid WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
+dv_querytext='SELECT  fluid_type as id, fluid_type as idval FROM man_type_fluid WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
 WHERE column_id='fluid_type' and table_id ilike 've_connec%';
 
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='category_type', dv_name_column='category_type', form_label='category_type' , sys_api_cat_widgettype_id=2 ,
-dv_querytext='SELECT category_type FROM man_type_category WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
+dv_querytext='SELECT category_type as id, category_type as idval FROM man_type_category WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
 WHERE column_id='category_type' and table_id ilike 've_node%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='category_type', dv_name_column='category_type', form_label='category_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT category_type FROM man_type_category WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id'
+dv_querytext='SELECT category_type as id, category_type as idval FROM man_type_category WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id'
 WHERE column_id='category_type' and table_id ilike 've_arc%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='category_type', dv_name_column='category_type', form_label='category_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT category_type FROM man_type_category WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
+dv_querytext='SELECT category_type as id, category_type as idval FROM man_type_category WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
 WHERE column_id='category_type' and table_id ilike 've_connec%';
 
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='location_type', dv_name_column='location_type', form_label='location_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT location_type FROM man_type_location WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
+dv_querytext='SELECT location_type as id, location_type as idval FROM man_type_location WHERE (featurecat_id is null AND feature_type=''NODE'')', dv_filterbyfield='nodetype_id'
 WHERE column_id='location_type' and table_id ilike 've_node%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='location_type', dv_name_column='location_type', form_label='location_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT location_type FROM man_type_location WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id'
+dv_querytext='SELECT location_type as id, location_type as idval FROM man_type_location WHERE (featurecat_id is null AND feature_type=''ARC'')', dv_filterbyfield='arctype_id'
 WHERE column_id='location_type' and table_id ilike 've_arc%';
 
 UPDATE config_api_layer_field SET dv_table='man_type_fluid', dv_id_column='location_type', dv_name_column='location_type', form_label='location_type' , sys_api_cat_widgettype_id=2, 
-dv_querytext='SELECT location_type FROM man_type_location WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
+dv_querytext='SELECT location_type as id, location_type as idval FROM man_type_location WHERE (featurecat_id is null AND feature_type=''CONNEC'')', dv_filterbyfield='connectype_id'
 WHERE column_id='location_type' and table_id ilike 've_connec%';
 
 	
