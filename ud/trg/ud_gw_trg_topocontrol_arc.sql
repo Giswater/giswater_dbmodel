@@ -32,7 +32,7 @@ DECLARE
 	connec_id_aux varchar;
     gully_id_aux varchar;
     array_agg varchar [];
-	
+	project_type_aux varchar;
 
 BEGIN 
 

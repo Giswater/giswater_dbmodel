@@ -59,7 +59,7 @@ CREATE TABLE "config_param_system" (
 "value" text,
 "data_type" varchar(20),
 "context" varchar (50),
-"descript" text
+"descript" text,
 sys_api_cat_datatype_id integer,
 sys_api_cat_widgettype_id integer,
 form_label text,
@@ -287,24 +287,6 @@ orderby integer,
 layout_id integer,
 layout_order integer
 );
-
-
-  id text NOT NULL,
-  context text,
-  description text,
-  sys_role_id character varying(30),
-  qgis_message text,
-  dv_table text,
-  dv_column text,
-  data_type text,
-  sys_api_cat_datatype_id integer,
-  sys_api_cat_widgettype_id integer,
-  form_label text,
-  dv_filterbyfield text,
-  isenabled boolean,
-  orderby integer,
-  layout_id integer,
-  layout_order integer,
 
 
 -- Catalog of columns
