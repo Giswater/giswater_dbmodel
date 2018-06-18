@@ -60,26 +60,12 @@ ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_reaction_check;
 ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_f_factor_check;
 
 ALTER TABLE inp_times DROP CONSTRAINT IF EXISTS inp_times_f_statistic_check;
-ALTER TABLE inp_pump_DROPitional DROP CONSTRAINT IF EXISTS inp_pump_DROPitional_pattern_check;
-
-
-
-
-
-
-
-
+ALTER TABLE inp_pump_additional DROP CONSTRAINT IF EXISTS inp_pump_additional_pattern_check;
 
 
 
 --DROP UNIQUE
 ALTER TABLE "inp_pump_additional" DROP CONSTRAINT IF EXISTS "inp_pump_additional_unique";
-
-
-
-
-
-
 
 
 

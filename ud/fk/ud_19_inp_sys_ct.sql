@@ -10,7 +10,7 @@ SET search_path = "SCHEMA_NAME", public, pg_catalog;
 --DROP CHECK
 ALTER TABLE inp_typevalue DROP CONSTRAINT IF EXISTS inp_typevalue_check;
 ALTER TABLE "inp_options" DROP CONSTRAINT IF EXISTS "inp_options_check";
-ALTER TABLE "inp_timser_id" DROP CONSTRAINT IF EXISTS "inp_timser_id_check";
+
 
 ALTER TABLE "inp_arc_type" DROP CONSTRAINT IF EXISTS "inp_arc_type_check";
 ALTER TABLE "inp_node_type" DROP CONSTRAINT IF EXISTS "inp_node_type_check";
@@ -20,76 +20,76 @@ ALTER TABLE "inp_flwreg_weir" DROP CONSTRAINT IF EXISTS "inp_flwreg_weir_check" 
 ALTER TABLE "inp_flwreg_outlet" DROP CONSTRAINT IF EXISTS "inp_flwreg_outlet_check" ;
 
 
-ALTER TABLE raingage DROP CONSTRAINT raingage_form_type_check;
-ALTER TABLE raingage DROP CONSTRAINT raingage_rgage_type_check;
+ALTER TABLE raingage DROP CONSTRAINT IF EXISTS raingage_form_type_check;
+ALTER TABLE raingage DROP CONSTRAINT IF EXISTS raingage_rgage_type_check;
 
-ALTER TABLE inp_timser_id DROP CONSTRAINT inp_timser_id_timser_type_check;
+ALTER TABLE inp_timser_id DROP CONSTRAINT IF EXISTS inp_timser_id_check;
 
-ALTER TABLE inp_subcatchment DROP CONSTRAINT inp_subcatchment_routeto_check;
+ALTER TABLE subcatchment DROP CONSTRAINT IF EXISTS subcatchment_routeto_check;
 
-ALTER TABLE inp_pollutant DROP CONSTRAINT inp_pollutant_units_type_check;
+ALTER TABLE inp_pollutant DROP CONSTRAINT IF EXISTS inp_pollutant_units_type_check;
 
-ALTER TABLE cat_hydrology DROP CONSTRAINT cat_hydrology_infiltration_check;
-ALTER TABLE inp_curve_id DROP CONSTRAINT inp_curve_id_curve_type_check;
-ALTER TABLE inp_inflows_pol_x_node DROP CONSTRAINT inp_inflows_pol_x_node_form_type_check;
-ALTER TABLE inp_lid_control DROP CONSTRAINT inp_lid_control_lidco_type_check;
+ALTER TABLE cat_hydrology DROP CONSTRAINT IF EXISTS cat_hydrology_infiltration_check;
+ALTER TABLE inp_curve_id DROP CONSTRAINT IF EXISTS inp_curve_id_curve_type_check;
+ALTER TABLE inp_inflows_pol_x_node DROP CONSTRAINT IF EXISTS inp_inflows_pol_x_node_form_type_check;
+ALTER TABLE inp_lid_control DROP CONSTRAINT IF EXISTS inp_lid_control_lidco_type_check;
 
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_allow_ponding_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_normal_flow_limited_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_inertial_damping_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_skip_steady_state_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_ignore_quality_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_ignore_routing_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_ignore_groundwater_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_ignore_snowmelt_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_ignore_rainfall_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_force_main_equation_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_link_offsets_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_flow_routing_check;
-ALTER TABLE inp_options DROP CONSTRAINT inp_options_flow_units_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_allow_ponding_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_normal_flow_limited_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_inertial_damping_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_skip_steady_state_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_ignore_quality_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_ignore_routing_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_ignore_groundwater_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_ignore_snowmelt_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_ignore_rainfall_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_force_main_equation_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_link_offsets_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_flow_routing_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_flow_units_check;
 
-ALTER TABLE inp_orifice DROP CONSTRAINT inp_orifice_shape_check;
-ALTER TABLE inp_orifice DROP CONSTRAINT inp_orifice_ori_type_check;
+ALTER TABLE inp_orifice DROP CONSTRAINT IF EXISTS inp_orifice_shape_check;
+ALTER TABLE inp_orifice DROP CONSTRAINT IF EXISTS inp_orifice_ori_type_check;
 
-ALTER TABLE inp_pump DROP CONSTRAINT inp_pump_status_check;
+ALTER TABLE inp_pump DROP CONSTRAINT IF EXISTS inp_pump_status_check;
 
-ALTER TABLE inp_washoff_land_x_pol DROP CONSTRAINT inp_washoff_land_x_pol_funcw_type_check;
+ALTER TABLE inp_washoff_land_x_pol DROP CONSTRAINT IF EXISTS inp_washoff_land_x_pol_funcw_type_check;
 
-ALTER TABLE inp_files DROP CONSTRAINT inp_files_actio_type_check;
-ALTER TABLE inp_files DROP CONSTRAINT inp_files_file_type_check;
+ALTER TABLE inp_files DROP CONSTRAINT IF EXISTS inp_files_actio_type_check;
+ALTER TABLE inp_files DROP CONSTRAINT IF EXISTS inp_files_file_type_check;
 
-ALTER TABLE inp_report DROP CONSTRAINT inp_report_controls_check;
-ALTER TABLE inp_report DROP CONSTRAINT inp_report_input_check;
-ALTER TABLE inp_report DROP CONSTRAINT inp_report_continuity_check;
-ALTER TABLE inp_report DROP CONSTRAINT inp_report_flowstats_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_controls_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_input_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_continuity_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_flowstats_check;
 
-ALTER TABLE inp_temperature	 DROP CONSTRAINT inp_temperature_temp_type_check;
+ALTER TABLE inp_temperature	 DROP CONSTRAINT IF EXISTS inp_temperature_temp_type_check;
 
-ALTER TABLE inp_timser_id DROP CONSTRAINT inp_timser_id_timser_type_check;
-ALTER TABLE inp_timser_id DROP CONSTRAINT inp_timser_id_timses_type_check;
+ALTER TABLE inp_timser_id DROP CONSTRAINT IF EXISTS inp_timser_id_timser_type_check;
+ALTER TABLE inp_timser_id DROP CONSTRAINT IF EXISTS inp_timser_id_times_type_check;
 
-ALTER TABLE inp_weir DROP CONSTRAINT inp_weir_weir_type_check;
-ALTER TABLE inp_weir DROP CONSTRAINT inp_weir_flap_check;
+ALTER TABLE inp_weir DROP CONSTRAINT IF EXISTS inp_weir_weir_type_check;
+ALTER TABLE inp_weir DROP CONSTRAINT IF EXISTS inp_weir_flap_check;
 
-ALTER TABLE inp_buildup_land_x_pol DROP CONSTRAINT inp_buildup_land_x_pol_funcb_type_check;
+ALTER TABLE inp_buildup_land_x_pol DROP CONSTRAINT IF EXISTS inp_buildup_land_x_pol_funcb_type_check;
 
-ALTER TABLE inp_treatment_node_x_pol DROP CONSTRAINT inp_treatment_node_x_pol_function_check;
+ALTER TABLE inp_treatment_node_x_pol DROP CONSTRAINT IF EXISTS inp_treatment_node_x_pol_function_check;
 
-ALTER TABLE inp_flwreg_orifice DROP CONSTRAINT inp_flwreg_orifice_shape_check;
-ALTER TABLE inp_flwreg_pump DROP CONSTRAINT inp_flwreg_pump_status_check;
-ALTER TABLE inp_flwreg_weir DROP CONSTRAINT inp_flwreg_weir_weir_type_check;
-ALTER TABLE inp_flwreg_weir DROP CONSTRAINT inp_flwreg_weir_flap_check;
-ALTER TABLE inp_flwreg_orifice DROP CONSTRAINT inp_flwreg_orifice_ori_type_check;
-ALTER TABLE inp_flwreg_orifice DROP CONSTRAINT inp_flwreg_orifice_shape_check;
-ALTER TABLE inp_flwreg_outlet DROP CONSTRAINT inp_flwreg_outlet_outlet_type_check;
 
-ALTER TABLE inp_divider DROP CONSTRAINT inp_divider_divider_type_check;
-ALTER TABLE inp_evaporation DROP CONSTRAINT inp_evaporation_evap_type_check;
-ALTER TABLE inp_outfall DROP CONSTRAINT inp_outfall_outfall_type_check;
-ALTER TABLE inp_outlet DROP CONSTRAINT inp_outlet_outlet_type_check;
-ALTER TABLE inp_pattern DROP CONSTRAINT inp_pattern_pattern_type_check;
-ALTER TABLE inp_storage DROP CONSTRAINT inp_storage_storage_type_check;
-ALTER TABLE inp_windspeed DROP CONSTRAINT inp_windspeed_wind_type_check;
+ALTER TABLE inp_flwreg_pump DROP CONSTRAINT IF EXISTS inp_flwreg_pump_status_check;
+ALTER TABLE inp_flwreg_weir DROP CONSTRAINT IF EXISTS inp_flwreg_weir_weir_type_check;
+ALTER TABLE inp_flwreg_weir DROP CONSTRAINT IF EXISTS inp_flwreg_weir_flap_check;
+ALTER TABLE inp_flwreg_orifice DROP CONSTRAINT IF EXISTS inp_flwreg_orifice_ori_type_check;
+ALTER TABLE inp_flwreg_orifice DROP CONSTRAINT IF EXISTS inp_flwreg_orifice_shape_check;
+ALTER TABLE inp_flwreg_outlet DROP CONSTRAINT IF EXISTS inp_flwreg_outlet_outlet_type_check;
+
+ALTER TABLE inp_divider DROP CONSTRAINT IF EXISTS inp_divider_divider_type_check;
+ALTER TABLE inp_evaporation DROP CONSTRAINT IF EXISTS inp_evaporation_evap_type_check;
+ALTER TABLE inp_outfall DROP CONSTRAINT IF EXISTS inp_outfall_outfall_type_check;
+ALTER TABLE inp_outlet DROP CONSTRAINT IF EXISTS inp_outlet_outlet_type_check;
+ALTER TABLE inp_pattern DROP CONSTRAINT IF EXISTS inp_pattern_pattern_type_check;
+ALTER TABLE inp_storage DROP CONSTRAINT IF EXISTS inp_storage_storage_type_check;
+ALTER TABLE inp_windspeed DROP CONSTRAINT IF EXISTS inp_windspeed_wind_type_check;
 
 
 
@@ -104,6 +104,11 @@ ALTER TABLE "inp_flwreg_outlet" DROP CONSTRAINT IF EXISTS "inp_flwreg_outlet_uni
 
 -- ADD CHECK
 ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_check CHECK (id IN ('T10-5m','T5-5m'));
+
+ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timser_type_check CHECK (timser_type IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature_time'));
+ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_times_type_check CHECK (times_type IN ('ABSOLUTE','FILE_TIME','RELATIVE'));
+
+
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_check CHECK (id IN (1));
 
 ALTER TABLE inp_arc_type ADD CONSTRAINT inp_arc_type_check CHECK (id IN ('CONDUIT','NOT DEFINED','ORIFICE','OUTLET','PUMP','VIRTUAL','WEIR'));
@@ -167,9 +172,7 @@ ALTER TABLE "inp_flwreg_outlet" ADD CONSTRAINT "inp_flwreg_outlet_unique" UNIQUE
 ALTER TABLE raingage ADD CONSTRAINT raingage_form_type_check CHECK (form_type IN ('CUMULATIVE','INTENSITY','VOLUME'));
 ALTER TABLE raingage ADD CONSTRAINT raingage_rgage_type_check CHECK (rgage_type IN ('FILE_RAIN','TIMESERIES_RAIN'));
 
-ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timser_type_check CHECK (timser_type IN ('ABSOLUTE','FILE_TIME','RELATIVE'));
-
-ALTER TABLE inp_subcatchment ADD CONSTRAINT inp_subcatchment_routeto_check CHECK (routeto IN ('IMPERVIOUS','OUTLET','PERVIOUS'));
+ALTER TABLE subcatchment ADD CONSTRAINT subcatchment_routeto_check CHECK (routeto IN ('IMPERVIOUS','OUTLET','PERVIOUS'));
 
 ALTER TABLE inp_pollutant ADD CONSTRAINT inp_pollutant_units_type_check CHECK (units_type IN ('#/L','MG/L','UG/L'));
 
@@ -209,8 +212,6 @@ ALTER TABLE inp_report ADD CONSTRAINT inp_report_flowstats_check CHECK (flowstat
 
 ALTER TABLE inp_temperature	 ADD CONSTRAINT inp_temperature_temp_type_check CHECK (temp_type IN ('FILE_TEMP','TIMESERIES_TEMP'));
 
-ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timser_type_check CHECK (timser_type IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature_time'));
-ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timses_type_check CHECK (times_type IN ('ABSOLUTE','FILE','RELATIVE'));
 
 ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_weir_type_check CHECK (weir_type IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL_WEIR','V-NOTCH'));
 ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_flap_check CHECK (flap IN ('YES','NO'));
@@ -219,7 +220,6 @@ ALTER TABLE inp_buildup_land_x_pol ADD CONSTRAINT inp_buildup_land_x_pol_funcb_t
 
 ALTER TABLE inp_treatment_node_x_pol ADD CONSTRAINT inp_treatment_node_x_pol_function_check CHECK (function IN ('CONCEN_TREAT','RATE','REMOVAL'));
 
-ALTER TABLE inp_flwreg_orifice ADD CONSTRAINT inp_flwreg_orifice_shape_check CHECK (shape IN ('CIRCULAR','RECT-CLOSED'));
 ALTER TABLE inp_flwreg_pump ADD CONSTRAINT inp_flwreg_pump_status_check CHECK (status IN ('OFF','ON'));
 ALTER TABLE inp_flwreg_weir ADD CONSTRAINT inp_flwreg_weir_weir_type_check CHECK (weir_type IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL','V-NOTCH'));
 ALTER TABLE inp_flwreg_weir ADD CONSTRAINT inp_flwreg_weir_flap_check CHECK (flap IN ('YES','NO'));
