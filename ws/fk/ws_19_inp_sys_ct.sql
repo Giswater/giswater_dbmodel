@@ -17,8 +17,70 @@ ALTER TABLE "inp_node_type" DROP CONSTRAINT IF EXISTS "inp_node_type_check";
 ALTER TABLE "inp_pump_additional" DROP CONSTRAINT IF EXISTS "inp_pump_additional_check";
 
 
+
+ALTER TABLE inp_energy_el DROP CONSTRAINT IF EXISTS inp_energy_el_parameter_check;
+ALTER TABLE inp_energy_gl DROP CONSTRAINT IF EXISTS inp_energy_gl_parameter_check;
+ALTER TABLE inp_energy_gl DROP CONSTRAINT IF EXISTS inp_energy_gl_energ_type_check;
+ALTER TABLE inp_mixing DROP CONSTRAINT IF EXISTS inp_mixing_mix_type_check;
+ALTER TABLE inp_source DROP CONSTRAINT IF EXISTS inp_source_sourc_type_check;
+ALTER TABLE inp_shortpipe DROP CONSTRAINT IF EXISTS inp_source_status_check;
+ALTER TABLE inp_pump DROP CONSTRAINT IF EXISTS inp_pumpe_status_check;
+ALTER TABLE inp_pipe DROP CONSTRAINT IF EXISTS inp_pipe_status_check;
+ALTER TABLE inp_valve DROP CONSTRAINT IF EXISTS inp_valve_status_check;
+ALTER TABLE inp_valve DROP CONSTRAINT IF EXISTS inp_valve_valv_type_check;
+ALTER TABLE inp_curve_id DROP CONSTRAINT IF EXISTS inp_curve_id_curve_type_check;
+
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_units_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_hydraulics_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_headloss_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_quality_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_unbalanced_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_rtc_coefficient_check;
+ALTER TABLE inp_options DROP CONSTRAINT IF EXISTS inp_options_valve_mode_check;
+
+ALTER TABLE inp_reactions_el DROP CONSTRAINT IF EXISTS inp_reactions_el_parameter_check;
+ALTER TABLE inp_reactions_gl DROP CONSTRAINT IF EXISTS inp_reactions_gl_parameter_check;
+ALTER TABLE inp_reactions_gl DROP CONSTRAINT IF EXISTS inp_reactions_gl_react_type_check;
+
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_pressure_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_demand_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_status_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_summary_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_energy_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_elevation_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_head_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_quality_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_length_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_diameter_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_flow_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_velocity_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_headloss_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_setting_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_reaction_check;
+ALTER TABLE inp_report DROP CONSTRAINT IF EXISTS inp_report_f_factor_check;
+
+ALTER TABLE inp_times DROP CONSTRAINT IF EXISTS inp_times_f_statistic_check;
+ALTER TABLE inp_pump_DROPitional DROP CONSTRAINT IF EXISTS inp_pump_DROPitional_pattern_check;
+
+
+
+
+
+
+
+
+
+
+
 --DROP UNIQUE
 ALTER TABLE "inp_pump_additional" DROP CONSTRAINT IF EXISTS "inp_pump_additional_unique";
+
+
+
+
+
+
+
 
 
 
@@ -63,7 +125,15 @@ ALTER TABLE inp_typevalue ADD CONSTRAINT inp_typevalue_check CHECK
 --check typevalue
 ALTER TABLE inp_energy_el ADD CONSTRAINT inp_energy_el_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
 ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
+ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_energ_type_check CHECK ( parameter IN ('DEMAND CHARGE','GLOBAL'));
 ALTER TABLE inp_mixing ADD CONSTRAINT inp_mixing_mix_type_check CHECK ( mix_type IN ('2COMP','FIFO','LIFO','MIXED'));
+ALTER TABLE inp_source ADD CONSTRAINT inp_source_sourc_type_check CHECK ( sourc_type IN ('CONCEN','FLOWPACED','MASS','SETPOINT'));
+ALTER TABLE inp_shortpipe ADD CONSTRAINT inp_source_status_check CHECK ( status IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE'));
+ALTER TABLE inp_pump ADD CONSTRAINT inp_pumpe_status_check CHECK ( status IN ('CLOSED_PUMP','OPEN_PUMP'));
+ALTER TABLE inp_pipe ADD CONSTRAINT inp_pipe_status_check CHECK ( status IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE'));
+ALTER TABLE inp_valve ADD CONSTRAINT inp_valve_status_check CHECK ( status IN ('ACTIVE_VALVE','CLOSED_VALVE','OPEN_VALVE'));
+ALTER TABLE inp_valve ADD CONSTRAINT inp_valve_valv_type_check CHECK ( valv_type IN ('FCV','GPV','PBV','PRV','PSV','TCV'));
+ALTER TABLE inp_curve_id ADD CONSTRAINT inp_curve_id_curve_type_check CHECK ( curve_type IN ('EFFICIENCY','HEADLOSS','PUMP','VOLUME'));
 
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_units_check CHECK ( units IN ('AFD','CMD','CMH','GPM','IMGD','LPM','LPS','MGD','MLD'));
 ALTER TABLE inp_options ADD CONSTRAINT inp_options_hydraulics_check CHECK ( hydraulics IN (' ','SAVE','USE'));
