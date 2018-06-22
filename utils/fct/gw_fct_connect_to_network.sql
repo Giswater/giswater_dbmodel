@@ -17,7 +17,6 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_connect_to_network(
 $BODY$
 
 DECLARE
-    rec record;
     connect_id_aux  varchar;
     arc_geom       public.geometry;
     candidate_line integer;
@@ -41,14 +40,14 @@ DECLARE
 	v_vnode_type text;	
 	v_exit_id text;
 	point_aux public.geometry;
-
+	node_proximity_aux double precision;
 	
 BEGIN
 
     -- Search path
     SET search_path = "SCHEMA_NAME", public;
 
-    SELECT * INTO rec FROM config;
+    node_proximity_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
 
     -- Main loop
     IF connec_array IS NOT NULL THEN
@@ -123,7 +122,7 @@ BEGIN
 		DELETE FROM link WHERE feature_id = connect_id_aux AND feature_type=feature_type_aux;
 
 		--Checking if there is vnode exiting
-		SELECT vnode_id INTO vnode_id_aux FROM vnode WHERE ST_DWithin(vnode_geom, vnode.the_geom, rec.node_proximity) LIMIT 1;
+		SELECT vnode_id INTO vnode_id_aux FROM vnode WHERE ST_DWithin(vnode_geom, vnode.the_geom, node_proximity_aux) LIMIT 1;
 
 		IF vnode_id_aux IS NULL THEN
 

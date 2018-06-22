@@ -156,7 +156,7 @@ BEGIN
 	
 		-- reconnecting arcs
 		-- Dissable config parameter arc_searchnodes
-		UPDATE config SET arc_searchnodes_control=FALSE;
+		UPDATE config_param_system SET value=FALSE WHERE parameter='arc_searchnodes_control';
 			
 		FOR rec_arc IN SELECT arc_id FROM arc WHERE node_1=old_node_id_aux
 		LOOP
@@ -173,7 +173,7 @@ BEGIN
 		UPDATE node SET state=1, workcat_id=workcat_id_end_aux, builtdate=enddate_aux, enddate=NULL WHERE node_id=new_node_id_aux;
 	
 		-- enable config parameter arc_searchnodes
-		UPDATE config SET arc_searchnodes_control=TRUE;
+		UPDATE config_param_system SET value=TRUE WHERE parameter='arc_searchnodes_control';
 		
 	END IF;
 		

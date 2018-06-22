@@ -17,8 +17,8 @@ DECLARE
     nodeRecord1 Record; 
     nodeRecord2 Record;
     optionsRecord Record;
-    rec Record;
     update_control_bool boolean;
+    arc_searchnodes_aux double precision;
 
 BEGIN 
 
@@ -26,19 +26,19 @@ BEGIN
 
     update_control_bool:=false;
 
-    -- Get data from config table
-    SELECT * INTO rec FROM config;    
-	
+    -- Get data from config table  
+	arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+
 	DELETE FROM audit_log_data WHERE fprocesscat_id=17 AND user_name=current_user;
 
 	-- Starting loop process
     FOR arcrec IN SELECT * FROM v_edit_arc
     LOOP
     
-		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(arcrec.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(arcrec.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 		ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(arcrec.the_geom)) desc LIMIT 1;
 
-		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(arcrec.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(arcrec.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 		ORDER BY ST_Distance(v_edit_node.the_geom, ST_endpoint(arcrec.the_geom)) desc LIMIT 1;
 	
 	

@@ -15,12 +15,13 @@ DECLARE
     nodeRecord1 Record; 
     nodeRecord2 Record;
     optionsRecord Record;
-    rec Record;
     z1 double precision;
     z2 double precision;
     z_aux double precision;
     value1 boolean;
     value2 boolean;
+    arc_searchnodes_aux double precision;
+    samenode_init_end_control_aux boolean;
 
 BEGIN 
 
@@ -31,16 +32,17 @@ BEGIN
     value2:= true;
     
     -- Get data from config table
-    SELECT * INTO rec FROM config;    
+    arc_searchnodes_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+    samenode_init_end_control_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
 
 	-- Starting loop process
     FOR arcrec IN SELECT * FROM arc
     LOOP
     
-	SELECT * INTO nodeRecord1 FROM node WHERE ST_DWithin(ST_startpoint(arcrec.the_geom), node.the_geom, rec.arc_searchnodes) AND node.unconnected IS NOT TRUE
+	SELECT * INTO nodeRecord1 FROM node WHERE ST_DWithin(ST_startpoint(arcrec.the_geom), node.the_geom, arc_searchnodes_aux) AND node.unconnected IS NOT TRUE
 	ORDER BY ST_Distance(node.the_geom, ST_startpoint(arcrec.the_geom)), state desc LIMIT 1;
 
-	SELECT * INTO nodeRecord2 FROM node WHERE ST_DWithin(ST_endpoint(arcrec.the_geom), node.the_geom, rec.arc_searchnodes)  AND node.unconnected IS NOT TRUE
+	SELECT * INTO nodeRecord2 FROM node WHERE ST_DWithin(ST_endpoint(arcrec.the_geom), node.the_geom, arc_searchnodes_aux)  AND node.unconnected IS NOT TRUE
 	ORDER BY ST_Distance(node.the_geom, ST_endpoint(arcrec.the_geom)) , state desc LIMIT 1;
 
     SELECT * INTO optionsRecord FROM inp_options LIMIT 1;
@@ -61,7 +63,7 @@ BEGIN
     IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN	
 
         -- Control de lineas de longitud 0
-        IF (nodeRecord1.node_id = nodeRecord2.node_id) AND (rec.samenode_init_end_control IS TRUE) THEN
+        IF (nodeRecord1.node_id = nodeRecord2.node_id) AND (samenode_init_end_control_aux IS TRUE) THEN
 		    
         ELSE
         

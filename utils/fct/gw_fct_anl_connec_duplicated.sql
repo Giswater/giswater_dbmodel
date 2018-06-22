@@ -10,14 +10,14 @@ This version of Giswater is provided by Giswater Association
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_anl_connec_duplicated() RETURNS void AS $BODY$ 
 DECLARE
     rec_connec record;
-    rec record;
+    connec_duplicated_tolerance_aux
 
 BEGIN
 
     SET search_path = "SCHEMA_NAME", public;
 
     -- Get data from config table
-    SELECT * INTO rec FROM config; 
+    connec_duplicated_tolerance_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='connec_duplicated_tolerance');
 
     -- Reset values
 	DELETE FROM anl_connec WHERE cur_user="current_user"() AND fprocesscat_id=5;
@@ -25,7 +25,7 @@ BEGIN
     -- Computing process
     INSERT INTO anl_connec (connec_id, connecat_id,state, connec_id_aux, connecat_id_aux, state_aux, expl_id, fprocesscat_id, the_geom)
     SELECT DISTINCT t1.connec_id, t1.connecat_id,  t1.state, t2.connec_id, t2.connecat_id, t2.state, t1.expl_id, 5, t1.the_geom
-    FROM connec AS t1 JOIN connec AS t2 ON ST_Dwithin(t1.the_geom, t2.the_geom,(rec.connec_duplicated_tolerance)) 
+    FROM connec AS t1 JOIN connec AS t2 ON ST_Dwithin(t1.the_geom, t2.the_geom,(connec_duplicated_tolerance_aux)) 
     WHERE t1.connec_id != t2.connec_id  
     ORDER BY t1.connec_id;
     

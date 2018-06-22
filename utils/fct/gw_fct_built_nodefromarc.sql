@@ -16,8 +16,8 @@ $BODY$
 DECLARE
 rec_arc record;
 rec_table record;
-rec record;
 numnodes integer;
+node_proximity_aux double precision;
 
 BEGIN
 
@@ -25,8 +25,8 @@ BEGIN
     SET search_path = SCHEMA_NAME, public;
 
 	-- Get data from config tables
-	SELECT * INTO rec FROM config;
-	
+	node_proximity_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
+
 	--  Reset values
 	DELETE FROM temp_table WHERE user_name=current_user AND fprocesscat_id=16;
 
@@ -45,7 +45,7 @@ BEGIN
 	LOOP
 	        -- Check existing nodes  
 	        numNodes:= 0;
-		numNodes:= (SELECT COUNT(*) FROM node WHERE node.the_geom && ST_Expand(rec_table.geom_point, rec.node_proximity));
+		numNodes:= (SELECT COUNT(*) FROM node WHERE node.the_geom && ST_Expand(rec_table.geom_point, node_proximity_aux));
 		IF numNodes = 0 THEN
 			INSERT INTO node (the_geom, state) VALUES (rec_table.geom_point,1);
 		ELSE
@@ -57,9 +57,9 @@ BEGIN
 	-- udpdate arc table
 	FOR rec_arc IN SELECT * FROM arc
 	LOOP
-	UPDATE arc  SET node_1= (SELECT node_id FROM node WHERE ST_DWithin(node.the_geom, ST_StartPoint(rec_arc.the_geom),rec.node_proximity) 
+	UPDATE arc  SET node_1= (SELECT node_id FROM node WHERE ST_DWithin(node.the_geom, ST_StartPoint(rec_arc.the_geom),node_proximity_aux) 
 					ORDER BY ST_Distance(node.the_geom, ST_StartPoint(rec_arc.the_geom)) LIMIT 1),
-				node_2= (SELECT node_id FROM node WHERE ST_DWithin(node.the_geom, ST_EndPoint(rec_arc.the_geom), rec.node_proximity) 
+				node_2= (SELECT node_id FROM node WHERE ST_DWithin(node.the_geom, ST_EndPoint(rec_arc.the_geom), node_proximity_aux) 
 					ORDER BY ST_Distance(node.the_geom, ST_EndPoint(rec_arc.the_geom)) LIMIT 1) 
 					WHERE rec_arc.arc_id=arc_id;
 	END LOOP;

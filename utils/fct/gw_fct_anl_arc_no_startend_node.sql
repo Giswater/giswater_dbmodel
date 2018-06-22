@@ -13,7 +13,8 @@ DECLARE
 arc_rec record;
 nodeRecord1 record;
 nodeRecord2 record;
-rec record;
+arc_searchnodes_aux double precision;
+
 
 BEGIN
 
@@ -23,21 +24,21 @@ BEGIN
     DELETE FROM anl_arc_x_node WHERE cur_user="current_user"() AND fprocesscat_id=3;
 
 	-- Get data from config table
-    SELECT * INTO rec FROM config;
-
+	arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+	
 	-- Computing process
 	FOR arc_rec IN SELECT * FROM v_edit_arc
 
     	LOOP
 
-		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(arc_rec.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(arc_rec.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 		ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(arc_rec.the_geom)) LIMIT 1;
 		IF nodeRecord1 IS NULL 	THEN
 			INSERT INTO anl_arc_x_node (arc_id, state, expl_id, fprocesscat_id, the_geom, the_geom_p) 
 			SELECT arc_rec.arc_id, arc_rec.state, arc_rec.expl_id, 3, arc_rec.the_geom, st_startpoint(arc_rec.the_geom);
 		END IF;
 	
-		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(arc_rec.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(arc_rec.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 		ORDER BY ST_Distance(v_edit_node.the_geom, ST_endpoint(arc_rec.the_geom)) LIMIT 1;
 		IF nodeRecord2 IS NULL 	THEN
 			INSERT INTO anl_arc_x_node (arc_id, state, expl_id, fprocesscat_id, the_geom, the_geom_p) 
