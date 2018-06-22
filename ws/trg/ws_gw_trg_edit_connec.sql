@@ -108,10 +108,10 @@ BEGIN
             NEW.state := (SELECT "value" FROM config_param_user WHERE "parameter"='state_vdefault' AND "cur_user"="current_user"() LIMIT 1);
         END IF;
 		
-		-- State_type
-		--IF (NEW.state_type IS NULL) THEN
-			NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-        --END IF;
+	-- State_type
+	IF (NEW.state_type IS NULL) THEN
+	   NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+        END IF;
 
 		--Inventory
 		IF (NEW.inventory IS NULL) THEN
@@ -156,9 +156,17 @@ BEGIN
 				NEW.descript, NEW.rotation, NEW.verified, NEW.the_geom,NEW.undelete,NEW.label_x,NEW.label_y,NEW.label_rotation, NEW.postcomplement, NEW.postcomplement2,
 				NEW.expl_id, NEW.publish, NEW.inventory, NEW.num_value, NEW.arc_id );
         RETURN NEW;
+		
+		-- Control of automatic insert of link and vnode
+		IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
+		AND cur_user=current_user LIMIT 1) IS TRUE THEN
+			PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
+		END IF;
+			 
+		RETURN NEW;
+	
 
     ELSIF TG_OP = 'UPDATE' THEN
-
 
         -- Connec type
     	IF (NEW.connecat_id != OLD.connecat_id) THEN
@@ -191,15 +199,23 @@ BEGIN
 					END IF;
 				END IF;
 			END IF;
+			
+			-- Control of automatic downgrade of associated link/vnode
+			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_downgrade_linkvnode' 
+			AND cur_user=current_user LIMIT 1) IS TRUE THEN	
+				UPDATE link SET state=0 WHERE feature_id=OLD.connec_id;
+				UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
+			END IF;
+			
 		END IF;
 
          -- Looking for state control
         IF (NEW.state != OLD.state) THEN   
-		PERFORM gw_fct_state_control('CONNEC', NEW.connec_id, NEW.state, TG_OP);	
- 	END IF;
+			PERFORM gw_fct_state_control('CONNEC', NEW.connec_id, NEW.state, TG_OP);	
+		END IF;
 
 				
-UPDATE connec 
+		UPDATE connec 
 			SET code=NEW.code, elevation=NEW.elevation, "depth"=NEW.depth, connecat_id=NEW.connecat_id, sector_id=NEW.sector_id, customer_code=NEW.customer_code,
 			connec_length=NEW.connec_length, "state"=NEW.state, state_type=NEW.state_type, annotation=NEW.annotation, observ=NEW.observ, "comment"=NEW.comment, dma_id=NEW.dma_id, 
 			presszonecat_id=NEW.presszonecat_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type, location_type=NEW.location_type, workcat_id=NEW.workcat_id, 
@@ -209,7 +225,6 @@ UPDATE connec
 			publish=NEW.publish, inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, arc_id=NEW.arc_id
 			WHERE connec_id=OLD.connec_id;
       
-       -- PERFORM audit_function(2,1304);     
         RETURN NEW;
     
 
@@ -219,7 +234,6 @@ UPDATE connec
 
         DELETE FROM connec WHERE connec_id = OLD.connec_id;
 
-        --PERFORM audit_function(3,1304);     
         RETURN NULL;
    
     END IF;

@@ -33,6 +33,8 @@ DECLARE
 	v_parameter_name text;
 	v_new_value_param text;
 	v_old_value_param text;
+	insert_double_geometry_aux boolean;
+	buffer_value_aux double precision;
 
 BEGIN
 
@@ -49,7 +51,9 @@ BEGIN
 	--Get data from config table
 	SELECT * INTO rec FROM config;	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
-	
+	insert_double_geometry_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='insert_double_geometry');
+	buffer_value_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='buffer_value');
+
     -- Control insertions ID
     IF TG_OP = 'INSERT' THEN
 
@@ -217,12 +221,12 @@ BEGIN
 		
 		ELSIF p_man_table='man_storage' THEN
 			
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
 
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,rec.buffer_value))) from "SCHEMA_NAME".node where node_id=NEW.node_id));
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,buffer_value_aux))) from "SCHEMA_NAME".node where node_id=NEW.node_id));
 				INSERT INTO man_storage (node_id,pol_id, length, width, custom_area, max_volume, util_volume, min_height, accessibility, name)
 				VALUES(NEW.node_id, NEW.pol_id, NEW.length, NEW.width,NEW.custom_area, NEW.max_volume, NEW.util_volume, NEW.min_height,NEW.accessibility, NEW.name);
 				
@@ -234,12 +238,12 @@ BEGIN
 						
 		ELSIF p_man_table='man_netgully' THEN
 					
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
 
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,rec.buffer_value))) from "SCHEMA_NAME".node where node_id=NEW.node_id));
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,buffer_value_aux))) from "SCHEMA_NAME".node where node_id=NEW.node_id));
 				INSERT INTO man_netgully (node_id,pol_id, sander_depth, gratecat_id, units, groove, siphon ) 
 				VALUES(NEW.node_id, NEW.pol_id, NEW.sander_depth, NEW.gratecat_id, NEW.units, 
 				NEW.groove, NEW.siphon );
@@ -251,12 +255,12 @@ BEGIN
 					 			
 		ELSIF p_man_table='man_chamber' THEN
 
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
 
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,rec.buffer_value))) from "SCHEMA_NAME".node where node_id=NEW.node_id));
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,buffer_value_aux))) from "SCHEMA_NAME".node where node_id=NEW.node_id));
 				INSERT INTO man_chamber (node_id,pol_id, length, width, sander_depth, max_volume, util_volume, inlet, bottom_channel, accessibility, name)
 				VALUES (NEW.node_id,NEW.pol_id, NEW.length,NEW.width, NEW.sander_depth, NEW.max_volume, NEW.util_volume, 
 				NEW.inlet, NEW.bottom_channel, NEW.accessibility,NEW.name);
@@ -284,12 +288,12 @@ BEGIN
 
 		ELSIF p_man_table='man_wwtp' THEN
 		
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
 				
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,rec.buffer_value)))
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,buffer_value_aux)))
 				from "SCHEMA_NAME".node where node_id=NEW.node_id));
 				INSERT INTO man_wwtp (node_id,pol_id, name) VALUES (NEW.node_id,NEW.pol_id,NEW.name);
 			

@@ -37,6 +37,8 @@ DECLARE
 	v_parameter_name text;
 	v_new_value_param text;
 	v_old_value_param text;
+	insert_double_geometry_aux boolean;
+	buffer_value_aux double precision;
 
 
 BEGIN
@@ -49,9 +51,10 @@ BEGIN
 	USING v_customfeature;
 
 	--Get data from config table
-	SELECT * INTO rec FROM config;	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
-	
+	insert_double_geometry_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='insert_double_geometry');
+	buffer_value_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='buffer_value');
+
 -- INSERT
 
     -- Control insertions ID
@@ -222,12 +225,12 @@ BEGIN
 		NEW.expl_id, NEW.publish, NEW.inventory, NEW.the_geom,  NEW.hemisphere,NEW.num_value);
 		
 		IF p_man_table='man_tank' THEN
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 					END IF;
 					
-					INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,rec.buffer_value))) 
+					INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,buffer_value_aux))) 
 					from "SCHEMA_NAME".node where node_id=NEW.node_id));
 					INSERT INTO man_tank (node_id,pol_id, vmax, vutil, area, chlorination,name) VALUES (NEW.node_id, NEW.pol_id, NEW.vmax, NEW.vutil, NEW.area,NEW.chlorination, NEW.name);
 
@@ -269,11 +272,11 @@ BEGIN
 			INSERT INTO man_filter (node_id) VALUES(NEW.node_id);	
 		
 		ELSIF p_man_table='man_register' THEN
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,rec.buffer_value))) from "SCHEMA_NAME".node where node_id=NEW.node_id));			
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,buffer_value_aux))) from "SCHEMA_NAME".node where node_id=NEW.node_id));			
 				INSERT INTO man_register (node_id,pol_id) VALUES (NEW.node_id, NEW.pol_id);
 			ELSE
 				INSERT INTO man_register (node_id) VALUES (NEW.node_id);

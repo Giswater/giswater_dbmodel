@@ -73,7 +73,7 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
     man_table:= TG_ARGV[0];
 
-    SELECT arc_searchnodes into link_buffer_aux FROM config;
+    SELECT "value" into link_buffer_aux FROM config_param_system WHERE "parameter"='arc_searchnodes';
 
     -- control of project type
     SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;

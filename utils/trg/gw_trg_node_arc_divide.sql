@@ -11,9 +11,9 @@ CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_node_arc_divide()
 $BODY$
 DECLARE 
 
-rec record;
 arc_id_aux varchar;
 edit_arc_division_dsbl_aux boolean;
+node_proximity_aux double precision;
 
 BEGIN
 
@@ -25,9 +25,10 @@ BEGIN
 --  Only enabled on insert
 	IF TG_OP = 'INSERT' AND edit_arc_division_dsbl_aux IS NOT TRUE THEN
 
-		SELECT * INTO rec FROM config;
+   	 --Get data from config table
+		node_proximity_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
 	
-		SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_intersects((NEW.the_geom), St_buffer(v_edit_arc.the_geom,rec.node_proximity)) AND NEW.state>0 LIMIT 1;
+		SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_intersects((NEW.the_geom), St_buffer(v_edit_arc.the_geom,node_proximity_aux)) AND NEW.state>0 LIMIT 1;
 		IF arc_id_aux IS NOT NULL THEN
 			PERFORM gw_fct_arc_divide(NEW.node_id);	
 		END IF;	

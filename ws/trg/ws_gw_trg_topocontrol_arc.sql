@@ -10,33 +10,35 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_topocontrol_arc() RETURNS trigger 
 DECLARE 
     nodeRecord1 record; 
     nodeRecord2 record; 
-    rec record;  
     vnoderec record;
     newPoint public.geometry;    
     connecPoint public.geometry;
-    state_topocontrol_bool boolean;
+    state_topocontrol_aux boolean;
     connec_id_aux varchar;
     array_agg varchar [];
+    arc_searchnodes_aux double precision;
+    samenode_init_end_control_aux boolean;
 	
 BEGIN 
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
     
  -- Get data from config table
-    SELECT * INTO rec FROM config;  
-    SELECT value::boolean INTO state_topocontrol_bool FROM config_param_system WHERE parameter='state_topocontrol';
+    arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+    samenode_init_end_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
+    SELECT value::boolean INTO state_topocontrol_aux FROM config_param_system WHERE parameter='state_topocontrol';
     
 
-    IF state_topocontrol_bool IS FALSE OR state_topocontrol_bool IS NULL THEN
+    IF state_topocontrol_aux IS FALSE OR state_topocontrol_aux IS NULL THEN
 
-	SELECT * INTO nodeRecord1 FROM node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), node.the_geom, rec.arc_searchnodes)
+	SELECT * INTO nodeRecord1 FROM node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), node.the_geom, arc_searchnodes_aux)
 	ORDER BY ST_Distance(node.the_geom, ST_startpoint(NEW.the_geom)) LIMIT 1;
 
-	SELECT * INTO nodeRecord2 FROM node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), node.the_geom, rec.arc_searchnodes)
+	SELECT * INTO nodeRecord2 FROM node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), node.the_geom, arc_searchnodes_aux)
 	ORDER BY ST_Distance(node.the_geom, ST_endpoint(NEW.the_geom)) LIMIT 1;
    
     
-    ELSIF state_topocontrol_bool IS TRUE THEN
+    ELSIF state_topocontrol_aux IS TRUE THEN
 
 	-- Looking for state control
 	PERFORM gw_fct_state_control('ARC', NEW.arc_id, NEW.state, TG_OP);
@@ -49,7 +51,7 @@ BEGIN
 	-- Starting process
 	IF TG_OP='INSERT' THEN  
 
-		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 		AND (NEW.state=1 AND v_edit_node.state=1)
 		
 					-- looking for existing nodes that not belongs on the same alternatives that arc
@@ -69,7 +71,7 @@ BEGIN
 		ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(NEW.the_geom)) LIMIT 1;
 
 	
-		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes) 
+		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux) 
 		AND (NEW.state=1 AND v_edit_node.state=1)
 
 					-- looking for existing nodes that not belongs on the same alternatives that arc
@@ -91,7 +93,7 @@ BEGIN
 	ELSIF TG_OP='UPDATE' THEN
 
 
-		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 		AND (NEW.state=1 AND v_edit_node.state=1)
 					-- looking for existing nodes that not belongs on the same alternatives that arc
 
@@ -110,7 +112,7 @@ BEGIN
 		ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(NEW.the_geom)) LIMIT 1;
 
 	
-		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes) 
+		SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux) 
 		AND (NEW.state=1 AND v_edit_node.state=1)
 
 					-- looking for existing nodes that not belongs on the same alternatives that arc
@@ -137,7 +139,7 @@ BEGIN
 		IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN
     
         -- Control of same node initial and final
-			IF (nodeRecord1.node_id = nodeRecord2.node_id) AND (rec.samenode_init_end_control IS TRUE) THEN
+			IF (nodeRecord1.node_id = nodeRecord2.node_id) AND (samenode_init_end_control_aux IS TRUE) THEN
 				RETURN audit_function (1040, 1344, nodeRecord1.node_id);
 			
 			ELSE
@@ -176,11 +178,11 @@ BEGIN
 			END IF;
 		
 	--	Error, no existing nodes
-		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (rec.arc_searchnodes_control IS TRUE) THEN
+		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS TRUE) THEN
 			PERFORM audit_function (1042,1344,NEW.arc_id);
 		
 	--	Not existing nodes but accepted insertion
-		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (rec.arc_searchnodes_control IS FALSE) THEN
+		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS FALSE) THEN
 			RETURN NEW;
 			
 		ELSE

@@ -12,7 +12,6 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_node_update()
 $BODY$
 DECLARE 
     numNodes numeric;
-    rec record;
     psector_vdefault_var integer;
     replace_node_aux boolean;
     node_id_var varchar;
@@ -28,13 +27,17 @@ DECLARE
     yvar double precision;
 	pol_id_var varchar;
 	top_elev_aux double precision;
+	node_proximity_aux double precision;
+	node_proximity_control_aux boolean;
 
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
     -- Get parameters
-    SELECT * INTO rec FROM config;
+    node_proximity_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
+    node_proximity_control_aux= (SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity_control');
+
 	SELECT * INTO optionsRecord FROM inp_options LIMIT 1;
 
 
@@ -48,13 +51,13 @@ BEGIN
         IF TG_OP = 'INSERT' THEN
 		
 		-- Checking number of nodes 
-			numNodes := (SELECT COUNT(*) FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, rec.node_proximity) AND node.node_id != NEW.node_id AND node.state!=0);
+			numNodes := (SELECT COUNT(*) FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, node_proximity_aux) AND node.node_id != NEW.node_id AND node.state!=0);
 			
-			IF (numNodes >1) AND (rec.node_proximity_control IS TRUE) THEN
+			IF (numNodes >1) AND (node_proximity_control_aux IS TRUE) THEN
 				PERFORM audit_function(1096,1234);
 				
-			ELSIF (numNodes =1) AND (rec.node_proximity_control IS TRUE) THEN
-				SELECT * INTO node_rec FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, rec.node_proximity) AND node.node_id != NEW.node_id AND node.state!=0;
+			ELSIF (numNodes =1) AND (node_proximity_control_aux IS TRUE) THEN
+				SELECT * INTO node_rec FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, node_proximity_aux) AND node.node_id != NEW.node_id AND node.state!=0;
 				IF (NEW.state=1 AND node_rec.state=1) OR (NEW.state=2 AND node_rec.state=1) THEN
 					PERFORM audit_function(1098,1234);
 				ELSIF (NEW.state=2 AND node_rec.state=2) THEN
@@ -66,13 +69,13 @@ BEGIN
 		ELSIF TG_OP ='UPDATE' THEN
 		
 		-- Checking number of nodes 
-			numNodes := (SELECT COUNT(*) FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, rec.node_proximity) AND node.node_id != NEW.node_id AND node.state!=0);
+			numNodes := (SELECT COUNT(*) FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, node_proximity_aux) AND node.node_id != NEW.node_id AND node.state!=0);
 			
-			IF (numNodes >1) AND (rec.node_proximity_control IS TRUE) THEN
+			IF (numNodes >1) AND (node_proximity_control_aux IS TRUE) THEN
 				PERFORM audit_function(1096,1234);
 				
-			ELSIF (numNodes =1) AND (rec.node_proximity_control IS TRUE) THEN
-				SELECT * INTO node_rec FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, rec.node_proximity) AND node.node_id != NEW.node_id AND node.state!=0;
+			ELSIF (numNodes =1) AND (node_proximity_control_aux IS TRUE) THEN
+				SELECT * INTO node_rec FROM node WHERE ST_DWithin(NEW.the_geom, node.the_geom, node_proximity_aux) AND node.node_id != NEW.node_id AND node.state!=0;
 				IF (NEW.state=1 AND node_rec.state=1) OR (NEW.state=2 AND node_rec.state=1) THEN
 					PERFORM audit_function(1098,1234);
 				ELSIF (NEW.state=2 AND node_rec.state=2) THEN

@@ -13,7 +13,6 @@ DECLARE
     nodeRecord1 Record; 
     nodeRecord2 Record;
     optionsRecord Record;
-    rec Record;
     sys_elev1_aux double precision;
     sys_elev2_aux double precision;
 	custom_elev1_aux double precision;
@@ -25,16 +24,18 @@ DECLARE
     value1 boolean;
     value2 boolean;
     featurecat_aux text;
-    state_topocontrol_bool boolean;
+    state_topocontrol_aux boolean;
     sys_y1_aux double precision;
     sys_y2_aux double precision;
 	sys_length_aux double precision;
 	is_reversed boolean;
-	geom_slp_direction_bool boolean;
+	geom_slp_direction_aux boolean;
 	connec_id_aux varchar;
     gully_id_aux varchar;
     array_agg varchar [];
 	project_type_aux text;
+	arc_searchnodes_aux double precision;
+	samenode_init_end_control_aux boolean;
 		
 
 BEGIN 
@@ -43,21 +44,23 @@ BEGIN
 
  
  -- Get data from config tables
-    SELECT * INTO rec FROM config; 
+    arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+    samenode_init_end_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
+	SELECT value::boolean INTO state_topocontrol_aux FROM config_param_system WHERE parameter='state_topocontrol' ;
+	SELECT value::boolean INTO geom_slp_direction_aux FROM config_param_system WHERE parameter='geom_slp_direction' ;
+		
     SELECT * INTO optionsRecord FROM inp_options LIMIT 1;  
 	SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;
-	SELECT value::boolean INTO state_topocontrol_bool FROM config_param_system WHERE parameter='state_topocontrol' ;
-	SELECT value::boolean INTO geom_slp_direction_bool FROM config_param_system WHERE parameter='geom_slp_direction' ;
-		
-	IF state_topocontrol_bool IS FALSE OR state_topocontrol_bool IS NULL THEN
 
-		SELECT * INTO nodeRecord1 FROM node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), node.the_geom, rec.arc_searchnodes)
+	IF state_topocontrol_aux IS FALSE OR state_topocontrol_aux IS NULL THEN
+
+		SELECT * INTO nodeRecord1 FROM node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), node.the_geom, arc_searchnodes_aux)
 		ORDER BY ST_Distance(node.the_geom, ST_startpoint(NEW.the_geom)) LIMIT 1;
 
-		SELECT * INTO nodeRecord2 FROM node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), node.the_geom, rec.arc_searchnodes)
+		SELECT * INTO nodeRecord2 FROM node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), node.the_geom, arc_searchnodes_aux)
 		ORDER BY ST_Distance(node.the_geom, ST_endpoint(NEW.the_geom)) LIMIT 1;
        
-    ELSIF state_topocontrol_bool IS TRUE THEN
+    ELSIF state_topocontrol_aux IS TRUE THEN
 	
 		-- Looking for state control
 		PERFORM gw_fct_state_control('ARC', NEW.arc_id, NEW.state, TG_OP);
@@ -71,7 +74,7 @@ BEGIN
 		-- Starting process
 		IF TG_OP='INSERT' THEN
 
-			SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+			SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 			AND (NEW.state=1 AND v_edit_node.state=1)
 					-- looking for existing nodes that not belongs on the same alternatives that arc
 					OR (NEW.state=2 AND v_edit_node.state=1 AND node_id NOT IN 
@@ -89,7 +92,7 @@ BEGIN
 
 					ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(NEW.the_geom)) LIMIT 1;
 	
-			SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes) 
+			SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux) 
 			AND (NEW.state=1 AND v_edit_node.state=1)
 
 					-- looking for existing nodes that not belongs on the same alternatives that arc
@@ -110,7 +113,7 @@ BEGIN
 
 		ELSIF TG_OP='UPDATE' THEN
 
-			SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes)
+			SELECT * INTO nodeRecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux)
 			AND (NEW.state=1 AND v_edit_node.state=1)
 
 					-- looking for existing nodes that not belongs on the same alternatives that arc
@@ -128,7 +131,7 @@ BEGIN
 
 					ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(NEW.the_geom)) LIMIT 1;
 	
-			SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, rec.arc_searchnodes) 
+			SELECT * INTO nodeRecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(NEW.the_geom), v_edit_node.the_geom, arc_searchnodes_aux) 
 			AND (NEW.state=1 AND v_edit_node.state=1)
 
 					-- looking for existing nodes that not belongs on the same alternatives that arc
@@ -152,7 +155,7 @@ BEGIN
 	IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN	
 
 	-- Control de lineas de longitud 0
-		IF (nodeRecord1.node_id = nodeRecord2.node_id) AND (rec.samenode_init_end_control IS TRUE) THEN
+		IF (nodeRecord1.node_id = nodeRecord2.node_id) AND (samenode_init_end_control_aux IS TRUE) THEN
 			PERFORM audit_function (1040,1244, nodeRecord1.node_id);
             
 		ELSE
@@ -175,7 +178,7 @@ BEGIN
 					NEW.node_2 := nodeRecord2.node_id;
 			ELSE 
 
-				IF ((sys_elev1_aux > sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE) OR ((sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS TRUE OR geom_slp_direction_bool IS FALSE))) THEN
+				IF ((sys_elev1_aux > sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE) OR ((sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS TRUE OR geom_slp_direction_aux IS FALSE))) THEN
 					NEW.node_1 := nodeRecord1.node_id; 
 					NEW.node_2 := nodeRecord2.node_id;
 					NEW.sys_elev1 := sys_elev1_aux;
@@ -281,11 +284,11 @@ BEGIN
 		END IF;
 
 	-- Error, no existing nodes
-	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (rec.arc_searchnodes_control IS TRUE) THEN
+	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS TRUE) THEN
 		PERFORM audit_function (1042,1244,NEW.arc_id);
 		
 	--Not existing nodes but accepted insertion
-	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (rec.arc_searchnodes_control IS FALSE) THEN
+	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS FALSE) THEN
 		RETURN NEW;
         
 	ELSE

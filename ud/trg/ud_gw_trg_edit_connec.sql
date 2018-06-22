@@ -89,9 +89,9 @@ BEGIN
         END IF;
 		
 		-- State_type
-		--IF (NEW.state_type IS NULL) THEN
+		IF (NEW.state_type IS NULL) THEN
 			NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-        --END IF;
+        END IF;
 		
 		-- Workcat_id
         IF (NEW.workcat_id IS NULL) THEN
@@ -152,6 +152,12 @@ BEGIN
 								NEW.postnumber, NEW.streetaxis2_id, NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2, NEW.descript, NEW.rotation, NEW.link, 
 								NEW.verified, NEW.the_geom, NEW.undelete,NEW.featurecat_id,NEW.feature_id, NEW.label_x, NEW.label_y, NEW.label_rotation,
 								NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.private_connecat_id);
+		
+		-- Control of automatic insert of link and vnode
+		IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
+		AND cur_user=current_user LIMIT 1) IS TRUE THEN
+			PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
+		END IF;
 
         RETURN NEW;
 
@@ -176,6 +182,13 @@ BEGIN
 					RETURN audit_function(2110,1318);
 					END IF;
 				END IF;
+			END IF;
+			
+			-- Control of automatic downgrade of associated link/vnode
+			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_downgrade_linkvnode' 
+			AND cur_user=current_user LIMIT 1) IS TRUE THEN	
+				UPDATE link SET state=0 WHERE feature_id=OLD.connec_id;
+				UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
 			END IF;
 		END IF;
 

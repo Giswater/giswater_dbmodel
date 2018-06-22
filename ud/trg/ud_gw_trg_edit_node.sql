@@ -16,7 +16,6 @@ DECLARE
     v_sql varchar;
     old_nodetype varchar;
     new_nodetype varchar;
-	rec Record;
     node_id_seq int8;
 	count_aux integer;
 	promixity_buffer_aux double precision;
@@ -27,7 +26,6 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
    
    	--Get data from config table
-	SELECT * INTO rec FROM config;	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
 	
     -- Control insertions ID
@@ -132,9 +130,9 @@ BEGIN
         END IF;
 		
 		-- State_type
-		--IF (NEW.state_type IS NULL) THEN
+		IF (NEW.state_type IS NULL) THEN
 			NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-		--END IF;
+		END IF;
 		
 		-- Workcat_id
         IF (NEW.workcat_id IS NULL) THEN
@@ -205,14 +203,6 @@ BEGIN
 
 
     ELSIF TG_OP = 'UPDATE' THEN
-
-
-		IF (NEW.elev <> OLD.elev) THEN
-                RETURN audit_function(1048,1220);  
-		END IF;
-
-        NEW.elev=NEW.top_elev-NEW.ymax;
- 
 
         IF (NEW.epa_type !=  OLD.epa_type) THEN    
          

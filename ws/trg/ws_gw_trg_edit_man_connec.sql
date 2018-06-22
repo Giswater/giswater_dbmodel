@@ -19,7 +19,6 @@ DECLARE
     connec_id_seq int8;
 	code_autofill_bool boolean;
 	P_man_table_2 varchar;
-	rec Record;
 	count_aux integer;
 	promixity_buffer_aux double precision;
 	v_addfields record;
@@ -28,6 +27,8 @@ DECLARE
 	v_parameter_name text;
 	v_new_value_param text;
 	v_old_value_param text;
+	insert_double_geometry_aux boolean;
+	buffer_value_aux double precision;
 
 BEGIN
 
@@ -42,9 +43,10 @@ BEGIN
 	p_man_table_2:=P_man_table;
 	
 	--Get data from config table
-	SELECT * INTO rec FROM config;	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
-	
+	insert_double_geometry_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='insert_double_geometry');
+	buffer_value_aux= (SELECT "value" FROM config_param_system WHERE "parameter"='buffer_value');
+
     -- Control insertions ID
     IF TG_OP = 'INSERT' THEN
 
@@ -197,12 +199,12 @@ BEGIN
 			INSERT INTO man_greentap (connec_id, linked_connec) VALUES(NEW.connec_id, NEW.linked_connec); 
 		
 		ELSIF p_man_table='man_fountain' THEN 
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (insert_double_geometry_aux IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
 		
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(connec.the_geom,rec.buffer_value))) from "SCHEMA_NAME".connec where connec_id=NEW.connec_id));
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(connec.the_geom,buffer_value_aux))) from "SCHEMA_NAME".connec where connec_id=NEW.connec_id));
 					
 				INSERT INTO man_fountain(connec_id, linked_connec, vmax, vtotal, container_number, pump_number, power, regulation_tank,name,  chlorinator, arq_patrimony, pol_id) 
 				VALUES (NEW.connec_id, NEW.linked_connec, NEW.vmax, NEW.vtotal,NEW.container_number, NEW.pump_number, NEW.power, NEW.regulation_tank, NEW.name, 

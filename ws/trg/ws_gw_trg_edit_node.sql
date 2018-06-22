@@ -18,7 +18,6 @@ DECLARE
     old_nodetype varchar;
     new_nodetype varchar;
     node_id_seq int8;
-	rec Record;
 	rec_aux text;
 	node_id_aux text;
 	tablename_aux varchar;
@@ -35,7 +34,6 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	
 	--Get data from config table
-	SELECT * INTO rec FROM config;
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
     
 	-- Control insertions ID
@@ -148,10 +146,10 @@ BEGIN
             NEW.state := (SELECT "value" FROM config_param_user WHERE "parameter"='state_vdefault' AND "cur_user"="current_user"() LIMIT 1);
         END IF;
 		
-		-- State_type
-		--IF (NEW.state_type IS NULL) THEN
+		 State_type
+		IF (NEW.state_type IS NULL) THEN
 			NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-        --END IF;
+        END IF;
         
 		-- Exploitation
 		IF (NEW.expl_id IS NULL) THEN

@@ -9,26 +9,27 @@ This version of Giswater is provided by Giswater Association
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_connec_proximity() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE 
     numConnecs numeric;
-    rec record;
-
+    connec_proximity_aux double precision;
+    connec_proximity_control_aux boolean;
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
     -- Get connec tolerance from config table
-    SELECT * INTO rec FROM config;
-
+    connec_proximity_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='connec_proximity');
+    connec_proximity_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='connec_proximity_control');
+    
     IF TG_OP = 'INSERT' THEN
         -- Existing connecs  
-        numConnecs:= (SELECT COUNT(*) FROM connec WHERE connec.the_geom && ST_Expand(NEW.the_geom, rec.connec_proximity));
+        numConnecs:= (SELECT COUNT(*) FROM connec WHERE connec.the_geom && ST_Expand(NEW.the_geom, connec_proximity_aux));
 
     ELSIF TG_OP = 'UPDATE' THEN
         -- Existing connecs  
-       numConnecs := (SELECT COUNT(*) FROM connec WHERE ST_DWithin(NEW.the_geom, connec.the_geom, rec.connec_proximity) AND connec.connec_id != NEW.connec_id);
+       numConnecs := (SELECT COUNT(*) FROM connec WHERE ST_DWithin(NEW.the_geom, connec.the_geom, connec_proximity_aux) AND connec.connec_id != NEW.connec_id);
     END IF;
 
     -- If there is an existing connec closer than 'rec.connec_tolerance' meters --> error
-    IF (numConnecs > 0) AND (rec.connec_proximity_control IS TRUE) THEN
+    IF (numConnecs > 0) AND (connec_proximity_control_aux IS TRUE) THEN
         PERFORM audit_function (1044,1106, NEW.connec_id);
         RETURN NULL;
     END IF;
