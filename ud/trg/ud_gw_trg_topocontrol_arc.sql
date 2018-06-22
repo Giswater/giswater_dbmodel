@@ -16,6 +16,8 @@ DECLARE
     rec Record;
     sys_elev1_aux double precision;
     sys_elev2_aux double precision;
+	custom_elev1_aux double precision;
+    custom_elev2_aux double precision;
     y_aux double precision;
     vnoderec Record;
     newPoint public.geometry;    
@@ -32,7 +34,8 @@ DECLARE
 	connec_id_aux varchar;
     gully_id_aux varchar;
     array_agg varchar [];
-	project_type_aux varchar;
+	project_type_aux text;
+		
 
 BEGIN 
 
@@ -42,6 +45,7 @@ BEGIN
  -- Get data from config tables
     SELECT * INTO rec FROM config; 
     SELECT * INTO optionsRecord FROM inp_options LIMIT 1;  
+	SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;
 	SELECT value::boolean INTO state_topocontrol_bool FROM config_param_system WHERE parameter='state_topocontrol' ;
 	SELECT value::boolean INTO geom_slp_direction_bool FROM config_param_system WHERE parameter='geom_slp_direction' ;
 		
@@ -165,67 +169,73 @@ BEGIN
 			-- Update coordinates
 			NEW.the_geom := ST_SetPoint(NEW.the_geom, 0, nodeRecord1.the_geom);
 			NEW.the_geom := ST_SetPoint(NEW.the_geom, ST_NumPoints(NEW.the_geom) - 1, nodeRecord2.the_geom);
-	
-			IF ((sys_elev1_aux > sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE) OR ((sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS TRUE OR geom_slp_direction_bool IS FALSE))) THEN
-				NEW.node_1 := nodeRecord1.node_id; 
-				NEW.node_2 := nodeRecord2.node_id;
-				NEW.sys_elev1 := sys_elev1_aux;
-				NEW.sys_elev2 := sys_elev2_aux;
+ 
+			IF ( (sys_elev1_aux IS NULL OR sys_elev2_aux IS NULL)) THEN
+					NEW.node_1 := nodeRecord1.node_id; 
+					NEW.node_2 := nodeRecord2.node_id;
+			ELSE 
+
+				IF ((sys_elev1_aux > sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE) OR ((sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS TRUE OR geom_slp_direction_bool IS FALSE))) THEN
+					NEW.node_1 := nodeRecord1.node_id; 
+					NEW.node_2 := nodeRecord2.node_id;
+					NEW.sys_elev1 := sys_elev1_aux;
+					NEW.sys_elev2 := sys_elev2_aux;
 
 		
-			ELSE 
-				-- Update conduit direction
-				-- Geometry
-				NEW.the_geom := ST_reverse(NEW.the_geom);
+				ELSE 
+					-- Update conduit direction
+					-- Geometry
+					NEW.the_geom := ST_reverse(NEW.the_geom);
 
-				-- Node 1 & Node 2
-				NEW.node_1 := nodeRecord2.node_id;
-				NEW.node_2 := nodeRecord1.node_id;                             
-	
-				-- Node values
-				y_aux := NEW.y1;
-				NEW.y1 := NEW.y2;
-				NEW.y2 := y_aux;
-	
-				y_aux := NEW.custom_y1;
-				NEW.custom_y1 := NEW.custom_y2;
-				NEW.custom_y2 := y_aux;
-	
-				y_aux := NEW.elev1;
-				NEW.elev1 := NEW.elev2;
-				NEW.elev2 := y_aux;
+					-- Node 1 & Node 2
+					NEW.node_1 := nodeRecord2.node_id;
+					NEW.node_2 := nodeRecord1.node_id;                             
+		
+					-- Node values
+					y_aux := NEW.y1;
+					NEW.y1 := NEW.y2;
+					NEW.y2 := y_aux;
+		
+					y_aux := NEW.custom_y1;
+					NEW.custom_y1 := NEW.custom_y2;
+					NEW.custom_y2 := y_aux;
+		
+					y_aux := NEW.elev1;
+					NEW.elev1 := NEW.elev2;
+					NEW.elev2 := y_aux;
 
-				y_aux := NEW.custom_elev1;
-				NEW.custom_elev1 := NEW.custom_elev2;
-				NEW.custom_elev2 := y_aux;
-
-				NEW.sys_elev1 := sys_elev2_aux;
-				NEW.sys_elev2 := sys_elev1_aux;
-				is_reversed = TRUE;
+					y_aux := NEW.custom_elev1;
+					NEW.custom_elev1 := NEW.custom_elev2;
+					NEW.custom_elev2 := y_aux;
+	
+					NEW.sys_elev1 := sys_elev2_aux;
+					NEW.sys_elev2 := sys_elev1_aux;
+					is_reversed = TRUE;
 						
+				END IF;
+
 			END IF;
 
 			NEW.sys_length:= ST_length(NEW.the_geom);
 			sys_length_aux:=NEW.sys_length;			
 			
 			IF NEW.custom_length IS NOT NULL THEN
-				sys_length_aux=NEW.custom_length;
+					sys_length_aux=NEW.custom_length;
 			END IF;
 			
 			IF sys_length_aux < 0.1 THEN 
-				sys_length_aux=0.1;
+					sys_length_aux=0.1;
 			END IF;
-
-			NEW.sys_slope:= (NEW.sys_elev1-NEW.sys_elev2)/sys_length_aux;
 			
-			IF NEW.sys_slope > 1 THEN 
-				NEW.sys_slope=NULL;
+			NEW.sys_slope:= (NEW.sys_elev1-NEW.sys_elev2)/sys_length_aux;
 				
+			IF NEW.sys_slope > 1 THEN 
+					NEW.sys_slope=NULL;	
 			END IF;
 
 		END IF;
 
-		-- Redraw the link and vnode
+		-- Update vnode/link
 		FOR connec_id_aux IN SELECT connec_id FROM connec WHERE arc_id=NEW.arc_id
 		LOOP
 			array_agg:= array_append(array_agg, connec_id_aux);

@@ -149,8 +149,8 @@ BEGIN
 		
 		IF parameter_aux IS NOT NULL THEN
 				
-			IF table_record.dv_querytext IS NOT NULL THEN
-				EXECUTE table_record.dv_querytext||'''||parameter_aux||''';
+			IF table_record.dv_clause IS NOT NULL THEN
+				EXECUTE table_record.dv_clause||'''||parameter_aux||''';
 			ELSE 
 				EXECUTE 'SELECT '||table_record.dv_column||' FROM '||table_record.dv_table|| ' WHERE '''||parameter_aux||'''='||table_record.dv_column INTO query_string;
 			END IF;
