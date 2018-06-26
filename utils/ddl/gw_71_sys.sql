@@ -282,10 +282,13 @@ sys_api_cat_datatype_id integer,
 sys_api_cat_widgettype_id integer,
 form_label text,
 dv_filterbyfield text,
+dv_querytext_filterc text,
+dv_parent_id text,
 isenabled boolean,
 orderby integer,
 layout_id integer,
-layout_order integer
+layout_order integer,
+project_type character varying
 );
 
 

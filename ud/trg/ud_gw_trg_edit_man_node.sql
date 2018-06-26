@@ -22,7 +22,6 @@ DECLARE
     old_nodetype varchar;
     new_nodetype varchar;
     p_man_table_2 varchar;
-	rec Record;
     node_id_seq int8;
 	code_autofill_bool boolean;
 	count_aux integer;
@@ -49,7 +48,6 @@ BEGIN
 
 
 	--Get data from config table
-	SELECT * INTO rec FROM config;	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
 	insert_double_geometry_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='insert_double_geometry');
 	buffer_value_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='buffer_value');
