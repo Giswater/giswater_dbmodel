@@ -30,29 +30,6 @@ CREATE TABLE "version" (
 -- Tables: configs
 -- ----------------------------------
 
-CREATE TABLE "config" (
-"id" varchar(18) NOT NULL PRIMARY KEY,
-"node_proximity" double precision,
-"arc_searchnodes" double precision,
-"node2arc" double precision,
-"connec_proximity" double precision,
-"nodeinsert_arcendpoint" boolean,
-"orphannode_delete" boolean,
-"vnode_update_tolerance" double precision,
-"nodetype_change_enabled" boolean,
-"samenode_init_end_control" boolean,
-"node_proximity_control" boolean,
-"connec_proximity_control" boolean,
-"node_duplicated_tolerance" float,
-"connec_duplicated_tolerance" float,
-"audit_function_control" boolean,
-"arc_searchnodes_control" boolean,
-"insert_double_geometry" boolean,
-"buffer_value" double precision,
-CONSTRAINT "config_check" CHECK(id = '1')
-);
-
-
 CREATE TABLE "config_param_system" (
 "id" serial NOT NULL PRIMARY KEY,
 "parameter"  varchar (50),

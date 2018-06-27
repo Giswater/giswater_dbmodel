@@ -1649,3 +1649,581 @@ FROM v_edit_subcatchment subcatchment;
 
 
 
+
+
+--new inp views
+
+DROP VIEW IF EXISTS  vi_subcatchments CASCADE;
+CREATE OR REPLACE VIEW vi_subcatchments AS 
+ SELECT v_edit_subcatchment.subc_id,
+ 	v_edit_subcatchment.rg_id,
+    v_edit_subcatchment.node_id,
+    v_edit_subcatchment.area,
+    v_edit_subcatchment.imperv,
+    v_edit_subcatchment.width,
+    v_edit_subcatchment.slope,
+    v_edit_subcatchment.clength,
+	v_edit_subcatchment.snow_id,
+   FROM v_edit_subcatchment;
+
+DROP VIEW IF EXISTS  vi_subareas CASCADE;
+CREATE OR REPLACE VIEW vi_subareas AS 
+ SELECT v_edit_subcatchment.subc_id,
+    v_edit_subcatchment.nimp,
+    v_edit_subcatchment.nperv,
+    v_edit_subcatchment.simp,
+    v_edit_subcatchment.sperv,
+    v_edit_subcatchment.zero,
+    v_edit_subcatchment.routeto,
+    v_edit_subcatchment.rted
+   FROM v_edit_subcatchment;
+
+DROP VIEW IF EXISTS vi_aquifers CASCADE;
+CREATE OR REPLACE VIEW vi_aquifers AS 
+ SELECT inp_aquifer.aquif_id,
+    inp_aquifer.por,
+    inp_aquifer.wp,
+    inp_aquifer.fc,
+    inp_aquifer.k,
+    inp_aquifer.ks,
+    inp_aquifer.ps,
+    inp_aquifer.uef,
+    inp_aquifer.led,
+    inp_aquifer.gwr,
+    inp_aquifer.be,
+    inp_aquifer.wte,
+    inp_aquifer.umc,
+    inp_aquifer.pattern_id
+   FROM inp_aquifer
+  ORDER BY inp_aquifer.aquif_id;
+
+DROP VIEW IF EXISTS  vi_junction CASCADE;
+CREATE OR REPLACE VIEW vi_junction AS 
+ SELECT rpt_inp_node.node_id,
+    rpt_inp_node.elev,
+    rpt_inp_node.ymax,
+    rpt_inp_node.y0,
+    rpt_inp_node.ysur,
+    rpt_inp_node.apond,
+   FROM inp_selector_result,rpt_inp_node
+   WHERE rpt_inp_node.epa_type::text = 'JUNCTION'::text AND rpt_inp_node.result_id::text = inp_selector_result.result_id::text 
+   AND inp_selector_result.cur_user = "current_user"()::text;
+
+DROP VIEW IF EXISTS  vi_pumps CASCADE;
+CREATE OR REPLACE VIEW vi_pumps AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_pump.curve_id,
+    inp_pump.status,
+    inp_pump.startup,
+    inp_pump.shutoff
+   FROM inp_selector_result,rpt_inp_arc
+     JOIN inp_pump ON rpt_inp_arc.arc_id::text = inp_pump.arc_id::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_flwreg_pump.curve_id,
+    inp_flwreg_pump.status,
+    inp_flwreg_pump.startup,
+    inp_flwreg_pump.shutoff
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_flwreg_pump ON rpt_inp_arc.flw_code::text = concat(inp_flwreg_pump.node_id, '_', inp_flwreg_pump.to_arc, '_pump_', inp_flwreg_pump.flwreg_id)
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS  vi_orifices CASCADE;
+CREATE OR REPLACE VIEW vi_orifices AS 
+ SELECT inp_orifice.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_orifice.ori_type,
+    inp_orifice."offset",
+    inp_orifice.cd,
+    inp_orifice.flap,
+    inp_orifice.orate
+   FROM inp_selector_result,
+    rpt_inp_arc
+     JOIN inp_orifice ON inp_orifice.arc_id::text = rpt_inp_arc.arc_id::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_flwreg_orifice.ori_type,
+    inp_flwreg_orifice."offset",
+    inp_flwreg_orifice.cd,
+    inp_flwreg_orifice.flap,
+    inp_flwreg_orifice.orate
+   FROM inp_selector_result,
+    rpt_inp_arc
+     JOIN inp_flwreg_orifice ON rpt_inp_arc.flw_code::text = concat(inp_flwreg_orifice.node_id, '_', inp_flwreg_orifice.to_arc, '_ori_', inp_flwreg_orifice.flwreg_id)
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+DROP VIEW IF EXISTS vi_weirs CASCADE;
+CREATE OR REPLACE VIEW vi_weirs AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_weir.weir_type,
+    inp_weir."offset",
+    inp_weir.cd,
+    inp_weir.flap,
+    inp_weir.ec,
+    inp_weir.cd2,
+    inp_weir.surcharge
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_weir ON inp_weir.arc_id::text = rpt_inp_arc.arc_id::text
+     JOIN inp_value_weirs ON inp_weir.weir_type::text = inp_value_weirs.id::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_flwreg_weir.weir_type,
+    inp_flwreg_weir."offset",
+    inp_flwreg_weir.cd,
+    inp_flwreg_weir.flap,
+    inp_flwreg_weir.ec,
+    inp_flwreg_weir.cd2,
+    inp_flwreg_weir.surcharge
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_flwreg_weir ON rpt_inp_arc.flw_code::text = concat(inp_flwreg_weir.node_id, '_', inp_flwreg_weir.to_arc, '_weir_', inp_flwreg_weir.flwreg_id)
+     JOIN inp_value_weirs ON inp_flwreg_weir.weir_type::text = inp_value_weirs.id::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+DROP VIEW IF EXISTS  vi_groundwater CASCADE;
+CREATE OR REPLACE VIEW vi_groundwater AS 
+ SELECT inp_groundwater.subc_id,
+    inp_groundwater.aquif_id,
+    inp_groundwater.node_id,
+    inp_groundwater.surfel,
+    inp_groundwater.a1,
+    inp_groundwater.b1,
+    inp_groundwater.a2,
+    inp_groundwater.b2,
+    inp_groundwater.a3,
+    inp_groundwater.tw,
+    inp_groundwater.h,
+   FROM v_edit_subcatchment
+     JOIN inp_groundwater ON inp_groundwater.subc_id::text = v_edit_subcatchment.subc_id::text;
+
+
+DROP VIEW IF EXISTS  vi_files CASCADE;
+CREATE OR REPLACE VIEW vi_files AS 
+ SELECT
+    inp_files.actio_type,
+    inp_files.file_type,
+    inp_files.fname
+   FROM inp_files;
+
+DROP VIEW IF EXISTS  vi_losses CASCADE;
+CREATE OR REPLACE VIEW vi_losses AS 
+ SELECT inp_conduit.arc_id,
+    inp_conduit.kentry,
+    inp_conduit.kexit,
+    inp_conduit.kavg,
+    inp_conduit.flap,
+    inp_conduit.seepage
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_conduit ON rpt_inp_arc.arc_id::text = inp_conduit.arc_id::text
+  WHERE inp_conduit.kentry > 0::numeric OR inp_conduit.kexit > 0::numeric OR inp_conduit.kavg > 0::numeric OR inp_conduit.flap::text = 'YES'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS  vi_pollutants CASCADE;
+CREATE OR REPLACE VIEW vi_pollutants AS 
+ SELECT inp_pollutant.poll_id,
+    inp_pollutant.units_type,
+    inp_pollutant.crain,
+    inp_pollutant.cgw,
+    inp_pollutant.cii,
+    inp_pollutant.kd,
+    inp_pollutant.sflag,
+    inp_pollutant.copoll_id,
+    inp_pollutant.cofract,
+    inp_pollutant.cdwf
+   FROM inp_pollutant
+  ORDER BY inp_pollutant.poll_id;
+
+DROP VIEW IF EXISTS  vi_landuses CASCADE;
+CREATE OR REPLACE VIEW vi_landuses AS 
+ SELECT inp_landuses.landus_id,
+    inp_landuses.sweepint,
+    inp_landuses.availab,
+    inp_landuses.lastsweep
+   FROM inp_landuses;
+
+
+DROP VIEW IF EXISTS  vi_coverages CASCADE;
+CREATE OR REPLACE VIEW vi_coverages AS 
+ SELECT v_edit_subcatchment.subc_id,
+    inp_coverage_land_x_subc.landus_id,
+    inp_coverage_land_x_subc.percent
+   FROM inp_coverage_land_x_subc
+     JOIN v_edit_subcatchment ON inp_coverage_land_x_subc.subc_id::text = v_edit_subcatchment.subc_id::text;
+
+DROP VIEW IF EXISTS  vi_buildup CASCADE;
+CREATE OR REPLACE VIEW vi_buildup AS 
+ SELECT inp_buildup_land_x_pol.landus_id,
+    inp_buildup_land_x_pol.poll_id,
+    inp_buildup_land_x_pol.funcb_type,
+    inp_buildup_land_x_pol.c1,
+    inp_buildup_land_x_pol.c2,
+    inp_buildup_land_x_pol.c3,
+    inp_buildup_land_x_pol.perunit
+   FROM inp_buildup_land_x_pol;
+
+DROP VIEW IF EXISTS  vi_washoff CASCADE;
+CREATE OR REPLACE VIEW vi_washoff AS 
+ SELECT inp_washoff_land_x_pol.landus_id,
+    inp_washoff_land_x_pol.poll_id,
+    inp_washoff_land_x_pol.funcw_type,
+    inp_washoff_land_x_pol.c1,
+    inp_washoff_land_x_pol.c2,
+    inp_washoff_land_x_pol.sweepeffic,
+    inp_washoff_land_x_pol.bmpeffic
+   FROM inp_washoff_land_x_pol;
+
+DROP VIEW IF EXISTS  vi_treatment CASCADE;
+CREATE OR REPLACE VIEW vi_treatment AS 
+ SELECT rpt_inp_node.node_id,
+    inp_treatment_node_x_pol.poll_id,
+    inp_treatment_node_x_pol.function
+   FROM inp_selector_result,rpt_inp_node
+     JOIN inp_treatment_node_x_pol ON inp_treatment_node_x_pol.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS  vi_rdii CASCADE;
+CREATE OR REPLACE VIEW vi_rdii AS 
+ SELECT rpt_inp_node.node_id,
+    inp_rdii.hydro_id,
+    inp_rdii.sewerarea
+   FROM inp_selector_result, rpt_inp_node
+     JOIN inp_rdii ON inp_rdii.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS  vi_curves CASCADE;
+CREATE OR REPLACE VIEW vi_curves AS 
+ SELECT inp_curve.curve_id,
+    CASE
+       WHEN inp_curve.x_value = (( SELECT min(sub.x_value) AS min
+          FROM inp_curve sub
+          WHERE sub.curve_id::text = inp_curve.curve_id::text)) THEN inp_curve_id.curve_type
+       ELSE NULL::character varying
+     END AS curve_type,
+    inp_curve.x_value,
+    inp_curve.y_value
+   FROM inp_curve
+     JOIN inp_curve_id ON inp_curve_id.id::text = inp_curve.curve_id::text
+  ORDER BY inp_curve.id;
+
+DROP VIEW IF EXISTS vi_lid_controls CASCADE;
+CREATE OR REPLACE VIEW vi_lid_controls AS 
+ SELECT inp_lid_control.lidco_id,
+    inp_lid_control.lidco_type,
+    inp_lid_control.value_2,
+    inp_lid_control.value_3,
+    inp_lid_control.value_4,
+    inp_lid_control.value_5,
+    inp_lid_control.value_6,
+    inp_lid_control.value_7,
+    inp_lid_control.value_8
+   FROM inp_lid_control
+  ORDER BY inp_lid_control.id;
+
+
+DROP VIEW IF EXISTS vi_lid_usage CASCADE;
+CREATE OR REPLACE VIEW vi_lid_usage AS 
+ SELECT inp_lidusage_subc_x_lidco.subc_id,
+    inp_lidusage_subc_x_lidco.lidco_id,
+    inp_lidusage_subc_x_lidco.number::integer AS number,
+    inp_lidusage_subc_x_lidco.area,
+    inp_lidusage_subc_x_lidco.width,
+    inp_lidusage_subc_x_lidco.initsat,
+    inp_lidusage_subc_x_lidco.fromimp,
+    inp_lidusage_subc_x_lidco.toperv::integer AS toperv,
+    inp_lidusage_subc_x_lidco.rptfile
+   FROM v_edit_subcatchment
+     JOIN inp_lidusage_subc_x_lidco ON inp_lidusage_subc_x_lidco.subc_id::text = v_edit_subcatchment.subc_id::text;
+
+
+DROP VIEW IF EXISTS vi_backdrop CASCADE;
+CREATE OR REPLACE VIEW vi_backdrop AS 
+ SELECT inp_backdrop.text
+   FROM inp_backdrop;
+
+
+DROP VIEW IF EXISTS vi_symbols CASCADE;
+CREATE OR REPLACE VIEW vi_symbols AS 
+ SELECT v_edit_raingage.rg_id,
+    st_x(v_edit_raingage.the_geom)::numeric(16,3) AS xcoord,
+    st_y(v_edit_raingage.the_geom)::numeric(16,3) AS ycoord
+   FROM v_edit_raingage
+  WHERE v_edit_raingage.rgage_type::text = 'FILE'::text;
+
+
+DROP VIEW IF EXISTS vi_symbols_2 CASCADE
+CREATE OR REPLACE VIEW vi_symbols_2 AS 
+ SELECT v_edit_raingage.rg_id,
+    st_x(v_edit_raingage.the_geom)::numeric(16,3) AS xcoord,
+    st_y(v_edit_raingage.the_geom)::numeric(16,3) AS ycoord
+   FROM v_edit_raingage
+  WHERE v_edit_raingage.rgage_type::text = 'TIMESERIES'::text;
+
+
+DROP VIEW IF EXISTS vi_labels CASCADE;
+CREATE OR REPLACE VIEW vi_labels AS 
+ SELECT inp_label.xcoord,
+ 	inp_label.ycoord,
+ 	inp_label.label,
+    inp_label.anchor,
+    inp_label.font,
+    inp_label.size,
+    inp_label.bold,
+    inp_label.italic
+   FROM inp_label
+  ORDER BY inp_label.label;
+
+
+DROP VIEW IF EXISTS vi_vertices CASCADE;
+CREATE OR REPLACE VIEW vi_vertices AS 
+ SELECT  arc.arc_id,
+    st_x(arc.point)::numeric(16,3) AS xcoord,
+    st_y(arc.point)::numeric(16,3) AS ycoord
+   FROM ( SELECT (st_dumppoints(rpt_inp_arc.the_geom)).geom AS point,
+            st_startpoint(rpt_inp_arc.the_geom) AS startpoint,
+            st_endpoint(rpt_inp_arc.the_geom) AS endpoint,
+            rpt_inp_arc.sector_id,
+            rpt_inp_arc.state,
+            rpt_inp_arc.arc_id
+           FROM inp_selector_result,
+            rpt_inp_arc
+          WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text) arc
+  WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) AND (arc.point < arc.endpoint OR arc.point > arc.endpoint);
+
+
+DROP VIEW IF EXISTS vi_title CASCADE;
+CREATE OR REPLACE VIEW vi_title AS 
+ SELECT inp_project_id.title,
+    inp_project_id.date
+   FROM inp_project_id
+  ORDER BY inp_project_id.title;
+
+
+DROP VIEW IF EXISTS vi_report CASCADE;
+CREATE OR REPLACE VIEW vi_report AS 
+SELECT
+   unnest(array['input', 'continuity', 'flowstats','controls','subcatchments','nodes','links']) AS "repor_type",
+   unnest(array[input, continuity, flowstats, controls,subcatchments,nodes,links]) AS "value"
+FROM inp_report
+
+
+DROP VIEW IF EXISTS vi_options CASCADE;
+CREATE OR REPLACE VIEW vi_options AS 
+SELECT
+  unnest(array['flow_units','infiltration','flow_routing','link_offsets','force_main_equation','ignore_rainfall','ignore_snowmelt',
+ 'ignore_groundwater','ignore_routing','ignore_quality','skip_steady_state','start_date','start_time','end_date','end_time',
+ 'report_start_date','report_start_time','sweep_start','sweep_end','dry_days','report_step','wet_step','dry_step','routing_step',
+ 'lengthening_step','variable_step','inertial_damping','normal_flow_limited','min_surfarea','min_slope','allow_ponding','tempdir',
+ 'max_trials','head_tolerance','sys_flow_tol','lat_flow_tol']) AS "parameter",
+  unnest(array[flow_units,cat_hydrology.infiltration,flow_routing,link_offsets,force_main_equation,ignore_rainfall,ignore_snowmelt,
+  ignore_groundwater, ignore_routing,ignore_quality,skip_steady_state,start_date,start_time,end_date,end_time,report_start_date,
+  report_start_time,sweep_start,sweep_end,dry_days::text,report_step,wet_step,dry_step,routing_step,lengthening_step::text,
+  variable_step::text,inertial_damping,normal_flow_limited,min_surfarea::text,min_slope::text,allow_ponding,tempdir,max_trials::text,
+  head_tolerance::text,sys_flow_tol::text,lat_flow_tol::text]) AS "value"
+FROM inp_options, inp_selector_hydrology
+     JOIN cat_hydrology ON inp_selector_hydrology.hydrology_id = cat_hydrology.hydrology_id;
+
+
+DROP VIEW IF EXISTS vi_snowpacks_1 CASCADE;
+CREATE OR REPLACE VIEW vi_snowpacks_1 AS 
+ SELECT inp_snowpack.snow_id,
+    'PLOWABLE'::text AS type_snpk1,
+    inp_snowpack.cmin_1,
+    inp_snowpack.cmax_1,
+    inp_snowpack.tbase_1,
+    inp_snowpack.fwf_1,
+    inp_snowpack.sd0_1,
+    inp_snowpack.fw0_1,
+    inp_snowpack.snn0_1
+    FROM inp_snowpack;
+
+DROP VIEW IF EXISTS vi_snowpacks_2 CASCADE;
+CREATE OR REPLACE VIEW vi_snowpacks_2 AS 
+ SELECT inp_snowpack.snow_id,
+    'IMPERVIOUS'::text AS type_snpk2,
+    inp_snowpack.cmin_2,
+    inp_snowpack.cmax_2,
+    inp_snowpack.tbase_2,
+    inp_snowpack.fwf_2,
+    inp_snowpack.sd0_2,
+    inp_snowpack.fw0_2,
+    inp_snowpack.sd100_1
+    FROM inp_snowpack;
+
+
+DROP VIEW IF EXISTS vi_snowpacks_3 CASCADE;
+CREATE OR REPLACE VIEW vi_snowpacks_3 AS 
+ SELECT inp_snowpack.snow_id,
+ 	'PERVIOUS'::text AS type_snpk3,
+    inp_snowpack.cmin_3,
+    inp_snowpack.cmax_3,
+    inp_snowpack.tbase_3,
+    inp_snowpack.fwf_3,
+    inp_snowpack.sd0_3,
+    inp_snowpack.fw0_3,
+    inp_snowpack.sd100_2
+    FROM inp_snowpack;
+
+
+DROP VIEW IF EXISTS vi_snowpacks_4 CASCADE;
+CREATE OR REPLACE VIEW vi_snowpacks_4 AS 
+ SELECT inp_snowpack.snow_id,
+    'REMOVAL'::text AS type_snpk4,
+    inp_snowpack.sdplow,
+    inp_snowpack.fout,
+    inp_snowpack.fimp,
+    inp_snowpack.fperv,
+    inp_snowpack.fimelt,
+    inp_snowpack.fsub,
+    inp_snowpack.subc_id
+    FROM inp_snowpack;
+
+DROP VIEW IF EXISTS vi_transects CASCADE;
+CREATE OR REPLACE VIEW vi_transects AS 
+ SELECT inp_transects.text
+   FROM inp_transects;
+
+
+DROP VIEW IF EXISTS vi_controls CASCADE;
+CREATE OR REPLACE VIEW vi_controls AS 
+ SELECT inp_controls_x_arc.text
+   FROM inp_selector_sector,inp_controls_x_arc
+     JOIN rpt_inp_arc ON inp_controls_x_arc.arc_id::text = rpt_inp_arc.arc_id::text
+  WHERE rpt_inp_arc.sector_id = inp_selector_sector.sector_id AND inp_selector_sector.cur_user = "current_user"()::text
+UNION
+ SELECT inp_controls_x_node.text
+   FROM inp_selector_sector, inp_controls_x_node
+     JOIN rpt_inp_node ON inp_controls_x_node.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.sector_id = inp_selector_sector.sector_id AND inp_selector_sector.cur_user = "current_user"()::text
+  ORDER BY 1;
+
+DROP VIEW IF EXISTS vi_loadings CASCADE;
+CREATE OR REPLACE VIEW vi_loadings AS 
+ SELECT inp_loadings_pol_x_subc.subc_id,
+ 	inp_loadings_pol_x_subc.poll_id,
+    inp_loadings_pol_x_subc.ibuildup
+   FROM ud_sample.v_edit_subcatchment
+     JOIN ud_sample.inp_loadings_pol_x_subc ON inp_loadings_pol_x_subc.subc_id::text = v_edit_subcatchment.subc_id::text;
+
+DROP VIEW IF EXISTS vi_hydrograph CASCADE;
+CREATE OR REPLACE VIEW vi_hydrograph AS 
+ SELECT inp_hydrograph.text
+   FROM ud_sample.inp_hydrograph;
+
+
+
+CREATE OR REPLACE VIEW ud_sample.v_inp_adjustments AS 
+ SELECT inp_adjustments.adj_type,
+    inp_adjustments.value_1,
+    inp_adjustments.value_2,
+    inp_adjustments.value_3,
+    inp_adjustments.value_4,
+    inp_adjustments.value_5,
+    inp_adjustments.value_6,
+    inp_adjustments.value_7,
+    inp_adjustments.value_8,
+    inp_adjustments.value_9,
+    inp_adjustments.value_10,
+    inp_adjustments.value_11,
+    inp_adjustments.value_12
+    FROM ud_sample.inp_adjustments;
+ 
+
+ ----
+
+
+DROP VIEW IF EXISTS  vi_raingage CASCADE;
+CREATE OR REPLACE VIEW vi_raingage AS 
+SELECT v_edit_raingage.rg_id,
+    v_edit_raingage.form_type,
+    v_edit_raingage.intvl,
+    v_edit_raingage.scf
+   FROM v_edit_raingage;
+
+
+
+
+
+
+DROP VIEW IF EXISTS  vi_infiltration CASCADE;
+CREATE OR REPLACE VIEW vi_infiltration AS 
+ SELECT v_edit_subcatchment.subc_id,
+   v_edit_subcatchment.snow_id
+   FROM v_edit_subcatchment;
+
+
+
+
+
+
+
+
+DROP VIEW IF EXISTS  vi_conduits CASCADE;
+CREATE OR REPLACE VIEW vi_conduits AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.length,
+    rpt_inp_arc.n,
+    rpt_inp_arc.elevmax1 AS z1,
+    rpt_inp_arc.elevmax2 AS z2,
+    inp_conduit.q0,
+    inp_conduit.qmax
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_conduit ON rpt_inp_arc.arc_id::text = inp_conduit.arc_id::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+
+
+
+DROP VIEW IF EXISTS vi_outlets CASCADE;
+CREATE OR REPLACE VIEW vi_outlets AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_outlet."offset",
+    inp_outlet.outlet_type AS type_oufch,
+    
+    inp_outlet.cd1,
+    inp_outlet.cd2,
+    inp_outlet.flap
+   FROM inp_selector_result,
+    rpt_inp_arc
+     JOIN inp_outlet ON rpt_inp_arc.arc_id::text = inp_outlet.arc_id::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    inp_flwreg_outlet.outlet_type AS type_oufch,
+    inp_flwreg_outlet."offset",
+    inp_flwreg_outlet.cd1,
+    inp_flwreg_outlet.cd2,
+    inp_flwreg_outlet.flap
+   FROM inp_selector_result,
+    rpt_inp_arc
+     JOIN inp_flwreg_outlet ON rpt_inp_arc.flw_code::text = concat(inp_flwreg_outlet.node_id, '_', inp_flwreg_outlet.to_arc, '_out_', inp_flwreg_outlet.flwreg_id)
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+  st_x(v_edit_raingage.the_geom)::numeric(16,3) AS xcoord,
+    st_y(v_edit_raingage.the_geom)::numeric(16,3) AS ycoord
+        st_x(rpt_inp_node.the_geom)::numeric(16,3) AS xcoord,
+    st_y(rpt_inp_node.the_geom)::numeric(16,3) AS ycoord
