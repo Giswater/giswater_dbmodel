@@ -18,6 +18,8 @@ DECLARE
     array_agg varchar [];
     arc_searchnodes_aux double precision;
     samenode_init_end_control_aux boolean;
+    nodeinsert_arcendpoint_aux boolean;
+    arc_searchnodes_control_aux boolean;
 	
 BEGIN 
 
@@ -25,7 +27,10 @@ BEGIN
     
  -- Get data from config table
     arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+    arc_searchnodes_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes_control');
     samenode_init_end_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
+    nodeinsert_arcendpoint_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='nodeinsert_arcendpoint');
+
     SELECT value::boolean INTO state_topocontrol_aux FROM config_param_system WHERE parameter='state_topocontrol';
     
 
@@ -154,7 +159,7 @@ BEGIN
 			END IF;
 
 -- Check auto insert end nodes
-		ELSIF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NULL) AND (SELECT nodeinsert_arcendpoint FROM config) THEN
+		ELSIF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NULL) AND (nodeinsert_arcendpoint_aux is TRUE) THEN
 			IF TG_OP = 'INSERT' THEN
 
 			INSERT INTO node (node_id, sector_id, epa_type, nodecat_id, dma_id, the_geom) 
@@ -178,11 +183,11 @@ BEGIN
 			END IF;
 		
 	--	Error, no existing nodes
-		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS TRUE) THEN
+		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_control_aux IS TRUE) THEN
 			PERFORM audit_function (1042,1344,NEW.arc_id);
 		
 	--	Not existing nodes but accepted insertion
-		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS FALSE) THEN
+		ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_control_aux IS FALSE) THEN
 			RETURN NEW;
 			
 		ELSE

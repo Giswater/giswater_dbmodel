@@ -10,7 +10,7 @@ This version of Giswater is provided by Giswater Association
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_anl_connec_duplicated() RETURNS void AS $BODY$ 
 DECLARE
     rec_connec record;
-    connec_duplicated_tolerance_aux
+    connec_duplicated_tolerance_aux double precision;
 
 BEGIN
 

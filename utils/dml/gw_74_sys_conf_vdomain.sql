@@ -12,14 +12,6 @@ INSERT INTO cat_users VALUES (999, current_user);
 
 
 
-INSERT INTO config (id, node_proximity, arc_searchnodes, node2arc, connec_proximity, nodeinsert_arcendpoint, 
-		orphannode_delete, vnode_update_tolerance, nodetype_change_enabled, 		
-		samenode_init_end_control, node_proximity_control, connec_proximity_control, 
-		node_duplicated_tolerance, connec_duplicated_tolerance, audit_function_control, arc_searchnodes_control, insert_double_geometry, buffer_value)
-		VALUES ('1', 0.10000000000000001, 0.5, 0.5, 0.10000000000000001, false, false, 0.5, false, true, true, true, 0.001, 0.001, true, true, true, 1);
-
-
-
 
 
 INSERT INTO config_param_system (id, parameter, value, data_type, context, descript, sys_api_cat_datatype_id, sys_api_cat_widgettype_id, form_label, dv_querytext, dv_filterbyfield, isenabled, orderby, layout_id, layout_order) VALUES (62, 'basic_search_hyd_hydro_field_cc', 'connec_id', 'text', 'searchplus', 'field connec.code', 2, 1, 'basic_search_hyd_hydro_field_cc', NULL, NULL, NULL, NULL, NULL, NULL);

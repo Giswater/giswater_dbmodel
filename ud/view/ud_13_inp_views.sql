@@ -1663,7 +1663,7 @@ CREATE OR REPLACE VIEW vi_subcatchments AS
     v_edit_subcatchment.width,
     v_edit_subcatchment.slope,
     v_edit_subcatchment.clength,
-	v_edit_subcatchment.snow_id,
+	v_edit_subcatchment.snow_id
    FROM v_edit_subcatchment;
 
 DROP VIEW IF EXISTS  vi_subareas CASCADE;
@@ -1704,7 +1704,7 @@ CREATE OR REPLACE VIEW vi_junction AS
     rpt_inp_node.ymax,
     rpt_inp_node.y0,
     rpt_inp_node.ysur,
-    rpt_inp_node.apond,
+    rpt_inp_node.apond
    FROM inp_selector_result,rpt_inp_node
    WHERE rpt_inp_node.epa_type::text = 'JUNCTION'::text AND rpt_inp_node.result_id::text = inp_selector_result.result_id::text 
    AND inp_selector_result.cur_user = "current_user"()::text;
@@ -1744,8 +1744,7 @@ CREATE OR REPLACE VIEW vi_orifices AS
     inp_orifice.cd,
     inp_orifice.flap,
     inp_orifice.orate
-   FROM inp_selector_result,
-    rpt_inp_arc
+   FROM inp_selector_result,rpt_inp_arc
      JOIN inp_orifice ON inp_orifice.arc_id::text = rpt_inp_arc.arc_id::text
   WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
 UNION
@@ -1757,8 +1756,7 @@ UNION
     inp_flwreg_orifice.cd,
     inp_flwreg_orifice.flap,
     inp_flwreg_orifice.orate
-   FROM inp_selector_result,
-    rpt_inp_arc
+   FROM inp_selector_result,rpt_inp_arc
      JOIN inp_flwreg_orifice ON rpt_inp_arc.flw_code::text = concat(inp_flwreg_orifice.node_id, '_', inp_flwreg_orifice.to_arc, '_ori_', inp_flwreg_orifice.flwreg_id)
   WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
@@ -1806,7 +1804,7 @@ CREATE OR REPLACE VIEW vi_groundwater AS
     inp_groundwater.b2,
     inp_groundwater.a3,
     inp_groundwater.tw,
-    inp_groundwater.h,
+    inp_groundwater.h
    FROM v_edit_subcatchment
      JOIN inp_groundwater ON inp_groundwater.subc_id::text = v_edit_subcatchment.subc_id::text;
 
@@ -2204,8 +2202,7 @@ CREATE OR REPLACE VIEW vi_outlets AS
     inp_outlet.cd1,
     inp_outlet.cd2,
     inp_outlet.flap
-   FROM inp_selector_result,
-    rpt_inp_arc
+   FROM inp_selector_result, rpt_inp_arc
      JOIN inp_outlet ON rpt_inp_arc.arc_id::text = inp_outlet.arc_id::text
   WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
 UNION
@@ -2217,13 +2214,12 @@ UNION
     inp_flwreg_outlet.cd1,
     inp_flwreg_outlet.cd2,
     inp_flwreg_outlet.flap
-   FROM inp_selector_result,
-    rpt_inp_arc
+   FROM inp_selector_result,rpt_inp_arc
      JOIN inp_flwreg_outlet ON rpt_inp_arc.flw_code::text = concat(inp_flwreg_outlet.node_id, '_', inp_flwreg_outlet.to_arc, '_out_', inp_flwreg_outlet.flwreg_id)
   WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
-
+/*
   st_x(v_edit_raingage.the_geom)::numeric(16,3) AS xcoord,
     st_y(v_edit_raingage.the_geom)::numeric(16,3) AS ycoord
         st_x(rpt_inp_node.the_geom)::numeric(16,3) AS xcoord,
-    st_y(rpt_inp_node.the_geom)::numeric(16,3) AS ycoord
+    st_y(rpt_inp_node.the_geom)::numeric(16,3) AS ycoord*/
