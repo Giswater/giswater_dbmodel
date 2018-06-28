@@ -14,7 +14,7 @@ linkrec record;
 arcrec record;
 rec record;
 querystring text;
-vnode_update_tolerance_aux double precision
+vnode_update_tolerance_aux double precision;
 
 BEGIN
 

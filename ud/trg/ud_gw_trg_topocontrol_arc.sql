@@ -36,7 +36,8 @@ DECLARE
 	project_type_aux text;
 	arc_searchnodes_aux double precision;
 	samenode_init_end_control_aux boolean;
-		
+	nodeinsert_arcendpoint_aux boolean;
+	arc_searchnodes_control_aux boolean;
 
 BEGIN 
 
@@ -47,7 +48,9 @@ BEGIN
     arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
     samenode_init_end_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
 	SELECT value::boolean INTO state_topocontrol_aux FROM config_param_system WHERE parameter='state_topocontrol' ;
-	SELECT value::boolean INTO geom_slp_direction_aux FROM config_param_system WHERE parameter='geom_slp_direction' ;
+	SELECT value::boolean INTO geom_slp_direction_aux FROM config_param_system WHERE parameter='geom_slp_direction';
+	SELECT value::boolean INTO nodeinsert_arcendpoint_aux FROM config_param_system WHERE parameter='nodeinsert_arcendpoint';
+	SELECT value::boolean INTO arc_searchnodes_control_aux FROM config_param_system WHERE parameter='arc_searchnodes_control';
 		
     SELECT * INTO optionsRecord FROM inp_options LIMIT 1;  
 	SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;
@@ -260,16 +263,19 @@ BEGIN
 		
 
 	-- Check auto insert end nodes
-	ELSIF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NULL) AND (SELECT nodeinsert_arcendpoint FROM config) THEN
+	ELSIF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NULL) AND (nodeinsert_arcendpoint_aux IS TRUE) THEN
 		IF TG_OP = 'INSERT' THEN
-			INSERT INTO node (node_id, sector_id, epa_type, nodecat_id, dma_id, the_geom) 
+			INSERT INTO node (node_id, sector_id, epa_type,node_type, nodecat_id, dma_id, the_geom,state,expl_id) 
 			VALUES (
             (SELECT nextval('urn_id_seq')),
             (SELECT sector_id FROM sector WHERE (ST_endpoint(NEW.the_geom) @ sector.the_geom) LIMIT 1),
 			'JUNCTION'::text,
+			(SELECT "value" FROM config_param_user WHERE "parameter"='nodetype_vdefault' AND "cur_user"="current_user"()),
 			(SELECT "value" FROM config_param_user WHERE "parameter"='nodecat_vdefault' AND "cur_user"="current_user"()),
             (SELECT dma_id FROM dma WHERE (ST_endpoint(NEW.the_geom) @ dma.the_geom) LIMIT 1), 
-            ST_endpoint(NEW.the_geom)
+            ST_endpoint(NEW.the_geom),
+            (SELECT value::integer FROM config_param_user WHERE "parameter"='state_vdefault' AND "cur_user"="current_user"()),
+            (SELECT expl_id FROM exploitation WHERE (ST_endpoint(NEW.the_geom) @ exploitation.the_geom) LIMIT 1)
 			);
 
 			INSERT INTO inp_junction (node_id) VALUES ((SELECT currval('urn_id_seq')));
@@ -284,11 +290,11 @@ BEGIN
 		END IF;
 
 	-- Error, no existing nodes
-	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS TRUE) THEN
+	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_control_aux IS TRUE) THEN
 		PERFORM audit_function (1042,1244,NEW.arc_id);
 		
 	--Not existing nodes but accepted insertion
-	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_aux_control IS FALSE) THEN
+	ELSIF ((nodeRecord1.node_id IS NULL) OR (nodeRecord2.node_id IS NULL)) AND (arc_searchnodes_control_aux IS FALSE) THEN
 		RETURN NEW;
         
 	ELSE

@@ -330,7 +330,7 @@ BEGIN
 			INSERT INTO inp_outfall (node_id, outfall_type) VALUES (NEW.node_id, 'NORMAL');
 		
         ELSIF (NEW.epa_type = 'STORAGE') THEN
-			INSERT INTO inp_storage (node_id, storage_type) VALUES (NEW.node_id, 'TABULAR');
+			INSERT INTO inp_storage (node_id, storage_type) VALUES (NEW.node_id, 'TABULAR_STORAGE');
 		
 		
         END IF;
