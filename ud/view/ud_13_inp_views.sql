@@ -1653,6 +1653,132 @@ FROM v_edit_subcatchment subcatchment;
 
 --new inp views
 
+DROP VIEW IF EXISTS vi_title CASCADE;
+CREATE OR REPLACE VIEW vi_title AS 
+ SELECT inp_project_id.title,
+    inp_project_id.date
+   FROM inp_project_id
+  ORDER BY inp_project_id.title;
+
+
+DROP VIEW IF EXISTS vi_options CASCADE;
+CREATE OR REPLACE VIEW vi_options AS 
+SELECT
+  unnest(array['flow_units','infiltration','flow_routing','link_offsets','force_main_equation','ignore_rainfall','ignore_snowmelt',
+ 'ignore_groundwater','ignore_routing','ignore_quality','skip_steady_state','start_date','start_time','end_date','end_time',
+ 'report_start_date','report_start_time','sweep_start','sweep_end','dry_days','report_step','wet_step','dry_step','routing_step',
+ 'lengthening_step','variable_step','inertial_damping','normal_flow_limited','min_surfarea','min_slope','allow_ponding','tempdir',
+ 'max_trials','head_tolerance','sys_flow_tol','lat_flow_tol']) AS "parameter",
+  unnest(array[flow_units,cat_hydrology.infiltration,flow_routing,link_offsets,force_main_equation,ignore_rainfall,ignore_snowmelt,
+  ignore_groundwater, ignore_routing,ignore_quality,skip_steady_state,start_date,start_time,end_date,end_time,report_start_date,
+  report_start_time,sweep_start,sweep_end,dry_days::text,report_step,wet_step,dry_step,routing_step,lengthening_step::text,
+  variable_step::text,inertial_damping,normal_flow_limited,min_surfarea::text,min_slope::text,allow_ponding,tempdir,max_trials::text,
+  head_tolerance::text,sys_flow_tol::text,lat_flow_tol::text]) AS "value"
+FROM inp_options, inp_selector_hydrology
+     JOIN cat_hydrology ON inp_selector_hydrology.hydrology_id = cat_hydrology.hydrology_id;
+
+
+DROP VIEW IF EXISTS vi_report CASCADE;
+CREATE OR REPLACE VIEW vi_report AS 
+SELECT
+   unnest(array['input', 'continuity', 'flowstats','controls','subcatchments','nodes','links']) AS "repor_type",
+   unnest(array[input, continuity, flowstats, controls,subcatchments,nodes,links]) AS "value"
+FROM inp_report;
+
+DROP VIEW IF EXISTS  vi_files CASCADE;
+CREATE OR REPLACE VIEW vi_files AS 
+ SELECT
+    inp_files.actio_type,
+    inp_files.file_type,
+    inp_files.fname
+   FROM inp_files;
+
+
+DROP VIEW IF EXISTS vi_evaporation CASCADE;
+CREATE OR REPLACE VIEW vi_evaporation AS 
+SELECT concat(inp_evaporation.evap_type,' ',inp_evaporation.evap) as other_val
+   FROM ud_sample.inp_evaporation WHERE inp_evaporation.evap_type::text = 'CONSTANT'::text
+ UNION
+  SELECT concat('DRY_ONLY ',inp_evaporation.dry_only) as other_val
+   FROM ud_sample.inp_evaporation
+UNION
+ SELECT concat(inp_evaporation.evap_type,' ',inp_evaporation.pan_1,' ',inp_evaporation.pan_2,' ',inp_evaporation.pan_3,' ',
+    inp_evaporation.pan_4,' ',inp_evaporation.pan_5,' ',inp_evaporation.pan_6,' ',inp_evaporation.pan_7,' ',inp_evaporation.pan_8,' ',
+    inp_evaporation.pan_9,' ',inp_evaporation.pan_10,' ',inp_evaporation.pan_11,' ',inp_evaporation.pan_12) as other_val
+    FROM ud_sample.inp_evaporation
+  WHERE inp_evaporation.evap_type::text = 'FILE'::text
+UNION
+ SELECT concat(inp_evaporation.evap_type,' ',inp_evaporation.value_1,' ',inp_evaporation.value_2,' ',inp_evaporation.value_3,' ',
+    inp_evaporation.value_4,' ',inp_evaporation.value_5,' ',inp_evaporation.value_6,' ',inp_evaporation.value_7,' ',
+    inp_evaporation.value_8,' ',inp_evaporation.value_9,' ',inp_evaporation.value_10,' ',inp_evaporation.value_11,' ',
+    inp_evaporation.value_12)
+   FROM ud_sample.inp_evaporation
+  WHERE inp_evaporation.evap_type::text = 'MONTHLY'::text
+UNION
+ SELECT concat('RECOVERY ',inp_evaporation.recovery)as other_val
+   FROM ud_sample.inp_evaporation
+  WHERE inp_evaporation.recovery::text > '0'::text
+UNION
+ SELECT inp_evaporation.evap_type as other_val
+   FROM ud_sample.inp_evaporation
+  WHERE inp_evaporation.evap_type::text = 'TEMPERATURE'::text
+UNION
+ SELECT concat(inp_evaporation.evap_type,' ',inp_evaporation.timser_id) as other_val
+   FROM ud_sample.inp_evaporation
+  WHERE inp_evaporation.evap_type::text = 'TIMESERIES'::text
+ ORDER BY other_val;
+
+
+DROP VIEW IF EXISTS  vi_raingages CASCADE;
+CREATE OR REPLACE VIEW vi_raingages AS 
+SELECT v_edit_raingage.rg_id,
+    v_edit_raingage.form_type,
+    v_edit_raingage.intvl,
+    v_edit_raingage.scf,
+    concat(v_edit_raingage.rgage_type,' ',v_edit_raingage.timser_id,' ',v_edit_raingage.fname,' ',
+    	v_edit_raingage.sta,' ',v_edit_raingage.units) as other_val
+   FROM ud_sample.v_edit_raingage;
+
+
+DROP VIEW IF EXISTS vi_temperature CASCADE;
+CREATE OR REPLACE VIEW vi_temperature AS 
+ SELECT concat(inp_temperature.temp_type,' ',inp_temperature.fname,' ',inp_temperature.start) as other_val
+   FROM ud_sample.inp_temperature
+  WHERE inp_temperature.temp_type::text = 'FILE'::text
+ UNION
+  SELECT concat('SNOWMELT'::text,' ',inp_snowmelt.stemp,' ',inp_snowmelt.atiwt,' ',
+    inp_snowmelt.rnm,' ',inp_snowmelt.elev,' ',inp_snowmelt.lat,inp_snowmelt.dtlong) as other_val
+  FROM ud_sample.inp_snowmelt
+ UNION
+  SELECT concat('ADC IMPERVIOUS ',inp_snowmelt.i_f0,' ',inp_snowmelt.i_f1,' ',inp_snowmelt.i_f2,' ',
+    inp_snowmelt.i_f3,' ',inp_snowmelt.i_f4,' ',inp_snowmelt.i_f5,' ',inp_snowmelt.i_f6,' ',
+    inp_snowmelt.i_f7,' ',inp_snowmelt.i_f8,' ',inp_snowmelt.i_f9) as other_val
+  FROM ud_sample.inp_snowmelt
+ UNION
+  SELECT concat('ADC PERVIOUS ',inp_snowmelt.p_f0,' ',inp_snowmelt.p_f1,' ',inp_snowmelt.p_f2,' ',
+    inp_snowmelt.p_f3,' ',inp_snowmelt.p_f4,' ',inp_snowmelt.p_f5,' ',inp_snowmelt.p_f6,' ',
+    inp_snowmelt.p_f7,' ',inp_snowmelt.p_f8,' ',inp_snowmelt.p_f9)as other_val
+   FROM ud_sample.inp_snowmelt
+ UNION
+  SELECT concat(inp_temperature.temp_type,' ',inp_temperature.timser_id) as other_val
+   FROM ud_sample.inp_temperature
+  WHERE inp_temperature.temp_type::text = 'TIMESERIES'::text
+UNION
+ SELECT concat('WINDSPEED ',inp_windspeed.wind_type,' ',inp_windspeed.fname)
+   FROM ud_sample.inp_windspeed
+  WHERE inp_windspeed.wind_type::text = 'FILE'::text
+UNION
+   SELECT concat('WINDSPEED ',inp_windspeed.wind_type,' ',inp_windspeed.value_1,' ',
+    inp_windspeed.value_2,' ',inp_windspeed.value_3,' ',inp_windspeed.value_4,' ',
+    inp_windspeed.value_5,' ',inp_windspeed.value_6,' ',inp_windspeed.value_7,' ',
+    inp_windspeed.value_8,' ',inp_windspeed.value_9,' ',inp_windspeed.value_10,' ',
+    inp_windspeed.value_11,' ',inp_windspeed.value_12) as other_val
+    FROM ud_sample.inp_windspeed
+  WHERE inp_windspeed.wind_type::text = 'MONTHLY'::text
+ORDER BY other_val;
+
+
+
 DROP VIEW IF EXISTS  vi_subcatchments CASCADE;
 CREATE OR REPLACE VIEW vi_subcatchments AS 
  SELECT v_edit_subcatchment.subc_id,
@@ -1666,6 +1792,7 @@ CREATE OR REPLACE VIEW vi_subcatchments AS
 	v_edit_subcatchment.snow_id
    FROM v_edit_subcatchment;
 
+
 DROP VIEW IF EXISTS  vi_subareas CASCADE;
 CREATE OR REPLACE VIEW vi_subareas AS 
  SELECT v_edit_subcatchment.subc_id,
@@ -1677,6 +1804,31 @@ CREATE OR REPLACE VIEW vi_subareas AS
     v_edit_subcatchment.routeto,
     v_edit_subcatchment.rted
    FROM v_edit_subcatchment;
+
+
+
+
+DROP VIEW IF EXISTS  vi_infiltration CASCADE;
+CREATE OR REPLACE VIEW vi_infiltration AS 
+ SELECT v_edit_subcatchment.subc_id,concat(v_edit_subcatchment.curveno,' ',v_edit_subcatchment.conduct_2,' ',
+ 	v_edit_subcatchment.drytime_2) as other_val
+   FROM ud_sample.v_edit_subcatchment
+     JOIN ud_sample.cat_hydrology ON cat_hydrology.hydrology_id = v_edit_subcatchment.hydrology_id
+  WHERE cat_hydrology.infiltration::text = 'CURVE_NUMBER'::text
+UNION
+  SELECT v_edit_subcatchment.subc_id, concat(v_edit_subcatchment.suction,' ',v_edit_subcatchment.conduct,' ',
+  	v_edit_subcatchment.initdef) as other_val
+   FROM ud_sample.v_edit_subcatchment
+     JOIN ud_sample.cat_hydrology ON cat_hydrology.hydrology_id = v_edit_subcatchment.hydrology_id
+  WHERE cat_hydrology.infiltration::text = 'GREEN_AMPT'::text
+UNION
+ SELECT v_edit_subcatchment.subc_id,concat(v_edit_subcatchment.maxrate,' ',v_edit_subcatchment.minrate,' ',
+ 	v_edit_subcatchment.decay,' ', v_edit_subcatchment.drytime,' ',v_edit_subcatchment.maxinfil) as other_val
+   FROM ud_sample.v_edit_subcatchment
+     JOIN ud_sample.cat_hydrology ON cat_hydrology.hydrology_id = v_edit_subcatchment.hydrology_id
+  WHERE cat_hydrology.infiltration::text = 'MODIFIED_HORTON'::text OR cat_hydrology.infiltration::text = 'HORTON'::text
+ ORDER BY other_val;
+
 
 DROP VIEW IF EXISTS vi_aquifers CASCADE;
 CREATE OR REPLACE VIEW vi_aquifers AS 
@@ -1697,6 +1849,59 @@ CREATE OR REPLACE VIEW vi_aquifers AS
    FROM inp_aquifer
   ORDER BY inp_aquifer.aquif_id;
 
+
+DROP VIEW IF EXISTS  vi_groundwater CASCADE;
+CREATE OR REPLACE VIEW vi_groundwater AS 
+ SELECT inp_groundwater.subc_id,
+    inp_groundwater.aquif_id,
+    inp_groundwater.node_id,
+    inp_groundwater.surfel,
+    inp_groundwater.a1,
+    inp_groundwater.b1,
+    inp_groundwater.a2,
+    inp_groundwater.b2,
+    inp_groundwater.a3,
+    inp_groundwater.tw,
+    inp_groundwater.h
+   FROM v_edit_subcatchment
+     JOIN inp_groundwater ON inp_groundwater.subc_id::text = v_edit_subcatchment.subc_id::text;
+
+
+DROP VIEW IF EXISTS  vi_gwf CASCADE;
+CREATE OR REPLACE VIEW vi_gwf AS 
+ SELECT inp_groundwater.subc_id,
+    ('LATERAL'::text || ' '::text) || inp_groundwater.fl_eq_lat::text AS fl_eq_lat,
+    ('DEEP'::text || ' '::text) || inp_groundwater.fl_eq_lat::text AS fl_eq_deep
+ FROM ud_sample.v_edit_subcatchment
+ JOIN ud_sample.inp_groundwater ON inp_groundwater.subc_id::text = v_edit_subcatchment.subc_id::text;
+
+
+
+DROP VIEW IF EXISTS  vi_snowpacks CASCADE;
+CREATE OR REPLACE VIEW vi_snowpacks AS 
+ SELECT inp_snowpack.snow_id,
+    'PLOWABLE'::text AS type,
+    concat(inp_snowpack.cmin_1,' ',inp_snowpack.cmax_1,' ',inp_snowpack.tbase_1,' ',
+    inp_snowpack.fwf_1,' ',inp_snowpack.sd0_1,' ',inp_snowpack.fw0_1,' ',inp_snowpack.snn0_1) as other_val
+   FROM ud_sample.inp_snowpack 
+ UNION
+ SELECT inp_snowpack.snow_id,
+    'IMPERVIOUS'::text AS type,
+    concat(inp_snowpack.cmin_2,' ',inp_snowpack.cmax_2,' ',inp_snowpack.tbase_2,' ',inp_snowpack.fwf_2,' ',inp_snowpack.sd0_2,' ',inp_snowpack.fw0_2,' ',inp_snowpack.sd100_1) as other_val
+   FROM ud_sample.inp_snowpack
+ UNION
+ SELECT inp_snowpack.snow_id,
+    'PERVIOUS'::text AS type,
+    concat(inp_snowpack.cmin_3,' ',inp_snowpack.cmax_3,' ',inp_snowpack.tbase_3,' ',inp_snowpack.fwf_3,' ',inp_snowpack.sd0_3,' ',inp_snowpack.fw0_3,' ',inp_snowpack.sd100_2) as other_val
+   FROM ud_sample.inp_snowpack
+ UNION
+ SELECT inp_snowpack.snow_id,
+    'REMOVAL'::text AS type,
+    concat(inp_snowpack.sdplow,' ',inp_snowpack.fout,' ',inp_snowpack.fimp,' ',inp_snowpack.fperv,' ',inp_snowpack.fimelt,' ',inp_snowpack.fsub,' ',inp_snowpack.subc_id)
+   FROM ud_sample.inp_snowpack
+ ORDER BY 1,2;
+
+
 DROP VIEW IF EXISTS  vi_junction CASCADE;
 CREATE OR REPLACE VIEW vi_junction AS 
  SELECT rpt_inp_node.node_id,
@@ -1708,6 +1913,11 @@ CREATE OR REPLACE VIEW vi_junction AS
    FROM inp_selector_result,rpt_inp_node
    WHERE rpt_inp_node.epa_type::text = 'JUNCTION'::text AND rpt_inp_node.result_id::text = inp_selector_result.result_id::text 
    AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+
+
 
 DROP VIEW IF EXISTS  vi_pumps CASCADE;
 CREATE OR REPLACE VIEW vi_pumps AS 
@@ -1792,30 +2002,8 @@ UNION
      JOIN inp_value_weirs ON inp_flwreg_weir.weir_type::text = inp_value_weirs.id::text
   WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
-DROP VIEW IF EXISTS  vi_groundwater CASCADE;
-CREATE OR REPLACE VIEW vi_groundwater AS 
- SELECT inp_groundwater.subc_id,
-    inp_groundwater.aquif_id,
-    inp_groundwater.node_id,
-    inp_groundwater.surfel,
-    inp_groundwater.a1,
-    inp_groundwater.b1,
-    inp_groundwater.a2,
-    inp_groundwater.b2,
-    inp_groundwater.a3,
-    inp_groundwater.tw,
-    inp_groundwater.h
-   FROM v_edit_subcatchment
-     JOIN inp_groundwater ON inp_groundwater.subc_id::text = v_edit_subcatchment.subc_id::text;
 
 
-DROP VIEW IF EXISTS  vi_files CASCADE;
-CREATE OR REPLACE VIEW vi_files AS 
- SELECT
-    inp_files.actio_type,
-    inp_files.file_type,
-    inp_files.fname
-   FROM inp_files;
 
 DROP VIEW IF EXISTS  vi_losses CASCADE;
 CREATE OR REPLACE VIEW vi_losses AS 
@@ -2004,37 +2192,7 @@ CREATE OR REPLACE VIEW vi_vertices AS
   WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) AND (arc.point < arc.endpoint OR arc.point > arc.endpoint);
 
 
-DROP VIEW IF EXISTS vi_title CASCADE;
-CREATE OR REPLACE VIEW vi_title AS 
- SELECT inp_project_id.title,
-    inp_project_id.date
-   FROM inp_project_id
-  ORDER BY inp_project_id.title;
 
-
-DROP VIEW IF EXISTS vi_report CASCADE;
-CREATE OR REPLACE VIEW vi_report AS 
-SELECT
-   unnest(array['input', 'continuity', 'flowstats','controls','subcatchments','nodes','links']) AS "repor_type",
-   unnest(array[input, continuity, flowstats, controls,subcatchments,nodes,links]) AS "value"
-FROM inp_report
-
-
-DROP VIEW IF EXISTS vi_options CASCADE;
-CREATE OR REPLACE VIEW vi_options AS 
-SELECT
-  unnest(array['flow_units','infiltration','flow_routing','link_offsets','force_main_equation','ignore_rainfall','ignore_snowmelt',
- 'ignore_groundwater','ignore_routing','ignore_quality','skip_steady_state','start_date','start_time','end_date','end_time',
- 'report_start_date','report_start_time','sweep_start','sweep_end','dry_days','report_step','wet_step','dry_step','routing_step',
- 'lengthening_step','variable_step','inertial_damping','normal_flow_limited','min_surfarea','min_slope','allow_ponding','tempdir',
- 'max_trials','head_tolerance','sys_flow_tol','lat_flow_tol']) AS "parameter",
-  unnest(array[flow_units,cat_hydrology.infiltration,flow_routing,link_offsets,force_main_equation,ignore_rainfall,ignore_snowmelt,
-  ignore_groundwater, ignore_routing,ignore_quality,skip_steady_state,start_date,start_time,end_date,end_time,report_start_date,
-  report_start_time,sweep_start,sweep_end,dry_days::text,report_step,wet_step,dry_step,routing_step,lengthening_step::text,
-  variable_step::text,inertial_damping,normal_flow_limited,min_surfarea::text,min_slope::text,allow_ponding,tempdir,max_trials::text,
-  head_tolerance::text,sys_flow_tol::text,lat_flow_tol::text]) AS "value"
-FROM inp_options, inp_selector_hydrology
-     JOIN cat_hydrology ON inp_selector_hydrology.hydrology_id = cat_hydrology.hydrology_id;
 
 
 DROP VIEW IF EXISTS vi_snowpacks_1 CASCADE;
@@ -2145,24 +2303,12 @@ CREATE OR REPLACE VIEW ud_sample.v_inp_adjustments AS
  ----
 
 
-DROP VIEW IF EXISTS  vi_raingage CASCADE;
-CREATE OR REPLACE VIEW vi_raingage AS 
-SELECT v_edit_raingage.rg_id,
-    v_edit_raingage.form_type,
-    v_edit_raingage.intvl,
-    v_edit_raingage.scf
-   FROM v_edit_raingage;
 
 
 
 
 
 
-DROP VIEW IF EXISTS  vi_infiltration CASCADE;
-CREATE OR REPLACE VIEW vi_infiltration AS 
- SELECT v_edit_subcatchment.subc_id,
-   v_edit_subcatchment.snow_id
-   FROM v_edit_subcatchment;
 
 
 
