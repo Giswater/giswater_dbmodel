@@ -141,7 +141,7 @@ ALTER TABLE rpt_selector_hourly DROP CONSTRAINT IF EXISTS time_cur_user_unique;
 --INP
 
 
-ALTER TABLE  ws_sample.inp_typevalue add CONSTRAINT inp_typevalue_id_unique UNIQUE(id);
+ALTER TABLE  inp_typevalue add CONSTRAINT inp_typevalue_id_unique UNIQUE(id);
 
 ALTER TABLE inp_selector_dscenario ADD CONSTRAINT dscenario_id_cur_user_unique UNIQUE(dscenario_id, cur_user);
 ALTER TABLE "inp_selector_dscenario" ADD CONSTRAINT "inp_selector_dscenario_dscenario_id_fkey" FOREIGN KEY ("dscenario_id") REFERENCES "cat_dscenario" ("dscenario_id") ON DELETE RESTRICT ON UPDATE CASCADE;
