@@ -7,7 +7,10 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 2228
 
 
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_pg2epa_dump_subcatch() RETURNS SETOF character varying LANGUAGE plpgsql AS $$
+DROP FUNCTION SCHEMA_NAME.gw_fct_pg2epa_dump_subcatch();
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2epa_dump_subcatch()
+  RETURNS integer AS
+$BODY$
 DECLARE
     subcatchment_polygon public.geometry;
     row_id varchar(16);
@@ -21,7 +24,7 @@ BEGIN
     SET search_path = "SCHEMA_NAME", public;
 
 	--  Reset values
-	DELETE FROM temp_table WHERE user_name=cur_user AND fprocesscat_id=17;
+	DELETE FROM temp_table WHERE user_name=current_user AND fprocesscat_id=17;
 
     -- Dump node coordinates for every polygon
     FOR row_id IN SELECT subc_id FROM v_edit_subcatchment
@@ -35,14 +38,15 @@ BEGIN
         FOR point_aux IN SELECT (ST_dumppoints(subcatchment_polygon)).geom
         LOOP
             -- Insert result into outfile table
-            INSERT INTO temp_table (fprocesscat_id, text) VALUES ( 17, format('%s       %s       %s       ', row_id, to_char(ST_X(point_aux),'99999999.999'), to_char(ST_Y(point_aux),'99999999.999')) );
+            INSERT INTO temp_table (fprocesscat_id, text_column) VALUES ( 17, format('%s       %s       %s       ', row_id, to_char(ST_X(point_aux),'99999999.999'), to_char(ST_Y(point_aux),'99999999.999')) );
         END LOOP;
 
     END LOOP;
 
     -- Return the temporal table
-    RETURN QUERY SELECT text FROM temp_table WHERE user_name=cur_user AND fprocesscat_id=17 ORDER BY index;
+    RETURN 0;
 
 END
-$$;
-
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
