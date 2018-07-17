@@ -2698,3 +2698,11 @@ CREATE OR REPLACE VIEW vi_vertices AS
           AND inp_selector_result.cur_user = "current_user"()::text) arc
   WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) 
   AND (arc.point < arc.endpoint OR arc.point > arc.endpoint);
+
+
+DROP VIEW IF EXISTS vi_polygons CASCADE;
+CREATE OR REPLACE VIEW vi_polygons AS 
+ SELECT
+ temp_table.text_column
+ FROM temp_table
+ WHERE fprocesscat_id=17;

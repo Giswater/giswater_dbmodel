@@ -812,16 +812,19 @@ CREATE OR REPLACE VIEW vi_sources AS
   WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
 
-DROP VIEW IF EXISTS vi_reactions CASCADE;
-CREATE OR REPLACE VIEW vi_reactions AS 
+DROP VIEW IF EXISTS vi_reactions_el CASCADE;
+CREATE OR REPLACE VIEW vi_reactions_el AS 
  SELECT  inp_reactions_el.parameter,
     inp_reactions_el.arc_id,
     inp_reactions_el.value
    FROM inp_selector_result,inp_reactions_el
      JOIN rpt_inp_arc ON inp_reactions_el.arc_id::text = rpt_inp_arc.arc_id::text
-  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
-UNION
- SELECT inp_reactions_gl.react_type,
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_reactions_gl CASCADE;
+CREATE OR REPLACE VIEW vi_reactions_gl AS 
+ SELECT 
     inp_reactions_gl.parameter,
     inp_reactions_gl.value
    FROM inp_reactions_gl;

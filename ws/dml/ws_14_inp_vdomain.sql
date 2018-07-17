@@ -12,10 +12,7 @@ SET search_path = "SCHEMA_NAME", public, pg_catalog;
 -- ----------------------------
 
 
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'PATTERN_PUMP', 'PATTERN', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'HEAD_PUMP', 'HEAD', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'SPEED_PUMP', 'SPEED', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pump', 'POWER_PUMP', 'POWER', NULL);
+
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_reactions_gl', 'GLOBAL_GL', 'GLOBAL', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_opti_qual', 'AGE', 'AGE', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_energy', 'DEMAND CHARGE', 'DEMAND CHARGE', NULL);
@@ -24,8 +21,6 @@ INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalu
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'FLOWPACED', 'FLOWPACED', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'MASS', 'MASS', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_source', 'SETPOINT', 'SETPOINT', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_ampm', 'AM', 'AM', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_ampm', 'PM', 'PM', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'EFFICIENCY', 'EFFICIENCY', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'HEADLOSS', 'HEADLOSS', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_value_curve', 'PUMP', 'PUMP', NULL);
