@@ -204,6 +204,18 @@ sys_role text
 );
 
   
+CREATE TABLE sys_csv2pg_config
+(
+  id serial PRIMARY KEY,
+  pg2csvcat_id integer,
+  tablename text,
+  header_text text
+
+);
+ 
+   
+  
+  
   
 -- ----------------------------------
 -- Table: Audit table
