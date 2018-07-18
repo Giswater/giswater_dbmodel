@@ -23,7 +23,7 @@ ALTER TABLE inp_energy_gl DROP CONSTRAINT IF EXISTS inp_energy_gl_parameter_chec
 ALTER TABLE inp_energy_gl DROP CONSTRAINT IF EXISTS inp_energy_gl_energ_type_check;
 ALTER TABLE inp_mixing DROP CONSTRAINT IF EXISTS inp_mixing_mix_type_check;
 ALTER TABLE inp_source DROP CONSTRAINT IF EXISTS inp_source_sourc_type_check;
-ALTER TABLE inp_shortpipe DROP CONSTRAINT IF EXISTS inp_source_status_check;
+ALTER TABLE inp_shortpipe DROP CONSTRAINT IF EXISTS inp_shortpipe_status_check;
 ALTER TABLE inp_pump DROP CONSTRAINT IF EXISTS inp_pumpe_status_check;
 ALTER TABLE inp_pipe DROP CONSTRAINT IF EXISTS inp_pipe_status_check;
 ALTER TABLE inp_valve DROP CONSTRAINT IF EXISTS inp_valve_status_check;
@@ -113,8 +113,8 @@ ALTER TABLE inp_energy_el ADD CONSTRAINT inp_energy_el_parameter_check CHECK ( p
 ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
 ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_energ_type_check CHECK ( parameter IN ('DEMAND CHARGE','GLOBAL'));
 ALTER TABLE inp_mixing ADD CONSTRAINT inp_mixing_mix_type_check CHECK ( mix_type IN ('2COMP','FIFO','LIFO','MIXED'));
-ALTER TABLE inp_source ADD CONSTRAINT inp_source_sourc_type_check CHECK ( sourc_type IN ('CONCEN','FLOWPACED','MASS','SETPOINT'));
-ALTER TABLE inp_shortpipe ADD CONSTRAINT inp_source_status_check CHECK ( status IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE'));
+ALTER TABLE inp_source ADD CONSTRAINT inp_source_source_type_check CHECK ( sourc_type IN ('CONCEN','FLOWPACED','MASS','SETPOINT'));
+ALTER TABLE inp_shortpipe ADD CONSTRAINT inp_shortpipe_status_check CHECK ( status IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE'));
 ALTER TABLE inp_pump ADD CONSTRAINT inp_pumpe_status_check CHECK ( status IN ('CLOSED_PUMP','OPEN_PUMP'));
 ALTER TABLE inp_pipe ADD CONSTRAINT inp_pipe_status_check CHECK ( status IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE'));
 ALTER TABLE inp_valve ADD CONSTRAINT inp_valve_status_check CHECK ( status IN ('ACTIVE_VALVE','CLOSED_VALVE','OPEN_VALVE'));
