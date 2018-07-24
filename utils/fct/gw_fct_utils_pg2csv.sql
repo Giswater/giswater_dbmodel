@@ -7,42 +7,50 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: XXXX
 
 
-CREATE OR REPLACE FUNCTION ws_sample.gw_fct_pg2csv(p_pg2csvcat_id integer)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2csv(p_pg2csvcat_id integer)
   RETURNS void AS
 $BODY$DECLARE
 
 v_query_text text;
-
- 
+rec_table record;
+p_sys_csv2pg_config record;
+schemat text;
+--p_pg2csvcat_id integer;
 BEGIN
 
     -- Search path
-    SET search_path = "ws_sample", public;
+    SET search_path = "SCHEMA_NAME", public;
 
 
     --Delete previous
-    DELETE FROM ws_sample.temp_pg2csv WHERE user_name=current_user AND csv2pgcat_id=p_pg2csvcat_id;
+    DELETE FROM SCHEMA_NAME.temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_pg2csvcat_id;
  
     --node
-    FOR rec_table IN SELECT * FROM sys_pg2csv_config WHERE pg2csvcat_id=p_pg2csvcat_id
+    FOR rec_table IN SELECT * FROM sys_csv2pg_config WHERE pg2csvcat_id=p_pg2csvcat_id
      LOOP
+  --SELECT rec_table.header_text INTO p_sys_csv2pg_config FROM rec_table;
 
-	-- insert header
-	v_query_text = 'INSERT INTO temp_pg2csv SELECT * FROM '||sys_pg2csv_config.header;
-	EXECUTE v_query_text;
+  -- insert header
+  v_query_text = 'INSERT INTO temp_csv2pg(csv2pgcat_id,csv1) VALUES ('||p_pg2csvcat_id||','''|| rec_table.header_text||''');';
+  EXECUTE v_query_text;
 
-	-- insert column names
-	-- it need to be inverted
-	--v_query_text = 'INSERT INTO temp_pg2csv SELECT column_name FROM information_schema.columns WHERE table_schema=''ws_sample'' and table_name=''v_node''
+  --insert delimiter
+  v_query_text = 'INSERT INTO temp_csv2pg (csv1) VALUES ('';'')';
+  
+  EXECUTE v_query_text;
+  --insert column names
+  INSERT INTO SCHEMA_NAME.temp_csv2pg (csv2pgcat_id,csv1,csv2,csv3,csv4,csv5,csv6,csv7,csv8,csv9,csv10,csv11,csv12) SELECT p_pg2csvcat_id,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12
+  FROM crosstab('SELECT table_name::text,  data_type::text, column_name::text FROM information_schema.columns WHERE table_schema =''SCHEMA_NAME'' and table_name='''||rec_table.tablename||'''::text') 
+  AS rpt(table_name text, c1 text, c2 text, c3 text, c4 text, c5 text, c6 text, c7 text, c8 text, c9 text, c10 text, c11 text, c12 text);
 
-	-- underline
-	v_query_text = 'INSERT INTO temp_pg2csv SELECT '';'' FROM '||sys_pg2csv_config.header;
-	EXECUTE v_query_text;
+  --insert delimiter
+  v_query_text = 'INSERT INTO temp_csv2pg (csv1) VALUES ('';'')';
+  EXECUTE v_query_text;
 
-	-- insert values
-	v_query_text = 'INSERT INTO temp_pg2csv SELECT * FROM '||sys_pg2csv_config.tablename;
-	EXECUTE v_query_text;
-   		
+  -- insert values
+  v_query_text = 'INSERT INTO temp_csv2pg SELECT nextval(''SCHEMA_NAME.temp_csv2pg_id_seq''::regclass),4,current_user,*  FROM '||rec_table.tablename;
+  EXECUTE v_query_text;
+      
      END LOOP;
 
     RETURN;
@@ -50,5 +58,7 @@ BEGIN
 END;$BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
+
 
 
