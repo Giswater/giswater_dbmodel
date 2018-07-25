@@ -588,8 +588,8 @@ UNION
   WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
 
-DROP VIEW IF EXISTS vi_pump CASCADE;
-CREATE OR REPLACE VIEW vi_pump AS 
+DROP VIEW IF EXISTS vi_pumps CASCADE;
+CREATE OR REPLACE VIEW vi_pumps AS 
  SELECT concat(inp_pump.node_id, '_n2a') AS arc_id,
     rpt_inp_arc.node_1,
     rpt_inp_arc.node_2,
@@ -886,8 +886,8 @@ SELECT	rpt_inp_node.node_id,
 FROM rpt_inp_node;
 
 
-DROP VIEW IF EXISTS v_inp_vertice CASCADE;
-CREATE OR REPLACE VIEW v_inp_vertice AS 
+DROP VIEW IF EXISTS vi_vertices CASCADE;
+CREATE OR REPLACE VIEW vi_vertices AS 
  SELECT arc.arc_id,
     st_x(arc.point)::numeric(16,3) AS xcoord,
     st_y(arc.point)::numeric(16,3) AS ycoord
@@ -902,15 +902,15 @@ CREATE OR REPLACE VIEW v_inp_vertice AS
   WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) AND (arc.point < arc.endpoint OR arc.point > arc.endpoint);
 
 
-DROP VIEW IF EXISTS vi_label CASCADE;
-CREATE OR REPLACE VIEW vi_label AS 
+DROP VIEW IF EXISTS vi_labels CASCADE;
+CREATE OR REPLACE VIEW vi_labels AS 
  SELECT  inp_label.xcoord,
     inp_label.ycoord,
     inp_label.label,
     inp_label.node_id
    FROM inp_label;
 
-DROP VIEW IF EXISTS v_inp_backdrop CASCADE;
-CREATE OR REPLACE VIEW v_inp_backdrop AS 
+DROP VIEW IF EXISTS vi_backdrop CASCADE;
+CREATE OR REPLACE VIEW vi_backdrop AS 
  SELECT  inp_backdrop.text
    FROM inp_backdrop;

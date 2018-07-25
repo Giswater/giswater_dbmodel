@@ -39,3 +39,37 @@ dv_querytext='SELECT id FROM cat_arc WHERE id IS NOT NULL' WHERE column_id='conn
 
 UPDATE config_api_layer_field SET dv_table='arc', dv_id_column='arc_id', dv_name_column='arc_id', form_label='arc_id' , sys_api_cat_widgettype_id=2,
 dv_querytext='SELECT arc_id FROM arc WHERE arc_id IS NOT NULL' WHERE column_id='arc_id' and (table_id ilike 've_node%' or table_id ilike 've_connec%' or table_id ilike 've_gully');
+
+
+
+INSERT INTO sys_csv2pg_config VALUES (1, 4, 'vi_options', 'OPTIONS');
+INSERT INTO sys_csv2pg_config VALUES (2, 4, 'vi_evaporation', 'EVAPORATION');
+INSERT INTO sys_csv2pg_config VALUES (3, 4, 'vi_raingages', 'RAINGAGES');
+INSERT INTO sys_csv2pg_config VALUES (4, 4, 'vi_subcatchments', 'SUBCATCHMENTS');
+INSERT INTO sys_csv2pg_config VALUES (5, 4, 'vi_subareas', 'SUBAREAS');
+INSERT INTO sys_csv2pg_config VALUES (6, 4, 'vi_infiltration', 'INFILTRATION');
+INSERT INTO sys_csv2pg_config VALUES (8, 4, 'vi_lid_usage', 'LID_USAGE');
+INSERT INTO sys_csv2pg_config VALUES (7, 4, 'vi_lid_controls', 'LID_CONTROLS');
+INSERT INTO sys_csv2pg_config VALUES (9, 4, 'vi_snowpacks', 'SNOWPACKS');
+INSERT INTO sys_csv2pg_config VALUES (10, 4, 'vi_junctions', 'JUNCTIONS');
+INSERT INTO sys_csv2pg_config VALUES (11, 4, 'vi_outfalls', 'OUTFALLS');
+INSERT INTO sys_csv2pg_config VALUES (12, 4, 'vi_conduits', 'CONDUITS');
+INSERT INTO sys_csv2pg_config VALUES (13, 4, 'vi_xsections', 'XSECTIONS');
+INSERT INTO sys_csv2pg_config VALUES (14, 4, 'vi_losses', 'LOSSES');
+INSERT INTO sys_csv2pg_config VALUES (15, 4, 'vi_controls', 'CONTROLS');
+INSERT INTO sys_csv2pg_config VALUES (16, 4, 'vi_pollutants', 'POLLUTANTS');
+INSERT INTO sys_csv2pg_config VALUES (17, 4, 'vi_landuses', 'LANDUSES');
+INSERT INTO sys_csv2pg_config VALUES (18, 4, 'vi_coverages', 'COVERAGES');
+INSERT INTO sys_csv2pg_config VALUES (19, 4, 'vi_loadings', 'LOADINGS');
+INSERT INTO sys_csv2pg_config VALUES (20, 4, 'vi_buildup', 'BUILDUP');
+INSERT INTO sys_csv2pg_config VALUES (22, 4, 'vi_treatment', 'TREATMENT');
+INSERT INTO sys_csv2pg_config VALUES (23, 4, 'vi_dwf', 'DWF');
+INSERT INTO sys_csv2pg_config VALUES (24, 4, 'vi_timeseries', 'TIMESERIES');
+INSERT INTO sys_csv2pg_config VALUES (25, 4, 'vi_patterns', 'PATTERNS');
+INSERT INTO sys_csv2pg_config VALUES (26, 4, 'vi_report', 'REPORT');
+INSERT INTO sys_csv2pg_config VALUES (21, 4, 'vi_washoff', 'WASHOFF');
+INSERT INTO sys_csv2pg_config VALUES (27, 4, 'vi_map', 'MAP');
+INSERT INTO sys_csv2pg_config VALUES (28, 4, 'vi_coordinates', 'COORDINATES');
+INSERT INTO sys_csv2pg_config VALUES (29, 4, 'vi_vertices', 'VERTICES');
+INSERT INTO sys_csv2pg_config VALUES (30, 4, 'vi_symbols', 'SYMBOLS');
+INSERT INTO sys_csv2pg_config VALUES (31, 4, 'vi_polygons', 'Polygons');

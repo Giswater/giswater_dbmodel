@@ -30,3 +30,30 @@ dv_querytext='SELECT arc_id FROM arc WHERE arc_id IS NOT NULL' WHERE column_id='
 UPDATE config_api_layer_field SET ismandatory=FALSE, iseditable=FALSE WHERE column_id='nodetype_id';		
 
 
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (1, 4, 'vi_junctions', 'JUNCTIONS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (2, 4, 'vi_reservoirs', 'RESERVOIRS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (3, 4, 'vi_tanks', 'TANKS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (4, 4, 'vi_pipes', 'PIPES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (5, 4, 'vi_pumps', 'PUMPS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (6, 4, 'vi_valves', 'VALVES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (7, 4, 'vi_tags', 'TAGS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (8, 4, 'vi_demands', 'DEMANDS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (9, 4, 'vi_status', 'STATUS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (10, 4, 'vi_patterns', 'PATTERNS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (11, 4, 'vi_curves', 'CURVES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (12, 4, 'vi_controls', 'CONTROLS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (13, 4, 'vi_rules', 'RULES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (14, 4, 'vi_energy', 'ENERGY');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (15, 4, 'vi_emitters', 'EMITTERS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (16, 4, 'vi_quality', 'QUALITY');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (17, 4, 'vi_sources', 'SOURCES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (18, 4, 'vi_reactions_el', 'REACTIONS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (19, 4, 'vi_reactions_gl', 'REACTIONS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (20, 4, 'vi_mixing', 'MIXING');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (21, 4, 'vi_times', 'TIMES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (22, 4, 'vi_report', 'REPORT');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (23, 4, 'vi_options', 'OPTIONS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (24, 4, 'vi_coordinates', 'COORDINATES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (25, 4, 'vi_vertices', 'VERTICES');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (26, 4, 'vi_labels', 'LABELS');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (27, 4, 'vi_backdrop', 'BACKDROP');
