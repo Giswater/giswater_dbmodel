@@ -30,12 +30,13 @@
 			csv18=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',18),csv19=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',19),
 			csv20=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',20);
 
+			DELETE FROM temp_csv2pg WHERE csv1 ilike '-------%';
 
 			FOR rec_column IN SELECT column_name FROM information_schema.columns WHERE table_schema = 'SCHEMA_NAME' AND table_name   = 'temp_csv2pg' and (column_name ilike 'csv_' or column_name ilike 'csv__')
 			LOOP
 				v_query_text='UPDATE temp_csv2pg SET '||rec_column.column_name||'= NULL WHERE '||rec_column.column_name||'='''';';
 				execute v_query_text;
-			
+				
 			END LOOP;
 
 
