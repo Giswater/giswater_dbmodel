@@ -18,7 +18,7 @@
 			v_query_text='COPY SCHEMA_NAME.temp_csv2pg(csv1) FROM '''||path_aux||''' WITH (FORMAT text);';
 			execute v_query_text;
 			
-			update SCHEMA_NAME.temp_csv2pg set csv2pgcat_id=8,csv1=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',1),
+			update SCHEMA_NAME.temp_csv2pg set csv2pgcat_id=csv2pgcat_id_aux,csv1=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',1),
 			csv2=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',2),csv3=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',3),
 			csv4=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',4),csv5=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',5),
 			csv6=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',6),csv7=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',7),
