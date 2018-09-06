@@ -7,7 +7,7 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 2228
 
 
-DROP FUNCTION SCHEMA_NAME.gw_fct_pg2epa_dump_subcatch();
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_pg2epa_dump_subcatch();
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2epa_dump_subcatch()
   RETURNS integer AS
 $BODY$

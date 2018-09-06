@@ -8,17 +8,18 @@
 
 
 	rec_column record;
-	v_query_text text;
+	
 
 	BEGIN
 
 	--  Search path
 		SET search_path = "SCHEMA_NAME", public;
+			DELETE FROM temp_csv2pg WHERE csv2pgcat_id=csv2pgcat_id_aux AND user_name=current_user;
 
-			v_query_text='COPY SCHEMA_NAME.temp_csv2pg(csv1) FROM '''||path_aux||''' WITH (FORMAT text);';
-			execute v_query_text;
+			EXECUTE 'COPY temp_csv2pg(csv1) FROM '''||path_aux||''' WITH (FORMAT text);';
 			
-			update SCHEMA_NAME.temp_csv2pg set csv2pgcat_id=csv2pgcat_id_aux,csv1=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',1),
+			
+			update temp_csv2pg set csv2pgcat_id=csv2pgcat_id_aux,csv1=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',1),
 			csv2=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',2),csv3=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',3),
 			csv4=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',4),csv5=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',5),
 			csv6=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',6),csv7=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',7),
@@ -31,11 +32,10 @@
 			csv20=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',20);
 
 			DELETE FROM temp_csv2pg WHERE csv1 ilike '-------%';
-
+			DELETE FROM temp_csv2pg WHERE csv1 ilike '*%';
 			FOR rec_column IN SELECT column_name FROM information_schema.columns WHERE table_schema = 'SCHEMA_NAME' AND table_name   = 'temp_csv2pg' and (column_name ilike 'csv_' or column_name ilike 'csv__')
 			LOOP
-				v_query_text='UPDATE temp_csv2pg SET '||rec_column.column_name||'= NULL WHERE '||rec_column.column_name||'='''';';
-				execute v_query_text;
+				EXECUTE 'UPDATE temp_csv2pg SET '||rec_column.column_name||'= NULL WHERE '||rec_column.column_name||'='''';';
 				
 			END LOOP;
 

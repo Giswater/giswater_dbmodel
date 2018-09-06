@@ -2463,8 +2463,8 @@ UNION
   WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
 
-DROP VIEW IF EXISTS  vi_pattern CASCADE;
-CREATE OR REPLACE VIEW vi_pattern AS 
+DROP VIEW IF EXISTS  vi_patterns CASCADE;
+CREATE OR REPLACE VIEW vi_patterns AS 
 SELECT inp_pattern.pattern_id,
     inp_pattern.pattern_type,
     concat(inp_pattern.factor_1,' ',inp_pattern.factor_2,' ',inp_pattern.factor_3,' ',inp_pattern.factor_4,' ',

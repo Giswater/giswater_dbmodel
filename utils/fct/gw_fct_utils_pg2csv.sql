@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -54,16 +54,20 @@ BEGIN
 
         INSERT INTO temp_csv2pg (csv2pgcat_id,csv1) VALUES (p_pg2csvcat_id,';'); 
 
-        SELECT count(*) INTO column_number from information_schema.columns where table_name='vi_junctions';
+        SELECT count(*) INTO column_number from information_schema.columns where table_name=rec_table.tablename;
         INSERT INTO temp_csv2pg (csv2pgcat_id) VALUES (8) RETURNING id INTO id_last;
 
         SELECT count(*) INTO num_column from information_schema.columns where table_name=rec_table.tablename;
 
-        FOR num_col_rec IN 1..regexp_replace(num_column, '[()]', '','g')
-        LOOP
-            EXECUTE 'UPDATE temp_csv2pg SET csv'||num_col_rec||'=''----'' WHERE id='||id_last||';';
-        END LOOP;
-
+        --add underlines    
+            FOR num_col_rec IN 1..regexp_replace(num_column, '[()]', '','g')
+            LOOP
+                IF num_col_rec=1 then
+                      EXECUTE 'UPDATE temp_csv2pg set csv1='';-------'' WHERE id='||id_last||';';
+                ELSE
+                      EXECUTE 'UPDATE temp_csv2pg SET csv'||num_col_rec||'=''-------'' WHERE id='||id_last||';';
+                END IF;
+            END LOOP;
 
   -- insert values
         EXECUTE 'INSERT INTO temp_csv2pg SELECT nextval(''SCHEMA_NAME.temp_csv2pg_id_seq''::regclass),'||p_pg2csvcat_id||',current_user,*  FROM '||rec_table.tablename;
