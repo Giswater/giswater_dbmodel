@@ -200,7 +200,7 @@
 
 				END LOOP;
 
-		ELSIF csv2pgcat_id_aux=9 AND project_type_aux='ud' THEN
+		ELSIF csv2pgcat_id_aux=9 AND project_type_aux='UD' THEN
 
 			hour_aux=null;
 
@@ -214,8 +214,26 @@
 					
 					--RAISE NOTICE 'type,%',type_aux;
 					
+					IF type_aux='rpt_cat_result' THEN
+						UPDATE rpt_cat_result set flow_units=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Flow Units%' and result_id=label_aux;
+						UPDATE rpt_cat_result set rain_runof=rpt_rec.csv3 WHERE rpt_rec.csv1 ilike 'Rainfall/Runoff%' and result_id=label_aux;
+						UPDATE rpt_cat_result set snowmelt=rpt_rec.csv3 WHERE rpt_rec.csv1 ilike 'Snowmelt%' and result_id=label_aux;
+						UPDATE rpt_cat_result set groundw=rpt_rec.csv3 WHERE rpt_rec.csv1 ilike 'Groundwater%' and result_id=label_aux;
+						UPDATE rpt_cat_result set flow_rout=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3) ilike 'Flow Routing ...........%' and result_id=label_aux;
+						UPDATE rpt_cat_result set pond_all=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Ponding Allowed%' and result_id=label_aux;
+						UPDATE rpt_cat_result set water_q=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Water Quality%' and result_id=label_aux;
+						UPDATE rpt_cat_result set infil_m=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Infiltration Method%' and result_id=label_aux;
+						UPDATE rpt_cat_result set flowrout_m=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3) ilike 'Flow Routing Method%' and result_id=label_aux;
+						UPDATE rpt_cat_result set start_date=concat(rpt_rec.csv4,' ',rpt_rec.csv5) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Starting Date%' and result_id=label_aux;
+						UPDATE rpt_cat_result set end_date=concat(rpt_rec.csv4,' ',rpt_rec.csv5) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Ending Date%' and result_id=label_aux;
+						UPDATE rpt_cat_result set dry_days=rpt_rec.csv5::numeric WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Antecedent Dry%' and result_id=label_aux;
+						UPDATE rpt_cat_result set rep_tstep=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Report Time%' and result_id=label_aux;
+						UPDATE rpt_cat_result set wet_tstep=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Wet Time%' and result_id=label_aux;
+						UPDATE rpt_cat_result set dry_tstep=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Dry Time%' and result_id=label_aux;
+						UPDATE rpt_cat_result set rout_tstep=concat(rpt_rec.csv5,rpt_rec.csv6) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Routing Time%' and result_id=label_aux;
+						--there are still 3 empty fields on rpt_cat_results, where does the data come from?
 
-					IF type_aux='rpt_runoff_quant' then --HEKTARY CZY MM??
+					ELSIF type_aux='rpt_runoff_quant' then --HEKTARY CZY MM??
 					
 						IF label_aux NOT IN (SELECT result_id FROM rpt_runoff_quant) then
 							INSERT INTO SCHEMA_NAME.rpt_runoff_quant(result_id) VALUES (label_aux);
@@ -268,7 +286,7 @@
 
 					ELSIF rpt_rec.csv1 IN (SELECT subc_id FROM subcatchment) AND type_aux='rpt_subcathrunoff_sum' then 
 						INSERT INTO SCHEMA_NAME.rpt_subcathrunoff_sum(result_id, subc_id, tot_precip, tot_runon, tot_evap, tot_infil, 
-				tot_runoff, tot_runofl, peak_runof, runoff_coe)--, vxmax, vymax, depth, vel, vhmax)
+				tot_runoff, tot_runofl, peak_runof, runoff_coe)--, vxmax, vymax, depth, vel, vhmax) empty fields or should have data from another table?
 				VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
 						rpt_rec.csv7::numeric,rpt_rec.csv8::numeric,rpt_rec.csv9::numeric);
 
@@ -279,7 +297,7 @@
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node) AND type_aux='rpt_nodeinflow_sum' then
 						INSERT INTO SCHEMA_NAME.rpt_nodeinflow_sum(result_id, node_id, swnod_type, max_latinf, max_totinf, time_days, 
-				time_hour, latinf_vol, totinf_vol)--, flow_balance_error, other_info)
+				time_hour, latinf_vol, totinf_vol)--, flow_balance_error, other_info) empty fields or should have data from another table?
 						VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5,rpt_rec.csv6,
 						rpt_rec.csv7::numeric,rpt_rec.csv8::numeric);
 
@@ -294,7 +312,7 @@
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node WHERE epa_type='OUTFALL') AND type_aux='rpt_outfallload_sum' then
 						--INSERT INTO SCHEMA_NAME.rpt_outfallload_sum(result_id, poll_id, node_id, value)
-						--VALUES -- update poll_id, que es el value?
+						--VALUES -- update poll_id, que es el value? compare rpt and table
 
 						INSERT INTO SCHEMA_NAME.rpt_outfallflow_sum(result_id, node_id, flow_freq, avg_flow, max_flow, total_vol)
 						VALUES  (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric);

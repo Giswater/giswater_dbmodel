@@ -71,3 +71,27 @@ INSERT INTO sys_csv2pg_config VALUES (28, 8, 'vi_coordinates', '[COORDINATES]');
 INSERT INTO sys_csv2pg_config VALUES (29, 8, 'vi_vertices', '[VERTICES]');
 INSERT INTO sys_csv2pg_config VALUES (30, 8, 'vi_symbols', '[SYMBOLS]');
 INSERT INTO sys_csv2pg_config VALUES (31, 8, 'vi_polygons', '[Polygons]');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (32, 9, 'rpt_pumping_sum', 'Pumping Summary');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (33, 9, 'rpt_arcflow_sum', 'Link Flow');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (34, 9, NULL, 'Cross Section');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (35, 9, NULL, 'Link Summary');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (36, 9, NULL, 'Node Summary');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (37, 9, NULL, 'Raingage Summary');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (38, 9, NULL, 'Subcatchment Summary');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (39, 9, 'rpt_flowrouting_cont', 'Flow Routing');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (40, 9, 'rpt_storagevol_sum', 'Storage Volume');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (41, 9, 'rpt_subcathrunoff_sum', 'Subcatchment Runoff');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (42, 9, 'rpt_outfallload_sum', 'Outfall Loading');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (43, 9, 'rpt_condsurcharge_sum', 'Conduit Surcharge');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (44, 9, 'rpt_flowclass_sum', 'Flow Classification');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (45, 9, 'rpt_nodeflooding_sum', 'Node Flooding');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (46, 9, 'rpt_nodeinflow_sum', 'Node Inflow');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (47, 9, 'rpt_nodesurcharge_sum', 'Node Surcharge');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (48, 9, 'rpt_nodedepth_sum', 'Node Depth');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (49, 9, 'rpt_routing_timestep', 'Routing Time');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (50, 9, 'rpt_high_flowinest_ind', 'Highest Flow');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (51, 9, 'rpt_timestep_critelem', 'Time-Step Critical');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (52, 9, 'rpt_high_conterrors', 'Highest Continuity');
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, header_text) VALUES (53, 9, 'rpt_runoff_quant', 'Runoff Quantity');
+
+
