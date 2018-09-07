@@ -45,6 +45,80 @@ INSERT INTO sys_feature_cat VALUES ('NETELEMENT', 'NODE', 11 , 'v_edit_man_netel
 
 
 -- ----------------------------
+-- Records of sys_csv2pg_config
+-- ----------------------------
+
+INSERT INTO sys_csv2pg_config VALUES (2, 8, 'vi_options', '[OPTIONS]');
+INSERT INTO sys_csv2pg_config VALUES (3, 8, 'vi_report', '[REPORT]');
+INSERT INTO sys_csv2pg_config VALUES (5, 8, 'vi_evaporation', '[EVAPORATION]');
+INSERT INTO sys_csv2pg_config VALUES (6, 8, 'vi_raingages', '[RAINGAGES]');
+INSERT INTO sys_csv2pg_config VALUES (8, 8, 'vi_subcatchments', '[SUBCATCHMENTS]');
+INSERT INTO sys_csv2pg_config VALUES (9, 8, 'vi_subareas', '[SUBAREAS]');
+INSERT INTO sys_csv2pg_config VALUES (10, 8, 'vi_infiltration', '[INFILTRATION]');
+INSERT INTO sys_csv2pg_config VALUES (14, 8, 'vi_snowpacks', '[SNOWPACKS]');
+INSERT INTO sys_csv2pg_config VALUES (15, 8, 'vi_junction', '[JUNCTION]');
+INSERT INTO sys_csv2pg_config VALUES (19, 8, 'vi_conduits', '[CONDUITS]');
+INSERT INTO sys_csv2pg_config VALUES (24, 8, 'vi_xsections', '[XSECTIONS]');
+INSERT INTO sys_csv2pg_config VALUES (25, 8, 'vi_losses', '[LOSSES]');
+INSERT INTO sys_csv2pg_config VALUES (27, 8, 'vi_controls', '[CONTROLS]');
+INSERT INTO sys_csv2pg_config VALUES (28, 8, 'vi_pollutants', '[POLLUTANTS]');
+INSERT INTO sys_csv2pg_config VALUES (29, 8, 'vi_landuses', '[LANDUSES]');
+INSERT INTO sys_csv2pg_config VALUES (30, 8, 'vi_coverages', '[COVERAGES]');
+INSERT INTO sys_csv2pg_config VALUES (31, 8, 'vi_buildup', '[BUILDUP]');
+INSERT INTO sys_csv2pg_config VALUES (32, 8, 'vi_washoff', '[WASHOFF]');
+INSERT INTO sys_csv2pg_config VALUES (33, 8, 'vi_treatment', '[TREATMENT]');
+INSERT INTO sys_csv2pg_config VALUES (34, 8, 'vi_dwf', '[DWF]');
+INSERT INTO sys_csv2pg_config VALUES (35, 8, 'vi_patterns', '[PATTERNS]');
+INSERT INTO sys_csv2pg_config VALUES (37, 8, 'vi_loadings', '[LOADINGS]');
+INSERT INTO sys_csv2pg_config VALUES (41, 8, 'vi_timeseries', '[TIMESERIES]');
+INSERT INTO sys_csv2pg_config VALUES (42, 8, 'vi_lid_controls', '[LID_CONTROLS]');
+INSERT INTO sys_csv2pg_config VALUES (43, 8, 'vi_lid_usage', '[LID_USAGE]');
+INSERT INTO sys_csv2pg_config VALUES (75, 8, 'vi_map', '[MAP]');
+INSERT INTO sys_csv2pg_config VALUES (77, 8, 'vi_symbols', '[SYMBOLS]');
+INSERT INTO sys_csv2pg_config VALUES (1, 8, 'vi_title', '[TITLE]');
+INSERT INTO sys_csv2pg_config VALUES (4, 8, 'vi_files', '[FILES]');
+INSERT INTO sys_csv2pg_config VALUES (7, 8, 'vi_temperature', '[TEMPERATURE]');
+INSERT INTO sys_csv2pg_config VALUES (11, 8, 'vi_aquifers', '[AQUIFERS]');
+INSERT INTO sys_csv2pg_config VALUES (12, 8, 'vi_groundwater', '[GROUNDWATER]');
+INSERT INTO sys_csv2pg_config VALUES (13, 8, 'vi_gwf', '[GWF]');
+INSERT INTO sys_csv2pg_config VALUES (16, 8, 'vi_outfalls', '[OUTFALLS]');
+INSERT INTO sys_csv2pg_config VALUES (17, 8, 'vi_dividers', '[DIVIDERS]');
+INSERT INTO sys_csv2pg_config VALUES (18, 8, 'vi_storage', '[STORAGE]');
+INSERT INTO sys_csv2pg_config VALUES (20, 8, 'vi_pumps', '[PUMPS]');
+INSERT INTO sys_csv2pg_config VALUES (21, 8, 'vi_orifices', '[ORIFICES]');
+INSERT INTO sys_csv2pg_config VALUES (22, 8, 'vi_weirs', '[WEIRS]');
+INSERT INTO sys_csv2pg_config VALUES (23, 8, 'vi_outlets', '[OUTLETS]');
+INSERT INTO sys_csv2pg_config VALUES (26, 8, 'vi_transects', '[TRANSECTS]');
+INSERT INTO sys_csv2pg_config VALUES (36, 8, 'vi_inflows', '[INFLOWS]');
+INSERT INTO sys_csv2pg_config VALUES (38, 8, 'vi_rdii', '[RDII]');
+INSERT INTO sys_csv2pg_config VALUES (39, 8, 'vi_hydrographs', '[HYDROGRAPHS]');
+INSERT INTO sys_csv2pg_config VALUES (40, 8, 'vi_curves', '[CURVES]');
+INSERT INTO sys_csv2pg_config VALUES (79, 8, 'vi_coordinates', '[COORDINATES]');
+INSERT INTO sys_csv2pg_config VALUES (80, 8, 'vi_vertices', '[VERTICES]');
+INSERT INTO sys_csv2pg_config VALUES (81, 8, 'vi_polygons', '[Polygons]');
+INSERT INTO sys_csv2pg_config VALUES (82, 9, 'rpt_pumping_sum', 'Pumping Summary');
+INSERT INTO sys_csv2pg_config VALUES (83, 9, 'rpt_arcflow_sum', 'Link Flow');
+INSERT INTO sys_csv2pg_config VALUES (84, 9, 'rpt_flowrouting_cont', 'Flow Routing');
+INSERT INTO sys_csv2pg_config VALUES (85, 9, 'rpt_storagevol_sum', 'Storage Volume');
+INSERT INTO sys_csv2pg_config VALUES (86, 9, 'rpt_subcathrunoff_sum', 'Subcatchment Runoff');
+INSERT INTO sys_csv2pg_config VALUES (87, 9, 'rpt_outfallload_sum', 'Outfall Loading');
+INSERT INTO sys_csv2pg_config VALUES (88, 9, 'rpt_condsurcharge_sum', 'Conduit Surcharge');
+INSERT INTO sys_csv2pg_config VALUES (89, 9, 'rpt_flowclass_sum', 'Flow Classification');
+INSERT INTO sys_csv2pg_config VALUES (90, 9, 'rpt_nodeflooding_sum', 'Node Flooding');
+INSERT INTO sys_csv2pg_config VALUES (91, 9, 'rpt_nodeinflow_sum', 'Node Inflow');
+INSERT INTO sys_csv2pg_config VALUES (92, 9, 'rpt_nodesurcharge_sum', 'Node Surcharge');
+INSERT INTO sys_csv2pg_config VALUES (93, 9, 'rpt_nodedepth_sum', 'Node Depth');
+INSERT INTO sys_csv2pg_config VALUES (94, 9, 'rpt_routing_timestep', 'Routing Time');
+INSERT INTO sys_csv2pg_config VALUES (95, 9, 'rpt_high_flowinest_ind', 'Highest Flow');
+INSERT INTO sys_csv2pg_config VALUES (96, 9, 'rpt_timestep_critelem', 'Time-Step Critical');
+INSERT INTO sys_csv2pg_config VALUES (97, 9, 'rpt_high_conterrors', 'Highest Continuity');
+INSERT INTO sys_csv2pg_config VALUES (98, 9, 'rpt_runoff_quant', 'Runoff Quantity');
+INSERT INTO sys_csv2pg_config VALUES (99, 9, 'rpt_cat_result', 'Analysis Options');
+INSERT INTO sys_csv2pg_config VALUES (74, 8, 'vi_adjustments', '[ADJUSTMENTS]');
+INSERT INTO sys_csv2pg_config VALUES (76, 8, 'vi_backdrop', '[BACKDROP]');
+INSERT INTO sys_csv2pg_config VALUES (78, 8, 'vi_labels', '[LABELS]');
+
+-- ----------------------------
 -- Records of audit_cat_table
 -- ----------------------------
 INSERT INTO audit_cat_table VALUES ('om_reh_cat_works', 'O&M', 'Rehabilitation catalog of works', 'role_om', 0, NULL, NULL, NULL, NULL, NULL, NULL);

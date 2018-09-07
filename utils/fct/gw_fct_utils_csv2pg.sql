@@ -231,10 +231,9 @@
 						UPDATE rpt_cat_result set wet_tstep=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Wet Time%' and result_id=label_aux;
 						UPDATE rpt_cat_result set dry_tstep=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Dry Time%' and result_id=label_aux;
 						UPDATE rpt_cat_result set rout_tstep=concat(rpt_rec.csv5,rpt_rec.csv6) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Routing Time%' and result_id=label_aux;
-						--there are still 3 empty fields on rpt_cat_results, where does the data come from?
+						--there are still 3 empty fields on rpt_cat_results, where does the data come from? -- ok
 
-					ELSIF type_aux='rpt_runoff_quant' then --HEKTARY CZY MM??
-					
+					ELSIF type_aux='rpt_runoff_quant' then --HEKTARY 					
 						IF label_aux NOT IN (SELECT result_id FROM rpt_runoff_quant) then
 							INSERT INTO rpt_runoff_quant(result_id) VALUES (label_aux);
 						END IF;
@@ -247,7 +246,7 @@
 						UPDATE rpt_runoff_quant set finals_sto=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Final';
 						UPDATE rpt_runoff_quant set cont_error=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Continuity';
 
-					ELSIF type_aux='rpt_flowrouting_cont' then --HEKTARY CZY LITRY??
+					ELSIF type_aux='rpt_flowrouting_cont' then --HEKTARY
 						IF label_aux NOT IN (SELECT result_id FROM rpt_flowrouting_cont) then
 							INSERT INTO rpt_flowrouting_cont(result_id) VALUES (label_aux);
 						END IF;
