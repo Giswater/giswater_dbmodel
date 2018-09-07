@@ -148,9 +148,9 @@
 				FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=9 order by id
 				LOOP
 
-					IF (SELECT tablename FROM SCHEMA_NAME.sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9) 
+					IF (SELECT tablename FROM sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9) 
 					IS NOT NULL THEN
-						type_aux=(SELECT tablename FROM SCHEMA_NAME.sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9);
+						type_aux=(SELECT tablename FROM sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9);
 						hour_aux=rpt_rec.csv4;
 					END IF;
 					
@@ -207,9 +207,9 @@
 				FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=9 order by id
 				LOOP
 
-					IF (SELECT tablename FROM SCHEMA_NAME.sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9) 
+					IF (SELECT tablename FROM sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9) 
 					IS NOT NULL THEN
-						type_aux=(SELECT tablename FROM SCHEMA_NAME.sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9);
+						type_aux=(SELECT tablename FROM sys_csv2pg_config WHERE header_text=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND pg2csvcat_id=9);
 					END IF;
 					
 					--RAISE NOTICE 'type,%',type_aux;
@@ -236,109 +236,109 @@
 					ELSIF type_aux='rpt_runoff_quant' then --HEKTARY CZY MM??
 					
 						IF label_aux NOT IN (SELECT result_id FROM rpt_runoff_quant) then
-							INSERT INTO SCHEMA_NAME.rpt_runoff_quant(result_id) VALUES (label_aux);
+							INSERT INTO rpt_runoff_quant(result_id) VALUES (label_aux);
 						END IF;
 						
 
-						UPDATE SCHEMA_NAME.rpt_runoff_quant set total_prec=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Total';
-						UPDATE SCHEMA_NAME.rpt_runoff_quant set evap_loss=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Evaporation';
-						UPDATE SCHEMA_NAME.rpt_runoff_quant set infil_loss=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Infiltration';
-						UPDATE SCHEMA_NAME.rpt_runoff_quant set surf_runof=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Surface';
-						UPDATE SCHEMA_NAME.rpt_runoff_quant set finals_sto=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Final';
-						UPDATE SCHEMA_NAME.rpt_runoff_quant set cont_error=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Continuity';
+						UPDATE rpt_runoff_quant set total_prec=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Total';
+						UPDATE rpt_runoff_quant set evap_loss=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Evaporation';
+						UPDATE rpt_runoff_quant set infil_loss=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Infiltration';
+						UPDATE rpt_runoff_quant set surf_runof=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Surface';
+						UPDATE rpt_runoff_quant set finals_sto=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Final';
+						UPDATE rpt_runoff_quant set cont_error=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Continuity';
 
 					ELSIF type_aux='rpt_flowrouting_cont' then --HEKTARY CZY LITRY??
 						IF label_aux NOT IN (SELECT result_id FROM rpt_flowrouting_cont) then
-							INSERT INTO SCHEMA_NAME.rpt_flowrouting_cont(result_id) VALUES (label_aux);
+							INSERT INTO rpt_flowrouting_cont(result_id) VALUES (label_aux);
 						END IF;
 						
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set dryw_inf=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Dry';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set wetw_inf=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Wet';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set ground_inf=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Groundwater';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set rdii_inf=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='RDII';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set ext_inf=rpt_rec.csv5::numeric WHERE result_id=label_aux 
+						UPDATE rpt_flowrouting_cont set dryw_inf=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Dry';
+						UPDATE rpt_flowrouting_cont set wetw_inf=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Wet';
+						UPDATE rpt_flowrouting_cont set ground_inf=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Groundwater';
+						UPDATE rpt_flowrouting_cont set rdii_inf=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='RDII';
+						UPDATE rpt_flowrouting_cont set ext_inf=rpt_rec.csv5::numeric WHERE result_id=label_aux 
 							AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='External Inflow';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set ext_out=rpt_rec.csv5::numeric WHERE result_id=label_aux 
+						UPDATE rpt_flowrouting_cont set ext_out=rpt_rec.csv5::numeric WHERE result_id=label_aux 
 							AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='External Outflow';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set int_out=rpt_rec.csv5::numeric WHERE result_id=label_aux 
+						UPDATE rpt_flowrouting_cont set int_out=rpt_rec.csv5::numeric WHERE result_id=label_aux 
 							AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='Internal Outflow';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set stor_loss=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Storage';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set initst_vol=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Initial';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set finst_vol=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Final';
-						UPDATE SCHEMA_NAME.rpt_flowrouting_cont set cont_error=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Continuity';
+						UPDATE rpt_flowrouting_cont set stor_loss=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Storage';
+						UPDATE rpt_flowrouting_cont set initst_vol=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Initial';
+						UPDATE rpt_flowrouting_cont set finst_vol=rpt_rec.csv6::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Final';
+						UPDATE rpt_flowrouting_cont set cont_error=rpt_rec.csv5::numeric WHERE result_id=label_aux AND rpt_rec.csv1='Continuity';
 
 					ELSIF type_aux='rpt_high_conterrors' AND rpt_rec.csv1 = 'Node' then 
-						INSERT INTO SCHEMA_NAME.rpt_high_conterrors(result_id, text)
+						INSERT INTO rpt_high_conterrors(result_id, text)
 						VALUES (label_aux,CONCAT(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3));
 										
 					ELSIF type_aux='rpt_timestep_critelem' AND (rpt_rec.csv1 = 'Node' or rpt_rec.csv1 = 'Link') then 
-						INSERT INTO SCHEMA_NAME.rpt_timestep_critelem(result_id, text)
+						INSERT INTO rpt_timestep_critelem(result_id, text)
 						VALUES (label_aux,CONCAT(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3));
 
 					ELSIF type_aux='rpt_high_flowinest_ind' AND rpt_rec.csv1 = 'Link' then 
-						INSERT INTO SCHEMA_NAME.rpt_high_flowinest_ind(result_id, text)
+						INSERT INTO rpt_high_flowinest_ind(result_id, text)
 						VALUES (label_aux,CONCAT(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3));
 
 					ELSIF type_aux='rpt_routing_timestep' AND (rpt_rec.csv4 = ':' OR rpt_rec.csv5 = ':') then 
-						INSERT INTO SCHEMA_NAME.rpt_routing_timestep(result_id, text)
+						INSERT INTO rpt_routing_timestep(result_id, text)
 						VALUES (label_aux,CONCAT(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3,' ',rpt_rec.csv4,' ',rpt_rec.csv5,' ',
 						rpt_rec.csv6,' ',rpt_rec.csv7));
 
 					ELSIF rpt_rec.csv1 IN (SELECT subc_id FROM subcatchment) AND type_aux='rpt_subcathrunoff_sum' then 
-						INSERT INTO SCHEMA_NAME.rpt_subcathrunoff_sum(result_id, subc_id, tot_precip, tot_runon, tot_evap, tot_infil, 
+						INSERT INTO rpt_subcathrunoff_sum(result_id, subc_id, tot_precip, tot_runon, tot_evap, tot_infil, 
 				tot_runoff, tot_runofl, peak_runof, runoff_coe)--, vxmax, vymax, depth, vel, vhmax) empty fields or should have data from another table?
 				VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
 						rpt_rec.csv7::numeric,rpt_rec.csv8::numeric,rpt_rec.csv9::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node) AND type_aux='rpt_nodedepth_sum' then 
-						INSERT INTO SCHEMA_NAME.rpt_nodedepth_sum(result_id, node_id, swnod_type, aver_depth, max_depth, max_hgl,time_days, time_hour)
+						INSERT INTO rpt_nodedepth_sum(result_id, node_id, swnod_type, aver_depth, max_depth, max_hgl,time_days, time_hour)
 						VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6,
 						rpt_rec.csv7);
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node) AND type_aux='rpt_nodeinflow_sum' then
-						INSERT INTO SCHEMA_NAME.rpt_nodeinflow_sum(result_id, node_id, swnod_type, max_latinf, max_totinf, time_days, 
+						INSERT INTO rpt_nodeinflow_sum(result_id, node_id, swnod_type, max_latinf, max_totinf, time_days, 
 				time_hour, latinf_vol, totinf_vol)--, flow_balance_error, other_info) empty fields or should have data from another table?
 						VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5,rpt_rec.csv6,
 						rpt_rec.csv7::numeric,rpt_rec.csv8::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node) AND type_aux='rpt_nodesurcharge_sum' then
-						INSERT INTO SCHEMA_NAME.rpt_nodesurcharge_sum(result_id, node_id, swnod_type, hour_surch, max_height, min_depth)
+						INSERT INTO rpt_nodesurcharge_sum(result_id, node_id, swnod_type, hour_surch, max_height, min_depth)
 						VALUES  (label_aux,rpt_rec.csv1,rpt_rec.csv2,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node) AND type_aux='rpt_nodeflooding_sum' then
-						INSERT INTO SCHEMA_NAME.rpt_nodeflooding_sum(result_id, node_id, hour_flood, max_rate, time_days, time_hour, tot_flood, max_ponded)
+						INSERT INTO rpt_nodeflooding_sum(result_id, node_id, hour_flood, max_rate, time_days, time_hour, tot_flood, max_ponded)
 						VALUES  (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4,rpt_rec.csv5,rpt_rec.csv6::numeric,
 						rpt_rec.csv7::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node WHERE epa_type='OUTFALL') AND type_aux='rpt_outfallload_sum' then
-						--INSERT INTO SCHEMA_NAME.rpt_outfallload_sum(result_id, poll_id, node_id, value)
+						--INSERT INTO rpt_outfallload_sum(result_id, poll_id, node_id, value)
 						--VALUES -- update poll_id, que es el value? compare rpt and table
 
-						INSERT INTO SCHEMA_NAME.rpt_outfallflow_sum(result_id, node_id, flow_freq, avg_flow, max_flow, total_vol)
+						INSERT INTO rpt_outfallflow_sum(result_id, node_id, flow_freq, avg_flow, max_flow, total_vol)
 						VALUES  (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node WHERE epa_type='STORAGE') AND type_aux='rpt_storagevol_sum' then
-						INSERT INTO SCHEMA_NAME.rpt_storagevol_sum(result_id, node_id, aver_vol, avg_full, ei_loss, max_vol,
+						INSERT INTO rpt_storagevol_sum(result_id, node_id, aver_vol, avg_full, ei_loss, max_vol,
 						max_full, time_days, time_hour, max_out)
 						VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
 						rpt_rec.csv7,rpt_rec.csv8,rpt_rec.csv9::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT arc_id FROM rpt_inp_arc) AND type_aux='rpt_arcflow_sum' then
 						CASE WHEN rpt_rec.csv6='>50.00' THEN rpt_rec.csv6='50.00'; else end case;
-						INSERT INTO SCHEMA_NAME.rpt_arcflow_sum(result_id, arc_id, arc_type, max_flow, time_days, time_hour, max_veloc, 
+						INSERT INTO rpt_arcflow_sum(result_id, arc_id, arc_type, max_flow, time_days, time_hour, max_veloc, 
 						mfull_flow, mfull_dept) --max_shear, max_hr, max_slope, day_max, time_max, min_shear, day_min, time_min)
 						VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2,rpt_rec.csv3::numeric,rpt_rec.csv4,rpt_rec.csv5,rpt_rec.csv6::numeric,
 						rpt_rec.csv7::numeric,rpt_rec.csv8::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT arc_id FROM rpt_inp_arc) AND type_aux='rpt_flowclass_sum' then
-						INSERT INTO SCHEMA_NAME.rpt_flowclass_sum(result_id, arc_id, length, dry, up_dry, down_dry, sub_crit,
+						INSERT INTO rpt_flowclass_sum(result_id, arc_id, length, dry, up_dry, down_dry, sub_crit,
 							sub_crit_1, up_crit, down_crit, froud_numb, flow_chang)
 					VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
 						rpt_rec.csv7::numeric,rpt_rec.csv8::numeric,rpt_rec.csv9::numeric,rpt_rec.csv10::numeric,rpt_rec.csv11::numeric);
 
 
 					ELSIF rpt_rec.csv1 IN (SELECT arc_id FROM rpt_inp_arc) AND type_aux='rpt_condsurcharge_sum' THEN
-						INSERT INTO SCHEMA_NAME.rpt_condsurcharge_sum(result_id, arc_id, both_ends, upstream, dnstream, hour_nflow, hour_limit)
+						INSERT INTO rpt_condsurcharge_sum(result_id, arc_id, both_ends, upstream, dnstream, hour_nflow, hour_limit)
 						VALUES (label_aux,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric);
 
 					ELSIF rpt_rec.csv1 IN (SELECT arc_id FROM rpt_inp_arc WHERE epa_type='PUMP') AND type_aux='rpt_pumping_sum' THEN
