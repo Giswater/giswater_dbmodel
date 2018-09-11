@@ -45,7 +45,7 @@ BEGIN
       INSERT INTO temp_csv2pg (csv1,csv2pgcat_id) VALUES (NULL,p_pg2csvcat_id); 
 
       --node
-      FOR rec_table IN SELECT * FROM sys_csv2pg_config WHERE pg2csvcat_id=p_pg2csvcat_id
+      FOR rec_table IN SELECT * FROM sys_csv2pg_config WHERE pg2csvcat_id=p_pg2csvcat_id order by id
        LOOP
     -- insert header
           INSERT INTO temp_csv2pg (csv1,csv2pgcat_id) VALUES (NULL,p_pg2csvcat_id); 
@@ -80,7 +80,7 @@ BEGIN
   END CASE;
   
     --add formating - spaces
-         FOR num_col_rec IN 1..num_column::integer
+    FOR num_col_rec IN 1..num_column::integer
               LOOP
     IF num_col_rec < num_column::integer THEN
         EXECUTE 'UPDATE temp_csv2pg SET csv'||num_col_rec||'=rpad(csv'||num_col_rec||',20) WHERE source='''||rec_table.tablename||''';';

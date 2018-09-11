@@ -1685,7 +1685,12 @@ CREATE TABLE "rpt_timestep_critelem" (
 "text" varchar(255)  
 );
 
-
+CREATE TABLE rpt_warning_summary(
+id serial NOT NULL PRIMARY KEY,
+result_id varchar(30),
+warning_number varchar(30),
+text text
+);
 
 
 

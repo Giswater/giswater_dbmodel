@@ -1,5 +1,15 @@
+/*
+This file is part of Giswater 3
+The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This version of Giswater is provided by Giswater Association
+*/
 
-	CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_import_temp_csv2pg(
+--FUNCTION CODE: XXXX
+
+
+
+-- DROP FUNCTION SCHEMA_NAME.gw_fct_utils_import_temp_csv2pg(integer, text);
+	CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_utils_import_temp_csv2pg(
 		csv2pgcat_id_aux integer,
 		path_aux text)
 	  RETURNS integer AS
@@ -29,11 +39,11 @@
 			csv14=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',14),csv15=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',15),
 			csv16=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',16),csv17=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',17),
 			csv18=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',18),csv19=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',19),
-			csv20=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',20);
+			csv20=split_part(trim(regexp_replace(csv1, '\s+', ' ', 'g')),' ',20) WHERE csv2pgcat_id is null AND user_name=current_user;
 
 			DELETE FROM temp_csv2pg WHERE csv1 ilike '-------%';
 			DELETE FROM temp_csv2pg WHERE csv1 ilike '*%';
-			FOR rec_column IN SELECT column_name FROM information_schema.columns WHERE table_schema = 'SCHEMA_NAME' AND table_name   = 'temp_csv2pg' and (column_name ilike 'csv_' or column_name ilike 'csv__')
+			FOR rec_column IN SELECT column_name FROM information_schema.columns WHERE table_schema = 'SCHEMA_NAME' AND table_name = 'temp_csv2pg' and (column_name ilike 'csv_' or column_name ilike 'csv__')
 			LOOP
 				EXECUTE 'UPDATE temp_csv2pg SET '||rec_column.column_name||'= NULL WHERE '||rec_column.column_name||'='''';';
 				
