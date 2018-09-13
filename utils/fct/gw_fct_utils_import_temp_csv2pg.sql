@@ -57,5 +57,5 @@ This version of Giswater is provided by Giswater Association
 	$BODY$
 	  LANGUAGE plpgsql VOLATILE
 	  COST 100;
-	ALTER FUNCTION SCHEMA_NAME.gw_fct_import_temp_csv2pg(integer, text)
+	ALTER FUNCTION SCHEMA_NAME.gw_fct_utils_import_temp_csv2pg(integer, text)
 	  OWNER TO postgres;
