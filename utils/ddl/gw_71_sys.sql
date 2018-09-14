@@ -171,6 +171,7 @@ CREATE TABLE temp_csv2pg (
 id serial PRIMARY KEY,
 csv2pgcat_id integer,
 user_name text DEFAULT current_user,
+source text,
 csv1 text, 
 csv2 text,   
 csv3 text, 
