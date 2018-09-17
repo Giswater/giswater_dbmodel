@@ -205,17 +205,25 @@ sys_role text
 );
 
   
-CREATE TABLE sys_csv2pg_config
+CREATE TABLE sys_csv2pg_export_config
 (
   id serial PRIMARY KEY,
   pg2csvcat_id integer,
   tablename text,
   header_text text
-
 );
  
    
-  
+CREATE TABLE sys_csv2pg_import_config_fields (
+  id serial PRIMARY KEY NOT NULL,
+  pg2csvcat_id integer,
+  header_text text,
+  csv_field text,
+  tablename text,
+  table_field text,
+  tg_op text,
+  pk_field_value text
+);  
   
   
 -- ----------------------------------

@@ -22,6 +22,7 @@ feature_id (can be arc, node or connec), parameter_id (choose from man_addfields
 INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (5, 'Import arc visit table', 'Import arc visit table', 'The csv file must contains next columns on same position: arc_id, unit', 'role_om');
 INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (6, 'Import connec visit table', 'Import connec visit table', 'The csv file must contains next columns on same position: connec_id, unit', 'role_om');
 INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (7, 'Import gully visit table', 'Import gully visit table', 'The csv file must contains next columns on same position: gully_id, unit', 'role_om');
-INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (8, 'Export inp', 'Export inp', NULL, 'role_edit');
-INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (9, 'Import rpt', 'Import rpt', NULL, 'role_edit');
+INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (8, 'Export inp', 'Export inp', NULL, 'role_epa');
+INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (9, 'Import rpt', 'Import rpt', NULL, 'role_epa');
+INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role) VALUES (10, 'Import data from rpt', 'Import data from rpt', NULL, 'role_edit');
 
