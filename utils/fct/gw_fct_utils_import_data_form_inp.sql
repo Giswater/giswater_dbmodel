@@ -39,7 +39,7 @@ $BODY$
 	v_fields record;
 	v_target text;
 	v_count integer=0;
-
+	project_type_aux varchar;
 	
 	BEGIN
 	--  Search path
@@ -65,8 +65,12 @@ $BODY$
 	delete from config_param_user where cur_user=current_user;
 
 	--dissable (temporary) inp foreign keys
-	ALTER TABLE ws_inp.inp_junction DROP CONSTRAINT IF EXISTS inp_junction_pattern_id_fkey;
-
+	--ALTER TABLE inp_junction DROP CONSTRAINT IF EXISTS inp_junction_pattern_id_fkey;
+	--ALTER TABLE inp_pipe DROP CONSTRAINT inp_pipe_status_check;
+	--ALTER TABLE inp_pipe DROP CONSTRAINT inp_pipe_status_fkey;
+	--ALTER TABLE inp_pattern_value DROP CONSTRAINT inp_pattern_value_pattern_id_fkey;
+	--ALTER TABLE inp_tags DROP CONSTRAINT inp_tags_node_id_fkey;
+	--ALTER TABLE inp_pattern_value DROP CONSTRAINT inp_pattern_value_pattern_id_fkey;
 	
 	--insert basic data necessary to import data
 	INSERT INTO macroexploitation(macroexpl_id,name) VALUES(1,'macroexploitation1');
@@ -99,29 +103,45 @@ $BODY$
 	INSERT INTO selector_state(state_id,cur_user) VALUES (1,current_user);
 
 	--insert other previous values from data
-/*
-	IF project type='WS' THEN
-		patterns (inp_junction)
-	
-	ELSIF 
+	SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;
 
-	END IF;
-*/
 
-	-- select for the whole user's importation
 	FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=10 order by id
 	LOOP
+		
 		-- getting the target value
 		IF rpt_rec.csv1 LIKE '[%' THEN
 			v_target=rpt_rec.csv1;
 		END IF;
+		
+		UPDATE temp_csv2pg SET source=v_target WHERE rpt_rec.id=temp_csv2pg.id;
+
+
+		IF project_type_aux='WS' AND v_target='[PATTERNS]' AND rpt_rec.csv1 is not null THEN
+			INSERT INTO inp_pattern (pattern_id) SELECT  (rpt_rec.csv1) WHERE rpt_rec.csv1 not in (select pattern_id from inp_pattern);
+			INSERT INTO inp_pattern_value (pattern_id) VALUES (rpt_rec.csv1);
+		END IF;
+	end loop;
+
+	-- select for the whole user's importation
+	FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=10 and source!='[PATTERNS]' order by id
+	LOOP
+		
+		-- getting the target value
+		IF rpt_rec.csv1 LIKE '[%' THEN
+			v_target=rpt_rec.csv1;
+		END IF;
+		
+		UPDATE temp_csv2pg SET source=v_target WHERE rpt_rec.id=temp_csv2pg.id;
 
 		-- filter if the row it's a valid row to import or not		
-		IF rpt_rec.csv1 NOT LIKE ';%' AND rpt_rec.csv1 NOT LIKE '[%' THEN
-		 
+		IF rpt_rec.csv1 NOT LIKE ';%' AND rpt_rec.csv1 NOT LIKE '[%' AND rpt_rec.csv1 IS NOT NULL THEN
+		 RAISE NOTICE 'rpt_rec.csv1,%',rpt_rec.csv1;
 			-- Manage the insert/update for the whole table
-			FOR v_tablename IN SELECT DISTINCT tablename FROM sys_csv2pg_config_fields WHERE header_text = v_target AND pg2csvcat_id=10
+			FOR v_tablename IN SELECT DISTINCT tablename FROM sys_csv2pg_import_config_fields WHERE header_text = v_target AND pg2csvcat_id=10
 			LOOP
+				IF v_tablename is not null then 
+				raise notice 'v_tablename,%0',v_tablename;
 				--Getting parameters of table
 				--Get id column
 				EXECUTE 'SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = $1::regclass AND i.indisprimary'
@@ -141,11 +161,11 @@ $BODY$
 					INTO v_pkey_column_type;
 
 				-- Looking for the whole fields of looped table
-				FOR v_fields IN SELECT * FROM sys_csv2pg_config_fields WHERE header_text = rpt_rec.source AND pg2csvcat_id=10 AND tablename=v_tablename ORDER BY order_by
+				FOR v_fields IN SELECT * FROM sys_csv2pg_import_config_fields WHERE header_text = rpt_rec.source AND pg2csvcat_id=10 AND tablename=v_tablename ORDER BY id
 				LOOP
+				
 					-- Getting the value
 					v_query_text = 'SELECT '||v_fields.csv_field||' FROM temp_csv2pg WHERE id='||rpt_rec.id;
-					--raise notice 'query_text %', v_query_text;
 					EXECUTE v_query_text INTO v_value;
 					raise notice 'v_value %', v_value;
 
@@ -153,7 +173,7 @@ $BODY$
 					EXECUTE 'SELECT data_type FROM information_schema.columns  WHERE table_schema = $1 AND table_name = ' || quote_literal(v_tablename) || ' AND column_name = $2'
 						USING schemas_array[1], v_fields.table_field
 						INTO v_column_type;							
-
+					RAISE NOTICE 'v_column_type,%',v_column_type;
 					-- control of data type, only for numeric values
 					IF v_column_type='bigint' OR v_column_type='integer' OR v_column_type='numeric' OR v_column_type='smallint' THEN
 						IF (SELECT (v_value::varchar~ '^-?[0-9]*.?[0-9]*$') is_numeric) IS FALSE THEN
@@ -166,44 +186,50 @@ $BODY$
 
 					-- In case of insert
 					IF v_fields.tg_op='I' THEN
-
+						IF v_value!=v_table_pkey then
+							raise notice 'dsd';
+						ELSE
 						-- inserting data
 						v_query_text = 'INSERT INTO '||v_fields.tablename ||' ('||v_table_pkey||') VALUES ('||v_value||')';
 						raise notice 'insert query_text %', v_query_text;
 						EXECUTE v_query_text;
+						END IF;
 
 					-- In case of udate
 					ELSIF v_fields.tg_op='U' THEN
-
+						
 						-- Getting the primary key value
 						EXECUTE 'SELECT '||v_fields.pk_field_value||' FROM temp_csv2pg WHERE id = '||rpt_rec.id
 							INTO v_pkey_value;
 						raise notice 'v_pkey_value %', v_pkey_value;
-
+				
 						--updating data
-						v_query_text = 'UPDATE '|| quote_ident(v_fields.tablename)||' SET '|| quote_ident(v_fields.table_field)||' =  CAST('||quote_literal(v_value)||' AS '||
-						v_column_type ||') WHERE '||quote_ident(v_table_pkey)||' =  CAST('||quote_literal(v_pkey_value)||' AS '||v_pkey_column_type||')';
-						raise notice 'update query_text %', v_query_text;
-						EXECUTE v_query_text;
+						IF v_value IS NOT NULL AND v_target!='[COORDINATES]' AND v_target!='[VERTICES]'THEN
+							v_query_text = 'UPDATE '|| quote_ident(v_fields.tablename)||' SET '|| quote_ident(v_fields.table_field)||' =  CAST('||quote_literal(v_value)||' AS '||
+							v_column_type ||') WHERE '||quote_ident(v_table_pkey)||' =  CAST('||quote_literal(v_pkey_value)||' AS '||v_pkey_column_type||')';
+							raise notice 'update query_text %', v_query_text;
+							EXECUTE v_query_text;
+
+						END IF;
+
 						
 					END IF;
 
-
+					
 				END LOOP;
-
+				END IF;
 			END LOOP;
 		
 		END IF;
 
 	END LOOP;
 
-
+	--IF project_type_aux='WS' THEN
 	-- enable inp foreign keys
-	--ALTER TABLE ws_inp.inp_junction ADD CONSTRAINT inp_junction_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES ws_inp.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
-
+	--ALTER TABLE inp_junction ADD CONSTRAINT inp_junction_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES ws_inp.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 
 	RETURN v_count;
-
+	
 	END;
 	$BODY$
   LANGUAGE plpgsql VOLATILE
