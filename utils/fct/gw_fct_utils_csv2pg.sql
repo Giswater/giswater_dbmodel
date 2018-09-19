@@ -8,7 +8,7 @@
 
 	--DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_utils_csv2pg(integer, text);
 	CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_utils_csv2pg(
-	    csv2pgcat_id_aux integer,
+	    p_csv2pgcat_id_aux integer,
 	    label_aux text)
 	  RETURNS integer AS
 	$BODY$
@@ -31,7 +31,7 @@
 	    SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;
 
 		-- db prices catalog
-		IF csv2pgcat_id_aux=1 THEN
+		IF p_csv2pgcat_id_aux=1 THEN
 
 			-- control of price code (csv1)
 			SELECT csv1 INTO units_rec FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
@@ -86,7 +86,7 @@
 		
 
 		-- om visit tables
-		ELSIF csv2pgcat_id_aux=2 THEN
+		ELSIF p_csv2pgcat_id_aux=2 THEN
 		
 			-- Insert into audit table
 			INSERT INTO audit_log_csv2pg 
@@ -95,7 +95,7 @@
 			FROM temp_csv2pg;
 
 		-- elements import
-		ELSIF csv2pgcat_id_aux=3 THEN
+		ELSIF p_csv2pgcat_id_aux=3 THEN
 		
 			FOR element_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=3
 			LOOP 
@@ -126,7 +126,7 @@
 			DELETE FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=3;
 
 		-- addfields import
-		ELSIF csv2pgcat_id_aux=4 THEN
+		ELSIF p_csv2pgcat_id_aux=4 THEN
 
 			FOR addfields_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=4
 			LOOP
@@ -139,7 +139,7 @@
 
 				
 	-- import rpt csv
-			ELSIF csv2pgcat_id_aux=9 AND project_type_aux='WS' THEN
+			ELSIF p_csv2pgcat_id_aux=9 AND project_type_aux='WS' THEN
 
 			--remove data from with the same result_id
 			FOR rpt_rec IN SELECT * FROM sys_csv2pg_config WHERE pg2csvcat_id=9 EXCEPT SELECT * FROM sys_csv2pg_config WHERE tablename='rpt_cat_result' LOOP
@@ -204,7 +204,7 @@
 
 				END LOOP;
 
-		ELSIF csv2pgcat_id_aux=9 AND project_type_aux='UD' THEN
+		ELSIF p_csv2pgcat_id_aux=9 AND project_type_aux='UD' THEN
 
 			hour_aux=null;
 			--remove data from with the same result_id
