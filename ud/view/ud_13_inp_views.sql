@@ -5,7 +5,7 @@ This version of Giswater is provided by Giswater Association
 */
 
 
-SET search_path = "ud_sample", public, pg_catalog;
+SET search_path = "SCHEMA_NAME", public, pg_catalog;
 -- WARNING: ud_sample IS NOT ONLY PRESENT ON THE HEADER OF THIS FILE. IT EXISTS ALSO INTO IT. PLEASE REVIEW IT BEFORE REPLACE....
 
 
