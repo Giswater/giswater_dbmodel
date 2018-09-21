@@ -1,8 +1,8 @@
--- Function: ws_inp.gw_fct_utils_data_from_inp(integer)
+-- Function: SCHEMA_NAME.gw_fct_utils_data_from_inp(integer)
 
--- DROP FUNCTION ws_inp.gw_fct_utils_data_from_inp(integer);
+-- DROP FUNCTION SCHEMA_NAME.gw_fct_utils_data_from_inp(integer);
 
-CREATE OR REPLACE FUNCTION ws_inp.gw_fct_utils_data_from_inp(p_csv2pgcat_id_aux integer)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_utils_data_from_inp(p_csv2pgcat_id_aux integer)
   RETURNS integer AS
 $BODY$
 	DECLARE
@@ -28,10 +28,11 @@ $BODY$
 	v_data record;
 	id_last text;
 	v_typevalue text;
+	v_extend_val public.geometry;
 	
 	BEGIN
 	--  Search path
-	SET search_path = "ws_inp", public;
+	SET search_path = "SCHEMA_NAME", public;
 
     	--    Get schema name
 	schemas_array := current_schemas(FALSE);
@@ -53,17 +54,16 @@ $BODY$
 	delete from config_param_user where cur_user=current_user;
 	delete from inp_tags;
 	delete from inp_pattern cascade;
+	delete from inp_report cascade;
+	delete from inp_times cascade;
+	delete from inp_valve_importinp cascade;
+	delete from inp_pump_importinp cascade;
 
 	--dissable (temporary) inp foreign keys
-	--ALTER TABLE inp_junction DROP CONSTRAINT IF EXISTS inp_junction_pattern_id_fkey;
-	--ALTER TABLE inp_pipe DROP CONSTRAINT inp_pipe_status_check;
-	--ALTER TABLE inp_pipe DROP CONSTRAINT inp_pipe_status_fkey;
-	--ALTER TABLE inp_pattern_value DROP CONSTRAINT inp_pattern_value_pattern_id_fkey;
+	ALTER TABLE inp_junction DROP CONSTRAINT IF EXISTS inp_junction_pattern_id_fkey;
+	ALTER TABLE inp_pattern_value DROP CONSTRAINT inp_pattern_value_pattern_id_fkey;
+	ALTER TABLE inp_source DROP CONSTRAINT inp_source_pattern_id_fkey;
 	--ALTER TABLE inp_tags DROP CONSTRAINT inp_tags_node_id_fkey;
-	--ALTER TABLE inp_source DROP CONSTRAINT inp_source_pattern_id_fkey;
-	--ALTER TABLE inp_junction DROP CONSTRAINT inp_junction_pattern_id_fkey;
-	
-	
 	
 	--insert basic data necessary to import data
 	INSERT INTO macroexploitation(macroexpl_id,name) VALUES(1,'macroexploitation1');
@@ -71,11 +71,25 @@ $BODY$
 	INSERT INTO sector(sector_id,name) VALUES(1,'sector1');
 	INSERT INTO dma(dma_id,name) VALUES(1,'dma1');
 	INSERT INTO ext_municipality(muni_id,name) VALUES(1,'municipality1');
+	
+	IF NOT EXISTS (SELECT id FROM cat_feature WHERE id = 'VALVE_PIPE')THEN
+		INSERT INTO cat_feature VALUES ('VALVE_PIPE','PIPE','ARC');
+	ELSIF NOT EXISTS (SELECT id FROM arc_type WHERE id = 'VALVE_PIPE')THEN
+		INSERT INTO arc_type (id, type, epa_default, man_table, epa_table,active) VALUES ('VALVE_PIPE', 'PIPE', 'PIPE', 'man_valve', 'inp_valve_importinp',TRUE);
+	ELSIF NOT EXISTS (SELECT id FROM cat_feature WHERE id = 'PUMP_PIPE')THEN
+		INSERT INTO cat_feature VALUES ('PUMP_PIPE','PIPE','ARC');
+	ELSIF NOT EXISTS (SELECT id FROM arc_type WHERE id = 'PUMP_PIPE')THEN
+		INSERT INTO arc_type (id, type, epa_default, man_table, epa_table,active) VALUES ('PUMP_PIPE', 'PIPE', 'PIPE', 'man_pump', 'inp_pump_importinp',TRUE);
+	END IF;
+
+
 	INSERT INTO cat_node(id,nodetype_id) VALUES ('JUNCTION','JUNCTION');
 	INSERT INTO cat_node(id,nodetype_id) VALUES ('TANK','TANK');
-	INSERT INTO cat_node(id,nodetype_id) VALUES ('PUMP','PUMP');
-	INSERT INTO cat_node(id,nodetype_id) VALUES ('VALVE','PR-REDUC.VALVE');
+	INSERT INTO cat_node(id,nodetype_id) VALUES ('RESERVOIR','WATERWELL');
 	INSERT INTO cat_arc(id,arctype_id) VALUES ('PIPE','PIPE');
+	INSERT INTO cat_arc(id,arctype_id) VALUES ('PUMP','PUMP_PIPE');
+
+	--disabled triggers
 	ALTER TABLE node DISABLE TRIGGER gw_trg_node_update;
 	ALTER TABLE arc DISABLE TRIGGER gw_trg_topocontrol_arc;
 	
@@ -87,6 +101,8 @@ $BODY$
 	INSERT INTO config_param_user(parameter,value,cur_user) VALUES ('state_vdefault',1,current_user);
 	INSERT INTO config_param_user(parameter,value,cur_user) VALUES ('state_type_vdefault',1,current_user);
 	INSERT INTO config_param_user(parameter,value,cur_user) VALUES ('nodecat_vdefault','JUNCTION',current_user);
+	INSERT INTO config_param_user(parameter,value,cur_user) VALUES ('arccat_vdefault','PIPE',current_user);
+	
 
 	--check srid
 	SELECT epsg INTO epsg_val FROM version LIMIT 1;
@@ -120,8 +136,6 @@ $BODY$
 			v_target=rpt_rec.csv1;
 		END IF;
 		
-		UPDATE temp_csv2pg SET source=v_target WHERE rpt_rec.id=temp_csv2pg.id;
-
 		-- filter if the row it's a valid row to import or not		
 		IF rpt_rec.csv1 NOT LIKE ';%' AND rpt_rec.csv1 NOT LIKE '[%' AND rpt_rec.csv1 IS NOT NULL THEN
 		 RAISE NOTICE 'rpt_rec.csv1,%',rpt_rec.csv1;
@@ -150,12 +164,25 @@ $BODY$
 					raise notice 'v_table_pkey,%',v_table_pkey;
 					
 				-- Looking for the whole fields of looped table
-				FOR v_fields IN SELECT * FROM sys_csv2pg_import_config_fields WHERE header_text = rpt_rec.source AND pg2csvcat_id=p_csv2pgcat_id_aux AND tablename=v_tablename ORDER BY id
+			
+				FOR v_fields IN SELECT * FROM sys_csv2pg_import_config_fields WHERE header_text = rpt_rec.source AND pg2csvcat_id=p_csv2pgcat_id_aux AND tablename=v_tablename 
+				ORDER BY id 
 				LOOP
-				
-					-- Getting the value
-					v_query_text = 'SELECT '||v_fields.csv_field||' FROM temp_csv2pg WHERE id='||rpt_rec.id;
-					EXECUTE v_query_text INTO v_value;
+					IF v_fields.header_text='[TANKS]'THEN
+						UPDATE config_param_user SET value='TANK',cur_user=current_user WHERE parameter='nodecat_vdefault';
+					ELSIF v_fields.header_text='[RESERVOIRS]'THEN
+						UPDATE config_param_user SET value='RESERVOIR',cur_user=current_user WHERE parameter='nodecat_vdefault';
+					END IF;
+						-- Getting the value
+					IF v_fields.csv_field IS NOT NULL THEN
+							v_query_text = 'SELECT '||v_fields.csv_value||' FROM temp_csv2pg WHERE '||v_fields.csv_field_column||' like '''||v_fields.csv_field||''';';
+						raise notice 'v_query_text_new,%',v_query_text;
+						EXECUTE v_query_text INTO v_value;
+						raise notice 'v_value,%',v_value;
+					ELSE
+						v_query_text = 'SELECT '||v_fields.csv_value||' FROM temp_csv2pg WHERE id='||rpt_rec.id;
+						EXECUTE v_query_text INTO v_value;
+					END IF;
 					
 					--Capture the coordinates of nodes
 					IF (v_fields.header_text='[COORDINATES]') AND v_fields.table_field='the_geom.x' THEN
@@ -180,11 +207,11 @@ $BODY$
 							EXIT;
 						END IF;
 					END IF;			
-
+					
 					-- In case of insert
 					IF v_fields.tg_op='I' THEN
+					
 						-- inserting data
-						--if v_table_pkey=null
 						IF v_fields.pk_field_value IS NULL THEN
 							v_query_text = 'INSERT INTO '||v_fields.tablename ||' ('||v_table_pkey||') VALUES ('''||v_value||''')';
 							raise notice 'insert query_text %', v_query_text;
@@ -196,6 +223,7 @@ $BODY$
 							EXECUTE v_query_text;
 							--v_table_pkey not null =pk_field_value
 						END IF;
+						
 					-- In case of udate
 					ELSIF v_fields.tg_op='U' THEN
 						
@@ -208,8 +236,6 @@ $BODY$
 				
 						--updating data
 						IF v_value IS NOT NULL AND v_fields.header_text!='[COORDINATES]' THEN
-							IF v_fields.pk_field_value IS NOT NULL THEN
-
 								v_typevalue:=  v_fields.tablename || '.'||v_fields.table_field;
 
 				
@@ -219,15 +245,20 @@ $BODY$
 									INTO v_value;
 								
 								END IF;
-																	v_query_text = 'UPDATE '|| quote_ident(v_fields.tablename)||' SET '|| quote_ident(v_fields.table_field)||' =  CAST('||quote_literal(v_value)||' AS '||
+								
+							IF v_fields.pk_field_value IS NOT NULL THEN
+
+								
+								v_query_text = 'UPDATE '|| quote_ident(v_fields.tablename)||' SET '|| quote_ident(v_fields.table_field)||' =  CAST('||quote_literal(v_value)||' AS '||
 								v_column_type ||') WHERE '||quote_ident(v_table_pkey)||' =  CAST('||quote_literal(v_pkey_value)||' AS '||v_pkey_column_type||')';
 								raise notice 'update query_text %', v_query_text;
 								EXECUTE v_query_text;
 							ELSE 
 							
 							--update for tables where id is not inserted from the data
-							EXECUTE 'SELECT max(id) FROM '||v_fields.tablename||';'
+							EXECUTE 'SELECT max('||v_table_pkey||') FROM '||v_fields.tablename||';'
 							INTO v_pkey_value;
+							raise notice 'update v_table_pkey ,%,%', v_table_pkey,v_pkey_value;
 							
 								v_query_text = 'UPDATE '|| quote_ident(v_fields.tablename)||' SET '|| quote_ident(v_fields.table_field)||' =  CAST('||quote_literal(v_value)||' AS '||
 								v_column_type ||') WHERE '||quote_ident(v_table_pkey)||' =  CAST('||quote_literal(v_pkey_value)||' AS '||v_pkey_column_type||')';
@@ -245,7 +276,6 @@ $BODY$
 
 						
 					END IF;
-
 					
 				END LOOP;
 				END IF;
@@ -264,31 +294,48 @@ $BODY$
 
 		FOR v_data IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux and source='[VERTICES]' AND csv1=rpt_rec.arc_id order by id 
 		LOOP	
-			v_point_geom=ST_SetSrid(ST_MakePoint(v_data.csv2::numeric,v_data.csv3::numeric),epsg_val);
-			geom_array=array_append(geom_array,v_point_geom);
+				v_point_geom=ST_SetSrid(ST_MakePoint(v_data.csv2::numeric,v_data.csv3::numeric),epsg_val);
+				geom_array=array_append(geom_array,v_point_geom);
 		END LOOP;
 
 		geom_array=array_append(geom_array,(SELECT the_geom FROM node WHERE rpt_rec.node_2=node_id));
 
 		UPDATE arc SET the_geom=ST_MakeLine(geom_array) where arc_id=rpt_rec.arc_id;
-
+		
 	end loop;
-
-
+	
+	--update arc catalogs
+	INSERT INTO cat_arc(id, arctype_id, dint) SELECT DISTINCT CONCAT('PIPE_',custom_dint),'PIPE',custom_dint FROM inp_pipe WHERE custom_dint is not null;
+	UPDATE arc SET arccat_id=CONCAT('PIPE_',custom_dint) FROM inp_pipe WHERE inp_pipe.arc_id=arc.arc_id AND custom_dint is not null;
+	INSERT INTO cat_arc(id, arctype_id, dint) SELECT DISTINCT CONCAT('VALVE_',valv_type,diameter),'PIPE',diameter FROM inp_valve_importinp;
+	UPDATE arc SET arccat_id=concat('VALVE_',valv_type,diameter)FROM inp_valve_importinp WHERE arc.arc_id IN (SELECT arc_id FROM inp_valve_importinp);
+	UPDATE arc SET arccat_id='PUMP' WHERE arc.arc_id IN (SELECT arc_id FROM inp_pump_importinp);
+	
+	--create polygon geometry
+	EXECUTE 'SELECT ST_Multi(ST_ConvexHull(ST_Collect(the_geom))) FROM arc;'
+	into v_extend_val;
+	update exploitation SET the_geom=v_extend_val;
+	update sector SET the_geom=v_extend_val;
+	update dma SET the_geom=v_extend_val;
+	update ext_municipality SET the_geom=v_extend_val;
+	
 	IF project_type_aux='WS' THEN
-	INSERT INTO inp_pattern SELECT DISTINCT pattern_id FROM inp_pattern_value;
-	-- enable inp foreign keys
-		--ALTER TABLE inp_junction ADD CONSTRAINT inp_junction_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
-		--ALTER TABLE "inp_pattern_value" ADD CONSTRAINT "inp_pattern_value_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
+		INSERT INTO inp_pattern SELECT DISTINCT pattern_id FROM inp_pattern_value;
+		-- enable inp foreign keys
+		ALTER TABLE inp_junction ADD CONSTRAINT inp_junction_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		ALTER TABLE "inp_pattern_value" ADD CONSTRAINT "inp_pattern_value_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
+		ALTER TABLE "inp_source" ADD CONSTRAINT "inp_source_pattern_id_fkey" FOREIGN KEY ("pattern_id") REFERENCES "inp_pattern" ("pattern_id") ON DELETE CASCADE ON UPDATE CASCADE;
 		--ALTER TABLE "inp_tags" ADD CONSTRAINT "inp_tags_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
-
 	END IF;
 	
+	--enable triggers
+	ALTER TABLE node ENABLE TRIGGER gw_trg_node_update;
+	ALTER TABLE arc ENABLE TRIGGER gw_trg_topocontrol_arc;
 	RETURN v_count;
 	
 	END;
 	$BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION ws_inp.gw_fct_utils_data_from_inp(integer)
+ALTER FUNCTION SCHEMA_NAME.gw_fct_utils_data_from_inp(integer)
   OWNER TO postgres;

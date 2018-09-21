@@ -115,7 +115,12 @@ CREATE SEQUENCE "rpt_inp_arc_seq"
     CACHE 1;
 
 
-	
+CREATE SEQUENCE inp_times_id_seq
+  INCREMENT 1
+  MINVALUE 1
+  MAXVALUE 9223372036854775807
+  START 1
+  CACHE 1;
 
 -- ----------------------------
 -- Table CATALOG
@@ -241,7 +246,7 @@ CREATE TABLE "inp_junction" (
 
 
 CREATE TABLE "inp_label" (
-"id" int4 DEFAULT nextval('"SCHEMA_NAME".inp_labels_id_seq'::regclass) NOT NULL,
+"id" int4 DEFAULT nextval('SCHEMA_NAME.inp_labels_id_seq'::regclass) NOT NULL,
 "xcoord" numeric(18,6),
 "ycoord" numeric(18,6),
 "label" varchar(50)  ,
@@ -453,7 +458,7 @@ CREATE TABLE "inp_tank" (
 
 
 CREATE TABLE "inp_times" (
-"id" integer NOT NULL,
+"id" integer NOT NULL nextval('SCHEMA_NAME.inp_times_id_seq'::regclass),
 "duration" integer,
 "hydraulic_timestep" varchar(10)  ,
 "quality_timestep" varchar(10)  ,
