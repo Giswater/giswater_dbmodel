@@ -730,7 +730,7 @@ CREATE TABLE "inp_landuses" (
 CREATE TABLE "inp_lid_control" (
 "id" int4 DEFAULT nextval ('"SCHEMA_NAME".inp_lid_control_seq'::regclass) NOT NULL,
 "lidco_id" varchar(16)  ,
-"lidco_type" varchar(10)  ,
+"lidco_type" varchar(20)  ,
 "value_2" numeric(12,4),
 "value_3" numeric(12,4),
 "value_4" numeric(12,4),
