@@ -330,7 +330,7 @@ CREATE OR REPLACE VIEW vi_reactions_gl AS
 SELECT 
     inp_typevalue.idval as parameter,
     inp_reactions_gl.value
-   FROM ws_inp.inp_reactions_gl
+   FROM inp_reactions_gl
    LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_reactions_gl.parameter
    WHERE inp_typevalue.typevalue='inp_value_reactions_gl';
 

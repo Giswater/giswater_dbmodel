@@ -246,7 +246,7 @@ CREATE TABLE "inp_junction" (
 
 
 CREATE TABLE "inp_label" (
-"id" int4 DEFAULT nextval('SCHEMA_NAME.inp_labels_id_seq'::regclass) NOT NULL,
+"id" int4 DEFAULT nextval('"SCHEMA_NAME".inp_labels_id_seq'::regclass) NOT NULL,
 "xcoord" numeric(18,6),
 "ycoord" numeric(18,6),
 "label" varchar(50)  ,
@@ -458,7 +458,7 @@ CREATE TABLE "inp_tank" (
 
 
 CREATE TABLE "inp_times" (
-"id" integer NOT NULL nextval('SCHEMA_NAME.inp_times_id_seq'::regclass),
+"id" integer DEFAULT nextval('"SCHEMA_NAME".inp_times_id_seq'::regclass) NOT NULL,
 "duration" integer,
 "hydraulic_timestep" varchar(10)  ,
 "quality_timestep" varchar(10)  ,
