@@ -139,6 +139,8 @@ ALTER TABLE "inp_pump" DROP CONSTRAINT IF EXISTS "inp_pump_status_fkey";
 ALTER TABLE "inp_rdii" DROP CONSTRAINT IF EXISTS "inp_rdii_node_id_fkey";
 ALTER TABLE "inp_rdii" DROP CONSTRAINT IF EXISTS "inp_rdii_hydro_id_fkey";
 
+ALTER TABLE "inp_hydrograph" DROP CONSTRAINT IF EXISTS "inp_hydrograph_hydro_id_fkey";
+
 ALTER TABLE "inp_report" DROP CONSTRAINT IF EXISTS "inp_report_controls_fkey";
 ALTER TABLE "inp_report" DROP CONSTRAINT IF EXISTS "inp_report_input_fkey";
 ALTER TABLE "inp_report" DROP CONSTRAINT IF EXISTS "inp_report_continuity_fkey";
@@ -389,7 +391,10 @@ ALTER TABLE "inp_pump" ADD CONSTRAINT "inp_pump_to_arc_fkey" FOREIGN KEY ("to_ar
 ALTER TABLE "inp_pump" ADD CONSTRAINT "inp_pump_status_fkey" FOREIGN KEY ("status") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_rdii" ADD CONSTRAINT "inp_rdii_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
---ALTER TABLE "inp_rdii" ADD CONSTRAINT "inp_rdii_hydro_id_fkey" FOREIGN KEY ("hydro_id") REFERENCES "inp_hydrograph" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "inp_rdii" ADD CONSTRAINT "inp_rdii_hydro_id_fkey" FOREIGN KEY ("hydro_id") REFERENCES "inp_hydrograph_id" ("hydro_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "inp_hydrograph" ADD CONSTRAINT "inp_hydrograph_hydro_id_fkey" FOREIGN KEY ("hydro_id") REFERENCES "inp_hydrograph_id" ("hydro_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
 
 ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_controls_fkey" FOREIGN KEY ("controls") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "inp_report" ADD CONSTRAINT "inp_report_input_fkey" FOREIGN KEY ("input") REFERENCES "inp_typevalue" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;

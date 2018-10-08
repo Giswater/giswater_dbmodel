@@ -459,7 +459,6 @@ CREATE TABLE "cat_hydrology" (
 
 
 
-
 -- ----------------------------
 -- Table structure for Selector
 -- ----------------------------
@@ -671,10 +670,15 @@ CREATE TABLE "inp_groundwater" (
 );
 
 
-CREATE TABLE "inp_hydrograph" (
-"id" int4 DEFAULT nextval ('"SCHEMA_NAME".inp_hydrograph_seq'::regclass) NOT NULL,
-"text" varchar(254)  
-);
+CREATE TABLE inp_hydrograph (
+ id integer NOT NULL DEFAULT nextval('"SCHEMA_NAME".inp_hydrograph_seq'::regclass),
+ hydro_id varchar (30),
+ text text
+ );
+
+
+CREATE TABLE inp_hydrograph_id (
+hydro_id varchar (30) NOT NULL PRIMARY KEY);
 
 
 CREATE TABLE "inp_inflows" (

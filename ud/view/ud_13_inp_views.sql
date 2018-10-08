@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
--- WARNING: ud_sample IS NOT ONLY PRESENT ON THE HEADER OF THIS FILE. IT EXISTS ALSO INTO IT. PLEASE REVIEW IT BEFORE REPLACE....
+-- WARNING: SCHEMA_NAME IS NOT ONLY PRESENT ON THE HEADER OF THIS FILE. IT EXISTS ALSO INTO IT. PLEASE REVIEW IT BEFORE REPLACE....
 
 
 
@@ -19,32 +19,23 @@ CREATE OR REPLACE VIEW vi_title AS
 
 DROP VIEW IF EXISTS vi_options CASCADE;
 CREATE OR REPLACE VIEW vi_options AS 
-SELECT
-  unnest(array['flow_units','infiltration','flow_routing','link_offsets','force_main_equation','ignore_rainfall',
- 'ignore_snowmelt','ignore_groundwater','ignore_routing','ignore_quality','skip_steady_state','start_date',
- 'start_time','end_date','end_time','report_start_date','report_start_time','sweep_start','sweep_end',
- 'dry_days','report_step','wet_step','dry_step','routing_step','lengthening_step','variable_step','inertial_damping',
- 'normal_flow_limited','min_surfarea','min_slope','allow_ponding','tempdir','max_trials','head_tolerance',
- 'sys_flow_tol','lat_flow_tol']) AS "parameter",
-  unnest(array[flow_units,cat_hydrology.infiltration,flow_routing,link_offsets,force_main_equation,ignore_rainfall,
-  ignore_snowmelt,ignore_groundwater, ignore_routing,ignore_quality,skip_steady_state,start_date,start_time,
-  end_date,end_time,report_start_date,report_start_time,sweep_start,sweep_end,dry_days::text,report_step,
-  wet_step,dry_step,routing_step,lengthening_step::text,variable_step::text,inp_typevalue.idval,
-  normal_flow_limited,min_surfarea::text,min_slope::text,allow_ponding,tempdir,max_trials::text,
-  head_tolerance::text,sys_flow_tol::text,lat_flow_tol::text]) AS "value"
-FROM inp_selector_hydrology,cat_hydrology,inp_options
-LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_options.inertial_damping
-WHERE 
-     ((inp_selector_hydrology.hydrology_id = cat_hydrology.hydrology_id) AND inp_selector_hydrology.cur_user="current_user"())
-      AND inp_typevalue.typevalue='inp_value_options_id';
+ SELECT a.description,
+ CASE WHEN inp_typevalue.idval is not null then inp_typevalue.idval
+ else b.value end as value
+   FROM SCHEMA_NAME.audit_cat_param_user a
+     LEFT JOIN SCHEMA_NAME.config_param_user b ON a.id = b.parameter::text
+     LEFT JOIN SCHEMA_NAME.inp_typevalue ON  inp_typevalue.id=b.value and inp_typevalue.typevalue LIKE 'inp_value_options%'
+  WHERE a.context = 'inp_options'::text AND b.cur_user::name = "current_user"();
 
 
 DROP VIEW IF EXISTS vi_report CASCADE;
 CREATE OR REPLACE VIEW vi_report AS 
-SELECT
-   unnest(array['input', 'continuity', 'flowstats','controls','subcatchments','nodes','links']) AS "repor_type",
-   unnest(array[input, continuity, flowstats, controls,subcatchments,nodes,links]) AS "value"
-FROM inp_report;
+ SELECT a.description,
+    b.value
+   FROM SCHEMA_NAME.audit_cat_param_user a
+     LEFT JOIN SCHEMA_NAME.config_param_user b ON a.id = b.parameter::text
+  WHERE a.context = 'inp_report'::text AND b.cur_user::name = "current_user"();
+  
 
 DROP VIEW IF EXISTS  vi_files CASCADE;
 CREATE OR REPLACE VIEW vi_files AS 
@@ -954,8 +945,10 @@ CREATE OR REPLACE VIEW vi_rdii AS
 
 DROP VIEW IF EXISTS  vi_hydrographs CASCADE;
 CREATE OR REPLACE VIEW vi_hydrographs AS 
- SELECT inp_hydrograph.text
-   FROM ud_sample.inp_hydrograph;
+ SELECT 
+ inp_hydrograph.hydro_id,
+ inp_hydrograph.text
+   FROM SCHEMA_NAME.inp_hydrograph;
 
 
 DROP VIEW IF EXISTS  vi_curves CASCADE;

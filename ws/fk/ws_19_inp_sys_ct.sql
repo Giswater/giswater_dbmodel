@@ -111,7 +111,7 @@ ALTER TABLE inp_typevalue ADD CONSTRAINT inp_typevalue_check CHECK
 --check typevalue
 ALTER TABLE inp_energy_el ADD CONSTRAINT inp_energy_el_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
 ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_parameter_check CHECK ( parameter IN ('EFFIC','PATTERN','PRICE'));
-ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_energ_type_check CHECK ( parameter IN ('DEMAND CHARGE','GLOBAL'));
+ALTER TABLE inp_energy_gl ADD CONSTRAINT inp_energy_gl_energ_type_check CHECK ( energ_type IN ('DEMAND CHARGE','GLOBAL'));
 ALTER TABLE inp_mixing ADD CONSTRAINT inp_mixing_mix_type_check CHECK ( mix_type IN ('2COMP','FIFO','LIFO','MIXED'));
 ALTER TABLE inp_source ADD CONSTRAINT inp_source_source_type_check CHECK ( sourc_type IN ('CONCEN','FLOWPACED','MASS','SETPOINT'));
 ALTER TABLE inp_shortpipe ADD CONSTRAINT inp_shortpipe_status_check CHECK ( status IN ('CLOSED_PIPE','CV_PIPE','OPEN_PIPE'));
