@@ -313,26 +313,23 @@ CREATE OR REPLACE VIEW vi_sources AS
   WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
 
-DROP VIEW IF EXISTS vi_reactions_el CASCADE;
-CREATE OR REPLACE VIEW vi_reactions_el AS 
- SELECT  inp_typevalue.idval as parameter,
-    inp_reactions_el.arc_id,
-    inp_reactions_el.value
-   FROM inp_selector_result,inp_reactions_el
-     JOIN rpt_inp_arc ON inp_reactions_el.arc_id::text = rpt_inp_arc.arc_id::text
-     LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_reactions_el.parameter
-  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
-  AND inp_typevalue.typevalue='inp_value_reactions_el';
-
-
-DROP VIEW IF EXISTS vi_reactions_gl CASCADE;
-CREATE OR REPLACE VIEW vi_reactions_gl AS  
-SELECT 
-    inp_typevalue.idval as parameter,
+DROP VIEW IF EXISTS vi_reactions;
+CREATE OR REPLACE VIEW vi_reactions AS 
+ SELECT inp_typevalue_react.idval AS react_type,
+    inp_typevalue_param.idval AS parameter,
     inp_reactions_gl.value
    FROM inp_reactions_gl
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_reactions_gl.parameter
-   WHERE inp_typevalue.typevalue='inp_value_reactions_gl';
+     LEFT JOIN inp_typevalue inp_typevalue_react ON inp_reactions_gl.react_type::text = inp_typevalue_react.id::text AND inp_typevalue_react.typevalue::text = 'inp_typevalue_reactions_gl'::text
+     LEFT JOIN inp_typevalue inp_typevalue_param ON inp_reactions_gl.parameter::text = inp_typevalue_param.id::text AND inp_typevalue_param.typevalue::text = 'inp_value_reactions_gl'::text
+UNION
+ SELECT inp_typevalue_param.idval AS react_type,
+    inp_reactions_el.arc_id AS parameter,
+    inp_reactions_el.value
+   FROM inp_selector_result,
+    inp_reactions_el
+     JOIN rpt_inp_arc ON inp_reactions_el.arc_id::text = rpt_inp_arc.arc_id::text
+     LEFT JOIN inp_typevalue inp_typevalue_param ON inp_reactions_el.parameter::text = inp_typevalue_param.id::text AND inp_typevalue_param.typevalue::text = 'inp_value_reactions_el'::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
 
 

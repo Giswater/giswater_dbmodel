@@ -44,7 +44,7 @@ INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reve
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (7, 8, 'vi_tags', '[TAGS]', 'csv1, csv2, csv3', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (8, 8, 'vi_demands', '[DEMANDS]', 'csv1, csv2, csv3, csv4', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (9, 8, 'vi_status', '[STATUS]', 'csv1, csv2', 10);
-INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (18, 8, 'vi_reactions_el', '[REACTIONS]', 'csv1, csv2, csv3', 10);
+INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (18, 8, 'vi_reactions', '[REACTIONS]', 'csv1, csv2, csv3', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (15, 8, 'vi_emitters', '[EMITTERS]', 'csv1, csv2', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (16, 8, 'vi_quality', '[QUALITY]', 'csv1, csv2', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (17, 8, 'vi_sources', '[SOURCES]', 'csv1, csv2, csv3, csv4', 10);
@@ -59,7 +59,6 @@ INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reve
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (5, 8, 'vi_pumps', '[PUMPS]', 'csv1, csv2, csv3, csv4', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (11, 8, 'vi_curves', '[CURVES]', 'csv1, csv2, csv3', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (20, 8, 'vi_mixing', '[MIXING]', 'csv1, csv2, csv3', 10);
-INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (19, 8, 'vi_reactions_gl', '[REACTIONS]', NULL, NULL);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (10, 8, 'vi_patterns', '[PATTERNS]', 'csv1, csv2', 10);
 INSERT INTO sys_csv2pg_config (id, pg2csvcat_id, tablename, target, fields, reverse_pg2csvcat_id) VALUES (14, 8, 'vi_energy', '[ENERGY]', 'csv1, csv2', 10);
 
