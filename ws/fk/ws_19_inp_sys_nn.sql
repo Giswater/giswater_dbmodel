@@ -36,7 +36,7 @@ ALTER TABLE inp_reactions_el ALTER COLUMN "arc_id" DROP NOT NULL;
 ALTER TABLE inp_reactions_el ALTER COLUMN "value" DROP NOT NULL;
 
 ALTER TABLE inp_reactions_gl ALTER COLUMN react_type DROP NOT NULL;
-ALTER TABLE inp_reactions_gl ALTER COLUMN "parameter" DROP NOT NULL;
+--ALTER TABLE inp_reactions_gl ALTER COLUMN "parameter" DROP NOT NULL;
 ALTER TABLE inp_reactions_gl ALTER COLUMN "value" DROP NOT NULL;
 
 ALTER TABLE inp_rules_x_node ALTER COLUMN node_id DROP NOT NULL;
@@ -93,7 +93,7 @@ ALTER TABLE inp_reactions_el ALTER COLUMN "arc_id" SET NOT NULL;
 ALTER TABLE inp_reactions_el ALTER COLUMN "value" SET NOT NULL;
 
 ALTER TABLE inp_reactions_gl ALTER COLUMN react_type SET NOT NULL;
-ALTER TABLE inp_reactions_gl ALTER COLUMN "parameter" SET NOT NULL;
+--ALTER TABLE inp_reactions_gl ALTER COLUMN "parameter" SET NOT NULL;
 ALTER TABLE inp_reactions_gl ALTER COLUMN "value" SET NOT NULL;
 
 ALTER TABLE inp_rules_x_node ALTER COLUMN node_id SET NOT NULL;

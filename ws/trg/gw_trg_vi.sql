@@ -2,6 +2,7 @@
 
 -- DROP FUNCTION SCHEMA_NAME.gw_trg_vi();
 
+
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_vi()
   RETURNS trigger AS
 $BODY$
@@ -30,6 +31,7 @@ BEGIN
   ELSIF v_view='vi_reservoirs' THEN
     INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) VALUES (NEW.node_id, NEW.head,'EPARESERVOIR-DEF','RESERVOIR',1,1,1,1,2) ;
     INSERT INTO inp_reservoir (node_id, pattern_id) VALUES (NEW.node_id, NEW.pattern_id);
+    INSERT INTO man_source(node_id) VALUES (NEW.node_id); 
     
   ELSIF v_view='vi_tanks' THEN
     INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) VALUES (NEW.node_id, NEW.elevation,'EPATANK-DEF','TANK',1,1,1,1,2);
@@ -49,7 +51,7 @@ BEGIN
     VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'EPAPUMP-DEF','PIPE',1,1,1,1,2);
     --splitting and inserting fields that in views are concatenated as other_value
     INSERT INTO inp_pump_importinp (arc_id,power,curve_id,speed,pattern) 
-    VALUES (NEW.arc_id,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2),split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',4));
+    VALUES (NEW.arc_id,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2),split_part(NEW.other_val,' ',3)::NUMERIC,split_part(NEW.other_val,' ',4));
     INSERT INTO man_pipe (arc_id) VALUES (NEW.arc_id); 
     
   ELSIF v_view='vi_valves' THEN
@@ -80,7 +82,7 @@ BEGIN
       UPDATE inp_valve_importinp SET status=NEW.status WHERE arc_id=NEW.arc_id;
     END IF;
     
-  ELSIF v_view='vi_patterns' THEN --??? insert depends on format of input data..
+  ELSIF v_view='vi_patterns' THEN 
     INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6) 
     VALUES (NEW.pattern_id, split_part(NEW.multipliers,' ',1)::numeric,split_part(NEW.multipliers,' ',2)::numeric,split_part(NEW.multipliers,' ',3)::numeric,
     split_part(NEW.multipliers,' ',4)::numeric,split_part(NEW.multipliers,' ',5)::numeric,split_part(NEW.multipliers,' ',6)::numeric);
@@ -115,19 +117,22 @@ BEGIN
       FROM inp_typevalue WHERE NEW.parameter=idval AND typevalue='inp_value_reactions_el';
     ELSE 
       IF NEW.parameter='LIMITING' OR NEW.parameter='ROUGHNESS' THEN
-        INSERT INTO inp_reactions_gl (parameter,react_type,value) VALUES ('BULK_GL',concat(NEW.parameter,' ',NEW.arc_id),NEW.value);--REACT TYPE POR DEFECTO???
+        INSERT INTO inp_reactions_gl (react_type,value) VALUES (concat(NEW.parameter,' ',NEW.arc_id),NEW.value);
       ELSE
         INSERT INTO inp_reactions_gl (parameter,react_type,value) VALUES (
         (select inp_typevalue.id FROM inp_typevalue WHERE NEW.arc_id=idval AND typevalue='inp_value_reactions_gl'),
         (SELECT inp_typevalue.id FROM inp_typevalue WHERE NEW.parameter=idval AND typevalue='inp_typevalue_reactions_gl'), NEW.value);
       END IF;
-    END IF; 
-  ELSIF v_view='vi_energy' THEN --no se gestionan bien, si el valor es csv2 o csv3, depende del parametro (FALTA INSERT DE energy_el)
-      IF NEW.parameter like 'GLOBAL%' THEN
+    END IF;
+  ELSIF v_view='vi_energy' THEN
+      IF NEW.parameter ilike 'GLOBAL%' THEN
         INSERT INTO inp_energy_gl(energ_type,parameter, value)
         select split_part(NEW.parameter,' ',1),inp_typevalue.id,NEW.value FROM inp_typevalue WHERE split_part(NEW.parameter,' ',2)=idval AND typevalue='inp_value_param_energy';
-      ELSIF NEW.parameter like 'DEMAND CHARGE' THEN
+      ELSIF NEW.parameter ilike 'DEMAND CHARGE' THEN
         INSERT INTO inp_energy_gl(energ_type, value) VALUES ('DEMAND CHARGE',NEW.value);
+      ELSIF NEW.parameter ilike '%PUMP%' THEN
+      RAISE NOTICE 'PUMP';  
+        INSERT INTO inp_energy_el(pump_id,parameter, value) VALUES (split_part(NEW.parameter,' ',2),split_part(NEW.parameter,' ',3),NEW.value);
       END IF;
   ELSIF v_view='vi_mixing' THEN
     INSERT INTO inp_mixing(node_id, mix_type, value) VALUES (NEW.node_id, NEW.mix_type, NEW.value);
@@ -157,6 +162,8 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
+
 DROP TRIGGER IF EXISTS gw_trg_vi_junctions ON SCHEMA_NAME.vi_junctions;
 CREATE TRIGGER gw_trg_vi_junctions INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_junctions FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_junctions');
 DROP TRIGGER IF EXISTS gw_trg_vi_options ON SCHEMA_NAME.vi_options;
