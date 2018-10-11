@@ -105,50 +105,11 @@ SELECT v_edit_raingage.rg_id,
    WHERE inp_typevalue.typevalue='inp_typevalue_raingage';
 
 
-DROP VIEW IF EXISTS vi_temperature CASCADE;
+DROP VIEW IF EXISTS  vi_temperature CASCADE;
 CREATE OR REPLACE VIEW vi_temperature AS 
- SELECT concat(inp_typevalue.idval,' ',inp_temperature.fname,' ',inp_temperature.start) as other_val
-   FROM inp_temperature
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_temperature.temp_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_temp'
-  AND inp_temperature.temp_type::text = 'FILE_TEMP'::text
- UNION
-  SELECT concat('SNOWMELT'::text,' ',inp_snowmelt.stemp,' ',inp_snowmelt.atiwt,' ',
-    inp_snowmelt.rnm,' ',inp_snowmelt.elev,' ',inp_snowmelt.lat,inp_snowmelt.dtlong) as other_val
-  FROM inp_snowmelt
- UNION
-  SELECT concat('ADC IMPERVIOUS ',inp_snowmelt.i_f0,' ',inp_snowmelt.i_f1,' ',inp_snowmelt.i_f2,' ',
-    inp_snowmelt.i_f3,' ',inp_snowmelt.i_f4,' ',inp_snowmelt.i_f5,' ',inp_snowmelt.i_f6,' ',
-    inp_snowmelt.i_f7,' ',inp_snowmelt.i_f8,' ',inp_snowmelt.i_f9) as other_val
-  FROM inp_snowmelt
- UNION
-  SELECT concat('ADC PERVIOUS ',inp_snowmelt.p_f0,' ',inp_snowmelt.p_f1,' ',inp_snowmelt.p_f2,' ',
-    inp_snowmelt.p_f3,' ',inp_snowmelt.p_f4,' ',inp_snowmelt.p_f5,' ',inp_snowmelt.p_f6,' ',
-    inp_snowmelt.p_f7,' ',inp_snowmelt.p_f8,' ',inp_snowmelt.p_f9)as other_val
-   FROM inp_snowmelt
- UNION
-  SELECT concat(inp_typevalue.idval,' ',inp_temperature.timser_id) as other_val
-   FROM inp_temperature
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_temperature.temp_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_temp'
-   AND inp_temperature.temp_type::text = 'TIMESERIES_TEMP'::text
-UNION
- SELECT concat('WINDSPEED ',inp_typevalue.idval,' ',inp_windspeed.fname)
-   FROM inp_windspeed
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_windspeed.wind_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_windsp'
-  AND inp_windspeed.wind_type::text = 'FILE_WINDSP'::text
-UNION
-   SELECT concat('WINDSPEED ',inp_typevalue.idval,' ',inp_windspeed.value_1,' ',
-    inp_windspeed.value_2,' ',inp_windspeed.value_3,' ',inp_windspeed.value_4,' ',
-    inp_windspeed.value_5,' ',inp_windspeed.value_6,' ',inp_windspeed.value_7,' ',
-    inp_windspeed.value_8,' ',inp_windspeed.value_9,' ',inp_windspeed.value_10,' ',
-    inp_windspeed.value_11,' ',inp_windspeed.value_12) as other_val
-    FROM inp_windspeed
-    LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_windspeed.wind_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_windsp'
-  AND inp_windspeed.wind_type::text = 'MONTHLY_WINDSP'::text
-ORDER BY other_val;
+ SELECT inp_temperature.temp_type,
+    inp_temperature.value
+   FROM inp_temperature;
 
 
 

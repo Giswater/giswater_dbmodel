@@ -717,7 +717,7 @@ CREATE TABLE "inp_label" (
 "ycoord" numeric(18,6),
 "anchor" varchar(16)  ,
 "font" varchar(50)  ,
-"size" numeric(12,4),
+"size" integer,
 "bold" varchar(3)  ,
 "italic" varchar(3)  
 );
@@ -943,36 +943,6 @@ CREATE TABLE "inp_report" (
 );
 
 
-CREATE TABLE "inp_snowmelt" (
-"stemp" numeric(12,4),
-"atiwt" numeric(12,4),
-"rnm" numeric(12,4),
-"elev" numeric(12,4),
-"lat" numeric(12,4),
-"dtlong" numeric(12,4),
-"i_f0" numeric(12,4),
-"i_f1" numeric(12,4),
-"i_f2" numeric(12,4),
-"i_f3" numeric(12,4),
-"i_f4" numeric(12,4),
-"i_f5" numeric(12,4),
-"i_f6" numeric(12,4),
-"i_f7" numeric(12,4),
-"i_f8" numeric(12,4),
-"i_f9" numeric(12,4),
-"p_f0" numeric(12,4),
-"p_f1" numeric(12,4),
-"p_f2" numeric(12,4),
-"p_f3" numeric(12,4),
-"p_f4" numeric(12,4),
-"p_f5" numeric(12,4),
-"p_f6" numeric(12,4),
-"p_f7" numeric(12,4),
-"p_f8" numeric(12,4),
-"p_f9" numeric(12,4)
-);
-
-
 CREATE TABLE "inp_snowpack" (
 "snow_id" varchar(16) ,
 "cmin_1" numeric(12,4),
@@ -1024,11 +994,10 @@ CREATE TABLE "inp_storage" (
 
 
 CREATE TABLE "inp_temperature" (
-"temp_type" varchar(16),
-"timser_id" varchar(16)  ,
-"fname" varchar(254)  ,
-"start" varchar(12)  
-);
+  id serial NOT NULL,
+  temp_type character varying(30) PRIMARY KEY,
+  value text
+  );
 
 
 CREATE TABLE "inp_timeseries" (
@@ -1111,24 +1080,6 @@ CREATE TABLE "inp_weir" (
 "surcharge" varchar (3)
 );
 
-
-
-CREATE TABLE "inp_windspeed" (
-"wind_type" varchar(16),
-"value_1" numeric(12,4),
-"value_2" numeric(12,4),
-"value_3" numeric(12,4),
-"value_4" numeric(12,4),
-"value_5" numeric(12,4),
-"value_6" numeric(12,4),
-"value_7" numeric(12,4),
-"value_8" numeric(12,4),
-"value_9" numeric(12,4),
-"value_10" numeric(12,4),
-"value_11" numeric(12,4),
-"value_12" numeric(12,4),
-"fname" varchar(254)  
-);
 
 
 
@@ -1733,16 +1684,13 @@ ALTER TABLE "inp_project_id" ADD PRIMARY KEY ("title");
 ALTER TABLE "inp_pump" ADD PRIMARY KEY ("arc_id");
 ALTER TABLE "inp_rdii" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_report" ADD PRIMARY KEY ("input");
-ALTER TABLE "inp_snowmelt" ADD PRIMARY KEY ("stemp");
 ALTER TABLE "inp_snowpack" ADD PRIMARY KEY ("snow_id");
 ALTER TABLE "inp_storage" ADD PRIMARY KEY ("node_id");
-ALTER TABLE "inp_temperature" ADD PRIMARY KEY ("temp_type");
 ALTER TABLE "inp_timeseries" ADD PRIMARY KEY ("id");
 ALTER TABLE "inp_timser_id" ADD PRIMARY KEY ("id");
 ALTER TABLE "inp_transects" ADD PRIMARY KEY ("id");
 ALTER TABLE "inp_washoff_land_x_pol" ADD PRIMARY KEY ("landus_id", "poll_id");
 ALTER TABLE "inp_weir" ADD PRIMARY KEY ("arc_id");
-ALTER TABLE "inp_windspeed" ADD PRIMARY KEY ("wind_type");
 ALTER TABLE "raingage" ADD PRIMARY KEY ("rg_id");
 --ALTER TABLE "rpt_selector_result" ADD PRIMARY KEY ("id");
 --ALTER TABLE "rpt_selector_compare" ADD PRIMARY KEY ("id");

@@ -6,11 +6,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: XXXX
 
-
-
--- DROP FUNCTION SCHEMA_NAME.gw_fct_utils_pg2csv(integer, text);
--- Function: SCHEMA_NAME.gw_fct_utils_pg2csv(integer, text)
-
 -- DROP FUNCTION SCHEMA_NAME.gw_fct_utils_pg2csv(integer, text);
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_utils_pg2csv(
@@ -56,17 +51,18 @@ BEGIN
           EXECUTE 'INSERT INTO temp_csv2pg(csv2pgcat_id,csv1) VALUES ('||p_pg2csvcat_id||','''|| rec_table.header_text||''');';
 
     --insert column names for each header/target
-          INSERT INTO temp_csv2pg (csv2pgcat_id,csv1,csv2,csv3,csv4,csv5,csv6,csv7,csv8,csv9,csv10,csv11,csv12) 
-          SELECT p_pg2csvcat_id,rpad(concat(';',c1),20),rpad(c2,20),rpad(c3,20),rpad(c4,20),rpad(c5,20),rpad(c6,20),rpad(c7,20),rpad(c8,20),rpad(c9,20),rpad(c10,20),rpad(c11,20),rpad(c12,20)
-          FROM crosstab('SELECT table_name::text,  data_type::text, column_name::text FROM information_schema.columns WHERE table_schema =''SCHEMA_NAME'' and table_name='''||rec_table.tablename||'''::text') 
-          AS rpt(table_name text, c1 text, c2 text, c3 text, c4 text, c5 text, c6 text, c7 text, c8 text, c9 text, c10 text, c11 text, c12 text);
+        INSERT INTO temp_csv2pg (csv2pgcat_id,source,csv1,csv2,csv3,csv4,csv5,csv6,csv7,csv8,csv9,csv10,csv11,csv12,csv13,csv14) 
+        SELECT p_pg2csvcat_id,rec_table.tablename,concat(';',c1),c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,csv13,csv14
+        FROM crosstab('SELECT table_name::text,  data_type::text, column_name::text FROM information_schema.columns WHERE table_schema =''SCHEMA_NAME'' and table_name='''||rec_table.tablename||'''::text') 
+        AS rpt(table_name text, c1 text, c2 text, c3 text, c4 text, c5 text, c6 text, c7 text, c8 text, c9 text, c10 text, c11 text, c12 text,csv13 text,csv14 text);
 
+  
     --insert p_pg2csvcat_id value in order to add the underlines later on
           INSERT INTO temp_csv2pg (csv2pgcat_id) VALUES (p_pg2csvcat_id) RETURNING id INTO id_last;
 
     --count number of column in each header/target
           SELECT count(*)::text INTO num_column from information_schema.columns where table_name=rec_table.tablename AND table_schema='SCHEMA_NAME';
-  
+
     --add underlines    
           FOR num_col_rec IN 1..num_column
           LOOP
@@ -91,7 +87,7 @@ BEGIN
       END LOOP;
 
     --export to csv
-    EXECUTE 'COPY (SELECT csv1,csv2,csv3,csv4,csv5,csv6,csv7,csv8,csv9,csv10,csv11,csv12 FROM temp_csv2pg WHERE csv2pgcat_id=8 and user_name=current_user order by id) 
+    EXECUTE 'COPY (SELECT csv1,csv2,csv3,csv4,csv5,csv6,csv7,csv8,csv9,csv10,csv11,csv12,csv13,csv14 FROM temp_csv2pg WHERE csv2pgcat_id=8 and user_name=current_user order by id) 
     TO '''||p_path_aux||''' WITH (DELIMITER E''\t'', FORMAT CSV);';
 
     ELSE 

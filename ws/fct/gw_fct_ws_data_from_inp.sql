@@ -9,32 +9,18 @@ $BODY$
 	rpt_rec record;
 	epsg_val integer;
 	v_point_geom public.geometry;
-	v_value text;
-	v_config_fields record;
-	v_query_text text;
 	schemas_array name[];
-	v_table_pkey text;
-	v_column_type text;
-	v_pkey_column_type text;
-	v_pkey_value text;
-	v_tablename text;
-	v_fields record;
 	v_target text;
 	v_count integer=0;
 	project_type_aux varchar;
-	v_xcoord numeric;
-	v_ycoord numeric;
 	geom_array public.geometry array;
 	v_data record;
-	id_last text;
-	v_typevalue text;
 	v_extend_val public.geometry;
 	v_rec_table record;
 	v_query_fields text;
-	v_num_column integer;
 	v_rec_view record;
 	v_sql text;
-	v_split text;
+
 	
 BEGIN
 
@@ -156,11 +142,11 @@ BEGIN
 	ALTER TABLE SCHEMA_NAME.inp_arc_type ADD CONSTRAINT inp_arc_type_check 
 	CHECK (id::text = ANY (ARRAY['NOT DEFINED'::character varying::text, 'PIPE'::character varying::text, 'EPA-VALVE'::character varying::text, 'EPA-PUMP'::character varying::text]));
 
-	INERT INTO inp_arc_type VALUES ('EPA-VALVE');
-	INERT INTO inp_arc_type VALUES ('EPA-PUMP');
+	INSERT INTO inp_arc_type VALUES ('EPA-VALVE');
+	INSERT INTO inp_arc_type VALUES ('EPA-PUMP');
 	--cat_feature
 	--node
-	/NSERT INTO cat_feature VALUES ('EPAJUNCTION','JUNCTION','NODE');
+	INSERT INTO cat_feature VALUES ('EPAJUNCTION','JUNCTION','NODE');
 	INSERT INTO cat_feature VALUES ('EPATANK','TANK','NODE');
 	INSERT INTO cat_feature VALUES ('EPARESERVOIR','SOURCE','NODE');
 	--arc
