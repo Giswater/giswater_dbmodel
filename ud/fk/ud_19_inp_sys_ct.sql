@@ -73,7 +73,7 @@ ALTER TABLE inp_weir DROP CONSTRAINT IF EXISTS inp_weir_flap_check;
 
 ALTER TABLE inp_buildup_land_x_pol DROP CONSTRAINT IF EXISTS inp_buildup_land_x_pol_funcb_type_check;
 
-ALTER TABLE inp_treatment_node_x_pol DROP CONSTRAINT IF EXISTS inp_treatment_node_x_pol_function_check;
+--ALTER TABLE inp_treatment_node_x_pol DROP CONSTRAINT IF EXISTS inp_treatment_node_x_pol_function_check;
 
 
 ALTER TABLE inp_flwreg_pump DROP CONSTRAINT IF EXISTS inp_flwreg_pump_status_check;
@@ -218,7 +218,7 @@ ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_flap_check CHECK (flap IN ('YES','N
 
 ALTER TABLE inp_buildup_land_x_pol ADD CONSTRAINT inp_buildup_land_x_pol_funcb_type_check CHECK (funcb_type IN ('EXP_BUILDUP','EXT_BUILDUP','POW','SAT'));
 
-ALTER TABLE inp_treatment_node_x_pol ADD CONSTRAINT inp_treatment_node_x_pol_function_check CHECK (function IN ('CONCEN_TREAT','RATE','REMOVAL'));
+--ALTER TABLE inp_treatment_node_x_pol ADD CONSTRAINT inp_treatment_node_x_pol_function_check CHECK (function IN ('CONCEN_TREAT','RATE','REMOVAL'));
 
 ALTER TABLE inp_flwreg_pump ADD CONSTRAINT inp_flwreg_pump_status_check CHECK (status IN ('OFF','ON'));
 ALTER TABLE inp_flwreg_weir ADD CONSTRAINT inp_flwreg_weir_weir_type_check CHECK (weir_type IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL','V-NOTCH'));

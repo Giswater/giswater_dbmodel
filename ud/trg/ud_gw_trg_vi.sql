@@ -1,8 +1,8 @@
--- Function: ud_inp.gw_trg_vi()
+-- Function: SCHEMA_NAME.gw_trg_vi()
 
--- DROP FUNCTION ud_inp.gw_trg_vi();
+-- DROP FUNCTION SCHEMA_NAME.gw_trg_vi();
 
-CREATE OR REPLACE FUNCTION ud_inp.gw_trg_vi()
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_vi()
   RETURNS trigger AS
 $BODY$
 DECLARE 
@@ -11,6 +11,7 @@ DECLARE
 	geom_array public.geometry array;
 	v_point_geom public.geometry;
 	rec_arc record;
+	V_SQL text;
 BEGIN
 
     --Get schema name
@@ -47,8 +48,129 @@ BEGIN
 	ELSIF v_view='vi_snowpacks' THEN--complicated
 	ELSIF v_view='vi_gwf' THEN --like pumps
 		--INSERT INTO inp_groundwater(subc_id, fl_eq_lat, fl_eq_deep) VALUES (NEW.subc_id, NEW.fl_eq_lat, NEW.fl_eq_deep);
-	END IF;
+	ELSIF v_view='vi_snowpacks' THEN --modify the table
+	ELSIF v_view='vi_junction' THEN
+		INSERT INTO node (node_id, elev, ymax,node_type,nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.node_id, NEW.elev, NEW.ymax,'EPAMANHOLE','EPAMANHOLE-DEF','JUNCTION',1,1,1,1,2);
+		INSERT INTO man_manhole (node_id) VALUES (NEW.node_id);
+		INSERT INTO inp_junction(node_id, y0, ysur, apond) VALUES (NEW.node_id, NEW.y0, NEW.ysur, NEW.apond);
+	ELSIF v_view='vi_outfalls' THEN
+		INSERT INTO node (node_id, elev,node_type,nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.node_id, NEW.elev,'EPAOUTFALL','EPAOUTFALL-DEF','JUNCTION',1,1,1,1,2);
+		INSERT INTO man_outfall (node_id) VALUES (NEW.node_id);
+		
+		IF NEW.outfall_type  like 'FREE' or NEW.outfall_type  like 'NORMAL' THEN
+			INSERT INTO inp_outfall  (node_id, outfall_type, gate) values (NEW.node_id, NEW.outfall_type, NEW.other_val);
+		ELSIF NEW.outfall_type like 'FIXED' THEN 
+			INSERT INTO inp_outfall (node_id, outfall_type,stage, gate) values (NEW.node_id, NEW.outfall_type,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2));
+		ELSIF NEW.outfall_type like 'TIDAL' THEN
+			INSERT INTO inp_outfall (node_id, outfall_type,curve_id, gate) values (NEW.node_id,NEW.outfall_type,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2));
+		ELSIF NEW.outfall_type like 'TIMESERIES' THEN
+			INSERT INTO inp_outfall (node_id, outfall_type,timser_id, gate) values (NEW.node_id, NEW.outfall_type,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2));
+		END IF;
+	ELSIF v_view='vi_dividers' THEN --where doesd NEW.elev goes? split_part(NEW.other_val,' ',1)-ymax where does it go? --HOW DOES DIVIDERS WORK,are those existing nodes or new ones?
+	/*raise notice 'other,%', NEW.other_val;
+		IF NEW.divider_type LIKE 'CUTOFF' THEN
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,';',2)::numeric,
+			split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric);
+		ELSIF NEW.divider_type LIKE 'OVERFLOW' THEN
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,' ',2)::numeric,
+			split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',4)::numeric);
+		ELSIF NEW.divider_type LIKE 'TABULAR' THEN
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, curve_id, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,' ',1),
+			split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',4)::numeric,split_part(NEW.other_val,' ',5)::numeric);
+		ELSIF NEW.divider_type LIKE 'WEIR' THEN
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin,ht,cd, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,' ',1)::numeric,
+			split_part(NEW.other_val,' ',2)::numeric,split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',5)::numeric,
+			split_part(NEW.other_val,' ',6)::numeric,split_part(NEW.other_val,' ',7)::numeric);
+		END IF*/
+
+	ELSIF v_view='vi_storage' THEN
+		INSERT INTO node (node_id, elev, ymax,node_type,nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.node_id, NEW.elev, NEW.ymax,'EPASTORAGE','EPASTORAGE-DEF','STORAGE',1,1,1,1,2);
+		INSERT INTO man_storage (node_id) VALUES (NEW.node_id);
+		/*IF NEW.storage_type like 'FUNCTIONAL' THEN
+			INSERT INTO inp_storage(y0,storage_type,a1,a2,a0,apond, fevap, sh, hc, imd) VALUES (NEW.y0,NEW.storage_type,split_part(NEW.other_val,' ',1)::numeric,
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric,
+			split_part(NEW.other_val,';',6)::numeric,split_part(NEW.other_val,';',7)::numeric,split_part(NEW.other_val,';',8)::numeric);
+		ELSIF NEW.storage_type like 'TABULAR' THEN
+			INSERT INTO inp_storage(y0,storage_type,curve_id,apond,fevap, sh, hc, imd) VALUES (NEW.y0,NEW.storage_type,split_part(NEW.other_val,' ',1),
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric);
+		END IF;*/
+	ELSIF v_view='vi_conduits' THEN --NEW.z1,NEW.z2 where do they go??
+		INSERT INTO arc (arc_id, node_1,node_2, sys_length, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2,NEW.length, 'EPACONDUIT','EPACONDUIT-DEF','CONDUIT',1,1,1,1,2);
+		INSERT INTO man_conduit(arc_id) VALUES (NEW.arc_id);
+		INSERT INTO inp_conduit (arc_id,custom_n, q0, qmax) VALUES (NEW.arc_id,NEW.n, NEW.q0, NEW.qmax); 
+	ELSIF v_view='vi_pumps' THEN 
+		INSERT INTO arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'EPAPUMP','EPAPUMP-DEF','CONDUIT',1,1,1,1,2);
+		INSERT INTO man_conduit (arc_id) VALUES (NEW.arc_id); --pump goes to man_conduit???
+		INSERT INTO inp_pump (arc_id, curve_id, status, startup, shutoff) VALUES (NEW.arc_id, NEW.curve_id, NEW.status, NEW.startup, NEW.shutoff);
+	ELSIF v_view='vi_orifices' THEN 
+		INSERT INTO arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'EPAORIFICE','EPAORIFICE-DEF','CONDUIT',1,1,1,1,2);
+		INSERT INTO man_conduit (arc_id) VALUES (NEW.arc_id); --pump goes to man_conduit???
+		INSERT INTO inp_orifice (arc_id, ori_type, "offset", cd, flap, orate) VALUES (NEW.arc_id, NEW.ori_type, NEW."offset", NEW.cd, NEW.flap, NEW.orate);
+	ELSIF v_view='vi_weirs' THEN 
+		INSERT INTO arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'EPAWEIR','EPAWEIR-DEF','CONDUIT',1,1,1,1,2);
+		INSERT INTO man_conduit (arc_id) VALUES (NEW.arc_id); --pump goes to man_conduit???
+		INSERT INTO inp_weir (arc_id, weir_type, "offset", cd, flap, ec, cd2, surcharge) VALUES (NEW.arc_id, NEW.weir_type, NEW."offset", NEW.cd, NEW.flap, NEW.ec, NEW.cd2, NEW.surcharge);
+	ELSIF v_view='vi_outlets' THEN 
+		INSERT INTO arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'EPAOUTLET','EPAOUTLET-DEF','CONDUIT',1,1,1,1,2);
+		INSERT INTO man_conduit (arc_id) VALUES (NEW.arc_id); --pump goes to man_conduit???
+		IF NEW.outlet_type LIKE 'FUNCTIONAL%' THEN
+			INSERT INTO inp_outlet (arc_id, "offset", outlet_type, cd1, cd2,flap) VALUES (NEW.arc_id, NEW."offset", NEW.outlet_type, split_part(NEW.other_val,';',1)::numeric,
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3));
+		ELSIF NEW.outlet_type LIKE 'TABULAR%' THEN
+			INSERT INTO inp_outlet (arc_id, "offset", outlet_type, curve_id,flap) VALUES (NEW.arc_id, NEW."offset", NEW.outlet_type, split_part(NEW.other_val,';',1),
+			split_part(NEW.other_val,';',2));
+		END IF;
+	ELSIF v_view='vi_xsections' THEN 
+		UPDATE arc SET arccat_id=NEW.shape WHERE arc_id=NEW.arc_id;
+	ELSIF v_view='vi_losses' THEN --no data
+	ELSIF v_view='vi_transects' THEN 
+		INSERT INTO inp_transects_id (id) SELECT split_part(NEW.text,' ',1) WHERE split_part(NEW.text,' ',1)  NOT IN (SELECT id from inp_transects_id);
+		INSERT INTO inp_transects (tsect_id,text) VALUES (split_part(NEW.text,' ',1),NEW.text);
+	ELSIF v_view='vi_controls' THEN --how to manage controls that can ocuppy many lines if in one is id of node/arc
+		/*IF split_part(NEW.text,' ',3) IN (SELECT node_id FROM node) THEN
+			INSERT INTO inp_controls_x_node (node_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text);
+		ELSIF split_part(NEW.text,' ',3) IN (SELECT arc_id FROM arc) THEN 
+			INSERT INTO inp_controls_x_arc (arc_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text);
+		END IF;**/
+	ELSIF v_view='vi_pollutants' THEN 
+		INSERT INTO inp_pollutants (poll_id, units_type, crain, cgw, cii, kd, sflag, copoll_id, cofract, cdwf) 
+		VALUES (NEW.poll_id, NEW.units_type, NEW.crain, NEW.cgw, NEW.cii, NEW.kd, NEW.sflag, NEW.copoll_id, NEW.cofract, NEW.cdwf);
+	ELSIF v_view='vi_landuses' THEN 
+		INSERT INTO inp_landuses (landus_id, sweepint, availab, lastsweep) VALUES (NEW.landus_id, NEW.sweepint, NEW.availab, NEW.lastsweep);
+	ELSIF v_view='vi_coverages' THEN 
+		INSERT INTO inp_coverage_land_x_subc(subc_id, landus_id, percent) VALUES (NEW.subc_id, NEW.landus_id, NEW.percent);
+	ELSIF v_view='vi_buildup' THEN
+		INSERT INTO inp_buildup_land_x_pol(landus_id, poll_id, funcb_type, c1, c2, c3, perunit) 
+		VALUES (NEW.landus_id, NEW.poll_id, NEW.funcb_type, NEW.c1, NEW.c2, NEW.c3, NEW.perunit);
+	ELSIF v_view='vi_washoff' THEN
+		INSERT INTO inp_washoff_land_x_pol (landus_id, poll_id, funcw_type, c1, c2, sweepeffic, bmpeffic) 
+		VALUES (NEW.landus_id, NEW.poll_id, NEW.funcw_type, NEW.c1, NEW.c2, NEW.sweepeffic, NEW.bmpeffic);
+	ELSIF v_view='vi_treatment' THEN
+		INSERT INTO inp_treatment_node_x_pol (node_id, poll_id, function) VALUES (NEW.node_id, NEW.poll_id, NEW.function);
+	ELSIF v_view='vi_dwf' THEN
+		INSERT INTO inp_dwf(node_id,  value, pat1, pat2, pat3, pat4)
+		VALUES (NEW.node_id, NEW.value, NEW.pat1, NEW.pat2, NEW.pat3, NEW.pat4);
+	ELSIF v_view='vi_patterns' THEN --???
+	ELSIF v_view='vi_loadings' THEN
+		INSERT INTO inp_loadings_pol_x_subc (subc_id, poll_id, ibuildup) VALUES (NEW.subc_id, NEW.poll_id, NEW.ibuildup);
+	ELSIF v_view='vi_rdii' THEN
+		INSERT INTO inp_rdii(node_id, hydro_id, sewerarea) VALUES (NEW.node_id, NEW.hydro_id, NEW.sewerarea);
+	ELSIF v_view='vi_hydrographs' THEN
+		INSERT INTO inp_hydrograph (text) VALUES (NEW.text);
+	--ELSIF v_view='vi_curves' THEN
+	--	INSERT INTO 
+--	ELSIF v_view='vi_timeseries' THEN
     END IF;
+    END IF;
+
 
     RETURN NEW;
 
@@ -56,35 +178,79 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION ud_inp.gw_trg_vi()
-  OWNER TO geoadmin;
 
 
 
 
-DROP TRIGGER IF EXISTS gw_trg_vi_options ON ud_inp.vi_options;
-CREATE TRIGGER gw_trg_vi_options INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_options FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_options');
-DROP TRIGGER IF EXISTS gw_trg_vi_report ON ud_inp.vi_report;
-CREATE TRIGGER gw_trg_vi_report INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_report FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_report');
-DROP TRIGGER IF EXISTS gw_trg_vi_files ON ud_inp.vi_files;
-CREATE TRIGGER gw_trg_vi_files INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_files FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_files');
-DROP TRIGGER IF EXISTS gw_trg_vi_evaporation ON ud_inp.vi_evaporation;
-CREATE TRIGGER gw_trg_vi_evaporation INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_evaporation FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_evaporation');
-DROP TRIGGER IF EXISTS gw_trg_vi_raingages ON ud_inp.vi_raingages;
-CREATE TRIGGER gw_trg_vi_raingages INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_raingages FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_raingages');
-DROP TRIGGER IF EXISTS gw_trg_vi_temperature ON ud_inp.vi_temperature;
-CREATE TRIGGER gw_trg_vi_temperature INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_temperature FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_temperature');
-DROP TRIGGER IF EXISTS gw_trg_vi_subcatchments ON ud_inp.vi_subcatchments;
-CREATE TRIGGER gw_trg_vi_subcatchments INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_subcatchments FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_subcatchments');
-DROP TRIGGER IF EXISTS gw_trg_vi_subareas ON ud_inp.vi_subareas;
-CREATE TRIGGER gw_trg_vi_subareas INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_subareas FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_subareas');
-DROP TRIGGER IF EXISTS gw_trg_vi_infiltration ON ud_inp.vi_infiltration;
-CREATE TRIGGER gw_trg_vi_infiltration INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_infiltration FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_infiltration');
-DROP TRIGGER IF EXISTS gw_trg_vi_aquifers ON ud_inp.vi_aquifers;
-CREATE TRIGGER gw_trg_vi_aquifers INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_aquifers FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_aquifers');
-DROP TRIGGER IF EXISTS gw_trg_vi_groundwater ON ud_inp.vi_groundwater;
-CREATE TRIGGER gw_trg_vi_groundwater INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_groundwater FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_groundwater');
-DROP TRIGGER IF EXISTS gw_trg_vi_snowpacks ON ud_inp.vi_snowpacks;
-CREATE TRIGGER gw_trg_vi_snowpacks INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_snowpacks FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_snowpacks');
-DROP TRIGGER IF EXISTS gw_trg_vi_gwf ON ud_inp.vi_gwf;
-CREATE TRIGGER gw_trg_vi_gwf INSTEAD OF INSERT OR UPDATE OR DELETE ON ud_inp.vi_gwf FOR EACH ROW EXECUTE PROCEDURE ud_inp.gw_trg_vi('vi_gwf');
+DROP TRIGGER IF EXISTS gw_trg_vi_options ON SCHEMA_NAME.vi_options;
+CREATE TRIGGER gw_trg_vi_options INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_options FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_options');
+DROP TRIGGER IF EXISTS gw_trg_vi_report ON SCHEMA_NAME.vi_report;
+CREATE TRIGGER gw_trg_vi_report INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_report FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_report');
+DROP TRIGGER IF EXISTS gw_trg_vi_files ON SCHEMA_NAME.vi_files;
+CREATE TRIGGER gw_trg_vi_files INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_files FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_files');
+DROP TRIGGER IF EXISTS gw_trg_vi_evaporation ON SCHEMA_NAME.vi_evaporation;
+CREATE TRIGGER gw_trg_vi_evaporation INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_evaporation FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_evaporation');
+DROP TRIGGER IF EXISTS gw_trg_vi_raingages ON SCHEMA_NAME.vi_raingages;
+CREATE TRIGGER gw_trg_vi_raingages INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_raingages FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_raingages');
+DROP TRIGGER IF EXISTS gw_trg_vi_temperature ON SCHEMA_NAME.vi_temperature;
+CREATE TRIGGER gw_trg_vi_temperature INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_temperature FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_temperature');
+DROP TRIGGER IF EXISTS gw_trg_vi_subcatchments ON SCHEMA_NAME.vi_subcatchments;
+CREATE TRIGGER gw_trg_vi_subcatchments INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_subcatchments FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_subcatchments');
+DROP TRIGGER IF EXISTS gw_trg_vi_subareas ON SCHEMA_NAME.vi_subareas;
+CREATE TRIGGER gw_trg_vi_subareas INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_subareas FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_subareas');
+DROP TRIGGER IF EXISTS gw_trg_vi_infiltration ON SCHEMA_NAME.vi_infiltration;
+CREATE TRIGGER gw_trg_vi_infiltration INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_infiltration FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_infiltration');
+DROP TRIGGER IF EXISTS gw_trg_vi_aquifers ON SCHEMA_NAME.vi_aquifers;
+CREATE TRIGGER gw_trg_vi_aquifers INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_aquifers FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_aquifers');
+DROP TRIGGER IF EXISTS gw_trg_vi_groundwater ON SCHEMA_NAME.vi_groundwater;
+CREATE TRIGGER gw_trg_vi_groundwater INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_groundwater FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_groundwater');
+DROP TRIGGER IF EXISTS gw_trg_vi_snowpacks ON SCHEMA_NAME.vi_snowpacks;
+CREATE TRIGGER gw_trg_vi_snowpacks INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_snowpacks FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_snowpacks');
+DROP TRIGGER IF EXISTS gw_trg_vi_gwf ON SCHEMA_NAME.vi_gwf;
+CREATE TRIGGER gw_trg_vi_gwf INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_gwf FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_gwf');
+DROP TRIGGER IF EXISTS gw_trg_vi_snowpacks ON SCHEMA_NAME.vi_snowpacks;
+CREATE TRIGGER gw_trg_vi_snowpacks INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_snowpacks FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_snowpacks');
+DROP TRIGGER IF EXISTS gw_trg_vi_junction ON SCHEMA_NAME.vi_junction;
+CREATE TRIGGER gw_trg_vi_junction INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_junction FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_junction');
+DROP TRIGGER IF EXISTS gw_trg_vi_outfalls ON SCHEMA_NAME.vi_outfalls;
+CREATE TRIGGER gw_trg_vi_outfalls INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_outfalls FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_outfalls');
+DROP TRIGGER IF EXISTS gw_trg_vi_dividers ON SCHEMA_NAME.vi_dividers;
+CREATE TRIGGER gw_trg_vi_dividers INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_dividers FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_dividers');
+DROP TRIGGER IF EXISTS gw_trg_vi_storage ON SCHEMA_NAME.vi_storage;
+CREATE TRIGGER gw_trg_vi_storage INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_storage FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_storage');
+DROP TRIGGER IF EXISTS gw_trg_vi_conduits ON SCHEMA_NAME.vi_conduits;
+CREATE TRIGGER gw_trg_vi_conduits INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_conduits FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_conduits');
+DROP TRIGGER IF EXISTS gw_trg_vi_pumps ON SCHEMA_NAME.vi_pumps;
+CREATE TRIGGER gw_trg_vi_pumps INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_pumps FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_pumps');
+DROP TRIGGER IF EXISTS gw_trg_vi_orifices ON SCHEMA_NAME.vi_orifices;
+CREATE TRIGGER gw_trg_vi_orifices INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_orifices FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_orifices');
+DROP TRIGGER IF EXISTS gw_trg_vi_weirs ON SCHEMA_NAME.vi_weirs;
+CREATE TRIGGER gw_trg_vi_weirs INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_weirs FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_weirs');
+DROP TRIGGER IF EXISTS gw_trg_vi_outlets ON SCHEMA_NAME.vi_outlets;
+CREATE TRIGGER gw_trg_vi_outlets INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_outlets FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_outlets');
+DROP TRIGGER IF EXISTS gw_trg_vi_xsections ON SCHEMA_NAME.vi_xsections;
+CREATE TRIGGER gw_trg_vi_xsections INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_xsections FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_xsections');
+DROP TRIGGER IF EXISTS gw_trg_vi_losses ON SCHEMA_NAME.vi_losses;
+CREATE TRIGGER gw_trg_vi_losses INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_losses FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_losses');
+DROP TRIGGER IF EXISTS gw_trg_vi_transects ON SCHEMA_NAME.vi_transects;
+CREATE TRIGGER gw_trg_vi_transects INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_transects FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_transects');
+DROP TRIGGER IF EXISTS gw_trg_vi_controls ON SCHEMA_NAME.vi_controls;
+CREATE TRIGGER gw_trg_vi_controls INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_controls FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_controls');
+DROP TRIGGER IF EXISTS gw_trg_vi_coverages ON SCHEMA_NAME.vi_coverages;
+CREATE TRIGGER gw_trg_vi_coverages INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_coverages FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_coverages');
+DROP TRIGGER IF EXISTS gw_trg_vi_buildup ON SCHEMA_NAME.vi_buildup;
+CREATE TRIGGER gw_trg_vi_buildup INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_buildup FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_buildup');
+DROP TRIGGER IF EXISTS gw_trg_vi_washoff ON SCHEMA_NAME.vi_washoff;
+CREATE TRIGGER gw_trg_vi_washoff INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_washoff FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_washoff');
+DROP TRIGGER IF EXISTS gw_trg_vi_treatment ON SCHEMA_NAME.vi_treatment;
+CREATE TRIGGER gw_trg_vi_treatment INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_treatment FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_treatment');
+DROP TRIGGER IF EXISTS gw_trg_vi_dwf ON SCHEMA_NAME.vi_dwf;
+CREATE TRIGGER gw_trg_vi_dwf INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_dwf FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_dwf');
+DROP TRIGGER IF EXISTS gw_trg_vi_rdii ON SCHEMA_NAME.vi_rdii;
+CREATE TRIGGER gw_trg_vi_rdii INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_rdii FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_rdii');
+DROP TRIGGER IF EXISTS gw_trg_vi_patterns ON SCHEMA_NAME.vi_patterns;
+CREATE TRIGGER gw_trg_vi_patterns INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_patterns FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_patterns');
+DROP TRIGGER IF EXISTS gw_trg_vi_loadings ON SCHEMA_NAME.vi_loadings;
+CREATE TRIGGER gw_trg_vi_loadings INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_loadings FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_loadings');
+DROP TRIGGER IF EXISTS gw_trg_vi_hydrographs ON SCHEMA_NAME.vi_hydrographs;
+CREATE TRIGGER gw_trg_vi_hydrographs INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_hydrographs FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_hydrographs');

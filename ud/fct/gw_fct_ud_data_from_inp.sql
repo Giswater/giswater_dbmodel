@@ -45,17 +45,23 @@ BEGIN
 	--delete previous values
 
 	delete from arc CASCADE;
+	delete from inp_buildup_land_x_pol;
+	delete from inp_coverage_land_x_subc CASCADE;
 	delete from subcatchment CASCADE;
 	delete from inp_aquifer CASCADE;
 	delete from node CASCADE;
+	delete from inp_loadings_pol_x_subc;
 	delete from exploitation;
 	delete from macroexploitation;
 	delete from sector;
+	delete from inp_transects_id ;
 	delete from dma;
 	delete from ext_municipality;
+	delete from inp_pollutant;
+	delete from inp_landuses;
 	delete from cat_node;
-	delete from cat_arc;
-	delete from cat_mat_arc;
+	--delete from cat_arc;
+	--delete from cat_mat_arc;
 	delete from cat_mat_node;
 	delete from inp_groundwater	;
 	delete from selector_state where cur_user=current_user;
@@ -74,8 +80,17 @@ BEGIN
 	--  ALTER TABLE SCHEMA_NAME.subcatchment DROP CONSTRAINT subcatchment_rg_id_fkey;
 	--  ALTER TABLE SCHEMA_NAME.subcatchment DROP CONSTRAINT subcatchment_snow_id_fkey;
 	--ALTER TABLE SCHEMA_NAME.inp_groundwater DROP CONSTRAINT inp_groundwater_subc_id_fkey;
---	ALTER TABLE SCHEMA_NAME.inp_groundwater DROP CONSTRAINT inp_groundwater_aquif_id_fkey;
---	ALTER TABLE SCHEMA_NAME.inp_groundwater DROP CONSTRAINT inp_groundwater_node_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_groundwater DROP CONSTRAINT inp_groundwater_aquif_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_groundwater DROP CONSTRAINT inp_groundwater_node_id_fkey;
+	--ALTER TABLE inp_pump DROP CONSTRAINT inp_pump_curve_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_outlet DROP CONSTRAINT inp_outlet_curve_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_coverage_land_x_subc DROP CONSTRAINT inp_coverage_land_x_subc_landus_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_coverage_land_x_subc DROP CONSTRAINT inp_coverage_land_x_subc_subc_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat1_fkey;
+	-- ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat2_fkey;
+	-- ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat3_fkey;
+	-- ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat4_fkey;
+
 	
 	-- MAPZONES
 	INSERT INTO macroexploitation(macroexpl_id,name) VALUES(1,'macroexploitation1');
@@ -90,35 +105,11 @@ BEGIN
 	INSERT INTO selector_state(state_id,cur_user) VALUES (1,current_user);
 
 	
-	-- HARMONIZE THE SOURCE TABLE
-	FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux order by id
-	LOOP
-		-- massive refactor of source field (getting target)
-		IF rpt_rec.csv1 LIKE '[%' THEN
-			v_target=rpt_rec.csv1;
-		END IF;
-		UPDATE temp_csv2pg SET source=v_target WHERE rpt_rec.id=temp_csv2pg.id;
- 
-		-- refactor of [OPTIONS] target
-		IF rpt_rec.source ='[TEMPERATURE]' AND rpt_rec.csv3 is not null THEN 
-			IF rpt_rec.csv1 LIKE 'TIMESERIES' OR rpt_rec.csv1 LIKE 'FILE' OR rpt_rec.csv1 LIKE 'SNOWMELT' THEN
-				UPDATE temp_csv2pg SET csv2=concat(csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13,' ',csv14,' ',csv15,' ',csv16 ),
-				csv3=null, csv4=null,csv5=null,csv6=null,csv7=null, csv8=null, csv9=null,csv10=null,csv11=null,csv12=null, csv13=null, csv14=null,csv15=null,csv16=null WHERE temp_csv2pg.id=rpt_rec.id;
-			ELSE
-				UPDATE temp_csv2pg SET csv1=concat(csv1,' ',csv2),csv2=concat(csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13,' ',csv14,' ',csv15,' ',csv16 ),
-				csv3=null, csv4=null,csv5=null,csv6=null,csv7=null, csv8=null, csv9=null,csv10=null,csv11=null,csv12=null, csv13=null, csv14=null,csv15=null,csv16=null WHERE temp_csv2pg.id=rpt_rec.id;
-			END IF;
-		END IF;
-		
-			
-		-- other refactors if we need
-		-- todo
-	END LOOP;
 
 	-- CATALOGS
 	--cat_feature
 	--node
-	/*INSERT INTO cat_feature VALUES ('EPAJUNCTION','JUNCTION','NODE');
+	/*INSERT INTO cat_feature VALUES ('EPAMANHOLE','JUNCTION','NODE');
 	INSERT INTO cat_feature VALUES ('EPAOUTFALL','OUTFALL','NODE');
 	INSERT INTO cat_feature VALUES ('EPASTORAGE','STORAGE','NODE');
 	
@@ -141,32 +132,100 @@ BEGIN
 
 	--node_type
 	--node
-	INSERT INTO node_type VALUES ('EPAJUNCTION', 'MANHOLE', 'JUNCTION', 'man_manhole', 'inp_junction',TRUE);
+	INSERT INTO node_type VALUES ('EPAMANHOLE', 'MANHOLE', 'JUNCTION', 'man_manhole', 'inp_junction',TRUE);
 	INSERT INTO node_type VALUES ('EPAOUTFALL', 'OUTFALL', 'OUTFALL', 'man_outfall', 'inp_outfall',TRUE);
 	INSERT INTO node_type VALUES ('EPASTORAGE', 'STORAGE', 'STORAGE', 'man_storage', 'inp_storage',TRUE);
-*/
+
 	--cat_mat_arc
 	--arc
 	INSERT INTO cat_mat_arc 
 	SELECT DISTINCT csv6 FROM temp_csv2pg WHERE source='[XSECTIONS]' AND csv6 IS NOT NULL;
+
 	--nodarc
-	INSERT INTO cat_mat_arc VALUES ('EPAMAT');
+	INSERT INTO cat_mat_arc VALUES ('EPAMAT');	*/
 		
 	--cat_mat_node 
 	INSERT INTO cat_mat_node VALUES ('EPAMAT');
 
 	--cat_arc
 	--pipe 
-	INSERT INTO cat_arc( id, matcat_id, shape, geom1,geom2,geom3,geom4)
+	/*INSERT INTO cat_arc( id, matcat_id, shape, geom1,geom2,geom3,geom4)
 	SELECT DISTINCT ON (concat(csv2,'_',csv3::numeric(4,2),'x',csv4::numeric(4,2))) concat(csv2,'_',csv3::numeric(4,2),'x',csv4::numeric(4,2)),
 	'EPAMAT',csv2,csv3::numeric,csv4::numeric,csv5::numeric,csv6::numeric FROM SCHEMA_NAME.temp_csv2pg 
 	WHERE source='[XSECTIONS]' AND csv1 not like ';%';
-	
+	INSERT INTO cat_arc( id,matcat_id) VALUES ('EPACONDUIT-DEF', 'EPAMAT');
+	INSERT INTO cat_arc( id,matcat_id) VALUES ('EPAPUMP-DEF', 'EPAMAT');
+	INSERT INTO cat_arc( id,matcat_id) VALUES ('EPAORIFICE-DEF', 'EPAMAT');
+	INSERT INTO cat_arc( id,matcat_id) VALUES ('EPAOUTLET-DEF', 'EPAMAT');
+	INSERT INTO cat_arc( id,matcat_id) VALUES ('EPAWEIR-DEF', 'EPAMAT');
+	*/
 	--cat_node
 	INSERT INTO cat_node VALUES ('EPAMANHOLE-DEF', 'EPAMAT');
 	INSERT INTO cat_node VALUES ('EPAOUTFALL-DEF', 'EPAMAT');
 	INSERT INTO cat_node VALUES ('EPASTORAGE-DEF', 'EPAMAT');
 
+	
+	-- HARMONIZE THE SOURCE TABLE
+	FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux order by id
+	LOOP
+		-- massive refactor of source field (getting target)
+		IF rpt_rec.csv1 LIKE '[%' THEN
+			v_target=rpt_rec.csv1;
+		END IF;
+		UPDATE temp_csv2pg SET source=v_target WHERE rpt_rec.id=temp_csv2pg.id;
+		IF rpt_rec.source LIKE '%STORAGE%' THEN
+			
+		END IF;
+		-- refactor of [OPTIONS] target
+		IF rpt_rec.source ='[TEMPERATURE]' AND rpt_rec.csv3 is not null THEN 
+			IF rpt_rec.csv1 LIKE 'TIMESERIES' OR rpt_rec.csv1 LIKE 'FILE' OR rpt_rec.csv1 LIKE 'SNOWMELT' THEN
+				UPDATE temp_csv2pg SET csv2=concat(csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13,' ',csv14,' ',csv15,' ',csv16 ),
+				csv3=null, csv4=null,csv5=null,csv6=null,csv7=null, csv8=null, csv9=null,csv10=null,csv11=null,csv12=null, csv13=null, csv14=null,csv15=null,csv16=null WHERE temp_csv2pg.id=rpt_rec.id;
+			ELSE
+				UPDATE temp_csv2pg SET csv1=concat(csv1,' ',csv2),csv2=concat(csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13,' ',csv14,' ',csv15,' ',csv16 ),
+				csv3=null, csv4=null,csv5=null,csv6=null,csv7=null, csv8=null, csv9=null,csv10=null,csv11=null,csv12=null, csv13=null, csv14=null,csv15=null,csv16=null WHERE temp_csv2pg.id=rpt_rec.id;
+			END IF;
+		END IF;
+		
+		IF rpt_rec.source ='[OUTFALL]' AND rpt_rec.csv5 is not null THEN 
+			UPDATE temp_csv2pg SET csv4=concat(csv4,' ',csv5), csv5=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source ='[DIVIDERS]' THEN 
+			UPDATE temp_csv2pg SET csv5=concat(csv5,';',csv6,';',csv7,';',csv8,';',csv9,';',csv10,';',csv11),
+			csv6=null,csv7=null,csv8=null,csv9=null,csv10=null,csv11=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source LIKE '%STORAGE%'  AND rpt_rec.csv7 is not null THEN 
+			UPDATE temp_csv2pg SET csv6=concat(csv6,';',csv7,';',csv8,';',csv9,';',csv10,';',csv11,';',csv12,';',csv13),
+			csv7=null,csv8=null,csv9=null,csv10=null,csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;	
+		IF rpt_rec.source LIKE '%STORAGE%'  AND rpt_rec.csv7 is not null THEN 
+			UPDATE temp_csv2pg SET csv6=concat(csv6,';',csv7,';',csv8),csv7=null,csv8=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source LIKE '%OUTLETS%'  AND rpt_rec.csv7 is not null THEN 
+			UPDATE temp_csv2pg SET csv6=concat(csv6,';',csv7,';',csv8),csv7=null,csv8=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source LIKE '%XSECTION%'  AND rpt_rec.csv3 is not null and rpt_rec.csv1 NOT LIKE ';%'THEN 
+			UPDATE temp_csv2pg SET csv2=(concat(csv2,'_',csv3::numeric(4,2),'x',csv4::numeric(4,2))), csv3=null, csv4=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source LIKE '%TRANSECTS%'  AND rpt_rec.csv2 is not null THEN 
+			UPDATE temp_csv2pg SET csv1=(concat(csv1,' ',csv2,'',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
+			csv2=null,csv3=null, csv4=null, csv5=null, csv6=null, csv7=null,csv8=null, csv9=null,csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;		
+		IF rpt_rec.source LIKE '%CONTROLS%'  AND rpt_rec.csv2 is not null THEN 
+			UPDATE temp_csv2pg SET csv1=(concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
+			csv2=null, csv3=null, csv4=null, csv5=null, csv6=null, csv7=null, csv8=null, csv9=null, csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;		
+		IF rpt_rec.source LIKE '%TREATMENT%'  AND rpt_rec.csv2 is not null THEN 
+			UPDATE temp_csv2pg SET csv3=(concat(csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
+			csv4=null, csv5=null, csv6=null, csv7=null, csv8=null, csv9=null, csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;		
+		IF rpt_rec.source LIKE '%HYDROGRAPH%'  AND rpt_rec.csv2 is not null THEN 
+			UPDATE temp_csv2pg SET csv1=(concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
+			csv2=null, csv3=null,csv4=null, csv5=null, csv6=null, csv7=null, csv8=null, csv9=null, csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;				
+		-- other refactors if we need
+		-- todo
+	END LOOP;
 
 	-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
 	FOR v_rec_table IN SELECT * FROM sys_csv2pg_config WHERE reverse_pg2csvcat_id=10
@@ -195,7 +254,7 @@ BEGIN
 
 	-- CREATE GEOM'S
 	--arc
-	FOR v_data IN SELECT * FROM arc  LOOP
+	/*FOR v_data IN SELECT * FROM arc  LOOP
 
 		--Insert start point, add vertices if exist, add end point
 
@@ -220,7 +279,7 @@ BEGIN
 	update sector SET the_geom=v_extend_val;
 	update dma SET the_geom=v_extend_val;
 	update ext_municipality SET the_geom=v_extend_val;
-
+*/
 
 	--ENABLE CONSTRAINTS AND PROCEDURES
 	--enable constraints
@@ -232,7 +291,14 @@ BEGIN
 		--ALTER TABLE SCHEMA_NAME.inp_groundwater ADD CONSTRAINT inp_groundwater_subc_id_fkey FOREIGN KEY (subc_id) REFERENCES SCHEMA_NAME.subcatchment (subc_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
 		--ALTER TABLE SCHEMA_NAME.inp_groundwater ADD CONSTRAINT inp_groundwater_aquif_id_fkey FOREIGN KEY (aquif_id) REFERENCES SCHEMA_NAME.inp_aquifer (aquif_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
 		--ALTER TABLE SCHEMA_NAME.inp_groundwater ADD CONSTRAINT inp_groundwater_node_id_fkey FOREIGN KEY (node_id) REFERENCES SCHEMA_NAME.node (node_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
-
+		--ALTER TABLE SCHEMA_NAME.inp_pump ADD CONSTRAINT inp_pump_curve_id_fkey FOREIGN KEY (curve_id) REFERENCES SCHEMA_NAME.inp_curve_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE SCHEMA_NAME.inp_outlet ADD CONSTRAINT inp_outlet_curve_id_fkey FOREIGN KEY (curve_id) REFERENCES SCHEMA_NAME.inp_curve_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE inp_coverage_land_x_subc ADD CONSTRAINT inp_coverage_land_x_subc_landus_id_fkey FOREIGN KEY (landus_id) REFERENCES inp_landuses (landus_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+		--ALTER TABLE inp_coverage_land_x_subc ADD CONSTRAINT inp_coverage_land_x_subc_subc_id_fkey FOREIGN KEY (subc_id) REFERENCES subcatchment (subc_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat1_fkey FOREIGN KEY (pat1) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat2_fkey FOREIGN KEY (pat2) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat3_fkey FOREIGN KEY (pat3) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat4_fkey FOREIGN KEY (pat4) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
 	END IF;
 
 	--enable triggers
@@ -244,5 +310,4 @@ BEGIN
 	$BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION SCHEMA_NAME.gw_fct_ud_data_from_inp(integer)
-  OWNER TO postgres;
+

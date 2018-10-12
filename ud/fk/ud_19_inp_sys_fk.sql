@@ -162,7 +162,7 @@ ALTER TABLE "inp_transects" DROP CONSTRAINT IF EXISTS "inp_transects_tsect_id_fk
 
 ALTER TABLE "inp_treatment_node_x_pol" DROP CONSTRAINT IF EXISTS "inp_treatment_node_x_pol_node_id_fkey";
 ALTER TABLE "inp_treatment_node_x_pol" DROP CONSTRAINT IF EXISTS "inp_treatment_node_x_pol_poll_id_fkey";
-ALTER TABLE "inp_treatment_node_x_pol" DROP CONSTRAINT IF EXISTS "inp_treatment_node_x_pol_function_fkey";
+--ALTER TABLE "inp_treatment_node_x_pol" DROP CONSTRAINT IF EXISTS "inp_treatment_node_x_pol_function_fkey";
 
 ALTER TABLE "inp_washoff_land_x_pol" DROP CONSTRAINT IF EXISTS "inp_washoff_land_x_pol_poll_id_fkey";
 ALTER TABLE "inp_washoff_land_x_pol" DROP CONSTRAINT IF EXISTS "inp_washoff_land_x_pol_landus_id_fkey";
@@ -417,7 +417,7 @@ ALTER TABLE "inp_transects" ADD CONSTRAINT "inp_transects_tsect_id_fkey" FOREIGN
 
 ALTER TABLE "inp_treatment_node_x_pol" ADD CONSTRAINT "inp_treatment_node_x_pol_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "node" ("node_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_treatment_node_x_pol" ADD CONSTRAINT "inp_treatment_node_x_pol_poll_id_fkey" FOREIGN KEY ("poll_id") REFERENCES "inp_pollutant" ("poll_id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "inp_treatment_node_x_pol" ADD CONSTRAINT "inp_treatment_node_x_pol_function_fkey" FOREIGN KEY ("function") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+--ALTER TABLE "inp_treatment_node_x_pol" ADD CONSTRAINT "inp_treatment_node_x_pol_function_fkey" FOREIGN KEY ("function") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_washoff_land_x_pol" ADD CONSTRAINT "inp_washoff_land_x_pol_poll_id_fkey" FOREIGN KEY ("poll_id") REFERENCES "inp_pollutant" ("poll_id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_washoff_land_x_pol" ADD CONSTRAINT "inp_washoff_land_x_pol_landus_id_fkey" FOREIGN KEY ("landus_id") REFERENCES "inp_landuses" ("landus_id") ON DELETE CASCADE ON UPDATE CASCADE;
