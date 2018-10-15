@@ -9,6 +9,7 @@ $BODY$
 	rpt_rec record;
 	epsg_val integer;
 	v_point_geom public.geometry;
+	v_line_geom public.geometry;
 	schemas_array name[];
 	v_target text;
 	v_count integer=0;
@@ -60,6 +61,9 @@ BEGIN
 	delete from inp_pollutant;
 	delete from inp_landuses;
 	delete from cat_node;
+	delete from inp_curve_id cascade;
+	delete from inp_inflows cascade;
+	delete from inp_timser_id cascade;
 	--delete from cat_arc;
 	--delete from cat_mat_arc;
 	delete from cat_mat_node;
@@ -90,7 +94,12 @@ BEGIN
 	-- ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat2_fkey;
 	-- ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat3_fkey;
 	-- ALTER TABLE SCHEMA_NAME.inp_dwf DROP CONSTRAINT inp_dwf_pat4_fkey;
-
+	--ALTER TABLE inp_curve DROP CONSTRAINT inp_curve_curve_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_inflows_pol_x_node DROP CONSTRAINT inp_inflows_pol_x_node_pattern_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_inflows DROP CONSTRAINT inp_inflows_pattern_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_inflows DROP CONSTRAINT inp_inflows_timser_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_inflows DROP CONSTRAINT inp_inflows_pattern_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_inflows_pol_x_node DROP CONSTRAINT inp_inflows_pol_x_node_timser_id_fkey;
 	
 	-- MAPZONES
 	INSERT INTO macroexploitation(macroexpl_id,name) VALUES(1,'macroexploitation1');
@@ -127,7 +136,7 @@ BEGIN
 	--nodarc
 	INSERT INTO arc_type VALUES ('EPAWEIR', 'VARC', 'WEIR', 'man_varc', 'inp_weir',TRUE);
 	INSERT INTO arc_type VALUES ('EPAORIFICE', 'VARC', 'ORIFICE', 'man_varc', 'inp_orifice',TRUE);
-	INSERT INTO arc_type VALUES ('EPAPUMP', 'VARC', 'PUMP', 'man_varc', 'inp_pump',TRUE);
+	INSERT INTO arc_type VALUES ('EPAPUMP', '', 'PUMP', 'man_varc', 'inp_pump',TRUE);
 	INSERT INTO arc_type VALUES ('EPAOUTLET', 'VARC', 'OUTLET', 'man_varc', 'inp_outlet',TRUE);
 
 	--node_type
@@ -211,7 +220,7 @@ BEGIN
 			UPDATE temp_csv2pg SET csv1=(concat(csv1,' ',csv2,'',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
 			csv2=null,csv3=null, csv4=null, csv5=null, csv6=null, csv7=null,csv8=null, csv9=null,csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
 		END IF;		
-		IF rpt_rec.source LIKE '%CONTROLS%'  AND rpt_rec.csv2 is not null THEN 
+		IF rpt_rec.source LIKE '[CONTROLS%'  AND rpt_rec.csv2 is not null THEN 
 			UPDATE temp_csv2pg SET csv1=(concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
 			csv2=null, csv3=null, csv4=null, csv5=null, csv6=null, csv7=null, csv8=null, csv9=null, csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
 		END IF;		
@@ -222,13 +231,42 @@ BEGIN
 		IF rpt_rec.source LIKE '%HYDROGRAPH%'  AND rpt_rec.csv2 is not null THEN 
 			UPDATE temp_csv2pg SET csv1=(concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13)), 
 			csv2=null, csv3=null,csv4=null, csv5=null, csv6=null, csv7=null, csv8=null, csv9=null, csv10=null, csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
-		END IF;				
+		END IF;	
+		IF rpt_rec.source LIKE '%ADJUSTMENT%'  AND rpt_rec.csv3 is not null THEN 
+			UPDATE temp_csv2pg SET csv2=concat(csv2,';',csv3,';',csv4,';',csv5,';',csv6,';',csv7,';',csv8,';',csv9,';',csv10,';',csv11,';',csv12,';',csv13),
+			csv3=null,csv4=null,csv5=null,csv6=null,csv7=null,csv8=null,csv9=null,csv10=null,csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source LIKE '%MAP%'  AND rpt_rec.csv3 is not null THEN 
+			UPDATE temp_csv2pg SET csv2=concat(csv2,';',csv3,';',csv4,';',csv5),csv3=null,csv4=null,csv5=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;		
+		IF rpt_rec.source LIKE '%RAINGAGE%' AND rpt_rec.csv6 is not null THEN 
+			UPDATE temp_csv2pg SET csv5=concat(csv5,';',csv6,';',csv7,';',csv8),csv6=null,csv7=null,csv8=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;	
+		IF rpt_rec.source LIKE '%GWF%' AND rpt_rec.csv4 is not null THEN 
+			UPDATE temp_csv2pg SET csv2=concat(csv2,';',csv3),csv3=concat(csv4,';',csv5),csv4=null,csv5=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;	
+		IF rpt_rec.source LIKE '%TIMESERIES%' AND rpt_rec.csv3 is not null THEN 
+			UPDATE temp_csv2pg SET csv2=concat(csv2,';',csv3,';',csv4,';',csv5,';',csv6,';',csv7,';',csv8),
+			csv3=null,csv4=null,csv5=null,csv6=null, csv7=null, csv8=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;
+		IF rpt_rec.source LIKE '%LID_CONTROLS%' AND rpt_rec.csv4 is not null THEN 
+			UPDATE temp_csv2pg SET csv3=concat(csv3,';',csv4,';',csv5,';',csv6,';',csv7,';',csv8,';',csv9),
+			csv4=null,csv5=null,csv6=null, csv7=null, csv8=null,csv9=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;	
+		IF rpt_rec.source LIKE '%BACKDROP%' AND rpt_rec.csv2 is not null THEN 
+			UPDATE temp_csv2pg SET csv1=concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6),
+			csv2=null, csv3=null,csv4=null, csv5=null,csv6=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;	
+		IF rpt_rec.source LIKE '%INFLOWS%' AND rpt_rec.csv5 is not null THEN 
+			UPDATE temp_csv2pg SET csv4=concat(csv4,';',csv5,';',csv6,';',csv7,';',csv8),
+			csv5=null, csv6=null,csv7=null, csv8=null WHERE temp_csv2pg.id=rpt_rec.id; 
+		END IF;			
 		-- other refactors if we need
 		-- todo
 	END LOOP;
 
 	-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
-	FOR v_rec_table IN SELECT * FROM sys_csv2pg_config WHERE reverse_pg2csvcat_id=10
+	FOR v_rec_table IN SELECT * FROM sys_csv2pg_config WHERE reverse_pg2csvcat_id=10 order by id
 	LOOP
 		--identifing the humber of fields of the editable view
 		FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns where table_name=v_rec_table.tablename AND table_schema='SCHEMA_NAME'
@@ -254,7 +292,7 @@ BEGIN
 
 	-- CREATE GEOM'S
 	--arc
-	/*FOR v_data IN SELECT * FROM arc  LOOP
+	FOR v_data IN SELECT * FROM arc  LOOP
 
 		--Insert start point, add vertices if exist, add end point
 
@@ -271,7 +309,20 @@ BEGIN
 		UPDATE arc SET the_geom=ST_MakeLine(geom_array) where arc_id=v_data.arc_id;
 		
 	end loop;
+
+	-- CREATE subcatchments
+
+	FOR v_data IN SELECT * FROM subcatchment WHERE subc_id='30130' LOOP
 	
+		FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux and source ilike '[Polygons]' AND csv1=v_data.subc_id order by id 
+		LOOP	
+			v_point_geom=ST_SetSrid(ST_MakePoint(rpt_rec.csv2::numeric,rpt_rec.csv3::numeric),epsg_val);
+			geom_array=array_append(geom_array,v_point_geom);
+		END LOOP;
+			v_line_geom=ST_MakeLine(geom_array);
+		UPDATE subcatchment SET the_geom=ST_Multi(ST_Polygon(v_line_geom,epsg_val)) where subc_id=v_data.subc_id;
+	END LOOP;
+		
 	--mapzones
 	EXECUTE 'SELECT ST_Multi(ST_ConvexHull(ST_Collect(the_geom))) FROM arc;'
 	into v_extend_val;
@@ -279,7 +330,7 @@ BEGIN
 	update sector SET the_geom=v_extend_val;
 	update dma SET the_geom=v_extend_val;
 	update ext_municipality SET the_geom=v_extend_val;
-*/
+
 
 	--ENABLE CONSTRAINTS AND PROCEDURES
 	--enable constraints
@@ -299,6 +350,13 @@ BEGIN
 		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat2_fkey FOREIGN KEY (pat2) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
 		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat3_fkey FOREIGN KEY (pat3) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
 		--ALTER TABLE SCHEMA_NAME.inp_dwf ADD CONSTRAINT inp_dwf_pat4_fkey FOREIGN KEY (pat4) REFERENCES SCHEMA_NAME.inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+		--ALTER TABLE inp_curve ADD CONSTRAINT inp_curve_curve_id_fkey FOREIGN KEY (curve_id) REFERENCES inp_curve_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE inp_inflows_pol_x_node ADD CONSTRAINT inp_inflows_pol_x_node_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE inp_inflows ADD CONSTRAINT inp_inflows_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE SCHEMA_NAME.inp_inflows ADD CONSTRAINT inp_inflows_timser_id_fkey FOREIGN KEY (timser_id) REFERENCES SCHEMA_NAME.inp_timser_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE SCHEMA_NAME.inp_inflows_pol_x_node ADD CONSTRAINT inp_inflows_pol_x_node_timser_id_fkey FOREIGN KEY (timser_id) REFERENCES SCHEMA_NAME.inp_timser_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+
+
 	END IF;
 
 	--enable triggers
@@ -310,4 +368,5 @@ BEGIN
 	$BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-
+ALTER FUNCTION SCHEMA_NAME.gw_fct_ud_data_from_inp(integer)
+  OWNER TO postgres;

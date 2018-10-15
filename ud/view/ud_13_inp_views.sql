@@ -933,19 +933,19 @@ CREATE OR REPLACE VIEW vi_curves AS
 DROP VIEW IF EXISTS  vi_timeseries CASCADE;
 CREATE OR REPLACE VIEW vi_timeseries AS 
  SELECT inp_timeseries.timser_id,
-    concat(inp_timeseries.date,' ',inp_timeseries.hour,' ',inp_timeseries.value)
+    concat(inp_timeseries.date,' ',inp_timeseries.hour,' ',inp_timeseries.value) as other_val
    FROM inp_timeseries
      JOIN inp_timser_id ON inp_timeseries.timser_id::text = inp_timser_id.id::text
   WHERE inp_timser_id.times_type::text = 'ABSOLUTE'::text
 UNION
  SELECT inp_timeseries.timser_id,
-    concat('FILE',' ',inp_timeseries.fname)
+    concat('FILE',' ',inp_timeseries.fname) as other_val
    FROM inp_timeseries
      JOIN inp_timser_id ON inp_timeseries.timser_id::text = inp_timser_id.id::text
   WHERE inp_timser_id.times_type::text = 'FILE_TIME'::text
 UNION
  SELECT inp_timeseries.timser_id,
-    concat(inp_timeseries."time",' ',inp_timeseries.value)
+    concat(inp_timeseries."time",' ',inp_timeseries.value) as other_val
    FROM inp_timeseries
      JOIN inp_timser_id ON inp_timeseries.timser_id::text = inp_timser_id.id::text
   WHERE inp_timser_id.times_type::text = 'RELATIVE'::text
