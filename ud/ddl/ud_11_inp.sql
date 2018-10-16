@@ -944,35 +944,15 @@ CREATE TABLE "inp_report" (
 
 
 CREATE TABLE "inp_snowpack" (
-"snow_id" varchar(16) ,
-"cmin_1" numeric(12,4),
-"cmax_1" numeric(12,4),
-"tbase_1" numeric(12,4),
-"fwf_1" numeric(12,4),
-"sd0_1" numeric(12,4),
-"fw0_1" numeric(12,4),
-"snn0_1" numeric(12,4),
-"cmin_2" numeric(12,4),
-"cmax_2" numeric(12,4),
-"tbase_2" numeric(12,4),
-"fwf_2" numeric(12,4),
-"sd0_2" numeric(12,4),
-"fw0_2" numeric(12,4),
-"sd100_1" numeric(12,4),
-"cmin_3" numeric(12,4),
-"cmax_3" numeric(12,4),
-"tbase_3" numeric(12,4),
-"fwf_3" numeric(12,4),
-"sd0_3" numeric(12,4),
-"fw0_3" numeric(12,4),
-"sd100_2" numeric(12,4),
-"sdplow" numeric(12,4),
-"fout" numeric(12,4),
-"fimp" numeric(12,4),
-"fperv" numeric(12,4),
-"fimelt" numeric(12,4),
-"fsub" numeric(12,4),
-"subc_id" varchar(16)  
+  snow_id character varying(16) NOT NULL PRIMARY KEY,
+  snow_type character varying(16),
+  value_1 numeric(12,3),
+  value_2 numeric(12,3),
+  value_3 numeric(12,3),
+  value_4 numeric(12,3),
+  value_5 numeric(12,3),
+  value_6 numeric(12,3),
+  value_7 numeric(12,3)
 );
 
 
@@ -1684,7 +1664,6 @@ ALTER TABLE "inp_project_id" ADD PRIMARY KEY ("title");
 ALTER TABLE "inp_pump" ADD PRIMARY KEY ("arc_id");
 ALTER TABLE "inp_rdii" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_report" ADD PRIMARY KEY ("input");
-ALTER TABLE "inp_snowpack" ADD PRIMARY KEY ("snow_id");
 ALTER TABLE "inp_storage" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_timeseries" ADD PRIMARY KEY ("id");
 ALTER TABLE "inp_timser_id" ADD PRIMARY KEY ("id");

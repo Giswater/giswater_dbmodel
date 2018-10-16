@@ -212,31 +212,18 @@ CREATE OR REPLACE VIEW vi_gwf AS
 
 
 DROP VIEW IF EXISTS  vi_snowpacks CASCADE;
-CREATE OR REPLACE VIEW vi_snowpacks AS 
- SELECT inp_snowpack.snow_id,
-    'PLOWABLE'::text AS type,
-    concat(inp_snowpack.cmin_1,' ',inp_snowpack.cmax_1,' ',inp_snowpack.tbase_1,' ',
-    inp_snowpack.fwf_1,' ',inp_snowpack.sd0_1,' ',inp_snowpack.fw0_1,' ',inp_snowpack.snn0_1) as other_val
-   FROM inp_snowpack 
- UNION
- SELECT inp_snowpack.snow_id,
-    'IMPERVIOUS'::text AS type,
-    concat(inp_snowpack.cmin_2,' ',inp_snowpack.cmax_2,' ',inp_snowpack.tbase_2,' ',inp_snowpack.fwf_2,' ',
-      inp_snowpack.sd0_2,' ',inp_snowpack.fw0_2,' ',inp_snowpack.sd100_1) as other_val
-   FROM inp_snowpack
- UNION
- SELECT inp_snowpack.snow_id,
-    'PERVIOUS'::text AS type,
-    concat(inp_snowpack.cmin_3,' ',inp_snowpack.cmax_3,' ',inp_snowpack.tbase_3,' ',inp_snowpack.fwf_3,' ',
-      inp_snowpack.sd0_3,' ',inp_snowpack.fw0_3,' ',inp_snowpack.sd100_2) as other_val
-   FROM inp_snowpack
- UNION
- SELECT inp_snowpack.snow_id,
-    'REMOVAL'::text AS type,
-    concat(inp_snowpack.sdplow,' ',inp_snowpack.fout,' ',inp_snowpack.fimp,' ',inp_snowpack.fperv,' ',
-      inp_snowpack.fimelt,' ',inp_snowpack.fsub,' ',inp_snowpack.subc_id)
-   FROM inp_snowpack
- ORDER BY 1,2;
+CREATE OR REPLACE VIEW vi_snowpacks AS select
+snow_id,
+snow_type,
+value_1,
+value_2,
+value_3,
+value_4,
+value_5,
+value_6,
+value_7
+FROM inp_snowpack
+order by snow_id;
 
 
 DROP VIEW IF EXISTS  vi_junction CASCADE;
@@ -909,7 +896,7 @@ CREATE OR REPLACE VIEW vi_hydrographs AS
  SELECT 
  inp_hydrograph.hydro_id,
  inp_hydrograph.text
-   FROM SCHEMA_NAME.inp_hydrograph;
+   FROM inp_hydrograph;
 
 
 DROP VIEW IF EXISTS  vi_curves CASCADE;

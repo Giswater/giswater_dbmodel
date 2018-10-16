@@ -91,7 +91,7 @@ ALTER TABLE inp_pattern DROP CONSTRAINT IF EXISTS inp_pattern_pattern_type_check
 ALTER TABLE inp_storage DROP CONSTRAINT IF EXISTS inp_storage_storage_type_check;
 ALTER TABLE inp_windspeed DROP CONSTRAINT IF EXISTS inp_windspeed_wind_type_check;
 
-
+ALTER TABLE inp_snowpack DROP CONSTRAINT inp_snowpack_snow_type_check
 
 -- DROP UNIQUE
 ALTER TABLE "inp_flwreg_pump" DROP CONSTRAINT IF EXISTS "inp_flwreg_pump_unique";
@@ -236,3 +236,4 @@ ALTER TABLE inp_storage ADD CONSTRAINT inp_storage_storage_type_check CHECK (sto
 ALTER TABLE inp_windspeed ADD CONSTRAINT inp_windspeed_wind_type_check CHECK (wind_type IN ('FILE_WINDSP','MONTHLY_WINDSP'));
 
 
+ALTER TABLE inp_snowpack ADD CONSTRAINT inp_snowpack_snow_type_check CHECK (snow_type= ANY(ARRAY[ 'PLOWABLE','IMPERVIOUS', 'PERVIOUS','REMOVAL']));
