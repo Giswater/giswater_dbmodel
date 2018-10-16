@@ -7,11 +7,11 @@ This version of Giswater is provided by Giswater Association
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
 -- ----------------------------
--- View structure for v_edit_inp
+-- View structure for ve_inp
 -- ----------------------------
 
-DROP VIEW IF EXISTS "v_edit_inp_junction" CASCADE;
-CREATE VIEW "v_edit_inp_junction" AS 
+DROP VIEW IF EXISTS "ve_inp_junction" CASCADE;
+CREATE VIEW "ve_inp_junction" AS 
 SELECT 
 node.node_id, 
 node.elevation, 
@@ -30,8 +30,8 @@ FROM inp_selector_sector, node
 	WHERE (node.sector_id=inp_selector_sector.sector_id AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS "v_edit_inp_reservoir" CASCADE;
-CREATE VIEW "v_edit_inp_reservoir" AS 
+DROP VIEW IF EXISTS "ve_inp_reservoir" CASCADE;
+CREATE VIEW "ve_inp_reservoir" AS 
 SELECT 
 node.node_id, 
 node.elevation, 
@@ -48,8 +48,8 @@ FROM inp_selector_sector, node
 	WHERE ((node.sector_id)=(inp_selector_sector.sector_id)	AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS "v_edit_inp_tank" CASCADE;
-CREATE VIEW "v_edit_inp_tank" AS 
+DROP VIEW IF EXISTS "ve_inp_tank" CASCADE;
+CREATE VIEW "ve_inp_tank" AS 
 SELECT 
 node.node_id, 
 node.elevation, 
@@ -72,8 +72,8 @@ FROM inp_selector_sector, node
 	WHERE ((node.sector_id)=(inp_selector_sector.sector_id)	AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS "v_edit_inp_pump" CASCADE;
-CREATE VIEW "v_edit_inp_pump" AS 
+DROP VIEW IF EXISTS "ve_inp_pump" CASCADE;
+CREATE VIEW "ve_inp_pump" AS 
 SELECT 
 node.node_id, 
 node.elevation, 
@@ -96,8 +96,8 @@ FROM inp_selector_sector, node
 	WHERE ((node.sector_id)=(inp_selector_sector.sector_id)	AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS "v_edit_inp_valve" CASCADE;
-CREATE VIEW "v_edit_inp_valve" AS 
+DROP VIEW IF EXISTS "ve_inp_valve" CASCADE;
+CREATE VIEW "ve_inp_valve" AS 
 SELECT 
 node.node_id, 
 node.elevation, 
@@ -122,8 +122,8 @@ FROM inp_selector_sector, node
 	WHERE ((node.sector_id)=(inp_selector_sector.sector_id)	AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS "v_edit_inp_shortpipe" CASCADE;
-CREATE VIEW "v_edit_inp_shortpipe" AS 
+DROP VIEW IF EXISTS "ve_inp_shortpipe" CASCADE;
+CREATE VIEW "ve_inp_shortpipe" AS 
 SELECT 
 node.node_id, 
 node.elevation, 
@@ -143,8 +143,8 @@ FROM inp_selector_sector, node
 	WHERE ((node.sector_id)=(inp_selector_sector.sector_id)	AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS "v_edit_inp_pipe" CASCADE;
-CREATE VIEW "v_edit_inp_pipe" AS 
+DROP VIEW IF EXISTS "ve_inp_pipe" CASCADE;
+CREATE VIEW "ve_inp_pipe" AS 
 SELECT 
 arc.arc_id, 
 arc.arccat_id, 
@@ -165,8 +165,8 @@ FROM inp_selector_sector, arc
 
 
 	
-DROP VIEW IF EXISTS "v_edit_inp_demand" CASCADE;
-CREATE VIEW "v_edit_inp_demand" AS 
+DROP VIEW IF EXISTS "ve_inp_demand" CASCADE;
+CREATE VIEW "ve_inp_demand" AS 
 SELECT 
 inp_demand.id,
 node.node_id,

@@ -47,8 +47,8 @@ END;
 $$;
 
 
-DROP TRIGGER IF EXISTS gw_trg_edit_inp_demand ON "SCHEMA_NAME".v_edit_inp_demand;
-CREATE TRIGGER gw_trg_edit_inp_demand INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_inp_demand
+DROP TRIGGER IF EXISTS gw_trg_edit_inp_demand ON "SCHEMA_NAME".ve_inp_demand;
+CREATE TRIGGER gw_trg_edit_inp_demand INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_inp_demand
 FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_inp_demand();
   
   
