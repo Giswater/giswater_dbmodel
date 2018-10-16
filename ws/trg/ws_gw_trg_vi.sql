@@ -42,7 +42,7 @@ BEGIN
     INSERT INTO arc (arc_id, node_1, node_2, arccat_id,epa_type,custom_length,sector_id, dma_id, expl_id, state, state_type) 
     VALUES (NEW.arc_id,NEW.node_1, NEW.node_2,concat(NEW.roughness::numeric(10,3),'-',NEW.diameter::numeric(10,3))::text,'PIPE',NEW.length,1,1,1,1,2);
     INSERT INTO inp_pipe (arc_id, minorloss,status, custom_roughness, custom_dint) 
-    SELECT NEW.arc_id, NEW.minorloss, inp_typevalue.id, NEW.roughness,NEW.diameter FROM inp_typevalue WHERE NEW.status=idval AND typevalue='inp_value_status_pipe';
+    SELECT NEW.arc_id, NEW.minorloss, inp_typevalue.id, NEW.roughness,NEW.diameter FROM inp_typevalue WHERE upper(NEW.status)=idval AND typevalue='inp_value_status_pipe';
     INSERT INTO man_pipe (arc_id) VALUES (NEW.arc_id); 
     
   ELSIF v_view='vi_pumps' THEN 
@@ -113,20 +113,21 @@ BEGIN
   ELSIF v_view='vi_reactions' THEN
       IF NEW.parameter IN (SELECT arc_id FROM arc) THEN
         INSERT INTO inp_reactions_el (parameter, arc_id,value) SELECT inp_typevalue.id,NEW.parameter,NEW.value
-        FROM inp_typevalue WHERE NEW.react_type=idval AND typevalue='inp_value_reactions_el';
+        FROM inp_typevalue WHERE upper(NEW.react_type)=idval AND typevalue='inp_value_reactions_el';
       ELSE 
         IF NEW.react_type='LIMITING' OR NEW.react_type='ROUGHNESS' THEN
           INSERT INTO inp_reactions_gl (react_type,value) VALUES (concat(NEW.react_type,' ',NEW.parameter),NEW.value);
         ELSE
           INSERT INTO inp_reactions_gl (react_type,parameter,value) VALUES (
-          (SELECT inp_typevalue.id FROM inp_typevalue WHERE NEW.react_type=idval AND typevalue='inp_typevalue_reactions_gl'),
-          (select inp_typevalue.id FROM inp_typevalue WHERE NEW.parameter=idval AND typevalue='inp_value_reactions_gl'), NEW.value);
+          (SELECT inp_typevalue.id FROM inp_typevalue WHERE upper(NEW.react_type)=idval AND typevalue='inp_typevalue_reactions_gl'),
+          (select inp_typevalue.id FROM inp_typevalue WHERE upper(NEW.parameter)=idval AND typevalue='inp_value_reactions_gl'), NEW.value);
         END IF;
       END IF;
   ELSIF v_view='vi_energy' THEN
       IF NEW.parameter ilike 'GLOBAL%' THEN
         INSERT INTO inp_energy_gl(energ_type,parameter, value)
-        select split_part(NEW.parameter,' ',1),inp_typevalue.id,NEW.value FROM inp_typevalue WHERE split_part(NEW.parameter,' ',2)=idval AND typevalue='inp_value_param_energy';
+        select split_part(NEW.parameter,' ',1),inp_typevalue.id,NEW.value FROM inp_typevalue WHERE upper((split_part(NEW.parameter,' ',2))=idval 
+          AND typevalue='inp_value_param_energy';
       ELSIF NEW.parameter ilike 'DEMAND CHARGE' THEN
         INSERT INTO inp_energy_gl(energ_type, value) VALUES ('DEMAND CHARGE',NEW.value);
       ELSIF NEW.parameter ilike '%PUMP%' THEN
