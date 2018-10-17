@@ -12,6 +12,7 @@ DECLARE
 	v_point_geom public.geometry;
 	rec_arc record;
 	V_SQL text;
+	v_id_last text;
 BEGIN
 
     --Get schema name
@@ -29,7 +30,9 @@ BEGIN
 		INSERT INTO config_param_user (parameter, value, cur_user) VALUES (concat('inp_report_',(lower(NEW.repor_type))), NEW.value, current_user) ;
 	ELSIF v_view='vi_files' THEN
 		INSERT INTO inp_files (actio_type, file_type, fname) VALUES (NEW.actio_type, NEW.file_type, NEW.fname);
-	ELSIF v_view='vi_evaporation' THEN --complicated
+	ELSIF v_view='vi_evaporation' THEN 
+		INSERT INTO inp_evaporation (evap_type, value) SELECT inp_typevalue.id, NEW.value
+		FROM inp_typevalue WHERE upper(split_part(NEW.other_val,';',1))=idval AND typevalue='inp_typevalue_evap';
 	ELSIF v_view='vi_raingages' THEN
 		IF split_part(NEW.other_val,';',1) ILIKE 'TIMESERIES' THEN
 			INSERT INTO raingage (rg_id, form_type, intvl, scf, rgage_type, timser_id, expl_id) VALUES (NEW.rg_id,NEW.form_type,NEW.intvl,NEW.scf, 'TIMESERIES_RAIN',
@@ -45,14 +48,27 @@ BEGIN
 		VALUES (NEW.subc_id, NEW.rg_id, NEW.node_id, NEW.area, NEW.imperv, NEW.width, NEW.slope, NEW.clength,NEW.snow_id);
 	ELSIF v_view='vi_subareas' THEN
 		UPDATE subcatchment SET nimp=NEW.nimp, nperv=NEW.nperv, simp=NEW.simp, sperv=NEW.sperv, zero=NEW.zero, routeto=NEW.routeto, rted=NEW.rted WHERE subc_id=NEW.subc_id;
-	ELSIF v_view='vi_infiltration' THEN --complicated 	
+	ELSIF v_view='vi_infiltration' THEN 
+		IF (SELECT value FROM config_param_user WHERE cur_user=current_user AND parameter='inp_options_infiltration') like 'CURVE_NUMBER' THEN
+			UPDATE subcatchment SET curveno=split_part(NEW.other_val,';',1)::numeric,conduct_2=split_part(NEW.other_val,';',2)::numeric,drytime_2=split_part(NEW.other_val,';',3)::numeric 
+			WHERE subc_id=NEW.subc_id;
+		ELSIF (SELECT value FROM config_param_user WHERE cur_user=current_user AND parameter='inp_options_infiltration') like 'GREEN_AMPT' THEN
+			UPDATE subcatchment SET suction=split_part(NEW.other_val,';',1)::numeric,conduct=split_part(NEW.other_val,';',2)::numeric,
+			initdef=split_part(NEW.other_val,';',3)::numeric WHERE subc_id=NEW.subc_id;
+		ELSIF (SELECT value FROM config_param_user WHERE cur_user=current_user AND parameter='inp_options_infiltration') like '%HORTON' THEN
+			UPDATE subcatchment SET maxrate=split_part(NEW.other_val,';',1)::numeric, minrate=split_part(NEW.other_val,';',2)::numeric,
+			decay=split_part(NEW.other_val,';',3)::numeric, drytime=split_part(NEW.other_val,';',4)::numeric,
+			maxinfil=split_part(NEW.other_val,';',5)::numeric WHERE subc_id=NEW.subc_id;
+		END IF;
 	ELSIF v_view='vi_aquifers' THEN
 		INSERT INTO inp_aquifer (aquif_id, por, wp, fc, k, ks, ps, uef, led, gwr, be, wte, umc, pattern_id) 
 		VALUES (NEW.aquif_id, NEW.por, NEW.wp, NEW.fc, NEW.k, NEW.ks, NEW.ps, NEW.uef, NEW.led, NEW.gwr, NEW.be, NEW.wte, NEW.umc, NEW.pattern_id);
 	ELSIF v_view='vi_groundwater' THEN
 		INSERT INTO inp_groundwater (subc_id, aquif_id, node_id, surfel, a1, b1, a2, b2, a3, tw, h) 
 		VALUES (NEW.subc_id, NEW.aquif_id, NEW.node_id, NEW.surfel, NEW.a1, NEW.b1, NEW.a2, NEW.b2, NEW.a3, NEW.tw, NEW.h);
-	ELSIF v_view='vi_snowpacks' THEN--complicated
+	ELSIF v_view='vi_snowpacks' THEN
+		INSERT INTO inp_snowpack (snow_id, snow_type, value_1, value_2, value_3, value_4, value_5, value_6, value_7)
+		VALUES (NEW.snow_id,NEW.snow_type, NEW.value_1, NEW.value_2, NEW.value_3, NEW.value_4, NEW.value_5, NEW.value_6, NEW.value_7);
 	ELSIF v_view='vi_gwf' THEN 
 		UPDATE inp_groundwater set fl_eq_lat=split_part(NEW.fl_eq_lat,';',2),fl_eq_deep=split_part(NEW.fl_eq_deep,';',2) WHERE subc_id=NEW.subc_id;
 	ELSIF v_view='vi_junction' THEN
@@ -75,7 +91,7 @@ BEGIN
 			INSERT INTO inp_outfall (node_id, outfall_type,timser_id, gate) values (NEW.node_id, NEW.outfall_type,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2));
 		END IF;
 	ELSIF v_view='vi_dividers' THEN
-	raise notice 'other,%', NEW.other_val;--HOW TO DEAL WITH OPTIONAL FIELDS - STORAGE MAY HAVE ALL FIELDS FILLED OR NOT
+	--HOW TO DEAL WITH OPTIONAL FIELDS - STORAGE MAY HAVE ALL FIELDS FILLED OR NOT
 		/*IF NEW.divider_type LIKE 'CUTOFF' THEN
 			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,';',2)::numeric,
 			split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric);
@@ -142,11 +158,14 @@ BEGIN
 		INSERT INTO inp_transects_id (id) SELECT split_part(NEW.text,' ',1) WHERE split_part(NEW.text,' ',1)  NOT IN (SELECT id from inp_transects_id);
 		INSERT INTO inp_transects (tsect_id,text) VALUES (split_part(NEW.text,' ',1),NEW.text);
 	ELSIF v_view='vi_controls' THEN --how to manage controls that can ocuppy many lines if in one is id of node/arc
-		/*IF split_part(NEW.text,' ',3) IN (SELECT node_id FROM node) THEN
-			INSERT INTO inp_controls_x_node (node_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text);
-		ELSIF split_part(NEW.text,' ',3) IN (SELECT arc_id FROM arc) THEN 
-			INSERT INTO inp_controls_x_arc (arc_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text);
-		END IF;**/
+		IF split_part(NEW.text,' ',2) IN (SELECT node_id FROM node) THEN
+			INSERT INTO inp_controls_x_node (node_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text) RETURNING node_id INTO v_id_last;
+		ELSIF split_part(NEW.text,' ',2) IN (SELECT arc_id FROM arc) THEN 
+			INSERT INTO inp_controls_x_arc (arc_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text) RETURNING arc_id INTO v_id_last;
+			RAISE NOTICE 'v_id_last,%',v_id_last;
+		ELSIF v_id_last IN (SELECT node_id FROM node) THEN
+			INSERT INTO inp_controls_x_node (node_id,text) VALUES (v_id_last, NEW.text);
+		END IF;
 	ELSIF v_view='vi_pollutants' THEN 
 		INSERT INTO inp_pollutants (poll_id, units_type, crain, cgw, cii, kd, sflag, copoll_id, cofract, cdwf) 
 		VALUES (NEW.poll_id, NEW.units_type, NEW.crain, NEW.cgw, NEW.cii, NEW.kd, NEW.sflag, NEW.copoll_id, NEW.cofract, NEW.cdwf);
@@ -165,7 +184,17 @@ BEGIN
 	ELSIF v_view='vi_dwf' THEN
 		INSERT INTO inp_dwf(node_id,  value, pat1, pat2, pat3, pat4)
 		VALUES (NEW.node_id, NEW.value, NEW.pat1, NEW.pat2, NEW.pat3, NEW.pat4);
-	ELSIF v_view='vi_patterns' THEN --???
+	ELSIF v_view='vi_patterns' THEN
+		IF NEW.pattern_type IN ('MONTHLY','DAILY','WEEKEND','HOURLY') THEN
+			INSERT INTO inp_pattern (pattern_id,pattern_type) VALUES (NEW.pattern_id,NEW.pattern_type);
+			INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6) 
+			VALUES (NEW.pattern_id, split_part(NEW.multipliers,';',1)::numeric,split_part(NEW.multipliers,';',2)::numeric,split_part(NEW.multipliers,';',3)::numeric,
+			split_part(NEW.multipliers,';',4)::numeric,split_part(NEW.multipliers,';',5)::numeric,split_part(NEW.multipliers,';',6)::numeric);
+		ELSE 
+			INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6) 
+			VALUES (NEW.pattern_id, NEW.pattern_type::NUMERIC,split_part(NEW.multipliers,';',1)::numeric,split_part(NEW.multipliers,';',2)::numeric,split_part(NEW.multipliers,';',3)::numeric,
+			split_part(NEW.multipliers,';',4)::numeric,split_part(NEW.multipliers,';',5)::numeric);
+		END IF;
 	ELSIF v_view='vi_inflows' THEN
 		IF NEW.type_flow ILIKE 'FLOW' THEN
 			INSERT INTO inp_inflows(node_id, timser_id, sfactor, base, pattern_id) VALUES (NEW.node_id,NEW.timser_id, split_part(NEW.other_val,';',3)::numeric,
@@ -230,9 +259,7 @@ BEGIN
 			INSERT INTO inp_mapunits (type_units, map_type) VALUES (NEW.type_dim, split_part(NEW.other_val,';',1));
 		END IF;
 	ELSIF v_view='vi_backdrop' THEN 
-		INSERT INTO inp_backdrop (text) VALUES (NEW.text);
-	--ELSIF v_view='vi_symbols' THEN --THERE IS NO TABLE FOR INP_SYMBOLS IT COMES FROM SUBCATCHMENTS THE_GEOM
-		--INSERT INTO inp_symbols (rg_id, xcoord, ycoord) VALUES (NEW.rg_id, NEW.xcoord, NEW.ycoord);
+		INSERT INTO inp_backdrop (text) VALUES (NEW.text)
 	ELSIF v_view='vi_labels' THEN
 		INSERT INTO inp_labels (xcoord, ycoord, label, anchor, font, size, bold, italic) VALUES (NEW.xcoord, NEW.ycoord, NEW.label, NEW.anchor, NEW.font, NEW.size, NEW.bold, NEW.italic);
 	ELSIF v_view='vi_coordinates' THEN
@@ -248,6 +275,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
 
 
 DROP TRIGGER IF EXISTS gw_trg_vi_coordinates ON SCHEMA_NAME.vi_coordinates;
@@ -349,5 +377,4 @@ CREATE TRIGGER gw_trg_vi_coordinates INSTEAD OF INSERT OR UPDATE OR DELETE ON SC
 
 
 
-
-
+--THINGS TO SOLVE: import of controls;

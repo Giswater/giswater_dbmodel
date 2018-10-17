@@ -70,7 +70,7 @@ ALTER TABLE "inp_dwf_pol_x_node" DROP CONSTRAINT IF EXISTS "inp_dwf_pol_x_node_p
 ALTER TABLE "inp_dwf_pol_x_node" DROP CONSTRAINT IF EXISTS "inp_dwf_pol_x_node_pat3_fkey";
 ALTER TABLE "inp_dwf_pol_x_node" DROP CONSTRAINT IF EXISTS "inp_dwf_pol_x_node_pat4_fkey";
 
-ALTER TABLE "inp_evaporation" DROP CONSTRAINT IF EXISTS "inp_evaporation_timser_id_fkey";
+
 ALTER TABLE "inp_evaporation" DROP CONSTRAINT IF EXISTS "inp_evaporation_evap_type_fkey";
 
 ALTER TABLE "inp_groundwater" DROP CONSTRAINT IF EXISTS "inp_groundwater_subc_id_fkey";
@@ -324,7 +324,6 @@ ALTER TABLE "inp_dwf_pol_x_node" ADD CONSTRAINT "inp_dwf_pol_x_node_pat3_fkey" F
 ALTER TABLE "inp_dwf_pol_x_node" ADD CONSTRAINT "inp_dwf_pol_x_node_pat4_fkey" FOREIGN KEY ("pat1") REFERENCES "inp_pattern" ("pattern_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 
-ALTER TABLE "inp_evaporation" ADD CONSTRAINT "inp_evaporation_timser_id_fkey" FOREIGN KEY ("timser_id") REFERENCES "inp_timser_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_evaporation" ADD CONSTRAINT "inp_evaporation_evap_type_fkey" FOREIGN KEY ("evap_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_groundwater" ADD CONSTRAINT "inp_groundwater_subc_id_fkey" FOREIGN KEY ("subc_id") REFERENCES "subcatchment" ("subc_id") ON DELETE RESTRICT ON UPDATE CASCADE;

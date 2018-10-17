@@ -48,47 +48,9 @@ CREATE OR REPLACE VIEW vi_files AS
 
 DROP VIEW IF EXISTS vi_evaporation CASCADE;
 CREATE OR REPLACE VIEW vi_evaporation AS 
-SELECT concat(inp_evaporation.evap_type,' ',inp_evaporation.evap) as other_val
-   FROM inp_evaporation WHERE inp_evaporation.evap_type::text = 'CONSTANT'::text
- UNION
-  SELECT concat('DRY_ONLY ',inp_evaporation.dry_only) as other_val
-   FROM inp_evaporation
-UNION
- SELECT concat(inp_typevalue.idval,' ',inp_evaporation.pan_1,' ',inp_evaporation.pan_2,' ',inp_evaporation.pan_3,' ',
-    inp_evaporation.pan_4,' ',inp_evaporation.pan_5,' ',inp_evaporation.pan_6,' ',inp_evaporation.pan_7,' ',
-    inp_evaporation.pan_8,' ',inp_evaporation.pan_9,' ',inp_evaporation.pan_10,' ',inp_evaporation.pan_11,' ',
-    inp_evaporation.pan_12) as other_val
-    FROM inp_evaporation
-    LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_evaporation.evap_type
-    WHERE inp_typevalue.typevalue='inp_typevalue_evap'
-    AND inp_evaporation.evap_type::text = 'FILE_EVAP'::text
-UNION
- SELECT concat(inp_typevalue.idval,' ',inp_evaporation.value_1,' ',inp_evaporation.value_2,' ',
-  inp_evaporation.value_3,' ',inp_evaporation.value_4,' ',inp_evaporation.value_5,' ',
-  inp_evaporation.value_6,' ',inp_evaporation.value_7,' ',inp_evaporation.value_8,' ',
-  inp_evaporation.value_9,' ',inp_evaporation.value_10,' ',inp_evaporation.value_11,' ',
-    inp_evaporation.value_12)
-   FROM inp_evaporation
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_evaporation.evap_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_evap'
-   AND inp_evaporation.evap_type::text = 'MONTHLY_EVAP'::text
-UNION
- SELECT concat('RECOVERY ',inp_evaporation.recovery)as other_val
-   FROM inp_evaporation
-   WHERE inp_evaporation.recovery::text > '0'::text
-UNION
- SELECT inp_typevalue.idval as other_val
-   FROM inp_evaporation
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_evaporation.evap_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_evap'
-   AND inp_evaporation.evap_type::text = 'TEMPERATURE_EVAP'::text
-UNION
- SELECT concat(inp_typevalue.idval,' ',inp_evaporation.timser_id) as other_val
-   FROM inp_evaporation
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_evaporation.evap_type
-   WHERE inp_typevalue.typevalue='inp_typevalue_evap'
-   AND inp_evaporation.evap_type::text = 'TIMESERIES_EVAP'::text
- ORDER BY other_val;
+ SELECT inp_evaporation.evap_type,
+    inp_evaporation.value
+   FROM ud_inp.inp_evaporation;
 
 
 
@@ -803,46 +765,22 @@ UNION
   WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
 
 
-DROP VIEW IF EXISTS  vi_patterns CASCADE;
+
+
+DROP VIEW IF EXISTS vi_patterns CASCADE;
 CREATE OR REPLACE VIEW vi_patterns AS 
-SELECT inp_pattern.pattern_id,
+ SELECT inp_pattern_value.pattern_id,
     inp_pattern.pattern_type,
-    concat(inp_pattern.factor_1,' ',inp_pattern.factor_2,' ',inp_pattern.factor_3,' ',inp_pattern.factor_4,' ',
-      inp_pattern.factor_5,' ',inp_pattern.factor_6,' ',inp_pattern.factor_7) as other_val
-   FROM inp_pattern
-  WHERE inp_pattern.pattern_type::text = 'DAILY'::text
-UNION
-  SELECT inp_pattern.pattern_id,
-    inp_pattern.pattern_type,
-    concat(inp_pattern.factor_1,' ',inp_pattern.factor_2,' ',inp_pattern.factor_3,' ',inp_pattern.factor_4,' ',
-      inp_pattern.factor_5,' ',inp_pattern.factor_6,' ',inp_pattern.factor_7,' ',inp_pattern.factor_8,' ', 
-      inp_pattern.factor_9,' ',inp_pattern.factor_10,' ',inp_pattern.factor_11,' ',inp_pattern.factor_12,' ',
-      inp_pattern.factor_13,' ',inp_pattern.factor_14,' ',inp_pattern.factor_15,' ',inp_pattern.factor_16,' ',
-      inp_pattern.factor_17,' ',inp_pattern.factor_18,' ',inp_pattern.factor_19,' ',inp_pattern.factor_20,' ',
-      inp_pattern.factor_21,' ',inp_pattern.factor_22,' ',inp_pattern.factor_23,' ',inp_pattern.factor_24) as other_val
-   FROM inp_pattern
-  WHERE inp_pattern.pattern_type::text = 'HOURLY'::text
-UNION
- SELECT inp_pattern.pattern_id,
-    inp_typevalue.idval AS type_pamo,
-    concat(inp_pattern.factor_1,' ',inp_pattern.factor_2,' ',inp_pattern.factor_3,' ',inp_pattern.factor_4,' ',
-      inp_pattern.factor_5,' ',inp_pattern.factor_6,' ',inp_pattern.factor_7,' ',inp_pattern.factor_8,' ', 
-      inp_pattern.factor_9,' ',inp_pattern.factor_10,' ',inp_pattern.factor_11,' ',inp_pattern.factor_12) as other_val  
-   FROM inp_pattern
-   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_pattern.pattern_type
-  WHERE inp_typevalue.typevalue='inp_typevalue_pattern'
-  AND inp_pattern.pattern_type::text = 'MONTHLY_PATTERN'::text
-UNION
-SELECT inp_pattern.pattern_id,
-    inp_pattern.pattern_type AS type_pawe,
-    concat(inp_pattern.factor_1,' ',inp_pattern.factor_2,' ',inp_pattern.factor_3,' ',inp_pattern.factor_4,' ',
-      inp_pattern.factor_5,' ',inp_pattern.factor_6,' ',inp_pattern.factor_7,' ',inp_pattern.factor_8,' ', 
-      inp_pattern.factor_9,' ',inp_pattern.factor_10,' ',inp_pattern.factor_11,' ',inp_pattern.factor_12,' ',
-      inp_pattern.factor_13,' ',inp_pattern.factor_14,' ',inp_pattern.factor_15,' ',inp_pattern.factor_16,' ',
-      inp_pattern.factor_17,' ',inp_pattern.factor_18,' ',inp_pattern.factor_19,' ',inp_pattern.factor_20,' ',
-      inp_pattern.factor_21,' ',inp_pattern.factor_22,' ',inp_pattern.factor_23,' ',inp_pattern.factor_24) as other_val
-   FROM inp_pattern
-  WHERE inp_pattern.pattern_type::text = 'WEEKEND'::text;
+    concat(inp_pattern_value.factor_1,' ',inp_pattern_value.factor_2,' ',inp_pattern_value.factor_3,' ',inp_pattern_value.factor_4,' ',
+    inp_pattern_value.factor_5,' ',inp_pattern_value.factor_6,' ',inp_pattern_value.factor_7,' ',inp_pattern_value.factor_8,' ',
+    inp_pattern_value.factor_9,' ',inp_pattern_value.factor_10,' ',inp_pattern_value.factor_11,' ', inp_pattern_value.factor_12,' ',
+    inp_pattern_value.factor_13,' ', inp_pattern_value.factor_14,' ',inp_pattern_value.factor_15,' ', inp_pattern_value.factor_16,' ',
+    inp_pattern_value.factor_17,' ', inp_pattern_value.factor_18,' ',inp_pattern_value.factor_19,' ',inp_pattern_value.factor_20,' ',
+    inp_pattern_value.factor_21,' ',inp_pattern_value.factor_22,' ',inp_pattern_value.factor_23,' ',inp_pattern_value.factor_24) as multipliers
+   FROM inp_pattern_value
+   JOIN inp_pattern ON inp_pattern_value.pattern_id=inp_pattern.pattern_id
+  ORDER BY inp_pattern_value.pattern_id;
+
 
 
 DROP VIEW IF EXISTS  vi_inflows CASCADE;

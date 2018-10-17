@@ -612,37 +612,9 @@ CREATE TABLE "inp_dwf_pol_x_node" (
 );
 
 
-CREATE TABLE "inp_evaporation" (
-"evap_type" varchar(16),
-"evap" numeric(12,4),
-"timser_id" varchar(16)  ,
-"value_1" numeric(12,4),
-"value_2" numeric(12,4),
-"value_3" numeric(12,4),
-"value_4" numeric(12,4),
-"value_5" numeric(12,4),
-"value_6" numeric(12,4),
-"value_7" numeric(12,4),
-"value_8" numeric(12,4),
-"value_9" numeric(12,4),
-"value_10" numeric(12,4),
-"value_11" numeric(12,4),
-"value_12" numeric(12,4),
-"pan_1" numeric(12,4),
-"pan_2" numeric(12,4),
-"pan_3" numeric(12,4),
-"pan_4" numeric(12,4),
-"pan_5" numeric(12,4),
-"pan_6" numeric(12,4),
-"pan_7" numeric(12,4),
-"pan_8" numeric(12,4),
-"pan_9" numeric(12,4),
-"pan_10" numeric(12,4),
-"pan_11" numeric(12,4),
-"pan_12" numeric(12,4),
-"recovery" varchar(16)  ,
-"dry_only" varchar(3)  
-);
+CREATE TABLE inp_evaporation(
+evap_type character varying(16) NOT NULL,
+value text);
 
 
 CREATE TABLE "inp_files" (
@@ -863,8 +835,14 @@ CREATE TABLE "inp_outlet" (
 
 
 CREATE TABLE "inp_pattern" (
+pattern_id varchar(16) PRIMARY KEY NOT NULL,
+pattern_type varchar(30) ,
+observ text
+);
+
+CREATE TABLE "inp_pattern_value" (
+"id" serial NOT NULL PRIMARY KEY,
 "pattern_id" varchar(16) ,
-"pattern_type" varchar(16)  ,
 "factor_1" numeric(12,4),
 "factor_2" numeric(12,4),
 "factor_3" numeric(12,4),
@@ -890,7 +868,6 @@ CREATE TABLE "inp_pattern" (
 "factor_23" numeric(12,4),
 "factor_24" numeric(12,4)
 );
-
 
 CREATE TABLE "inp_pollutant" (
 "poll_id" varchar(16) ,
@@ -1658,7 +1635,6 @@ ALTER TABLE "inp_options" ADD PRIMARY KEY ("id");
 ALTER TABLE "inp_orifice" ADD PRIMARY KEY ("arc_id");
 ALTER TABLE "inp_outfall" ADD PRIMARY KEY ("node_id");
 ALTER TABLE "inp_outlet" ADD PRIMARY KEY ("arc_id");
-ALTER TABLE "inp_pattern" ADD PRIMARY KEY ("pattern_id");
 ALTER TABLE "inp_pollutant" ADD PRIMARY KEY ("poll_id");
 ALTER TABLE "inp_project_id" ADD PRIMARY KEY ("title");
 ALTER TABLE "inp_pump" ADD PRIMARY KEY ("arc_id");
