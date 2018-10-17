@@ -11,8 +11,8 @@ SET search_path = "SCHEMA_NAME", public, pg_catalog;
 -- View structure for v_node
 -- ----------------------------
 
-DROP VIEW IF EXISTS v_edit_inp_junction CASCADE;
-CREATE VIEW v_edit_inp_junction AS
+DROP VIEW IF EXISTS ve_inp_junction CASCADE;
+CREATE VIEW ve_inp_junction AS
 SELECT 
 v_node.node_id, 
 top_elev,
@@ -36,8 +36,8 @@ FROM inp_selector_sector, v_node
 	WHERE ((v_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_divider CASCADE;
-CREATE VIEW v_edit_inp_divider AS
+DROP VIEW IF EXISTS ve_inp_divider CASCADE;
+CREATE VIEW ve_inp_divider AS
 SELECT 
 v_node.node_id, 
 top_elev,
@@ -67,8 +67,8 @@ FROM inp_selector_sector, v_node
 	WHERE ((v_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_outfall CASCADE;
-CREATE VIEW v_edit_inp_outfall AS
+DROP VIEW IF EXISTS ve_inp_outfall CASCADE;
+CREATE VIEW ve_inp_outfall AS
 SELECT 
 v_node.node_id, 
 top_elev,
@@ -94,8 +94,8 @@ FROM inp_selector_sector, v_node
 	WHERE ((v_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_storage CASCADE;
-CREATE VIEW v_edit_inp_storage AS
+DROP VIEW IF EXISTS ve_inp_storage CASCADE;
+CREATE VIEW ve_inp_storage AS
 SELECT 
 v_node.node_id, 
 top_elev,
@@ -131,8 +131,8 @@ FROM inp_selector_sector, v_node
 -- View structure for v_arc
 -- ----------------------------
 
-DROP VIEW IF EXISTS v_edit_inp_conduit CASCADE;
-CREATE VIEW v_edit_inp_conduit AS
+DROP VIEW IF EXISTS ve_inp_conduit CASCADE;
+CREATE VIEW ve_inp_conduit AS
 SELECT 
 v_arc_x_node.arc_id,
 node_1,
@@ -174,8 +174,8 @@ FROM inp_selector_sector,v_arc_x_node
 	WHERE ((v_arc_x_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_orifice CASCADE;
-CREATE VIEW v_edit_inp_orifice AS
+DROP VIEW IF EXISTS ve_inp_orifice CASCADE;
+CREATE VIEW ve_inp_orifice AS
 SELECT
 v_arc_x_node.arc_id,
 node_1,
@@ -215,8 +215,8 @@ FROM inp_selector_sector,v_arc_x_node
 	WHERE ((v_arc_x_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_outlet CASCADE;
-CREATE VIEW v_edit_inp_outlet AS
+DROP VIEW IF EXISTS ve_inp_outlet CASCADE;
+CREATE VIEW ve_inp_outlet AS
 SELECT 
 v_arc_x_node.arc_id,
 node_1,
@@ -252,8 +252,8 @@ FROM inp_selector_sector,v_arc_x_node
 	WHERE ((v_arc_x_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_pump CASCADE;
-CREATE VIEW v_edit_inp_pump AS
+DROP VIEW IF EXISTS ve_inp_pump CASCADE;
+CREATE VIEW ve_inp_pump AS
 SELECT 
 v_arc_x_node.arc_id,
 node_1,
@@ -287,8 +287,8 @@ FROM inp_selector_sector,v_arc_x_node
 	WHERE ((v_arc_x_node.sector_id)=(inp_selector_sector.sector_id) AND inp_selector_sector.cur_user="current_user"());
 
 
-DROP VIEW IF EXISTS v_edit_inp_weir CASCADE;
-CREATE VIEW v_edit_inp_weir AS 
+DROP VIEW IF EXISTS ve_inp_weir CASCADE;
+CREATE VIEW ve_inp_weir AS 
 SELECT
 v_arc_x_node.arc_id,
 node_1,
@@ -329,8 +329,8 @@ FROM inp_selector_sector,v_arc_x_node
 
 
 
-DROP VIEW IF EXISTS v_edit_inp_virtual CASCADE;
-CREATE VIEW v_edit_inp_virtual AS 
+DROP VIEW IF EXISTS ve_inp_virtual CASCADE;
+CREATE VIEW ve_inp_virtual AS 
 SELECT
 v_arc_x_node.arc_id,
 node_1,
