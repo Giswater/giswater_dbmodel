@@ -18,11 +18,16 @@ BEGIN
     --Get schema name
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
+    -- Get SRID
 	SELECT epsg INTO v_epsg FROM version LIMIT 1;
 	
     --Get view name
     v_view = TG_ARGV[0];
-    
+    --inserts of data via editable views into corresponding arc, node, man_* and inp_* tables
+    --split_part(NEW.other_val,';',1) splitting the values concatenated in a vie in order to put it in separated fields of a view
+    --nullif(split_part(NEW.other_val,';',1),'')::numeric in case of trying to split the value that may not exist(optional value),
+    --nullif function returns null instead of cast value error in case when there is no value in the inp data
+
     IF TG_OP = 'INSERT' THEN
 	IF v_view='vi_options' THEN
 		INSERT INTO config_param_user (parameter, value, cur_user) VALUES (concat('inp_options_',(lower(NEW.parameter))), NEW.value, current_user) ;
@@ -32,7 +37,7 @@ BEGIN
 		INSERT INTO inp_files (actio_type, file_type, fname) VALUES (NEW.actio_type, NEW.file_type, NEW.fname);
 	ELSIF v_view='vi_evaporation' THEN 
 		INSERT INTO inp_evaporation (evap_type, value) SELECT inp_typevalue.id, NEW.value
-		FROM inp_typevalue WHERE upper(split_part(NEW.other_val,';',1))=idval AND typevalue='inp_typevalue_evap';
+		FROM inp_typevalue WHERE upper(split_part(NEW.value,';',1))=idval AND typevalue='inp_typevalue_evap';
 	ELSIF v_view='vi_raingages' THEN
 		IF split_part(NEW.other_val,';',1) ILIKE 'TIMESERIES' THEN
 			INSERT INTO raingage (rg_id, form_type, intvl, scf, rgage_type, timser_id, expl_id) VALUES (NEW.rg_id,NEW.form_type,NEW.intvl,NEW.scf, 'TIMESERIES_RAIN',
@@ -90,38 +95,39 @@ BEGIN
 		ELSIF NEW.outfall_type like 'TIMESERIES' THEN
 			INSERT INTO inp_outfall (node_id, outfall_type,timser_id, gate) values (NEW.node_id, NEW.outfall_type,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2));
 		END IF;
-	ELSIF v_view='vi_dividers' THEN
-	--HOW TO DEAL WITH OPTIONAL FIELDS - STORAGE MAY HAVE ALL FIELDS FILLED OR NOT
-		/*IF NEW.divider_type LIKE 'CUTOFF' THEN
-			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,';',2)::numeric,
-			split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric);
+		ELSIF v_view='vi_dividers' THEN
+		IF NEW.divider_type LIKE 'CUTOFF' THEN
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id,'CUTOFF', split_part(NEW.other_val,';',1)::numeric,
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,nullif(split_part(NEW.other_val,';',4),'')::numeric);
 		ELSIF NEW.divider_type LIKE 'OVERFLOW' THEN
-			INSERT INTO inp_divider (node_id, arc_id, divider_type, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,' ',2)::numeric,
-			split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',4)::numeric);
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, 'OVERFLOW', split_part(NEW.other_val,';',1)::numeric,
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric);
 		ELSIF NEW.divider_type LIKE 'TABULAR' THEN
-			INSERT INTO inp_divider (node_id, arc_id, divider_type, curve_id, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,' ',1),
-			split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',4)::numeric,split_part(NEW.other_val,' ',5)::numeric);
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, curve_id, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, 'TABULAR_DIVIDER',split_part(NEW.other_val,';',1),
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,nullif(split_part(NEW.other_val,';',4),'')::numeric);
 		ELSIF NEW.divider_type LIKE 'WEIR' THEN
-			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin,ht,cd, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, NEW.divider_type, split_part(NEW.other_val,' ',1)::numeric,
-			split_part(NEW.other_val,' ',2)::numeric,split_part(NEW.other_val,' ',3)::numeric,split_part(NEW.other_val,' ',5)::numeric,
-			split_part(NEW.other_val,' ',6)::numeric,split_part(NEW.other_val,' ',7)::numeric);
-		END IF;*/
-
-	ELSIF v_view='vi_storage' THEN --HOW TO DEAL WITH OPTIONAL FIELDS - STORAGE MAY HAVE ALL FIELDS FILLED OR NOT
+			INSERT INTO inp_divider (node_id, arc_id, divider_type, qmin,ht,cd, y0,ysur,apond) VALUES (NEW.node_id, NEW.arc_id, 'WEIR', split_part(NEW.other_val,';',1)::numeric,
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,nullif(split_part(NEW.other_val,';',4),'')::numeric,
+			nullif(split_part(NEW.other_val,';',5),'')::numeric,nullif(split_part(NEW.other_val,';',6),'')::numeric);
+		END IF;
+	ELSIF v_view='vi_storage' THEN
 		INSERT INTO node (node_id, elev, ymax,node_type,nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
 		VALUES (NEW.node_id, NEW.elev, NEW.ymax,'EPASTORAGE','EPASTORAGE-DEF','STORAGE',1,1,1,1,2);
 		INSERT INTO man_storage (node_id) VALUES (NEW.node_id);
-		/*IF NEW.storage_type like 'FUNCTIONAL' THEN 
-			INSERT INTO inp_storage(y0,storage_type,a1,a2,a0,apond, fevap, sh, hc, imd) VALUES (NEW.y0,NEW.storage_type,split_part(NEW.other_val,' ',1)::numeric,
-			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric,
-			split_part(NEW.other_val,';',6)::numeric,split_part(NEW.other_val,';',7)::numeric,split_part(NEW.other_val,';',8)::numeric);
+		IF NEW.storage_type = 'FUNCTIONAL' THEN 
+			INSERT INTO inp_storage(node_id,y0,storage_type,a1,a2,a0,apond, fevap, sh, hc, imd) 
+			VALUES (NEW.node_id,NEW.y0,'FUNCTIONAL', split_part(NEW.other_val,';',1)::numeric,
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,nullif(split_part(NEW.other_val,';',4),'')::numeric,
+			nullif(split_part(NEW.other_val,';',5),'')::numeric,nullif(split_part(NEW.other_val,';',6),'')::numeric,
+			nullif(split_part(NEW.other_val,';',7),'')::numeric,nullif(split_part(NEW.other_val,';',8),'')::numeric);
 		ELSIF NEW.storage_type like 'TABULAR' THEN
-			INSERT INTO inp_storage(y0,storage_type,curve_id,apond,fevap, sh, hc, imd) VALUES (NEW.y0,NEW.storage_type,split_part(NEW.other_val,' ',1),
-			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)::numeric);
-		END IF;*/
+			INSERT INTO inp_storage(node_id,y0,storage_type,curve_id,apond,fevap, sh, hc, imd) VALUES (NEW.node_id,NEW.y0,'TABULAR_STORAGE',split_part(NEW.other_val,';',1),
+			split_part(NEW.other_val,';',2)::numeric,split_part(NEW.other_val,';',3)::numeric,nullif(split_part(NEW.other_val,';',4),'')::numeric,
+			nullif(split_part(NEW.other_val,';',5),'')::numeric,nullif(split_part(NEW.other_val,';',6),'')::numeric);
+		END IF;
 	ELSIF v_view='vi_conduits' THEN --NEW.z1 (elevmax1),NEW.z2 (elevmax2) where do they go??
-		INSERT INTO arc (arc_id, node_1,node_2, sys_length, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
-		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2,NEW.length, 'EPACONDUIT','EPACONDUIT-DEF','CONDUIT',1,1,1,1,2);
+		INSERT INTO arc (arc_id, node_1,node_2,y1,y2 sys_length, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+		VALUES (NEW.arc_id, NEW.node_1, NEW.node_2,NEW.z1, NEW.z2, NEW.length, 'EPACONDUIT','EPACONDUIT-DEF','CONDUIT',1,1,1,1,2);
 		INSERT INTO man_conduit(arc_id) VALUES (NEW.arc_id);
 		INSERT INTO inp_conduit (arc_id,custom_n, q0, qmax) VALUES (NEW.arc_id,NEW.n, NEW.q0, NEW.qmax); 
 	ELSIF v_view='vi_pumps' THEN 
@@ -157,12 +163,11 @@ BEGIN
 	ELSIF v_view='vi_transects' THEN 
 		INSERT INTO inp_transects_id (id) SELECT split_part(NEW.text,' ',1) WHERE split_part(NEW.text,' ',1)  NOT IN (SELECT id from inp_transects_id);
 		INSERT INTO inp_transects (tsect_id,text) VALUES (split_part(NEW.text,' ',1),NEW.text);
-	ELSIF v_view='vi_controls' THEN --how to manage controls that can ocuppy many lines if in one is id of node/arc
+	ELSIF v_view='vi_controls' THEN
 		IF split_part(NEW.text,' ',2) IN (SELECT node_id FROM node) THEN
 			INSERT INTO inp_controls_x_node (node_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text) RETURNING node_id INTO v_id_last;
 		ELSIF split_part(NEW.text,' ',2) IN (SELECT arc_id FROM arc) THEN 
 			INSERT INTO inp_controls_x_arc (arc_id,text) VALUES (split_part(NEW.text,' ',2), NEW.text) RETURNING arc_id INTO v_id_last;
-			RAISE NOTICE 'v_id_last,%',v_id_last;
 		ELSIF v_id_last IN (SELECT node_id FROM node) THEN
 			INSERT INTO inp_controls_x_node (node_id,text) VALUES (v_id_last, NEW.text);
 		END IF;
@@ -187,22 +192,36 @@ BEGIN
 	ELSIF v_view='vi_patterns' THEN
 		IF NEW.pattern_type IN ('MONTHLY','DAILY','WEEKEND','HOURLY') THEN
 			INSERT INTO inp_pattern (pattern_id,pattern_type) VALUES (NEW.pattern_id,NEW.pattern_type);
-			INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6) 
-			VALUES (NEW.pattern_id, split_part(NEW.multipliers,';',1)::numeric,split_part(NEW.multipliers,';',2)::numeric,split_part(NEW.multipliers,';',3)::numeric,
-			split_part(NEW.multipliers,';',4)::numeric,split_part(NEW.multipliers,';',5)::numeric,split_part(NEW.multipliers,';',6)::numeric);
+			INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6,factor_7,factor_8,factor_9,factor_10,factor_11,factor_12,
+			factor_13,factor_14,factor_15,factor_16,factor_17,factor_18,factor_19,factor_20,factor_21,factor_22,factor_23,factor_24) 
+			VALUES (NEW.pattern_id, nullif(split_part(NEW.multipliers,';',1),'')::numeric,nullif(split_part(NEW.multipliers,';',2),'')::numeric,nullif(split_part(NEW.multipliers,';',3),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',4),'')::numeric,nullif(split_part(NEW.multipliers,';',5),'')::numeric,nullif(split_part(NEW.multipliers,';',6),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',7),'')::numeric, nullif(split_part(NEW.multipliers,';',8),'')::numeric,nullif(split_part(NEW.multipliers,';',9),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',10),'')::numeric,nullif(split_part(NEW.multipliers,';',11),'')::numeric,nullif(split_part(NEW.multipliers,';',12),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',13),'')::numeric,nullif(split_part(NEW.multipliers,';',14),'')::numeric,nullif(split_part(NEW.multipliers,';',15),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',16),'')::numeric,nullif(split_part(NEW.multipliers,';',17),'')::numeric,nullif(split_part(NEW.multipliers,';',18),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',19),'')::numeric, nullif(split_part(NEW.multipliers,';',20),'')::numeric,nullif(split_part(NEW.multipliers,';',21),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',22),'')::numeric,nullif(split_part(NEW.multipliers,';',23),'')::numeric,nullif(split_part(NEW.multipliers,';',24),'')::numeric);
 		ELSE 
-			INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6) 
-			VALUES (NEW.pattern_id, NEW.pattern_type::NUMERIC,split_part(NEW.multipliers,';',1)::numeric,split_part(NEW.multipliers,';',2)::numeric,split_part(NEW.multipliers,';',3)::numeric,
-			split_part(NEW.multipliers,';',4)::numeric,split_part(NEW.multipliers,';',5)::numeric);
+			INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6,factor_7,factor_8,factor_9,factor_10,factor_11,factor_12,
+			factor_13,factor_14,factor_15,factor_16,factor_17,factor_18,factor_19,factor_20,factor_21,factor_22,factor_23,factor_24) 
+			VALUES (NEW.pattern_id, nullif(split_part(NEW.multipliers,';',1),'')::numeric,nullif(split_part(NEW.multipliers,';',2),'')::numeric,nullif(split_part(NEW.multipliers,';',3),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',4),'')::numeric,nullif(split_part(NEW.multipliers,';',5),'')::numeric,nullif(split_part(NEW.multipliers,';',6),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',7),'')::numeric, nullif(split_part(NEW.multipliers,';',8),'')::numeric,nullif(split_part(NEW.multipliers,';',9),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',10),'')::numeric,nullif(split_part(NEW.multipliers,';',11),'')::numeric,nullif(split_part(NEW.multipliers,';',12),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',13),'')::numeric,nullif(split_part(NEW.multipliers,';',14),'')::numeric,nullif(split_part(NEW.multipliers,';',15),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',16),'')::numeric,nullif(split_part(NEW.multipliers,';',17),'')::numeric,nullif(split_part(NEW.multipliers,';',18),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',19),'')::numeric, nullif(split_part(NEW.multipliers,';',20),'')::numeric,nullif(split_part(NEW.multipliers,';',21),'')::numeric,
+			nullif(split_part(NEW.multipliers,';',22),'')::numeric,nullif(split_part(NEW.multipliers,';',23),'')::numeric,nullif(split_part(NEW.multipliers,';',24),'')::numeric);
 		END IF;
 	ELSIF v_view='vi_inflows' THEN
 		IF NEW.type_flow ILIKE 'FLOW' THEN
-			INSERT INTO inp_inflows(node_id, timser_id, sfactor, base, pattern_id) VALUES (NEW.node_id,NEW.timser_id, split_part(NEW.other_val,';',3)::numeric,
-			split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5));
+			INSERT INTO inp_inflows(node_id, timser_id, sfactor, base, pattern_id) VALUES (NEW.node_id,NEW.timser_id, nullif(split_part(NEW.other_val,';',3),'')::numeric,
+			nullif(split_part(NEW.other_val,';',4),'')::numeric,split_part(NEW.other_val,';',5));
 		ELSE
 			INSERT INTO inp_inflows_pol_x_node (node_id, timser_id, poll_id,form_type, mfactor, sfactor, base, pattern_id) 
-			SELECT NEW.node_id,NEW.timser_id, NEW.type_flow, inp_typevalue.id, split_part(NEW.other_val,';',2)::numeric,
-			split_part(NEW.other_val,';',3)::numeric,split_part(NEW.other_val,';',4)::numeric,split_part(NEW.other_val,';',5)
+			SELECT NEW.node_id,NEW.timser_id, NEW.type_flow, inp_typevalue.id, nullif(split_part(NEW.other_val,';',2),'')::numeric,
+			nullif(split_part(NEW.other_val,';',3),'')::numeric,nullif(split_part(NEW.other_val,';',4),'')::numeric,split_part(NEW.other_val,';',5)
 			FROM inp_typevalue WHERE upper(split_part(NEW.other_val,';',1))=idval AND typevalue='inp_value_inflows';
 		END IF;	
 	ELSIF v_view='vi_loadings' THEN
@@ -259,11 +278,10 @@ BEGIN
 			INSERT INTO inp_mapunits (type_units, map_type) VALUES (NEW.type_dim, split_part(NEW.other_val,';',1));
 		END IF;
 	ELSIF v_view='vi_backdrop' THEN 
-		INSERT INTO inp_backdrop (text) VALUES (NEW.text)
+		INSERT INTO inp_backdrop (text) VALUES (NEW.text);
 	ELSIF v_view='vi_labels' THEN
 		INSERT INTO inp_labels (xcoord, ycoord, label, anchor, font, size, bold, italic) VALUES (NEW.xcoord, NEW.ycoord, NEW.label, NEW.anchor, NEW.font, NEW.size, NEW.bold, NEW.italic);
 	ELSIF v_view='vi_coordinates' THEN
-
 		UPDATE node SET the_geom=ST_SetSrid(ST_MakePoint(NEW.xcoord,NEW.ycoord),v_epsg) WHERE node_id=NEW.node_id;
     END IF;
     END IF;
@@ -275,6 +293,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
 
 
 
@@ -376,5 +395,3 @@ DROP TRIGGER IF EXISTS gw_trg_vi_coordinates ON SCHEMA_NAME.vi_coordinates;
 CREATE TRIGGER gw_trg_vi_coordinates INSTEAD OF INSERT OR UPDATE OR DELETE ON SCHEMA_NAME.vi_coordinates FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_vi('vi_coordinates');
 
 
-
---THINGS TO SOLVE: import of controls;

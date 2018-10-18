@@ -122,18 +122,19 @@ BEGIN
 			UPDATE temp_csv2pg SET csv1=concat(csv1,' ',csv2), csv2=csv3, csv3=null WHERE temp_csv2pg.id=rpt_rec.id; END IF;
 		IF rpt_rec.source ='[PUMPS]' and rpt_rec.csv4 ILIKE 'Power' THEN 
 			UPDATE temp_csv2pg SET csv4=concat(csv5,' ',csv7,' ',csv9,' ',csv11), csv5=NULL, csv6=null, csv7=null,csv8=null,csv9=null,csv10=null,csv11=null WHERE temp_csv2pg.id=rpt_rec.id; END IF;
-		IF rpt_rec.source ='[RULES]'THEN 
+		IF rpt_rec.source ='[RULES]' and rpt_rec.csv2 IS NOT NULL THEN 
 			UPDATE temp_csv2pg SET csv1=concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10 ), 
 			csv2=null, csv3=null, csv4=null,csv5=NULL, csv6=null, csv7=null,csv8=null,csv9=null,csv10=null,csv11=null WHERE temp_csv2pg.id=rpt_rec.id; END IF;
-		IF rpt_rec.source ='[CONTROLS]'THEN 
+		IF rpt_rec.source ='[CONTROLS]'and rpt_rec.csv2 IS NOT NULL THEN 
 			UPDATE temp_csv2pg SET csv1=concat(csv1,' ',csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10 ), 
 			csv2=null, csv3=null, csv4=null,csv5=NULL, csv6=null, csv7=null,csv8=null,csv9=null,csv10=null,csv11=null WHERE temp_csv2pg.id=rpt_rec.id; END IF;
-		IF rpt_rec.source ='[PATTERNS]' THEN 
-			UPDATE temp_csv2pg SET csv2=concat(csv2,' ',csv3,' ',csv4,' ',csv5,' ',csv6,' ',csv7,' ',csv8,' ',csv9,' ',csv10,' ',csv11,' ',csv12,' ',csv13), 
-			csv3=null, csv4=null,csv5=NULL, csv6=null, csv7=null,csv8=null,csv9=null,csv10=null,csv11=null,csv12=null, csv13=null WHERE temp_csv2pg.id=rpt_rec.id; END IF;
-				
-		-- other refactors if we need
-		-- todo
+		IF rpt_rec.source ='[PATTERNS]' and rpt_rec.csv3 IS NOT NULL THEN 
+			UPDATE temp_csv2pg SET csv2=concat(csv2,';',csv3,';',csv4,';',csv5,';',csv6,';',csv7,';',csv8,';',csv9,';',csv10,';',csv11,';',csv12,';',csv13,
+			csv14,';',csv15,';',csv16,';',csv17,';',csv18,';',csv19,';',csv20,';',csv21,';',csv22,';',csv23,';',csv24,';',csv25), 
+			csv3=null, csv4=null,csv5=NULL, csv6=null, csv7=null,csv8=null,csv9=null,csv10=null,csv11=null,csv12=null, csv13=null,
+			csv14=null,csv15=NULL, csv16=null, csv17=null,csv18=null,csv19=null,csv20=null,csv21=null,csv22=null, csv23=null,csv24=null, csv25=null
+			 WHERE temp_csv2pg.id=rpt_rec.id;
+		END IF;
 	END LOOP;
 
 	-- CATALOGS
@@ -225,8 +226,8 @@ BEGIN
 	--arc
 	FOR v_data IN SELECT * FROM arc  LOOP
 
-		--Insert start point, add vertices if exist, add end point
-
+	--Insert geometry of the start point (node1) from node to the array, add vertices defined in inp file if exist, add geometry of an 
+	--end point (node2) from node to the array and create a line out all points.
 		SELECT array_agg(the_geom) INTO geom_array FROM node WHERE v_data.node_1=node_id;
 
 		FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux and source='[VERTICES]' AND csv1=v_data.arc_id order by id 
@@ -242,6 +243,7 @@ BEGIN
 	end loop;
 	
 	--mapzones
+	--Create the same geometry of all mapzones by making the Convex Hull over all the existing arcs
 	EXECUTE 'SELECT ST_Multi(ST_ConvexHull(ST_Collect(the_geom))) FROM arc;'
 	into v_extend_val;
 	update exploitation SET the_geom=v_extend_val;

@@ -15,25 +15,34 @@ BEGIN
 
     --Get schema name
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
-
+    
+    -- Get SRID
   SELECT epsg INTO v_epsg FROM version LIMIT 1;
   
     --Get view name
     v_view = TG_ARGV[0];
+
+    --inserts of data via editable views into corresponding arc, node, man_* and inp_* tables
+    --split_part(NEW.other_val,';',1) splitting the values concatenated in a vie in order to put it in separated fields of a view
+    --nullif(split_part(NEW.other_val,';',1),'')::numeric in case of trying to split the value that may not exist(optional value),
+    --nullif function returns null instead of cast value error in case when there is no value in the inp data
     
-    IF TG_OP = 'INSERT' THEN
+   IF TG_OP = 'INSERT' THEN
   IF v_view='vi_junctions' THEN
-    INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) VALUES (NEW.node_id, NEW.elevation,'EPAJUNCTION-DEF','JUNCTION',1,1,1,1,2) ;
+    INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+    VALUES (NEW.node_id, NEW.elevation,'EPAJUNCTION-DEF','JUNCTION',1,1,1,1,2) ;
     INSERT INTO inp_junction (node_id, demand, pattern_id) VALUES (NEW.node_id, NEW.demand, NEW.pattern_id);
     INSERT INTO man_junction (node_id) VALUES (NEW.node_id); 
     
   ELSIF v_view='vi_reservoirs' THEN
-    INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) VALUES (NEW.node_id, NEW.head,'EPARESERVOIR-DEF','RESERVOIR',1,1,1,1,2) ;
+    INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+    VALUES (NEW.node_id, NEW.head,'EPARESERVOIR-DEF','RESERVOIR',1,1,1,1,2) ;
     INSERT INTO inp_reservoir (node_id, pattern_id) VALUES (NEW.node_id, NEW.pattern_id);
     INSERT INTO man_source(node_id) VALUES (NEW.node_id); 
     
   ELSIF v_view='vi_tanks' THEN
-    INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) VALUES (NEW.node_id, NEW.elevation,'EPATANK-DEF','TANK',1,1,1,1,2);
+    INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+    VALUES (NEW.node_id, NEW.elevation,'EPATANK-DEF','TANK',1,1,1,1,2);
     INSERT INTO inp_tank (node_id, initlevel, minlevel, maxlevel, diameter, minvol, curve_id) 
     VALUES (NEW.node_id, NEW.initlevel, NEW.minlevel, NEW.maxlevel, NEW.diameter, NEW.minvol, NEW.curve_id);
     INSERT INTO man_tank (node_id) VALUES (NEW.node_id); 
@@ -42,15 +51,15 @@ BEGIN
     INSERT INTO arc (arc_id, node_1, node_2, arccat_id,epa_type,custom_length,sector_id, dma_id, expl_id, state, state_type) 
     VALUES (NEW.arc_id,NEW.node_1, NEW.node_2,concat(NEW.roughness::numeric(10,3),'-',NEW.diameter::numeric(10,3))::text,'PIPE',NEW.length,1,1,1,1,2);
     INSERT INTO inp_pipe (arc_id, minorloss,status, custom_roughness, custom_dint) 
-    SELECT NEW.arc_id, NEW.minorloss, inp_typevalue.id, NEW.roughness,NEW.diameter FROM inp_typevalue WHERE upper(NEW.status)=idval AND typevalue='inp_value_status_pipe';
+    SELECT NEW.arc_id, NEW.minorloss, inp_typevalue.id, NEW.roughness,NEW.diameter 
+    FROM inp_typevalue WHERE upper(NEW.status)=idval AND typevalue='inp_value_status_pipe';
     INSERT INTO man_pipe (arc_id) VALUES (NEW.arc_id); 
     
   ELSIF v_view='vi_pumps' THEN 
     INSERT INTO arc (arc_id, node_1, node_2, arccat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
     VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'EPAPUMP-DEF','PIPE',1,1,1,1,2);
-    --splitting and inserting fields that in views are concatenated as other_value
     INSERT INTO inp_pump_importinp (arc_id,power,curve_id,speed,pattern) 
-    VALUES (NEW.arc_id,split_part(NEW.other_val,' ',1),split_part(NEW.other_val,' ',2),split_part(NEW.other_val,' ',3)::NUMERIC,split_part(NEW.other_val,' ',4));
+    VALUES (NEW.arc_id,NEW.power,NEW.curve_id, NEW.speed::numeric, NEW.pattern);
     INSERT INTO man_pipe (arc_id) VALUES (NEW.arc_id); 
     
   ELSIF v_view='vi_valves' THEN
@@ -81,7 +90,8 @@ BEGIN
       UPDATE inp_valve_importinp SET status=NEW.status WHERE arc_id=NEW.arc_id;
     END IF;
     
-  ELSIF v_view='vi_patterns' THEN --??? insert depends on format of input data..
+  ELSIF v_view='vi_patterns' THEN --insert depends on format of input data..
+  --splitting and inserting fields that in views are concatenated as other_value
     INSERT INTO inp_pattern_value (pattern_id,factor_1,factor_2,factor_3,factor_4,factor_5,factor_6) 
     VALUES (NEW.pattern_id, split_part(NEW.multipliers,' ',1)::numeric,split_part(NEW.multipliers,' ',2)::numeric,split_part(NEW.multipliers,' ',3)::numeric,
     split_part(NEW.multipliers,' ',4)::numeric,split_part(NEW.multipliers,' ',5)::numeric,split_part(NEW.multipliers,' ',6)::numeric);
@@ -111,6 +121,7 @@ BEGIN
   ELSIF v_view='vi_sources' THEN
     INSERT INTO inp_source(node_id, sourc_type, quality, pattern_id) VALUES (NEW.node_id, NEW.sourc_type, NEW.quality, NEW.pattern_id);
   ELSIF v_view='vi_reactions' THEN
+    IF NEW.parameter IS NOT NULL THEN
       IF NEW.parameter IN (SELECT arc_id FROM arc) THEN
         INSERT INTO inp_reactions_el (parameter, arc_id,value) SELECT inp_typevalue.id,NEW.parameter,NEW.value
         FROM inp_typevalue WHERE upper(NEW.react_type)=idval AND typevalue='inp_value_reactions_el';
@@ -123,11 +134,12 @@ BEGIN
           (select inp_typevalue.id FROM inp_typevalue WHERE upper(NEW.parameter)=idval AND typevalue='inp_value_reactions_gl'), NEW.value);
         END IF;
       END IF;
+    END IF;
   ELSIF v_view='vi_energy' THEN
       IF NEW.parameter ilike 'GLOBAL%' THEN
         INSERT INTO inp_energy_gl(energ_type,parameter, value)
-        select split_part(NEW.parameter,' ',1),inp_typevalue.id,NEW.value FROM inp_typevalue WHERE upper((split_part(NEW.parameter,' ',2))=idval 
-          AND typevalue='inp_value_param_energy';
+        select split_part(NEW.parameter,' ',1),inp_typevalue.id,NEW.value 
+        FROM inp_typevalue WHERE upper(split_part(NEW.parameter,' ',2))=idval AND typevalue='inp_value_param_energy';
       ELSIF NEW.parameter ilike 'DEMAND CHARGE' THEN
         INSERT INTO inp_energy_gl(energ_type, value) VALUES ('DEMAND CHARGE',NEW.value);
       ELSIF NEW.parameter ilike '%PUMP%' THEN
@@ -161,6 +173,7 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
 
 
 
