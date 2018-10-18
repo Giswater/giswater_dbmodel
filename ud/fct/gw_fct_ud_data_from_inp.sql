@@ -59,6 +59,9 @@ BEGIN
 	delete from inp_transects_id ;
 	delete from dma;
 	delete from inp_snowpack;
+	delete from inp_divider;
+	delete from inp_storage;
+	delete from inp_evaporation;
 	delete from ext_municipality;
 	delete from inp_pollutant;
 	delete from inp_landuses;
@@ -103,7 +106,8 @@ BEGIN
 	--ALTER TABLE SCHEMA_NAME.inp_inflows DROP CONSTRAINT inp_inflows_timser_id_fkey;
 	--ALTER TABLE SCHEMA_NAME.inp_inflows DROP CONSTRAINT inp_inflows_pattern_id_fkey;
 	--ALTER TABLE SCHEMA_NAME.inp_inflows_pol_x_node DROP CONSTRAINT inp_inflows_pol_x_node_timser_id_fkey;
-	
+	--ALTER TABLE SCHEMA_NAME.inp_divider DROP CONSTRAINT inp_divider_node_id_fkey;
+	--ALTER TABLE SCHEMA_NAME.inp_storage DROP CONSTRAINT inp_storage_curve_id_fkey;
 	-- MAPZONES
 	INSERT INTO macroexploitation(macroexpl_id,name) VALUES(1,'macroexploitation1');
 	INSERT INTO exploitation(expl_id,name,macroexpl_id) VALUES(1,'exploitation1',1);
@@ -185,9 +189,7 @@ BEGIN
 			v_target=rpt_rec.csv1;
 		END IF;
 		UPDATE temp_csv2pg SET source=v_target WHERE rpt_rec.id=temp_csv2pg.id;
-		IF rpt_rec.source LIKE '%STORAGE%' THEN
-			
-		END IF;
+
 		-- refactor of [OPTIONS] target
 		IF rpt_rec.source ='[TEMPERATURE]' AND rpt_rec.csv3 is not null THEN 
 			IF rpt_rec.csv1 LIKE 'TIMESERIES' OR rpt_rec.csv1 LIKE 'FILE' OR rpt_rec.csv1 LIKE 'SNOWMELT' THEN
@@ -202,7 +204,7 @@ BEGIN
 		IF rpt_rec.source ='[OUTFALL]' AND rpt_rec.csv5 is not null THEN 
 			UPDATE temp_csv2pg SET csv4=concat(csv4,' ',csv5), csv5=null WHERE temp_csv2pg.id=rpt_rec.id; 
 		END IF;
-		IF rpt_rec.source ='[DIVIDERS]' THEN 
+		IF rpt_rec.source ='[DIVIDERS]' AND rpt_rec.csv6 is not null THEN 
 			UPDATE temp_csv2pg SET csv5=concat(csv5,';',csv6,';',csv7,';',csv8,';',csv9,';',csv10,';',csv11),
 			csv6=null,csv7=null,csv8=null,csv9=null,csv10=null,csv11=null WHERE temp_csv2pg.id=rpt_rec.id; 
 		END IF;
@@ -275,6 +277,7 @@ BEGIN
 			UPDATE temp_csv2pg SET csv2=concat(csv2,';',csv3,';',csv4,';',csv5,';',csv6,csv7,';',csv8,';',csv9,';',csv10,';',csv11,';',csv12,';',csv13),
 			csv3=null,csv4=null, csv5=null,csv6=null,csv7=null,csv8=null,csv9=null,csv10=null,csv11=null,csv12=null,csv13=null WHERE temp_csv2pg.id=rpt_rec.id; 
 		END IF;	
+
 	END LOOP;
 
 	-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
@@ -303,11 +306,13 @@ BEGIN
 
 
 	-- CREATE GEOM'S
-	--arc
+	--ARC
+	--Insert geometry of the start point (node1) from node to the array, add vertices defined in inp file if exist, add geometry of an 
+	--end point (node2) from node to the array and create a line out all points.
+
 	FOR v_data IN SELECT * FROM arc  LOOP
 
-		--Insert start point, add vertices if exist, add end point
-
+		
 		SELECT array_agg(the_geom) INTO geom_array FROM node WHERE v_data.node_1=node_id;
 
 		FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux and source='[VERTICES]' AND csv1=v_data.arc_id order by id 
@@ -321,8 +326,9 @@ BEGIN
 		UPDATE arc SET the_geom=ST_MakeLine(geom_array) where arc_id=v_data.arc_id;
 		
 	end loop;
-	-- CREATE subcatchments
 
+	-- CREATE subcatchments
+		--Create points out of vertices defined in inp file create a line out all points and transform it into a polygon.
 	FOR v_data IN SELECT * FROM subcatchment LOOP
 	
 		FOR rpt_rec IN SELECT * FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=p_csv2pgcat_id_aux and source ilike '[Polygons]' AND csv1=v_data.subc_id order by id 
@@ -336,6 +342,7 @@ BEGIN
 	END LOOP;
 		
 	--mapzones
+	--Create the same geometry of all mapzones by making the Convex Hull over all the existing arcs
 	EXECUTE 'SELECT ST_Multi(ST_ConvexHull(ST_Collect(the_geom))) FROM arc;'
 	into v_extend_val;
 	update exploitation SET the_geom=v_extend_val;
@@ -367,6 +374,7 @@ BEGIN
 		--ALTER TABLE inp_inflows ADD CONSTRAINT inp_inflows_pattern_id_fkey FOREIGN KEY (pattern_id) REFERENCES inp_pattern (pattern_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 		--ALTER TABLE SCHEMA_NAME.inp_inflows ADD CONSTRAINT inp_inflows_timser_id_fkey FOREIGN KEY (timser_id) REFERENCES SCHEMA_NAME.inp_timser_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 		--ALTER TABLE SCHEMA_NAME.inp_inflows_pol_x_node ADD CONSTRAINT inp_inflows_pol_x_node_timser_id_fkey FOREIGN KEY (timser_id) REFERENCES SCHEMA_NAME.inp_timser_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+		--ALTER TABLE SCHEMA_NAME.inp_storage ADD CONSTRAINT inp_storage_curve_id_fkey FOREIGN KEY (curve_id) REFERENCES SCHEMA_NAME.inp_curve_id (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 	END IF;
@@ -380,3 +388,6 @@ BEGIN
 	$BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
+
+--THINGS TO SOLVE: import of controls; remaping the z1/z2 values in function of [OPTIONS]-link_offsests parameter;
