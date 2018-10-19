@@ -23,7 +23,7 @@ ALTER TABLE "inp_flwreg_outlet" DROP CONSTRAINT IF EXISTS "inp_flwreg_outlet_che
 ALTER TABLE raingage DROP CONSTRAINT IF EXISTS raingage_form_type_check;
 ALTER TABLE raingage DROP CONSTRAINT IF EXISTS raingage_rgage_type_check;
 
-ALTER TABLE inp_timser_id DROP CONSTRAINT IF EXISTS inp_timser_id_check;
+--ALTER TABLE inp_timser_id DROP CONSTRAINT IF EXISTS inp_timser_id_check;
 
 ALTER TABLE subcatchment DROP CONSTRAINT IF EXISTS subcatchment_routeto_check;
 
@@ -89,9 +89,9 @@ ALTER TABLE inp_outfall DROP CONSTRAINT IF EXISTS inp_outfall_outfall_type_check
 ALTER TABLE inp_outlet DROP CONSTRAINT IF EXISTS inp_outlet_outlet_type_check;
 ALTER TABLE inp_pattern DROP CONSTRAINT IF EXISTS inp_pattern_pattern_type_check;
 ALTER TABLE inp_storage DROP CONSTRAINT IF EXISTS inp_storage_storage_type_check;
-ALTER TABLE inp_windspeed DROP CONSTRAINT IF EXISTS inp_windspeed_wind_type_check;
 
-ALTER TABLE inp_snowpack DROP CONSTRAINT inp_snowpack_snow_type_check
+
+ALTER TABLE inp_snowpack DROP CONSTRAINT IF EXISTS inp_snowpack_snow_type_check;
 
 -- DROP UNIQUE
 ALTER TABLE "inp_flwreg_pump" DROP CONSTRAINT IF EXISTS "inp_flwreg_pump_unique";
@@ -103,7 +103,7 @@ ALTER TABLE "inp_flwreg_outlet" DROP CONSTRAINT IF EXISTS "inp_flwreg_outlet_uni
 
 
 -- ADD CHECK
-ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_check CHECK (id IN ('T10-5m','T5-5m'));
+--ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_check CHECK (id IN ('T10-5m','T5-5m'));
 
 ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_timser_type_check CHECK (timser_type IN ('Evaporation','Inflow_Hydrograph','Inflow_Pollutograph','Rainfall', 'Temperature_time'));
 ALTER TABLE inp_timser_id ADD CONSTRAINT inp_timser_id_times_type_check CHECK (times_type IN ('ABSOLUTE','FILE_TIME','RELATIVE'));
@@ -129,9 +129,8 @@ ALTER TABLE inp_typevalue ADD CONSTRAINT inp_typevalue_check CHECK
 (typevalue='inp_typevalue_pattern' AND id IN ('DAILY','HOURLY','MONTHLY_PATTERN','WEEKEND')) OR
 (typevalue='inp_typevalue_raingage' AND id IN ('FILE_RAIN','TIMESERIES_RAIN')) OR
 (typevalue='inp_typevalue_storage' AND id IN ('FUNCTIONAL','TABULAR_STORAGE')) OR
-(typevalue='inp_typevalue_temp' AND id IN ('FILE_TEMP','TIMESERIES_TEMP')) OR
+(typevalue='inp_typevalue_temp' AND id IN ('FILE_TEMP','TIMESERIES_TEMP','FILE_WINDSP','MONTHLY_WINDSP','ADC IMPERVIOUS','ADC PERVIOUS','SNOWMELT')) OR
 (typevalue='inp_typevalue_timeseries' AND id IN ('ABSOLUTE','FILE_TIME','RELATIVE')) OR
-(typevalue='inp_typevalue_windsp' AND id IN ('FILE_WINDSP','MONTHLY_WINDSP')) OR
 (typevalue='inp_value_allnone' AND id IN ('ALL','NONE')) OR
 (typevalue='inp_value_buildup' AND id IN ('EXP_BUILDUP','EXT_BUILDUP','POW','SAT')) OR
 (typevalue='inp_value_catarc' AND id IN ('ARCH','BASKETHANDLE','CIRCULAR','CUSTOM','DUMMY','EGG','FILLED_CIRCULAR','FORCE_MAIN','HORIZ_ELLIPSE','HORSESHOE',
@@ -210,7 +209,8 @@ ALTER TABLE inp_report ADD CONSTRAINT inp_report_input_check CHECK (input IN ('Y
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_continuity_check CHECK (continuity IN ('YES','NO'));
 ALTER TABLE inp_report ADD CONSTRAINT inp_report_flowstats_check CHECK (flowstats IN ('YES','NO'));
 
-ALTER TABLE inp_temperature	 ADD CONSTRAINT inp_temperature_temp_type_check CHECK (temp_type IN ('FILE_TEMP','TIMESERIES_TEMP'));
+ALTER TABLE inp_temperature	 ADD CONSTRAINT inp_temperature_temp_type_check CHECK (temp_type IN ('FILE_TEMP','TIMESERIES_TEMP','FILE_WINDSP','MONTHLY_WINDSP',
+'ADC IMPERVIOUS','ADC PERVIOUS','SNOWMELT'));
 
 
 ALTER TABLE inp_weir ADD CONSTRAINT inp_weir_weir_type_check CHECK (weir_type IN ('SIDEFLOW','TRANSVERSE','TRAPEZOIDAL_WEIR','V-NOTCH'));
@@ -225,15 +225,17 @@ ALTER TABLE inp_flwreg_weir ADD CONSTRAINT inp_flwreg_weir_weir_type_check CHECK
 ALTER TABLE inp_flwreg_weir ADD CONSTRAINT inp_flwreg_weir_flap_check CHECK (flap IN ('YES','NO'));
 ALTER TABLE inp_flwreg_orifice ADD CONSTRAINT inp_flwreg_orifice_ori_type_check CHECK (ori_type IN ('BOTTOM','SIDE'));
 ALTER TABLE inp_flwreg_orifice ADD CONSTRAINT inp_flwreg_orifice_shape_check CHECK (shape IN ('CIRCULAR_ORIFICE','RECT-CLOSED_ORIFICE'));
-ALTER TABLE inp_flwreg_outlet ADD CONSTRAINT inp_flwreg_outlet_outlet_type_check CHECK (outlet_type IN ('FUNCTIONAL/DEPTH','FUNCTIONAL/HEAD','TABULAR/DEPTH','TABULAR/HEAD'));
+ALTER TABLE inp_flwreg_outlet ADD CONSTRAINT inp_flwreg_outlet_outlet_type_check CHECK (outlet_type IN ('FUNCTIONAL/DEPTH','FUNCTIONAL/HEAD',
+'TABULAR/DEPTH','TABULAR/HEAD'));
 
 ALTER TABLE inp_divider ADD CONSTRAINT inp_divider_divider_type_check CHECK (divider_type IN ('CUTOFF','OVERFLOW','TABULAR_DIVIDER','WEIR'));
-ALTER TABLE inp_evaporation ADD CONSTRAINT inp_evaporation_evap_type_check CHECK (evap_type IN('CONSTANT','FILE_EVAP','MONTHLY_EVAP','RECOVERY','TEMPERATURE_EVAP','TIMESERIES_EVAP'));
+ALTER TABLE inp_evaporation ADD CONSTRAINT inp_evaporation_evap_type_check CHECK (evap_type IN('CONSTANT','FILE_EVAP','MONTHLY_EVAP','RECOVERY',
+'TEMPERATURE_EVAP','TIMESERIES_EVAP'));
 ALTER TABLE inp_outfall ADD CONSTRAINT inp_outfall_outfall_type_check CHECK (outfall_type IN ('FIXED','FREE','NORMAL','TIDAL_OUTFALL','TIMESERIES_OUTFALL'));
 ALTER TABLE inp_outlet ADD CONSTRAINT inp_outlet_outlet_type_check CHECK (outlet_type IN ('FUNCTIONAL/DEPTH','FUNCTIONAL/HEAD','TABULAR/DEPTH','TABULAR/HEAD'));
 ALTER TABLE inp_pattern ADD CONSTRAINT inp_pattern_pattern_type_check CHECK (pattern_type IN ('DAILY','HOURLY','MONTHLY_PATTERN','WEEKEND'));
 ALTER TABLE inp_storage ADD CONSTRAINT inp_storage_storage_type_check CHECK (storage_type IN ('FUNCTIONAL','TABULAR_STORAGE'));
-ALTER TABLE inp_windspeed ADD CONSTRAINT inp_windspeed_wind_type_check CHECK (wind_type IN ('FILE_WINDSP','MONTHLY_WINDSP'));
+
 
 
 ALTER TABLE inp_snowpack ADD CONSTRAINT inp_snowpack_snow_type_check CHECK (snow_type= ANY(ARRAY[ 'PLOWABLE','IMPERVIOUS', 'PERVIOUS','REMOVAL']));

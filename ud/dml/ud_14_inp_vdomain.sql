@@ -15,8 +15,11 @@ INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalu
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'TIMESERIES_TEMP', 'TIMESERIES', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_timeseries', 'FILE_TIME', 'FILE', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'FILE_TEMP', 'FILE', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_windsp', 'FILE_WINDSP', 'FILE', NULL);
-INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_windsp', 'MONTHLY_WINDSP', 'MONTHLY', NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'FILE_WINDSP', 'FILE', NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'MONTHLY_WINDSP', 'MONTHLY', NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'SNOWMELT', 'SNOWMELT', NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'ADC PERVIOUS', 'ADC PERVIOUS', NULL);
+INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_temp', 'ADC IMPERVIOUS', 'IMPERVIOUS', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_pattern', 'MONTHLY_PATTERN', 'MONTHLY', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_evap', 'FILE_EVAP', 'FILE', NULL);
 INSERT INTO inp_typevalue (typevalue, id, idval, descript) VALUES ('inp_typevalue_storage', 'TABULAR_STORAGE', 'TABULAR', NULL);

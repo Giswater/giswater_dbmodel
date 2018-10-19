@@ -174,7 +174,6 @@ ALTER TABLE "inp_weir" DROP CONSTRAINT IF EXISTS "inp_weir_to_arc_fkey";
 ALTER TABLE "inp_weir" DROP CONSTRAINT IF EXISTS "inp_weir_weir_type_fkey";
 ALTER TABLE "inp_weir" DROP CONSTRAINT IF EXISTS "inp_weir_flap_fkey";
 
-ALTER TABLE "inp_windspeed" DROP CONSTRAINT IF EXISTS "inp_windspeed_wind_type_fkey";
 
 --FLOW REGULATOR
 ALTER TABLE "inp_flwreg_orifice" DROP CONSTRAINT IF EXISTS "inp_flwreg_orifice_node_id_fkey";
@@ -404,7 +403,6 @@ ALTER TABLE "inp_storage" ADD CONSTRAINT "inp_storage_node_id_fkey" FOREIGN KEY 
 ALTER TABLE "inp_storage" ADD CONSTRAINT "inp_storage_curve_id_fkey" FOREIGN KEY ("curve_id") REFERENCES "inp_curve_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_storage" ADD CONSTRAINT "inp_storage_storage_type_fkey" FOREIGN KEY ("storage_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_temperature" ADD CONSTRAINT "inp_temperature_timser_id_fkey" FOREIGN KEY  ("timser_id") REFERENCES "inp_timser_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_temperature" ADD CONSTRAINT "inp_temperature_temp_type_fkey" FOREIGN KEY  ("temp_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "inp_timeseries" ADD CONSTRAINT "inp_timeseries_timser_id_fkey" FOREIGN KEY ("timser_id") REFERENCES "inp_timser_id" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -428,7 +426,6 @@ ALTER TABLE "inp_weir" ADD CONSTRAINT "inp_weir_to_arc_fkey" FOREIGN KEY ("to_ar
 ALTER TABLE "inp_weir" ADD CONSTRAINT "inp_weir_weir_type_fkey" FOREIGN KEY ("weir_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "inp_weir" ADD CONSTRAINT "inp_weir_flap_fkey" FOREIGN KEY ("flap") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "inp_windspeed" ADD CONSTRAINT "inp_windspeed_wind_type_fkey" FOREIGN KEY ("wind_type") REFERENCES "inp_typevalue" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 --FLOW REGULATOR

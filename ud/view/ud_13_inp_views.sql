@@ -19,7 +19,7 @@ CREATE OR REPLACE VIEW vi_title AS
 
 DROP VIEW IF EXISTS vi_options CASCADE;
 CREATE OR REPLACE VIEW vi_options AS 
- SELECT a.description,
+ SELECT a.description as parameter,
  CASE WHEN inp_typevalue.idval is not null then inp_typevalue.idval
  else b.value end as value
    FROM SCHEMA_NAME.audit_cat_param_user a
@@ -30,7 +30,7 @@ CREATE OR REPLACE VIEW vi_options AS
 
 DROP VIEW IF EXISTS vi_report CASCADE;
 CREATE OR REPLACE VIEW vi_report AS 
- SELECT a.description,
+ SELECT a.description as parameter,
     b.value
    FROM SCHEMA_NAME.audit_cat_param_user a
      LEFT JOIN SCHEMA_NAME.config_param_user b ON a.id = b.parameter::text

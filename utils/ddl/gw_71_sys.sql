@@ -242,7 +242,6 @@ CREATE TABLE sys_csv2pg_config
   pg2csvcat_id integer,
   tablename text,
   target text,
-  fields text,
   reverse_pg2csvcat_id integer
 );
  
