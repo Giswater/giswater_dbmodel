@@ -272,8 +272,8 @@ JOIN anl_mincut_cat_type ON mincut_type=anl_mincut_cat_type.id;
 -- MINCUT MANAGER VIEW
 -- ----------------------------
 
-DROP VIEW IF EXISTS "v_ui_anl_mincut_result_cat";
-CREATE OR REPLACE VIEW "v_ui_anl_mincut_result_cat" AS
+DROP VIEW IF EXISTS "ve_ui_mincut_result_cat";
+CREATE OR REPLACE VIEW "ve_ui_mincut_result_cat" AS
 SELECT
 anl_mincut_result_cat.id,
 work_order,

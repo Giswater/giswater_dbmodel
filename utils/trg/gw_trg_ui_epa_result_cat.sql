@@ -35,6 +35,6 @@ $BODY$
   COST 100;
 
   
-DROP TRIGGER IF EXISTS gw_trg_ui_rpt_cat_result ON "SCHEMA_NAME".v_ui_rpt_cat_result;
-CREATE TRIGGER gw_trg_ui_rpt_cat_result INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_ui_rpt_cat_result
+DROP TRIGGER IF EXISTS gw_trg_ui_rpt_cat_result ON "SCHEMA_NAME".ve_ui_rpt_result_cat;
+CREATE TRIGGER gw_trg_ui_rpt_cat_result INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_ui_rpt_result_cat
 FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_ui_rpt_cat_result();

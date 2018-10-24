@@ -8,7 +8,7 @@ This version of Giswater is provided by Giswater Association
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
 
-DROP VIEW IF EXISTS  "v_ui_rpt_cat_result" CASCADE;
-CREATE VIEW "v_ui_rpt_cat_result" AS 
+DROP VIEW IF EXISTS  "ve_ui_rpt_result_cat" CASCADE;
+CREATE VIEW "ve_ui_rpt_result_cat" AS 
 SELECT *
 FROM rpt_cat_result

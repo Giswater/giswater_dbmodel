@@ -62,26 +62,11 @@ SELECT v_ui_workcat_polygon_aux.workcat_id,
 
 
 
-DROP VIEW IF EXISTS v_ui_arc_x_node;
-CREATE OR REPLACE VIEW v_ui_arc_x_node AS
-SELECT 
-v_arc.arc_id,
-node_1, 
-st_x(a.the_geom) AS x1,
-st_y(a.the_geom) AS y1,
-node_2,
-st_x(b.the_geom) AS x2,
-st_y(b.the_geom) AS y2
-FROM v_arc
-LEFT JOIN node a ON a.node_id::text = v_arc.node_1::text
-LEFT JOIN node b ON b.node_id::text = v_arc.node_2::text;
 
 
 
-
-
-DROP VIEW IF EXISTS v_ui_element_x_arc CASCADE;
-CREATE OR REPLACE VIEW v_ui_element_x_arc AS
+DROP VIEW IF EXISTS ve_ui_element_x_arc CASCADE;
+CREATE OR REPLACE VIEW ve_ui_element_x_arc AS
 SELECT
 element_x_arc.id,
 element_x_arc.arc_id,
@@ -103,8 +88,8 @@ WHERE state=1;
 
 
 
-DROP VIEW IF EXISTS v_ui_element_x_node CASCADE;
-CREATE OR REPLACE VIEW v_ui_element_x_node AS
+DROP VIEW IF EXISTS ve_ui_element_x_node CASCADE;
+CREATE OR REPLACE VIEW ve_ui_element_x_node AS
 SELECT
 element_x_node.id,
 element_x_node.node_id,
@@ -126,8 +111,8 @@ WHERE state=1;
 
 
 
-DROP VIEW IF EXISTS v_ui_element_x_connec CASCADE;
-CREATE OR REPLACE VIEW v_ui_element_x_connec AS
+DROP VIEW IF EXISTS ve_ui_element_x_connec CASCADE;
+CREATE OR REPLACE VIEW ve_ui_element_x_connec AS
 SELECT
 element_x_connec.id,
 element_x_connec.connec_id,
@@ -148,8 +133,8 @@ JOIN element ON element.element_id = element_x_connec.element_id
 WHERE state=1;
 
 
-DROP VIEW IF EXISTS  "v_ui_element" CASCADE;
-CREATE VIEW "v_ui_element" AS 
+DROP VIEW IF EXISTS  ve_ui_element CASCADE;
+CREATE VIEW ve_ui_element AS 
 SELECT 
 element_id as id,
 code,
@@ -185,25 +170,3 @@ feature_type ,
 tstamp
 FROM element;
 
-
-
-DROP VIEW IF EXISTS  "v_ui_scada_x_node" CASCADE;
-CREATE OR REPLACE VIEW "v_ui_scada_x_node" AS 
- SELECT *
-   FROM rtc_scada_node;
-
-   
-
-DROP VIEW IF EXISTS  "v_ui_scada_x_node_values" CASCADE;
-CREATE OR REPLACE VIEW v_ui_scada_x_node_values AS 
- SELECT ext_rtc_scada_x_value.id,
-    rtc_scada_node.scada_id,
-    rtc_scada_node.node_id,
-    ext_rtc_scada_x_value.value,
-    ext_rtc_scada_x_value.status,
-    ext_rtc_scada_x_value."timestamp"
-   FROM rtc_scada_node
-     JOIN ext_rtc_scada_x_value ON ext_rtc_scada_x_value.scada_id::text = rtc_scada_node.scada_id::text;
-
-
-   

@@ -99,8 +99,8 @@ where v_edit_gully.arc_id is not null;
 
 
 
-DROP VIEW IF EXISTS v_ui_element_x_gully CASCADE;
-CREATE OR REPLACE VIEW v_ui_element_x_gully AS
+DROP VIEW IF EXISTS ve_ui_element_x_gully CASCADE;
+CREATE OR REPLACE VIEW ve_ui_element_x_gully AS
 SELECT
 element_x_gully.id,
 element_x_gully.gully_id,

@@ -6,8 +6,8 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
-DROP VIEW IF EXISTS v_ui_doc_x_gully CASCADE;
-CREATE OR REPLACE VIEW v_ui_doc_x_gully AS
+DROP VIEW IF EXISTS ve_ui_doc_x_gully CASCADE;
+CREATE OR REPLACE VIEW ve_ui_doc_x_gully AS
 SELECT
 doc_x_gully.id,
 doc_x_gully.gully_id,
