@@ -1,11 +1,136 @@
-﻿--node
+﻿--views ve_nod, ve_arc
+DROP VIEW IF EXISTS ve_node CASCADE;
+CREATE OR REPLACE VIEW ve_node AS
+SELECT 
+node_id, 
+code,
+elevation, 
+depth, 
+node_type,
+sys_type,
+nodecat_id,
+cat_matcat_id,
+cat_pnom, 
+cat_dnom,
+epa_type,
+v_node.sector_id,
+sector.macrosector_id,
+arc_id,
+parent_id,
+state, 
+state_type,
+annotation, 
+observ, 
+comment,
+dma_id,
+presszonecat_id,
+soilcat_id,
+function_type,
+category_type,
+fluid_type,
+location_type,
+workcat_id,
+buildercat_id,
+workcat_id_end,
+builtdate,
+enddate,
+ownercat_id,
+muni_id ,
+postcode,
+streetaxis_id,
+postnumber,
+postcomplement,
+postcomplement2,
+streetaxis2_id,
+postnumber2,
+v_node.descript,
+svg,
+rotation,
+link,
+verified,
+v_node.the_geom,
+v_node.undelete,
+label_x,
+label_y,
+label_rotation,
+publish,
+inventory,
+macrodma_id,
+expl_id,
+hemisphere,
+num_value
+FROM v_node
+    LEFT JOIN sector ON v_node.sector_id = sector.sector_id;
+
+
+DROP VIEW IF EXISTS ve_arc CASCADE;
+CREATE OR REPLACE VIEW ve_arc AS
+SELECT 
+arc_id,
+code,
+node_1,
+node_2,
+arccat_id, 
+arc_type,
+sys_type,
+matcat_id AS cat_matcat_id,
+pnom AS cat_pnom,
+dnom AS cat_dnom,
+epa_type,
+v_arc.sector_id, 
+sector.macrosector_id,
+state, 
+state_type,
+annotation, 
+observ, 
+comment,
+gis_length,
+custom_length,
+dma_id,
+presszonecat_id,
+soilcat_id,
+function_type,
+category_type,
+fluid_type,
+location_type,
+workcat_id,
+workcat_id_end,
+buildercat_id,
+builtdate,
+enddate,
+ownercat_id,
+muni_id ,
+postcode,
+streetaxis_id,
+postnumber,
+postcomplement,
+postcomplement2,
+streetaxis2_id,
+postnumber2,
+v_arc.descript,
+link,
+verified,
+v_arc.the_geom,
+v_arc.undelete,
+label_x,
+label_y,
+label_rotation,
+publish,
+inventory,
+macrodma_id,
+expl_id,
+num_value
+FROM v_arc
+    LEFT JOIN sector ON v_arc.sector_id = sector.sector_id;
+
+--node
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_shutoffvalve;
 CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_shutoffvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -81,7 +206,7 @@ SELECT v_node.node_id,
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''SHUTOFF-VALVE''
                     ORDER  BY 1,2'::text, ' VALUES (''22''),(''23'')'::text) 
                     ct(feature_id character varying, shtvalve_param_1 text, shtvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.nodetype_id::text = 'SHUTOFF-VALVE'::text;
+                    WHERE v_node.node_type::text = 'SHUTOFF-VALVE'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_checkoffvalve;
@@ -90,7 +215,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -166,7 +291,7 @@ SELECT v_node.node_id,
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CHECK-VALVE''
                     ORDER  BY 1,2'::text, ' VALUES (''47''),(''48'')'::text) 
                     ct(feature_id character varying, checkvalve_param_1 text, checkvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.nodetype_id::text = 'CHECK-VALVE'::text;
+                    WHERE v_node.node_type::text = 'CHECK-VALVE'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_prbkvalve;
@@ -175,7 +300,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -253,7 +378,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -331,7 +456,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -409,7 +534,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -487,7 +612,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -565,7 +690,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -643,7 +768,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -719,7 +844,7 @@ SELECT v_node.node_id,
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''AIR-VALVE''
                 ORDER  BY 1,2'::text, ' VALUES (''26''),(''27'')'::text) 
                 ct(feature_id character varying, airvalve_param_1 text, airvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.nodetype_id::text = 'AIR-VALVE'::text;
+                WHERE v_node.node_type::text = 'AIR-VALVE'::text;
 
 
 
@@ -730,7 +855,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -806,7 +931,7 @@ SELECT v_node.node_id,
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''GREEN-VALVE''
                 ORDER  BY 1,2'::text, ' VALUES (''26''),(''27'')'::text) 
                 ct(feature_id character varying, greenvalve_param_1 text, greenvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.nodetype_id::text = 'GREEN-VALVE'::text;
+                WHERE v_node.node_type::text = 'GREEN-VALVE'::text;
 
 
 
@@ -816,7 +941,7 @@ SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -892,7 +1017,7 @@ SELECT v_node.node_id,
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''OUTFALL-VALVE''
                 ORDER  BY 1,2'::text, ' VALUES (''26''),(''27'')'::text) 
                 ct(feature_id character varying, outfallvalve_param_1 text, outfallvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.nodetype_id::text = 'OUTFALL-VALVE'::text;
+                WHERE v_node.node_type::text = 'OUTFALL-VALVE'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_register;
@@ -901,7 +1026,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_register AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -963,7 +1088,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_register AS
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''REGISTER''
                 ORDER  BY 1,2'::text, ' VALUES (''3''),(''4'')'::text) 
                 ct(feature_id character varying, register_param_1 text, register_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.nodetype_id::text = 'REGISTER'::text;
+                WHERE v_node.node_type::text = 'REGISTER'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_bypassregister;
@@ -972,7 +1097,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_bypassregister AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1037,7 +1162,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_valveregister AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1102,7 +1227,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_controlregister AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1164,7 +1289,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_controlregister AS
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CONTROL-REGISTER''
                 ORDER  BY 1,2'::text, ' VALUES (''28''),(''29'')'::text) 
                 ct(feature_id character varying, ctrlregister_param_1 text, ctrlregister_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.nodetype_id::text = 'CONTROL-REGISTER'::text;
+                WHERE v_node.node_type::text = 'CONTROL-REGISTER'::text;
 
 
 
@@ -1174,7 +1299,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_expansiontank AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1237,7 +1362,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_filter AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1300,7 +1425,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flexunion AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1363,7 +1488,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_hydrant AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1427,7 +1552,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_hydrant AS
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''HYDRANT''
                     ORDER  BY 1,2'::text, ' VALUES (''35''),(''36'')'::text) 
                     ct(feature_id character varying, hydrant_param_1 text, hydrant_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.nodetype_id::text = 'HYDRANT'::text;
+                    WHERE v_node.node_type::text = 'HYDRANT'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_x;
@@ -1436,7 +1561,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_x AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1498,7 +1623,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_adaptation AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1561,7 +1686,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_endline AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1624,7 +1749,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_t AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1687,7 +1812,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_curve AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1750,7 +1875,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_junction AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1813,7 +1938,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_manhole AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1877,7 +2002,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flowmeter AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1940,7 +2065,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pressuremeter AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2003,7 +2128,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netelement AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2067,7 +2192,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netsamplepoint AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2131,7 +2256,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_waterconnection AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2197,7 +2322,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pump AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2268,7 +2393,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_reduction AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2333,7 +2458,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_source AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2397,7 +2522,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_tank AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2464,7 +2589,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_tank AS
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''TANK''
                 ORDER  BY 1,2'::text, ' VALUES (''5''),(''6'')'::text) 
                 ct(feature_id character varying, tank_param_1 text, tank_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.nodetype_id::text = 'TANK'::text;
+                WHERE v_node.node_type::text = 'TANK'::text;
 
 
 
@@ -2474,7 +2599,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_waterwell AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2538,7 +2663,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_wtp AS
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.nodetype_id,
+    v_node.node_type,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2603,7 +2728,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_pipe AS
     v_arc.node_1,
     v_arc.node_2,
     v_arc.arccat_id,
-    v_arc.arctype_id AS cat_arctype_id,
+    v_arc.arc_type,
     v_arc.matcat_id,
     v_arc.pnom AS cat_pnom,
     v_arc.dnom AS cat_dnom,
@@ -2660,7 +2785,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_pipe AS
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''PIPE''
                     ORDER  BY 1,2'::text, ' VALUES (''49''),(''50'')'::text) 
                     ct(feature_id character varying, pipe_param_1 text, pipe_param_2 text)) a ON a.feature_id::text = v_arc.arc_id::text
-                    WHERE v_arc.arctype_id::text = 'PIPE'::text;
+                    WHERE v_arc.arc_type::text = 'PIPE'::text;
 
 
 
@@ -2671,7 +2796,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_arc_varc AS
     v_arc.node_1,
     v_arc.node_2,
     v_arc.arccat_id,
-    v_arc.arctype_id AS cat_arctype_id,
+    v_arc.arc_type,
     v_arc.matcat_id,
     v_arc.pnom AS cat_pnom,
     v_arc.dnom AS cat_dnom,

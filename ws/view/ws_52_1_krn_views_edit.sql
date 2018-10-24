@@ -403,13 +403,82 @@ FROM connec
 
 
 
+DROP VIEW IF EXISTS ve_connec CASCADE;
+CREATE OR REPLACE VIEW ve_connec AS 
+ SELECT connec.connec_id,
+    connec.code,
+    connec.elevation,
+    connec.depth,
+    cat_connec.connectype_id AS connec_type,
+    connec_type.type AS sys_type,
+    connec.connecat_id,
+    connec.sector_id,
+    sector.macrosector_id,
+    connec.customer_code,
+    cat_connec.matcat_id AS cat_matcat_id,
+    cat_connec.pnom AS cat_pnom,
+    cat_connec.dnom AS cat_dnom,
+    connec.connec_length,
+    v_rtc_hydrometer_x_connec.n_hydrometer,
+    connec.state,
+    connec.state_type,
+    connec.annotation,
+    connec.observ,
+    connec.comment,
+    connec.dma_id,
+    connec.presszonecat_id,
+    connec.soilcat_id,
+    connec.function_type,
+    connec.category_type,
+    connec.fluid_type,
+    connec.location_type,
+    connec.workcat_id,
+    connec.workcat_id_end,
+    connec.buildercat_id,
+    connec.builtdate,
+    connec.enddate,
+    connec.ownercat_id,
+    connec.muni_id,
+    connec.postcode,
+    connec.streetaxis_id,
+    connec.postnumber,
+    connec.postcomplement,
+    connec.streetaxis2_id,
+    connec.postnumber2,
+    connec.postcomplement2,
+    connec.descript,
+    connec.arc_id,
+    cat_connec.svg,
+    connec.rotation,
+    concat(connec_type.link_path, connec.link) AS link,
+    connec.verified,
+    connec.the_geom,
+    connec.undelete,
+    connec.label_x,
+    connec.label_y,
+    connec.label_rotation,
+    connec.publish,
+    connec.inventory,
+    dma.macrodma_id,
+    connec.expl_id,
+    connec.num_value
+   FROM connec
+     JOIN cat_connec ON connec.connecat_id::text = cat_connec.id::text
+     JOIN connec_type ON connec_type.id::text = cat_connec.connectype_id::text
+     JOIN v_state_connec ON v_state_connec.connec_id::text = connec.connec_id::text
+     LEFT JOIN v_rtc_hydrometer_x_connec ON connec.connec_id::text = v_rtc_hydrometer_x_connec.connec_id::text
+     LEFT JOIN ext_streetaxis ON connec.streetaxis_id::text = ext_streetaxis.id::text
+     LEFT JOIN dma ON connec.dma_id = dma.dma_id
+     LEFT JOIN sector ON connec.sector_id = sector.sector_id;
+
+
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_connec_wjoin;
 CREATE OR REPLACE VIEW SCHEMA_NAME.ve_connec_wjoin AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
     connec.depth,
-    cat_connec.connectype_id,
+    cat_connec.connectype_id as connec_type,
     connec.connecat_id,
     cat_connec.matcat_id,
     cat_connec.pnom,
@@ -480,7 +549,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_connec_fountain AS
     connec.code,
     connec.elevation,
     connec.depth,
-    cat_connec.connectype_id,
+    cat_connec.connectype_id  as connec_type,
     connec.connecat_id,
     cat_connec.matcat_id,
     cat_connec.pnom,
@@ -560,7 +629,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_connec_tap AS
     connec.code,
     connec.elevation,
     connec.depth,
-    cat_connec.connectype_id,
+    cat_connec.connectype_id  as connec_type,
     connec.connecat_id,
     cat_connec.matcat_id,
     cat_connec.pnom,
@@ -637,7 +706,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_connec_greentap AS
     connec.code,
     connec.elevation,
     connec.depth,
-    cat_connec.connectype_id,
+    cat_connec.connectype_id  as connec_type,
     connec.connecat_id,
     cat_connec.matcat_id,
     cat_connec.pnom,
