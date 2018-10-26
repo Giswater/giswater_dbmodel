@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 1140
 
-CREATE OR REPLACE FUNCTION ws_sample.gw_trg_ui_element() RETURNS trigger AS $BODY$
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_ui_element() RETURNS trigger AS $BODY$
 DECLARE 
     element_table varchar;
     v_sql varchar;
@@ -55,19 +55,19 @@ $BODY$
   
 
   
-DROP TRIGGER IF EXISTS gw_trg_ui_element_x_node ON "ws_sample".ve_ui_element_x_node;
-CREATE TRIGGER gw_trg_ui_element_x_node INSTEAD OF INSERT OR DELETE OR UPDATE ON "ws_sample".ve_ui_element_x_node
-FOR EACH ROW EXECUTE PROCEDURE "ws_sample".gw_trg_ui_element(element_x_node);
+DROP TRIGGER IF EXISTS gw_trg_ui_element_x_node ON "SCHEMA_NAME".ve_ui_element_x_node;
+CREATE TRIGGER gw_trg_ui_element_x_node INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_ui_element_x_node
+FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_ui_element(element_x_node);
 
-DROP TRIGGER IF EXISTS gw_trg_ui_element_x_arc ON "ws_sample".ve_ui_element_x_arc;
-CREATE TRIGGER gw_trg_ui_element_x_arc INSTEAD OF INSERT OR DELETE OR UPDATE ON "ws_sample".ve_ui_element_x_arc
-FOR EACH ROW EXECUTE PROCEDURE "ws_sample".gw_trg_ui_element(element_x_arc);
+DROP TRIGGER IF EXISTS gw_trg_ui_element_x_arc ON "SCHEMA_NAME".ve_ui_element_x_arc;
+CREATE TRIGGER gw_trg_ui_element_x_arc INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_ui_element_x_arc
+FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_ui_element(element_x_arc);
 
-DROP TRIGGER IF EXISTS gw_trg_ui_element_x_connec ON "ws_sample".ve_ui_element_x_connec;
-CREATE TRIGGER gw_trg_ui_element_x_connec INSTEAD OF INSERT OR DELETE OR UPDATE ON "ws_sample".ve_ui_element_x_connec
-FOR EACH ROW EXECUTE PROCEDURE "ws_sample".gw_trg_ui_element(element_x_connec);
+DROP TRIGGER IF EXISTS gw_trg_ui_element_x_connec ON "SCHEMA_NAME".ve_ui_element_x_connec;
+CREATE TRIGGER gw_trg_ui_element_x_connec INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_ui_element_x_connec
+FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_ui_element(element_x_connec);
 
-DROP TRIGGER IF EXISTS gw_trg_ui_element ON "ws_sample".ve_ui_element;
-CREATE TRIGGER gw_trg_ui_element INSTEAD OF INSERT OR DELETE OR UPDATE ON "ws_sample".ve_ui_element
-FOR EACH ROW EXECUTE PROCEDURE "ws_sample".gw_trg_ui_element(element);
+DROP TRIGGER IF EXISTS gw_trg_ui_element ON "SCHEMA_NAME".ve_ui_element;
+CREATE TRIGGER gw_trg_ui_element INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".ve_ui_element
+FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_ui_element(element);
 
