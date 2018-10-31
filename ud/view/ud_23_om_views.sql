@@ -86,3 +86,42 @@ CREATE OR REPLACE VIEW ve_ui_event_x_gully AS
      LEFT JOIN ( SELECT DISTINCT doc_x_visit.visit_id
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit_x_gully.gully_id;
+
+
+DROP VIEW IF EXISTS ve_visit_singlevent_x_gully; 
+CREATE OR REPLACE VIEW ve_visit_singlevent_x_gully AS 
+ SELECT om_visit_x_gully.id,
+    om_visit_x_gully.visit_id,
+    om_visit_x_gully.gully_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    om_visit_event.event_code,
+    om_visit_event.position_id,
+    om_visit_event.position_value,
+    om_visit_event.parameter_id,
+    om_visit_event.value,
+    om_visit_event.value1,
+    om_visit_event.value2,
+    om_visit_event.geom1,
+    om_visit_event.geom2,
+    om_visit_event.geom3,
+    om_visit_event.xcoord,
+    om_visit_event.ycoord,
+    om_visit_event.compass,
+    om_visit_event.tstamp,
+    om_visit_event.text,
+    om_visit_event.index_val,
+    om_visit_event.is_last
+   FROM om_visit
+     JOIN om_visit_event ON om_visit.id = om_visit_event.visit_id
+     JOIN om_visit_x_gully ON om_visit.id = om_visit_x_gully.visit_id;

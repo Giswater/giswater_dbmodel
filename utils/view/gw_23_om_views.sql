@@ -638,3 +638,230 @@ CREATE OR REPLACE VIEW ve_ui_event_x_connec AS
      LEFT JOIN ( SELECT DISTINCT doc_x_visit.visit_id
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit_x_connec.connec_id;
+
+
+DROP VIEW IF EXISTS ve_visit_singlevent_x_arc;
+CREATE OR REPLACE VIEW ve_visit_singlevent_x_arc AS 
+ SELECT om_visit_x_arc.id,
+    om_visit_x_arc.visit_id,
+    om_visit_x_arc.arc_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    om_visit_event.event_code,
+    om_visit_event.position_id,
+    om_visit_event.position_value,
+    om_visit_event.parameter_id,
+    om_visit_event.value,
+    om_visit_event.value1,
+    om_visit_event.value2,
+    om_visit_event.geom1,
+    om_visit_event.geom2,
+    om_visit_event.geom3,
+    om_visit_event.xcoord,
+    om_visit_event.ycoord,
+    om_visit_event.compass,
+    om_visit_event.tstamp,
+    om_visit_event.text,
+    om_visit_event.index_val,
+    om_visit_event.is_last
+   FROM om_visit
+     JOIN om_visit_event ON om_visit.id = om_visit_event.visit_id
+     JOIN om_visit_x_arc ON om_visit.id = om_visit_x_arc.visit_id
+     JOIN om_visit_class ON om_visit_class.id=om_visit.class_id
+   WHERE om_visit_class.ismultievent=FALSE;
+
+
+DROP VIEW IF EXISTS ve_visit_singlevent_x_node; 
+CREATE OR REPLACE VIEW ve_visit_singlevent_x_node AS 
+ SELECT om_visit_x_node.id,
+    om_visit_x_node.visit_id,
+    om_visit_x_node.node_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    om_visit_event.event_code,
+    om_visit_event.position_id,
+    om_visit_event.position_value,
+    om_visit_event.parameter_id,
+    om_visit_event.value,
+    om_visit_event.value1,
+    om_visit_event.value2,
+    om_visit_event.geom1,
+    om_visit_event.geom2,
+    om_visit_event.geom3,
+    om_visit_event.xcoord,
+    om_visit_event.ycoord,
+    om_visit_event.compass,
+    om_visit_event.tstamp,
+    om_visit_event.text,
+    om_visit_event.index_val,
+    om_visit_event.is_last
+   FROM om_visit
+     JOIN om_visit_event ON om_visit.id = om_visit_event.visit_id
+     JOIN om_visit_x_node ON om_visit.id = om_visit_x_node.visit_id
+     JOIN om_visit_class ON om_visit_class.id=om_visit.class_id
+   WHERE om_visit_class.ismultievent=FALSE;
+
+DROP VIEW IF EXISTS ve_visit_singlevent_x_connec; 
+CREATE OR REPLACE VIEW ve_visit_singlevent_x_connec AS 
+ SELECT om_visit_x_connec.id,
+    om_visit_x_connec.visit_id,
+    om_visit_x_connec.connec_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    om_visit_event.event_code,
+    om_visit_event.position_id,
+    om_visit_event.position_value,
+    om_visit_event.parameter_id,
+    om_visit_event.value,
+    om_visit_event.value1,
+    om_visit_event.value2,
+    om_visit_event.geom1,
+    om_visit_event.geom2,
+    om_visit_event.geom3,
+    om_visit_event.xcoord,
+    om_visit_event.ycoord,
+    om_visit_event.compass,
+    om_visit_event.tstamp,
+    om_visit_event.text,
+    om_visit_event.index_val,
+    om_visit_event.is_last
+   FROM om_visit
+     JOIN om_visit_event ON om_visit.id = om_visit_event.visit_id
+     JOIN om_visit_x_connec ON om_visit.id = om_visit_x_connec.visit_id
+     JOIN om_visit_class ON om_visit_class.id=om_visit.class_id
+   WHERE om_visit_class.ismultievent=FALSE;
+
+
+DROP VIEW IF EXISTS ve_visit_multievent_x_connec;
+CREATE OR REPLACE VIEW ve_visit_multievent_x_connec AS 
+ SELECT om_visit_x_connec.id,
+    om_visit_x_connec.visit_id,
+    om_visit_x_connec.connec_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    a.param_1 AS con_insp_sed_b,
+    a.param_2 AS con_insp_des_c,
+    a.param_3 AS con_cln_exec
+   FROM om_visit
+     JOIN om_visit_class ON om_visit_class.id = om_visit.class_id
+     JOIN om_visit_x_connec ON om_visit.id = om_visit_x_connec.visit_id
+     LEFT JOIN ( SELECT ct.visit_id,
+            ct.param_1,
+            ct.param_2,
+            ct.param_3
+           FROM crosstab('SELECT visit_id, om_visit_event.parameter_id, value 
+            FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
+            JOIN om_visit_class on om_visit_class.id=om_visit.class_id
+            JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
+            where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''6''),(''7''),(''8'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
+  WHERE om_visit_class.ismultievent = true;
+
+
+DROP VIEW IF EXISTS ve_visit_multievent_x_node;
+CREATE OR REPLACE VIEW ve_visit_multievent_x_node AS 
+ SELECT om_visit_x_node.id,
+    om_visit_x_node.visit_id,
+    om_visit_x_node.node_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    a.param_1 AS con_insp_sed_b,
+    a.param_2 AS con_insp_des_c,
+    a.param_3 AS con_cln_exec
+   FROM om_visit
+     JOIN om_visit_class ON om_visit_class.id = om_visit.class_id
+     JOIN om_visit_x_node ON om_visit.id = om_visit_x_node.visit_id
+     LEFT JOIN ( SELECT ct.visit_id,
+            ct.param_1,
+            ct.param_2,
+            ct.param_3
+           FROM crosstab('SELECT visit_id, om_visit_event.parameter_id, value 
+            FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
+            JOIN om_visit_class on om_visit_class.id=om_visit.class_id
+            JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
+            where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''6''),(''7''),(''8'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
+  WHERE om_visit_class.ismultievent = true;
+
+DROP VIEW IF EXISTS ve_visit_multievent_x_arc;
+CREATE OR REPLACE VIEW ve_visit_multievent_x_arc AS 
+ SELECT om_visit_x_arc.id,
+    om_visit_x_arc.visit_id,
+    om_visit_x_arc.arc_id,
+    om_visit.visitcat_id,
+    om_visit.ext_code,
+    om_visit.startdate,
+    om_visit.enddate,
+    om_visit.user_name,
+    om_visit.webclient_id,
+    om_visit.expl_id,
+    om_visit.the_geom,
+    om_visit.descript,
+    om_visit.is_done,
+    om_visit.class_id,
+    om_visit.suspendendcat_id,
+    a.param_1 AS con_insp_sed_b,
+    a.param_2 AS con_insp_des_c,
+    a.param_3 AS con_cln_exec
+   FROM om_visit
+     JOIN om_visit_class ON om_visit_class.id = om_visit.class_id
+     JOIN om_visit_x_arc ON om_visit.id = om_visit_x_arc.visit_id
+     LEFT JOIN ( SELECT ct.visit_id,
+            ct.param_1,
+            ct.param_2,
+            ct.param_3
+           FROM crosstab('SELECT visit_id, om_visit_event.parameter_id, value 
+            FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
+            JOIN om_visit_class on om_visit_class.id=om_visit.class_id
+            JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
+            where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''1''),(''2''),(''3'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
+  WHERE om_visit_class.ismultievent = true;
+

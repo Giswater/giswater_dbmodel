@@ -19,13 +19,13 @@ BEGIN
 
     IF TG_OP = 'INSERT' THEN
         IF visit_table = 'visit_x_arc' THEN
-            INSERT INTO visit_x_arc (arc_id,visit_id) VALUES (NEW.arc_id,NEW.visit_id);
+            INSERT INTO om_visit_x_arc (arc_id,visit_id) VALUES (NEW.arc_id,NEW.visit_id);
         ELSIF visit_table = 'visit_x_node' THEN
-            INSERT INTO visit_x_node (node_id,visit_id)  VALUES (NEW.node_id,NEW.visit_id);
+            INSERT INTO om_visit_x_node (node_id,visit_id)  VALUES (NEW.node_id,NEW.visit_id);
         ELSIF visit_table = 'visit_x_connec' THEN
-            INSERT INTO visit_x_connec (connec_id,visit_id)  VALUES (NEW.connec_id,NEW.visit_id);
+            INSERT INTO om_visit_x_connec (connec_id,visit_id)  VALUES (NEW.connec_id,NEW.visit_id);
         ELSIF visit_table = 'visit_x_gully' THEN
-            INSERT INTO visit_x_gully (gully_id,visit_id)  VALUES (NEW.gully_id,NEW.visit_id);
+            INSERT INTO om_visit_x_gully (gully_id,visit_id)  VALUES (NEW.gully_id,NEW.visit_id);
          -- PERFORM audit_function(1); 
         END IF;
 
