@@ -7,7 +7,7 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 1328
 
 
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_rtc_hydro_data()  RETURNS trigger AS $BODY$ 
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_ui_hydroval_connec()  RETURNS trigger AS $BODY$ 
 
     
 BEGIN
@@ -40,7 +40,5 @@ $BODY$
   COST 100;
 
 
-DROP TRIGGER IF EXISTS gw_trg_edit_rtc_hydro_data ON "SCHEMA_NAME".v_edit_rtc_hydro_data_x_connec;
-CREATE TRIGGER gw_trg_edit_rtc_hydro_data INSTEAD OF UPDATE ON "SCHEMA_NAME".v_edit_rtc_hydro_data_x_connec FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_rtc_hydro_data();
--- to do: CREATE TRIGGER gw_trg_edit_rtc_hydro_data INSTEAD OF INSERT OR DELETE OR UPDATE ON "SCHEMA_NAME".v_edit_rtc_hydro_data_x_connec FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_rtc_hydro_data();
-
+DROP TRIGGER IF EXISTS gw_trg_ui_hydroval_connec ON "SCHEMA_NAME".v_edit_rtc_hydro_data_x_connec;
+CREATE TRIGGER gw_trg_ui_hydroval_connec INSTEAD OF UPDATE ON "SCHEMA_NAME".v_edit_rtc_hydro_data_x_connec FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_ui_hydroval_connec();
