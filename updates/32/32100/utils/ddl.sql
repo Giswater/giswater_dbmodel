@@ -333,10 +333,10 @@ CREATE TABLE audit_cat_table_x_column
   description text,
   sys_role_id character varying(30),
   CONSTRAINT audit_cat_table_x_column_pkey PRIMARY KEY (table_id, column_id)
-)
+);
 
 
-CREATE TABLE ws_sample.value_type
+CREATE TABLE value_type
 (  typevalue character varying(50) NOT NULL,
   id character varying(30) NOT NULL,
   idval character varying(100),
@@ -348,80 +348,76 @@ CREATE TABLE ws_sample.value_type
 -----------------------
 -- create new fields
 -----------------------
---audit_cat_param_user - se puede crear toda de nuevo?
+ALTER TABLE audit_cat_param_user ADD COLUMN formname text;
+ALTER TABLE audit_cat_param_user ADD COLUMN label text;
+ALTER TABLE audit_cat_param_user ADD COLUMN dv_querytext text;
+ALTER TABLE audit_cat_param_user ADD COLUMN dv_parent_id text;
+ALTER TABLE audit_cat_param_user ADD COLUMN isenabled boolean;
+ALTER TABLE audit_cat_param_user ADD COLUMN _orderby integer;
+ALTER TABLE audit_cat_param_user ADD COLUMN layout_id integer;
+ALTER TABLE audit_cat_param_user ADD COLUMN layout_order integer;
+ALTER TABLE audit_cat_param_user ADD COLUMN project_type character varying(30);
+ALTER TABLE audit_cat_param_user ADD COLUMN isparent boolean;
+ALTER TABLE audit_cat_param_user ADD COLUMN dv_querytext_filterc text;
+ALTER TABLE audit_cat_param_user ADD COLUMN feature_field_id text;
+ALTER TABLE audit_cat_param_user ADD COLUMN feature_dv_parent_value text;
+ALTER TABLE audit_cat_param_user ADD COLUMN isautoupdate boolean;
+ALTER TABLE audit_cat_param_user ADD COLUMN datatype character varying(30);
+ALTER TABLE audit_cat_param_user ADD COLUMN widgettype character varying(30);
+ALTER TABLE audit_cat_param_user ADD COLUMN _ischeckhidden boolean;
+ALTER TABLE audit_cat_param_user ADD COLUMN vdefault text;
 
-UPDATE cat_arc ADD COLUMN  dn integer;
-UPDATE cat_arc ADD COLUMN  pn integer;
-UPDATE cat_arc ADD COLUMN  shape character varying(30);
+ALTER TABLE cat_arc ADD COLUMN  dn integer;
+ALTER TABLE cat_arc ADD COLUMN  pn integer;
+ALTER TABLE cat_arc ADD COLUMN  shape character varying(30);
 
-UPDATE cat_connec ADD COLUMN dn integer;
-UPDATE cat_connec ADD COLUMN  pn integer;
+ALTER TABLE cat_connec ADD COLUMN dn integer;
+ALTER TABLE cat_connec ADD COLUMN  pn integer;
 
-UPDATE cat_node ADD COLUMN dn integer;
-UPDATE cat_node ADD COLUMN  pn integer;
+ALTER TABLE cat_node ADD COLUMN dn integer;
+ALTER TABLE cat_node ADD COLUMN  pn integer;
 
-ALTER TABLE cat_feature RENAME COLUMN feature_type TO type;
-UPDATE cat_feature ADD COLUMN shortcut_key character varying(100);
-UPDATE cat_feature ADD COLUMN parent_layer character varying(100);
-UPDATE cat_feature ADD COLUMN child_layer character varying(100);
-UPDATE cat_feature ADD COLUMN orderby integer;
-UPDATE cat_feature ADD COLUMN active boolean;
-UPDATE cat_feature ADD COLUMN code_autofill boolean;
+ALTER TABLE cat_feature ADD COLUMN  type haracter varying(30);
+ALTER TABLE cat_feature ADD COLUMN shortcut_key character varying(100);
+ALTER TABLE cat_feature ADD COLUMN parent_layer character varying(100);
+ALTER TABLE cat_feature ADD COLUMN child_layer character varying(100);
+ALTER TABLE cat_feature ADD COLUMN orderby integer;
+ALTER TABLE cat_feature ADD COLUMN active boolean;
+ALTER TABLE cat_feature ADD COLUMN code_autofill boolean;
 
-UPDATE config_param_system ADD COLUMN dt integer;
-UPDATE config_param_system ADD COLUMN wt integer;
-UPDATE config_param_system ADD COLUMN label text;
-UPDATE config_param_system ADD COLUMN dv_querytext text;
-UPDATE config_param_system ADD COLUMN dv_filterbyfield text;
-UPDATE config_param_system ADD COLUMN isenabled boolean;
-UPDATE config_param_system ADD COLUMN orderby integer;
-UPDATE config_param_system ADD COLUMN layout_id integer;
-UPDATE config_param_system ADD COLUMN layout_order integer;
-UPDATE config_param_system ADD COLUMN project_type character varying;
-UPDATE config_param_system ADD COLUMN dv_isparent boolean;
-UPDATE config_param_system ADD COLUMN isautoupdate boolean;
-UPDATE config_param_system ADD COLUMN _isinform boolean;
-UPDATE config_param_system ADD COLUMN datatype character varying;
-UPDATE config_param_system ADD COLUMN widgettype character varying;
-UPDATE config_param_system ADD COLUMN tooltip text;
+ALTER TABLE config_param_system ADD COLUMN dt integer;
+ALTER TABLE config_param_system ADD COLUMN wt integer;
+ALTER TABLE config_param_system ADD COLUMN label text;
+ALTER TABLE config_param_system ADD COLUMN dv_querytext text;
+ALTER TABLE config_param_system ADD COLUMN dv_filterbyfield text;
+ALTER TABLE config_param_system ADD COLUMN isenabled boolean;
+ALTER TABLE config_param_system ADD COLUMN orderby integer;
+ALTER TABLE config_param_system ADD COLUMN layout_id integer;
+ALTER TABLE config_param_system ADD COLUMN layout_order integer;
+ALTER TABLE config_param_system ADD COLUMN project_type character varying;
+ALTER TABLE config_param_system ADD COLUMN dv_isparent boolean;
+ALTER TABLE config_param_system ADD COLUMN isautoupdate boolean;
+ALTER TABLE config_param_system ADD COLUMN _isinform boolean;
+ALTER TABLE config_param_system ADD COLUMN datatype character varying;
+ALTER TABLE config_param_system ADD COLUMN widgettype character varying;
+ALTER TABLE config_param_system ADD COLUMN tooltip text;
 
-ALTER TABLE ext_rtc_hydrometer RENAME COLUMN id TO hydrometer_id;
-ALTER TABLE ext_rtc_hydrometer RENAME COLUMN customer_name TO client_name;
-ALTER TABLE ext_rtc_hydrometer RENAME COLUMN start_date TO instalation_date;
-ALTER TABLE ext_rtc_hydrometer RENAME COLUMN hydro_number TO hydrometer_number;
-ALTER TABLE ext_rtc_hydrometer RENAME COLUMN state_id TO state;
-ALTER TABLE ext_rtc_hydrometer RENAME COLUMN hydrometer_customer_code TO connec_customer_code;
-/*
-campos que no existen en 3.2
-  connec_id character varying(30),
-  plot_code integer,
-  priority_id integer,
-  catalog_id integer,
-  category_id integer,
-  crm_number integer,
-  muni_id integer,
-  address1 text,
-  address2 text,
-  address3 text,
-  address2_1 text,
-  address2_2 text,
-  address2_3 text,
-  m3_volume integer,
-  hydro_man_date date,
-  end_date date,
-  update_date date,
-*/
---man_addfields_parameter - completely different than the previous one.
+--rename instead of add column?
+ALTER TABLE ext_rtc_hydrometer ADD COLUMN hydrometer_id character varying(16);
+ALTER TABLE ext_rtc_hydrometer ADD COLUMN client_name text;
+ALTER TABLE ext_rtc_hydrometer ADD COLUMN instalation_date date;
+ALTER TABLE ext_rtc_hydrometer ADD COLUMN hydrometer_number integer;
+ALTER TABLE ext_rtc_hydrometer ADD COLUMN state smallint;
+ALTER TABLE ext_rtc_hydrometer ADD COLUMN connec_customer_code character varying(30);
 
+ALTER TABLE om_visit ADD COLUMN class_id integer;
+ALTER TABLE om_visit ADD COLUMN suspendendcat_id integer;
 
-UPDATE om_visit ADD COLUMN class_id integer;
-UPDATE om_visit ADD COLUMN suspendendcat_id integer;
+ALTER TABLE om_visit_cat ADD COLUMN extusercat_id integer;
+ALTER TABLE om_visit_cat ADD COLUMN duration text;
 
-UPDATE om_visit_cat ADD COLUMN extusercat_id integer;
-UPDATE om_visit_cat ADD COLUMN duration text;
+ALTER TABLE om_visit_parameter ADD COLUMN  short_descript character varying(30);
 
-UPDATE om_visit_parameter ADD COLUMN  short_descript character varying(30);
-
-UPDATE sys_feature_type ADD COLUMN  icon character varying(30);
+ALTER TABLE sys_feature_type ADD COLUMN  icon character varying(30);
 
 --table v_project_type???

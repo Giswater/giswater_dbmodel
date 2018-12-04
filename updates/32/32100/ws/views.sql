@@ -11,7 +11,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 -----------------------
 -- remove all the views that are refactored in the v3.2
 -----------------------
-DROP VIEW IF EXISTS v_edit_inp_demand;
+/*DROP VIEW IF EXISTS v_edit_inp_demand;
 DROP VIEW IF EXISTS v_edit_inp_junction;
 DROP VIEW IF EXISTS v_edit_inp_pipe;
 DROP VIEW IF EXISTS v_edit_inp_pump;
@@ -45,14 +45,15 @@ DROP VIEW IF EXISTS v_edit_man_waterwell;
 DROP VIEW IF EXISTS v_edit_man_wjoin;
 DROP VIEW IF EXISTS v_edit_man_wtp;
 
-
+*/
 
 -----------------------
 -- create views
 -----------------------
+--v_web_parent_* or ve_parent_* or both
 
 DROP VIEW IF EXISTS  ve_arc;
-CREATE OR REPLACE VIEW ve_arc AS 
+CREATE VIEW ve_arc AS 
  SELECT v_arc.arc_id,
     v_arc.code,
     v_arc.node_1,
@@ -111,7 +112,7 @@ CREATE OR REPLACE VIEW ve_arc AS
      LEFT JOIN sector ON v_arc.sector_id = sector.sector_id;
 
 DROP VIEW IF EXISTS  ve_connec;
-CREATE OR REPLACE VIEW ve_connec AS 
+CREATE VIEW ve_connec AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
@@ -179,9 +180,8 @@ CREATE OR REPLACE VIEW ve_connec AS
      LEFT JOIN sector ON connec.sector_id = sector.sector_id;
 
 
-DROP VIEW ve_node;
-
-CREATE OR REPLACE VIEW ve_node AS 
+DROP VIEW IF EXISTS ve_node;
+CREATE VIEW ve_node AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
@@ -242,10 +242,27 @@ CREATE OR REPLACE VIEW ve_node AS
    FROM v_node
      LEFT JOIN sector ON v_node.sector_id = sector.sector_id;
 
+--parent views
+DROP VIEW IF EXISTS ve_arc_parent;
+CREATE OR REPLACE VIEW ve_arc_parent AS 
+ SELECT v_edit_arc.arc_id AS nid,
+    v_edit_arc.cat_arctype_id AS custom_type
+   FROM v_edit_arc;
+
+DROP VIEW IF EXISTS ve_connec_parent;
+CREATE OR REPLACE VIEW ve_connec_parent AS 
+ SELECT v_edit_connec.connec_id AS nid,
+    v_edit_connec.connectype_id AS custom_type
+   FROM v_edit_connec;
+
+CREATE OR REPLACE VIEW ve_node_parent AS 
+ SELECT v_edit_node.node_id AS nid,
+    v_edit_node.nodetype_id AS custom_type
+   FROM v_edit_node;
 
 --child views
 DROP VIEW IF EXISTS  ve_arc_varc;
-CREATE OR REPLACE VIEW ve_arc_varc AS 
+CREATE VIEW ve_arc_varc AS 
  SELECT v_arc.arc_id,
     v_arc.code,
     v_arc.node_1,
@@ -303,7 +320,7 @@ CREATE OR REPLACE VIEW ve_arc_varc AS
      JOIN man_varc ON man_varc.arc_id::text = v_arc.arc_id::text;
 
 DROP VIEW IF EXISTS  ve_connec_fountain;
-CREATE OR REPLACE VIEW ve_connec_fountain AS 
+CREATE VIEW ve_connec_fountain AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
@@ -382,7 +399,7 @@ CREATE OR REPLACE VIEW ve_connec_fountain AS
 
 
 DROP VIEW IF EXISTS  ve_connec_greentap;
-CREATE OR REPLACE VIEW ve_connec_greentap AS 
+CREATE VIEW ve_connec_greentap AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
@@ -451,7 +468,7 @@ CREATE OR REPLACE VIEW ve_connec_greentap AS
 
 
 DROP VIEW IF EXISTS  ve_connec_tap;
-CREATE OR REPLACE VIEW ve_connec_tap AS 
+CREATE VIEW ve_connec_tap AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
@@ -527,7 +544,7 @@ CREATE OR REPLACE VIEW ve_connec_tap AS
 
 
 DROP VIEW IF EXISTS ve_connec_wjoin;
-CREATE OR REPLACE VIEW ve_connec_wjoin AS 
+CREATE VIEW ve_connec_wjoin AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
@@ -597,12 +614,12 @@ CREATE OR REPLACE VIEW ve_connec_wjoin AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_shutoffvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_shutoffvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_shutoffvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -678,16 +695,16 @@ SELECT v_node.node_id,
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''SHUTOFF-VALVE''
                     ORDER  BY 1,2'::text, ' VALUES (''22''),(''23'')'::text) 
                     ct(feature_id character varying, shtvalve_param_1 text, shtvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.node_type::text = 'SHUTOFF-VALVE'::text;
+                    WHERE v_node.nodetype_id::text = 'SHUTOFF-VALVE'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_checkoffvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_checkoffvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_checkoffvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -763,16 +780,16 @@ SELECT v_node.node_id,
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CHECK-VALVE''
                     ORDER  BY 1,2'::text, ' VALUES (''47''),(''48'')'::text) 
                     ct(feature_id character varying, checkvalve_param_1 text, checkvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.node_type::text = 'CHECK-VALVE'::text;
+                    WHERE v_node.nodetype_id::text = 'CHECK-VALVE'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_prbkvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_prbkvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_prbkvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -845,12 +862,12 @@ SELECT v_node.node_id,
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_flcontrvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flcontrvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_flcontrvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -923,12 +940,12 @@ SELECT v_node.node_id,
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_genpurpvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_genpurpvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_genpurpvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1001,12 +1018,12 @@ SELECT v_node.node_id,
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_throttlevalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_throttlevalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_throttlevalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1079,12 +1096,12 @@ SELECT v_node.node_id,
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_prreducvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_prreducvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_prreducvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1157,12 +1174,12 @@ SELECT v_node.node_id,
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_prsustavalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_prsustavalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_prsustavalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1235,12 +1252,12 @@ SELECT v_node.node_id,
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_airvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_airvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_airvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1316,18 +1333,18 @@ SELECT v_node.node_id,
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''AIR-VALVE''
                 ORDER  BY 1,2'::text, ' VALUES (''26''),(''27'')'::text) 
                 ct(feature_id character varying, airvalve_param_1 text, airvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.node_type::text = 'AIR-VALVE'::text;
+                WHERE v_node.nodetype_id::text = 'AIR-VALVE'::text;
 
 
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_greenvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_greenvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_greenvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1403,17 +1420,17 @@ SELECT v_node.node_id,
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''GREEN-VALVE''
                 ORDER  BY 1,2'::text, ' VALUES (''26''),(''27'')'::text) 
                 ct(feature_id character varying, greenvalve_param_1 text, greenvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.node_type::text = 'GREEN-VALVE'::text;
+                WHERE v_node.nodetype_id::text = 'GREEN-VALVE'::text;
 
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_outfallvalve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_outfallvalve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_outfallvalve AS 
 SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1489,16 +1506,16 @@ SELECT v_node.node_id,
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''OUTFALL-VALVE''
                 ORDER  BY 1,2'::text, ' VALUES (''26''),(''27'')'::text) 
                 ct(feature_id character varying, outfallvalve_param_1 text, outfallvalve_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.node_type::text = 'OUTFALL-VALVE'::text;
+                WHERE v_node.nodetype_id::text = 'OUTFALL-VALVE'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_register;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_register AS 
+CREATE VIEW SCHEMA_NAME.ve_node_register AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1560,16 +1577,16 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_register AS
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''REGISTER''
                 ORDER  BY 1,2'::text, ' VALUES (''3''),(''4'')'::text) 
                 ct(feature_id character varying, register_param_1 text, register_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.node_type::text = 'REGISTER'::text;
+                WHERE v_node.nodetype_id::text = 'REGISTER'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_bypassregister;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_bypassregister AS 
+CREATE VIEW SCHEMA_NAME.ve_node_bypassregister AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1629,12 +1646,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_bypassregister AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_valveregister;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_valveregister AS 
+CREATE VIEW SCHEMA_NAME.ve_node_valveregister AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1694,12 +1711,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_valveregister AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_controlregister;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_controlregister AS 
+CREATE VIEW SCHEMA_NAME.ve_node_controlregister AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1761,17 +1778,17 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_controlregister AS
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''CONTROL-REGISTER''
                 ORDER  BY 1,2'::text, ' VALUES (''28''),(''29'')'::text) 
                 ct(feature_id character varying, ctrlregister_param_1 text, ctrlregister_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.node_type::text = 'CONTROL-REGISTER'::text;
+                WHERE v_node.nodetype_id::text = 'CONTROL-REGISTER'::text;
 
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_expansiontank;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_expansiontank AS 
+CREATE VIEW SCHEMA_NAME.ve_node_expansiontank AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1829,12 +1846,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_expansiontank AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_filter;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_filter AS 
+CREATE VIEW SCHEMA_NAME.ve_node_filter AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1892,12 +1909,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_filter AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_flexunion;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flexunion AS 
+CREATE VIEW SCHEMA_NAME.ve_node_flexunion AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -1955,12 +1972,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flexunion AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_hydrant;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_hydrant AS 
+CREATE VIEW SCHEMA_NAME.ve_node_hydrant AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2024,16 +2041,16 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_hydrant AS
                     FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''HYDRANT''
                     ORDER  BY 1,2'::text, ' VALUES (''35''),(''36'')'::text) 
                     ct(feature_id character varying, hydrant_param_1 text, hydrant_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                    WHERE v_node.node_type::text = 'HYDRANT'::text;
+                    WHERE v_node.nodetype_id::text = 'HYDRANT'::text;
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_x;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_x AS 
+CREATE VIEW SCHEMA_NAME.ve_node_x AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2090,12 +2107,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_x AS
      WHERE nodetype_id='X';
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_adaptation;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_adaptation AS 
+CREATE VIEW SCHEMA_NAME.ve_node_adaptation AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2153,12 +2170,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_adaptation AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_endline;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_endline AS 
+CREATE VIEW SCHEMA_NAME.ve_node_endline AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2216,12 +2233,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_endline AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_t;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_t AS 
+CREATE VIEW SCHEMA_NAME.ve_node_t AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2279,12 +2296,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_t AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_curve;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_curve AS 
+CREATE VIEW SCHEMA_NAME.ve_node_curve AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2342,12 +2359,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_curve AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_junction;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_junction AS 
+CREATE VIEW SCHEMA_NAME.ve_node_junction AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2405,12 +2422,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_junction AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_manhole;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_manhole AS 
+CREATE VIEW SCHEMA_NAME.ve_node_manhole AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2469,12 +2486,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_manhole AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_flowmeter;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flowmeter AS 
+CREATE VIEW SCHEMA_NAME.ve_node_flowmeter AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2532,12 +2549,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_flowmeter AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_pressuremeter;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pressuremeter AS 
+CREATE VIEW SCHEMA_NAME.ve_node_pressuremeter AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2595,12 +2612,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pressuremeter AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_netelement;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netelement AS 
+CREATE VIEW SCHEMA_NAME.ve_node_netelement AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2659,12 +2676,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netelement AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_netsamplepoint;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netsamplepoint AS 
+CREATE VIEW SCHEMA_NAME.ve_node_netsamplepoint AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2723,12 +2740,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_netsamplepoint AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_waterconnection;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_waterconnection AS 
+CREATE VIEW SCHEMA_NAME.ve_node_waterconnection AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2789,12 +2806,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_waterconnection AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_pump;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pump AS 
+CREATE VIEW SCHEMA_NAME.ve_node_pump AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2860,12 +2877,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_pump AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_reduction;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_reduction AS 
+CREATE VIEW SCHEMA_NAME.ve_node_reduction AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2925,12 +2942,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_reduction AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_source;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_source AS 
+CREATE VIEW SCHEMA_NAME.ve_node_source AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -2989,12 +3006,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_source AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_tank;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_tank AS 
+CREATE VIEW SCHEMA_NAME.ve_node_tank AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -3061,17 +3078,17 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_tank AS
                 FROM SCHEMA_NAME.man_addfields_value JOIN SCHEMA_NAME.man_addfields_parameter on man_addfields_parameter.id=parameter_id where cat_feature_id=''TANK''
                 ORDER  BY 1,2'::text, ' VALUES (''5''),(''6'')'::text) 
                 ct(feature_id character varying, tank_param_1 text, tank_param_2 text)) a ON a.feature_id::text = v_node.node_id::text
-                WHERE v_node.node_type::text = 'TANK'::text;
+                WHERE v_node.nodetype_id::text = 'TANK'::text;
 
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_waterwell;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_waterwell AS 
+CREATE VIEW SCHEMA_NAME.ve_node_waterwell AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -3130,12 +3147,12 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_waterwell AS
 
 
 DROP VIEW IF EXISTS SCHEMA_NAME.ve_node_wtp;
-CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_wtp AS 
+CREATE VIEW SCHEMA_NAME.ve_node_wtp AS 
  SELECT v_node.node_id,
     v_node.code,
     v_node.elevation,
     v_node.depth,
-    v_node.node_type,
+    v_node.nodetype_id,
     v_node.nodecat_id,
     v_node.cat_matcat_id,
     v_node.cat_pnom,
@@ -3195,7 +3212,7 @@ CREATE OR REPLACE VIEW SCHEMA_NAME.ve_node_wtp AS
 
 --inp views
 DROP VIEW IF EXISTS ve_inp_demand;
-CREATE OR REPLACE VIEW ve_inp_demand AS 
+CREATE VIEW ve_inp_demand AS 
  SELECT inp_demand.id,
     node.node_id,
     inp_demand.demand,
@@ -3212,7 +3229,7 @@ CREATE OR REPLACE VIEW ve_inp_demand AS
 
 
 DROP VIEW IF EXISTS ve_inp_junction;
-CREATE OR REPLACE VIEW ve_inp_junction AS 
+CREATE VIEW ve_inp_junction AS 
  SELECT node.node_id,
     node.elevation,
     node.depth,
@@ -3232,7 +3249,7 @@ CREATE OR REPLACE VIEW ve_inp_junction AS
 
 
 DROP VIEW IF EXISTS ve_inp_pipe;
-CREATE OR REPLACE VIEW ve_inp_pipe AS 
+CREATE VIEW ve_inp_pipe AS 
  SELECT arc.arc_id,
     arc.arccat_id,
     arc.sector_id,
@@ -3254,7 +3271,7 @@ CREATE OR REPLACE VIEW ve_inp_pipe AS
 
 
 DROP VIEW IF EXISTS ve_inp_pump;
-CREATE OR REPLACE VIEW ve_inp_pump AS 
+CREATE VIEW ve_inp_pump AS 
  SELECT node.node_id,
     node.elevation,
     node.depth,
@@ -3279,7 +3296,7 @@ CREATE OR REPLACE VIEW ve_inp_pump AS
 
 
 DROP VIEW IF EXISTS ve_inp_reservoir;
-CREATE OR REPLACE VIEW ve_inp_reservoir AS 
+CREATE VIEW ve_inp_reservoir AS 
  SELECT node.node_id,
     node.elevation,
     node.depth,
@@ -3298,7 +3315,7 @@ CREATE OR REPLACE VIEW ve_inp_reservoir AS
 
 
 DROP VIEW IF EXISTS ve_inp_shortpipe;
-CREATE OR REPLACE VIEW ve_inp_shortpipe AS 
+CREATE VIEW ve_inp_shortpipe AS 
  SELECT node.node_id,
     node.elevation,
     node.depth,
@@ -3319,7 +3336,7 @@ CREATE OR REPLACE VIEW ve_inp_shortpipe AS
 
 
 DROP VIEW IF EXISTS ve_inp_tank;
-CREATE OR REPLACE VIEW ve_inp_tank AS 
+CREATE VIEW ve_inp_tank AS 
  SELECT node.node_id,
     node.elevation,
     node.depth,
@@ -3343,7 +3360,7 @@ CREATE OR REPLACE VIEW ve_inp_tank AS
 
 
 DROP VIEW IF EXISTS ve_inp_valve;
-CREATE OR REPLACE VIEW ve_inp_valve AS 
+CREATE VIEW ve_inp_valve AS 
  SELECT node.node_id,
     node.elevation,
     node.depth,
@@ -3371,7 +3388,7 @@ CREATE OR REPLACE VIEW ve_inp_valve AS
 
 --mincut
 DROP VIEW IF EXISTS ve_ui_mincut_result_cat;
-CREATE OR REPLACE VIEW ve_ui_mincut_result_cat AS 
+CREATE VIEW ve_ui_mincut_result_cat AS 
  SELECT anl_mincut_result_cat.id,
     anl_mincut_result_cat.work_order,
     anl_mincut_cat_state.name AS state,
@@ -3410,8 +3427,8 @@ CREATE OR REPLACE VIEW ve_ui_mincut_result_cat AS
 
 
 --old views with new fields
-DROP VIEW IF EXISTS ws_sample.v_anl_connec;
-CREATE OR REPLACE VIEW ws_sample.v_anl_connec AS 
+DROP VIEW IF EXISTS v_anl_connec;
+CREATE VIEW v_anl_connec AS 
  SELECT anl_connec.id,
     anl_connec.connec_id,
     anl_connec.connecat_id,
@@ -3422,15 +3439,15 @@ CREATE OR REPLACE VIEW ws_sample.v_anl_connec AS
     sys_fprocess_cat.fprocess_i18n AS fprocess,
     exploitation.name AS expl_name,
     anl_connec.the_geom
-   FROM ws_sample.selector_expl,
-    ws_sample.anl_connec
-     JOIN ws_sample.exploitation ON anl_connec.expl_id = exploitation.expl_id
-     JOIN ws_sample.sys_fprocess_cat ON anl_connec.fprocesscat_id = sys_fprocess_cat.id
+   FROM selector_expl,
+    anl_connec
+     JOIN exploitation ON anl_connec.expl_id = exploitation.expl_id
+     JOIN sys_fprocess_cat ON anl_connec.fprocesscat_id = sys_fprocess_cat.id
   WHERE anl_connec.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::text AND anl_connec.cur_user::name = "current_user"();
 
 
-DROP VIEW IF EXISTS ws_sample.v_edit_connec;
-CREATE OR REPLACE VIEW ws_sample.v_edit_connec AS 
+DROP VIEW IF EXISTS v_edit_connec;
+CREATE VIEW v_edit_connec AS 
  SELECT connec.connec_id,
     connec.code,
     connec.elevation,
@@ -3488,18 +3505,18 @@ CREATE OR REPLACE VIEW ws_sample.v_edit_connec AS
     dma.macrodma_id,
     connec.expl_id,
     connec.num_value
-   FROM ws_sample.connec
-     JOIN ws_sample.cat_connec ON connec.connecat_id::text = cat_connec.id::text
-     JOIN ws_sample.connec_type ON connec_type.id::text = cat_connec.connectype_id::text
-     JOIN ws_sample.v_state_connec ON v_state_connec.connec_id::text = connec.connec_id::text
-     LEFT JOIN ws_sample.v_rtc_hydrometer_x_connec ON connec.connec_id::text = v_rtc_hydrometer_x_connec.connec_id::text
-     LEFT JOIN ws_sample.ext_streetaxis ON connec.streetaxis_id::text = ext_streetaxis.id::text
-     LEFT JOIN ws_sample.dma ON connec.dma_id = dma.dma_id
-     LEFT JOIN ws_sample.sector ON connec.sector_id = sector.sector_id;
+   FROM connec
+     JOIN cat_connec ON connec.connecat_id::text = cat_connec.id::text
+     JOIN connec_type ON connec_type.id::text = cat_connec.connectype_id::text
+     JOIN v_state_connec ON v_state_connec.connec_id::text = connec.connec_id::text
+     LEFT JOIN v_rtc_hydrometer_x_connec ON connec.connec_id::text = v_rtc_hydrometer_x_connec.connec_id::text
+     LEFT JOIN ext_streetaxis ON connec.streetaxis_id::text = ext_streetaxis.id::text
+     LEFT JOIN dma ON connec.dma_id = dma.dma_id
+     LEFT JOIN sector ON connec.sector_id = sector.sector_id;
 
 
-DROP VIEW IF EXISTS ws_sample.v_rtc_hydrometer;
-CREATE OR REPLACE VIEW ws_sample.v_rtc_hydrometer AS 
+DROP VIEW IF EXISTS v_rtc_hydrometer;
+CREATE VIEW v_rtc_hydrometer AS 
  SELECT rtc_hydrometer.hydrometer_id,
     rtc_hydrometer_x_connec.connec_id,
     connec.customer_code AS connec_customer_code,
@@ -3522,16 +3539,16 @@ CREATE OR REPLACE VIEW ws_sample.v_rtc_hydrometer AS
     ext_cat_hydrometer.dnom,
         CASE
             WHEN (( SELECT config_param_system.value
-               FROM ws_sample.config_param_system
+               FROM config_param_system
               WHERE config_param_system.parameter::text = 'hydrometer_link_absolute_path'::text)) IS NULL THEN rtc_hydrometer.link
             ELSE concat(( SELECT config_param_system.value
-               FROM ws_sample.config_param_system
+               FROM config_param_system
               WHERE config_param_system.parameter::text = 'hydrometer_link_absolute_path'::text), rtc_hydrometer.link)
         END AS hydrometer_link
-   FROM ws_sample.rtc_hydrometer
-     LEFT JOIN ws_sample.ext_rtc_hydrometer ON ext_rtc_hydrometer.hydrometer_id::text = rtc_hydrometer.hydrometer_id::text
-     LEFT JOIN ws_sample.ext_cat_hydrometer ON ext_cat_hydrometer.id::text = ext_rtc_hydrometer.cat_hydrometer_id
-     JOIN ws_sample.rtc_hydrometer_x_connec ON rtc_hydrometer_x_connec.hydrometer_id::text = rtc_hydrometer.hydrometer_id::text
-     JOIN ws_sample.connec ON rtc_hydrometer_x_connec.connec_id::text = connec.connec_id::text
-     JOIN ws_sample.exploitation ON exploitation.expl_id = connec.expl_id
-     JOIN ws_sample.value_state ON value_state.id = connec.state;
+   FROM rtc_hydrometer
+     LEFT JOIN ext_rtc_hydrometer ON ext_rtc_hydrometer.hydrometer_id::text = rtc_hydrometer.hydrometer_id::text
+     LEFT JOIN ext_cat_hydrometer ON ext_cat_hydrometer.id::text = ext_rtc_hydrometer.cat_hydrometer_id
+     JOIN rtc_hydrometer_x_connec ON rtc_hydrometer_x_connec.hydrometer_id::text = rtc_hydrometer.hydrometer_id::text
+     JOIN connec ON rtc_hydrometer_x_connec.connec_id::text = connec.connec_id::text
+     JOIN exploitation ON exploitation.expl_id = connec.expl_id
+     JOIN value_state ON value_state.id = connec.state;

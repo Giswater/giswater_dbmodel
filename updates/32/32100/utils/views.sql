@@ -11,7 +11,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 -----------------------
 -- remove all the views that are refactored in the v3.2
 -----------------------
-
+/*
 DROP VIEW IF EXISTS v_ui_doc_x_connec;
 DROP VIEW IF EXISTS v_ui_doc_x_arc;
 DROP VIEW IF EXISTS v_ui_doc_x_node;
@@ -73,25 +73,13 @@ DROP VIEW IF EXISTS vu_connec;
 DROP VIEW IF EXISTS vu_node;
 
 DROP VIEW IF EXISTS v_edit_element;
-
+*/
 
 
 
 -----------------------
 -- create views
 -----------------------
---parent views
-DROP VIEW IF EXISTS ve_arc_parent;
-CREATE OR REPLACE VIEW ve_arc_parent AS 
- SELECT v_edit_arc.arc_id AS nid,
-    v_edit_arc.cat_arctype_id AS custom_type
-   FROM v_edit_arc;
-
-DROP VIEW IF EXISTS ve_connec_parent;
-CREATE OR REPLACE VIEW ve_connec_parent AS 
- SELECT v_edit_connec.connec_id AS nid,
-    v_edit_connec.connectype_id AS custom_type
-   FROM v_edit_connec;
 
 --cad view
 DROP VIEW IF EXISTS ve_cad_auxcircle;
@@ -485,7 +473,7 @@ CREATE OR REPLACE VIEW ve_ui_element_x_node AS
 
 
 --event
-DROP VIEW IF EXISIS ve_ui_event;
+DROP VIEW IF EXISTS ve_ui_event;
 CREATE OR REPLACE VIEW ve_ui_event AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -525,7 +513,7 @@ CREATE OR REPLACE VIEW ve_ui_event AS
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit.id;
 
-DROP VIEW IF EXISIS ve_ui_event_x_arc;
+DROP VIEW IF EXISTS ve_ui_event_x_arc;
  CREATE OR REPLACE VIEW ve_ui_event_x_arc AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -567,7 +555,7 @@ DROP VIEW IF EXISIS ve_ui_event_x_arc;
   ORDER BY om_visit_x_arc.arc_id;
 
 
-DROP VIEW IF EXISIS ve_ui_event_x_connec;
+DROP VIEW IF EXISTS ve_ui_event_x_connec;
 CREATE OR REPLACE VIEW ve_ui_event_x_connec AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -609,7 +597,7 @@ CREATE OR REPLACE VIEW ve_ui_event_x_connec AS
   ORDER BY om_visit_x_connec.connec_id;
 
 
-DROP VIEW IF EXISIS ve_ui_event_x_node;
+DROP VIEW IF EXISTS ve_ui_event_x_node;
 CREATE OR REPLACE VIEW ve_ui_event_x_node AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -671,47 +659,47 @@ CREATE OR REPLACE VIEW ve_ui_visit AS
 
 
 CREATE OR REPLACE VIEW ve_ui_visit_x_arc AS 
- SELECT DISTINCT ON (v_ui_om_event_x_arc.visit_id) v_ui_om_event_x_arc.visit_id,
-    v_ui_om_event_x_arc.code,
+ SELECT DISTINCT ON (ve_ui_event_x_arc.visit_id) ve_ui_event_x_arc.visit_id,
+    ve_ui_event_x_arc.code,
     om_visit_cat.name AS visitcat_name,
-    v_ui_om_event_x_arc.arc_id,
-    date_trunc('second'::text, v_ui_om_event_x_arc.visit_start) AS visit_start,
-    date_trunc('second'::text, v_ui_om_event_x_arc.visit_end) AS visit_end,
-    v_ui_om_event_x_arc.user_name,
-    v_ui_om_event_x_arc.is_done,
-    v_ui_om_event_x_arc.feature_type,
-    v_ui_om_event_x_arc.form_type
-   FROM v_ui_om_event_x_arc
-     JOIN om_visit_cat ON om_visit_cat.id = v_ui_om_event_x_arc.visitcat_id;
+    ve_ui_event_x_arc.arc_id,
+    date_trunc('second'::text, ve_ui_event_x_arc.visit_start) AS visit_start,
+    date_trunc('second'::text, ve_ui_event_x_arc.visit_end) AS visit_end,
+    ve_ui_event_x_arc.user_name,
+    ve_ui_event_x_arc.is_done,
+    ve_ui_event_x_arc.feature_type,
+    ve_ui_event_x_arc.form_type
+   FROM ve_ui_event_x_arc
+     JOIN om_visit_cat ON om_visit_cat.id = ve_ui_event_x_arc.visitcat_id;
 
 
 CREATE OR REPLACE VIEW ve_ui_visit_x_connec AS 
- SELECT DISTINCT ON (v_ui_om_event_x_connec.visit_id) v_ui_om_event_x_connec.visit_id,
-    v_ui_om_event_x_connec.code,
+ SELECT DISTINCT ON (ve_ui_event_x_connec.visit_id) ve_ui_event_x_connec.visit_id,
+    ve_ui_event_x_connec.code,
     om_visit_cat.name AS visitcat_name,
-    v_ui_om_event_x_connec.connec_id,
-    date_trunc('second'::text, v_ui_om_event_x_connec.visit_start) AS visit_start,
-    date_trunc('second'::text, v_ui_om_event_x_connec.visit_end) AS visit_end,
-    v_ui_om_event_x_connec.user_name,
-    v_ui_om_event_x_connec.is_done,
-    v_ui_om_event_x_connec.feature_type,
-    v_ui_om_event_x_connec.form_type
-   FROM v_ui_om_event_x_connec
-     JOIN om_visit_cat ON om_visit_cat.id = v_ui_om_event_x_connec.visitcat_id;
+    ve_ui_event_x_connec.connec_id,
+    date_trunc('second'::text, ve_ui_event_x_connec.visit_start) AS visit_start,
+    date_trunc('second'::text, ve_ui_event_x_connec.visit_end) AS visit_end,
+    ve_ui_event_x_connec.user_name,
+    ve_ui_event_x_connec.is_done,
+    ve_ui_event_x_connec.feature_type,
+    ve_ui_event_x_connec.form_type
+   FROM ve_ui_event_x_connec
+     JOIN om_visit_cat ON om_visit_cat.id = ve_ui_event_x_connec.visitcat_id;
 
 CREATE OR REPLACE VIEW ve_ui_visit_x_node AS 
- SELECT DISTINCT ON (v_ui_om_event_x_node.visit_id) v_ui_om_event_x_node.visit_id,
-    v_ui_om_event_x_node.code,
+ SELECT DISTINCT ON (ve_ui_event_x_node.visit_id) ve_ui_event_x_node.visit_id,
+    ve_ui_event_x_node.code,
     om_visit_cat.name AS visitcat_name,
-    v_ui_om_event_x_node.node_id,
-    date_trunc('second'::text, v_ui_om_event_x_node.visit_start) AS visit_start,
-    date_trunc('second'::text, v_ui_om_event_x_node.visit_end) AS visit_end,
-    v_ui_om_event_x_node.user_name,
-    v_ui_om_event_x_node.is_done,
-    v_ui_om_event_x_node.feature_type,
-    v_ui_om_event_x_node.form_type
-   FROM v_ui_om_event_x_node
-     JOIN om_visit_cat ON om_visit_cat.id = v_ui_om_event_x_node.visitcat_id;
+    ve_ui_event_x_node.node_id,
+    date_trunc('second'::text, ve_ui_event_x_node.visit_start) AS visit_start,
+    date_trunc('second'::text, ve_ui_event_x_node.visit_end) AS visit_end,
+    ve_ui_event_x_node.user_name,
+    ve_ui_event_x_node.is_done,
+    ve_ui_event_x_node.feature_type,
+    ve_ui_event_x_node.form_type
+   FROM ve_ui_event_x_node
+     JOIN om_visit_cat ON om_visit_cat.id = ve_ui_event_x_node.visitcat_id;
 
 --multievent
 DROP VIEW IF EXISTS ve_visit_multievent_x_arc;
@@ -819,7 +807,7 @@ CREATE OR REPLACE VIEW ve_visit_multievent_x_node AS
   WHERE om_visit_class.ismultievent = true;
 
 --singlevent
-DROP VIEW IF EXIST ve_visit_singlevent_x_arc;
+DROP VIEW IF EXISTS ve_visit_singlevent_x_arc;
 CREATE OR REPLACE VIEW ve_visit_singlevent_x_arc AS 
  SELECT om_visit_x_arc.id,
     om_visit_x_arc.visit_id,
@@ -944,8 +932,8 @@ CREATE OR REPLACE VIEW ve_visit_singlevent_x_node AS
 
 
 --node connections
-DROP VIEW IF EXISTS ws_sample.v_ui_node_x_connection_downstream;
-CREATE OR REPLACE VIEW ws_sample.v_ui_node_x_connection_downstream AS 
+DROP VIEW IF EXISTS v_ui_node_x_connection_downstream;
+CREATE OR REPLACE VIEW v_ui_node_x_connection_downstream AS 
  SELECT row_number() OVER (ORDER BY v_edit_arc.node_2) AS rid,
     v_edit_arc.node_2 AS node_id,
     v_edit_arc.arc_id AS feature_id,
@@ -958,13 +946,13 @@ CREATE OR REPLACE VIEW ws_sample.v_ui_node_x_connection_downstream AS
     've_arc'::text AS sys_table_id,
     'arc_id'::text AS sys_id_name,
     v_edit_arc.arc_id AS sys_id
-   FROM ws_sample.v_edit_arc
-     JOIN ws_sample.node ON v_edit_arc.node_1::text = node.node_id::text
-     JOIN ws_sample.arc_type ON arc_type.id::text = v_edit_arc.cat_arctype_id::text;
+   FROM v_edit_arc
+     JOIN node ON v_edit_arc.node_1::text = node.node_id::text
+     JOIN arc_type ON arc_type.id::text = v_edit_arc.cat_arctype_id::text;
 
 
-DROP VIEW IF EXISTS ws_sample.v_ui_node_x_connection_upstream;
-CREATE OR REPLACE VIEW ws_sample.v_ui_node_x_connection_upstream AS 
+DROP VIEW IF EXISTS v_ui_node_x_connection_upstream;
+CREATE OR REPLACE VIEW v_ui_node_x_connection_upstream AS 
  SELECT row_number() OVER (ORDER BY v_edit_arc.node_2) AS rid,
     v_edit_arc.node_2 AS node_id,
     v_edit_arc.arc_id AS feature_id,
@@ -977,13 +965,13 @@ CREATE OR REPLACE VIEW ws_sample.v_ui_node_x_connection_upstream AS
     've_arc'::text AS sys_table_id,
     'arc_id'::text AS sys_id_name,
     v_edit_arc.arc_id AS sys_id
-   FROM ws_sample.v_edit_arc
-     JOIN ws_sample.node ON v_edit_arc.node_1::text = node.node_id::text
-     JOIN ws_sample.arc_type ON arc_type.id::text = v_edit_arc.cat_arctype_id::text;
+   FROM v_edit_arc
+     JOIN node ON v_edit_arc.node_1::text = node.node_id::text
+     JOIN arc_type ON arc_type.id::text = v_edit_arc.cat_arctype_id::text;
 
 
-DROP VIEW IF EXISTS ws_sample.v_ui_node_x_relations;
-CREATE OR REPLACE VIEW ws_sample.v_ui_node_x_relations AS 
+DROP VIEW IF EXISTS v_ui_node_x_relations;
+CREATE OR REPLACE VIEW v_ui_node_x_relations AS 
  SELECT row_number() OVER (ORDER BY v_edit_node.node_id) AS rid,
     v_edit_node.parent_id,
     v_edit_node.nodetype_id,
@@ -993,16 +981,16 @@ CREATE OR REPLACE VIEW ws_sample.v_ui_node_x_relations AS
     've_node'::text AS sys_table_id,
     'node_id'::text AS sys_id_name,
     v_edit_node.node_id AS sys_id
-   FROM ws_sample.v_edit_node
+   FROM v_edit_node
   WHERE v_edit_node.parent_id IS NOT NULL AND (v_edit_node.parent_id::text IN ( SELECT v_edit_node_1.node_id
-           FROM ws_sample.v_edit_node v_edit_node_1));
+           FROM v_edit_node v_edit_node_1));
 
 
 
 
 --plan
-DROP VIEW IF EXISTS ws_sample.v_ui_plan_arc_cost;
-CREATE OR REPLACE VIEW ws_sample.v_ui_plan_arc_cost AS 
+DROP VIEW IF EXISTS v_ui_plan_arc_cost;
+CREATE OR REPLACE VIEW v_ui_plan_arc_cost AS 
  SELECT arc.arc_id,
     1 AS orderby,
     'element'::text AS identif,
@@ -1013,10 +1001,10 @@ CREATE OR REPLACE VIEW ws_sample.v_ui_plan_arc_cost AS
     v_price_compost.price AS cost,
     1 AS measurement,
     1::numeric * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_arc ON cat_arc.id::text = arc.arccat_id::text
-     JOIN ws_sample.v_price_compost ON cat_arc.cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
+     JOIN v_price_compost ON cat_arc.cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     2 AS orderby,
@@ -1028,10 +1016,10 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m2mlbottom AS measurement,
     v_plan_arc.m2mlbottom * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_arc ON cat_arc.id::text = arc.arccat_id::text
-     JOIN ws_sample.v_price_compost ON cat_arc.m2bottom_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
+     JOIN v_price_compost ON cat_arc.m2bottom_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     3 AS orderby,
@@ -1043,10 +1031,10 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m3mlprotec AS measurement,
     v_plan_arc.m3mlprotec * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_arc ON cat_arc.id::text = arc.arccat_id::text
-     JOIN ws_sample.v_price_compost ON cat_arc.m3protec_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
+     JOIN v_price_compost ON cat_arc.m3protec_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     4 AS orderby,
@@ -1058,10 +1046,10 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m3mlexc AS measurement,
     v_plan_arc.m3mlexc * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN ws_sample.v_price_compost ON cat_soil.m3exc_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m3exc_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     5 AS orderby,
@@ -1073,10 +1061,10 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m3mlfill AS measurement,
     v_plan_arc.m3mlfill * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN ws_sample.v_price_compost ON cat_soil.m3fill_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m3fill_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     6 AS orderby,
@@ -1088,10 +1076,10 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m3mlexcess AS measurement,
     v_plan_arc.m3mlexcess * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN ws_sample.v_price_compost ON cat_soil.m3excess_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m3excess_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     7 AS orderby,
@@ -1103,10 +1091,10 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m2mltrenchl AS measurement,
     v_plan_arc.m2mltrenchl * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN ws_sample.v_price_compost ON cat_soil.m2trenchl_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m2trenchl_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT arc.arc_id,
     8 AS orderby,
@@ -1118,11 +1106,11 @@ UNION
     v_price_compost.price AS cost,
     v_plan_arc.m2mlpav * plan_arc_x_pavement.percent AS measurement,
     v_plan_arc.m2mlpav * plan_arc_x_pavement.percent * v_price_compost.price AS total_cost
-   FROM ws_sample.arc
-     JOIN ws_sample.plan_arc_x_pavement ON plan_arc_x_pavement.arc_id::text = arc.arc_id::text
-     JOIN ws_sample.cat_pavement ON cat_pavement.id::text = plan_arc_x_pavement.pavcat_id::text
-     JOIN ws_sample.v_price_compost ON cat_pavement.m2_cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+   FROM arc
+     JOIN plan_arc_x_pavement ON plan_arc_x_pavement.arc_id::text = arc.arc_id::text
+     JOIN cat_pavement ON cat_pavement.id::text = plan_arc_x_pavement.pavcat_id::text
+     JOIN v_price_compost ON cat_pavement.m2_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
 UNION
  SELECT connec.arc_id,
     9 AS orderby,
@@ -1134,14 +1122,14 @@ UNION
     NULL::numeric AS cost,
     count(connec.connec_id) AS measurement,
     sum(connec.connec_length * (v_price_x_catconnec.cost_mlconnec + v_price_x_catconnec.cost_m3trench * connec.depth * 0.333) + v_price_x_catconnec.cost_ut)::numeric(12,2) AS total_cost
-   FROM ws_sample.connec
-     JOIN ws_sample.v_price_x_catconnec ON v_price_x_catconnec.id::text = connec.connecat_id::text
+   FROM connec
+     JOIN v_price_x_catconnec ON v_price_x_catconnec.id::text = connec.connecat_id::text
   GROUP BY connec.arc_id
   ORDER BY 1, 2;
 
 
-DROP VIEW IF EXISTS ws_sample.v_ui_plan_node_cost;
-CREATE OR REPLACE VIEW ws_sample.v_ui_plan_node_cost AS 
+DROP VIEW IF EXISTS v_ui_plan_node_cost;
+CREATE OR REPLACE VIEW v_ui_plan_node_cost AS 
  SELECT node.node_id,
     1 AS orderby,
     'element'::text AS identif,
@@ -1152,10 +1140,10 @@ CREATE OR REPLACE VIEW ws_sample.v_ui_plan_node_cost AS
     v_price_compost.price AS cost,
     1 AS measurement,
     1::numeric * v_price_compost.price AS total_cost
-   FROM ws_sample.node
-     JOIN ws_sample.cat_node ON cat_node.id::text = node.nodecat_id::text
-     JOIN ws_sample.v_price_compost ON cat_node.cost::text = v_price_compost.id::text
-     JOIN ws_sample.v_plan_node ON node.node_id::text = v_plan_node.node_id::text;
+   FROM node
+     JOIN cat_node ON cat_node.id::text = node.nodecat_id::text
+     JOIN v_price_compost ON cat_node.cost::text = v_price_compost.id::text
+     JOIN v_plan_node ON node.node_id::text = v_plan_node.node_id::text;
 
 
 
