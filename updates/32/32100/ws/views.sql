@@ -48,9 +48,8 @@ DROP VIEW IF EXISTS v_edit_man_wtp;
 */
 
 -----------------------
--- create views
+-- create views ve
 -----------------------
---v_web_parent_* or ve_parent_* or both
 
 DROP VIEW IF EXISTS  ve_arc;
 CREATE VIEW ve_arc AS 
@@ -242,25 +241,11 @@ CREATE VIEW ve_node AS
    FROM v_node
      LEFT JOIN sector ON v_node.sector_id = sector.sector_id;
 
---parent views
-DROP VIEW IF EXISTS ve_arc_parent;
-CREATE OR REPLACE VIEW ve_arc_parent AS 
- SELECT v_edit_arc.arc_id AS nid,
-    v_edit_arc.cat_arctype_id AS custom_type
-   FROM v_edit_arc;
 
-DROP VIEW IF EXISTS ve_connec_parent;
-CREATE OR REPLACE VIEW ve_connec_parent AS 
- SELECT v_edit_connec.connec_id AS nid,
-    v_edit_connec.connectype_id AS custom_type
-   FROM v_edit_connec;
 
-CREATE OR REPLACE VIEW ve_node_parent AS 
- SELECT v_edit_node.node_id AS nid,
-    v_edit_node.nodetype_id AS custom_type
-   FROM v_edit_node;
-
---child views
+-----------------------
+-- create child views
+-----------------------
 DROP VIEW IF EXISTS  ve_arc_varc;
 CREATE VIEW ve_arc_varc AS 
  SELECT v_arc.arc_id,
@@ -3195,22 +3180,226 @@ CREATE VIEW SCHEMA_NAME.ve_node_wtp AS
     v_node.verified,
     v_node.the_geom,
     v_node.undelete,
-    v_node.label_x,
+    v_node.label_x, 
     v_node.label_y,
     v_node.label_rotation,
     v_node.publish,
     v_node.inventory,
     v_node.macrodma_id,
     v_node.expl_id,
-    v_node.hemisphere,
-    v_node.num_value,
-    man_wtp.name
-   FROM SCHEMA_NAME.v_node
-     JOIN SCHEMA_NAME.man_wtp ON v_node.node_id::text = man_wtp.node_id::text;
+    
+
+-----------------------
+-- polygon views
+-----------------------
+
+DROP VIEW IF EXISTS ve_pol_tank CASCADE;
+CREATE OR REPLACE VIEW ve_pol_tank AS 
+SELECT 
+man_tank.pol_id,
+v_node.node_id,
+polygon.the_geom
+FROM v_node
+    JOIN man_tank ON man_tank.node_id = v_node.node_id
+    JOIN polygon ON polygon.pol_id=man_tank.pol_id;
+    
+DROP VIEW IF EXISTS ve_pol_register CASCADE;
+CREATE OR REPLACE VIEW ve_pol_register AS 
+SELECT 
+man_register.pol_id,
+v_node.node_id,
+polygon.the_geom
+FROM v_node
+    JOIN man_register ON v_node.node_id = man_register.node_id
+    JOIN polygon ON polygon.pol_id = man_register.pol_id;
 
 
+DROP VIEW IF EXISTS ve_pol_fountain CASCADE;
+CREATE OR REPLACE VIEW ve_pol_fountain AS 
+SELECT 
+man_fountain.pol_id,
+connec.connec_id,
+polygon.the_geom
+FROM connec
+    JOIN man_fountain ON man_fountain.connec_id = connec.connec_id
+    JOIN polygon ON polygon.pol_id=man_fountain.pol_id;
 
---inp views
+-----------------------
+-- plan edit views
+-----------------------
+
+DROP VIEW IF EXISTS v_ui_plan_arc_cost;
+CREATE OR REPLACE VIEW v_ui_plan_arc_cost AS 
+ SELECT arc.arc_id,
+    1 AS orderby,
+    'element'::text AS identif,
+    cat_arc.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    1 AS measurement,
+    1::numeric * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
+     JOIN v_price_compost ON cat_arc.cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    2 AS orderby,
+    'm2bottom'::text AS identif,
+    cat_arc.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m2mlbottom AS measurement,
+    v_plan_arc.m2mlbottom * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
+     JOIN v_price_compost ON cat_arc.m2bottom_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    3 AS orderby,
+    'm3protec'::text AS identif,
+    cat_arc.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m3mlprotec AS measurement,
+    v_plan_arc.m3mlprotec * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
+     JOIN v_price_compost ON cat_arc.m3protec_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    4 AS orderby,
+    'm3exc'::text AS identif,
+    cat_soil.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m3mlexc AS measurement,
+    v_plan_arc.m3mlexc * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m3exc_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    5 AS orderby,
+    'm3fill'::text AS identif,
+    cat_soil.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m3mlfill AS measurement,
+    v_plan_arc.m3mlfill * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m3fill_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    6 AS orderby,
+    'm3excess'::text AS identif,
+    cat_soil.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m3mlexcess AS measurement,
+    v_plan_arc.m3mlexcess * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m3excess_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    7 AS orderby,
+    'm2trenchl'::text AS identif,
+    cat_soil.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m2mltrenchl AS measurement,
+    v_plan_arc.m2mltrenchl * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
+     JOIN v_price_compost ON cat_soil.m2trenchl_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT arc.arc_id,
+    8 AS orderby,
+    'pavement'::text AS identif,
+    cat_pavement.id AS catalog_id,
+    v_price_compost.id AS price_id,
+    v_price_compost.unit,
+    v_price_compost.descript,
+    v_price_compost.price AS cost,
+    v_plan_arc.m2mlpav * plan_arc_x_pavement.percent AS measurement,
+    v_plan_arc.m2mlpav * plan_arc_x_pavement.percent * v_price_compost.price AS total_cost
+   FROM arc
+     JOIN plan_arc_x_pavement ON plan_arc_x_pavement.arc_id::text = arc.arc_id::text
+     JOIN cat_pavement ON cat_pavement.id::text = plan_arc_x_pavement.pavcat_id::text
+     JOIN v_price_compost ON cat_pavement.m2_cost::text = v_price_compost.id::text
+     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
+UNION
+ SELECT connec.arc_id,
+    9 AS orderby,
+    'connec'::text AS identif,
+    'Various catalog'::character varying AS catalog_id,
+    'Various prices'::character varying AS price_id,
+    'ut'::character varying AS unit,
+    'Sumatory of connecs cost related to arc. The cost is calculated in combination of parameters depth/length from connec table and catalog price from cat_connec table'::character varying AS descript,
+    NULL::numeric AS cost,
+    count(connec.connec_id) AS measurement,
+    sum(connec.connec_length * (v_price_x_catconnec.cost_mlconnec + v_price_x_catconnec.cost_m3trench * connec.depth * 0.333) + v_price_x_catconnec.cost_ut)::numeric(12,2) AS total_cost
+   FROM connec
+     JOIN v_price_x_catconnec ON v_price_x_catconnec.id::text = connec.connecat_id::text
+  GROUP BY connec.arc_id
+  ORDER BY 1, 2;
+
+-----------------------
+-- rpt edit views
+-----------------------
+DROP VIEW IF EXISTS ve_ui_rpt_result_cat;
+CREATE OR REPLACE VIEW ve_ui_rpt_result_cat AS 
+ SELECT rpt_cat_result.id,
+    rpt_cat_result.result_id,
+    rpt_cat_result.n_junction,
+    rpt_cat_result.n_reservoir,
+    rpt_cat_result.n_tank,
+    rpt_cat_result.n_pipe,
+    rpt_cat_result.n_pump,
+    rpt_cat_result.n_valve,
+    rpt_cat_result.head_form,
+    rpt_cat_result.hydra_time,
+    rpt_cat_result.hydra_acc,
+    rpt_cat_result.st_ch_freq,
+    rpt_cat_result.max_tr_ch,
+    rpt_cat_result.dam_li_thr,
+    rpt_cat_result.max_trials,
+    rpt_cat_result.q_analysis,
+    rpt_cat_result.spec_grav,
+    rpt_cat_result.r_kin_visc,
+    rpt_cat_result.r_che_diff,
+    rpt_cat_result.dem_multi,
+    rpt_cat_result.total_dura,
+    rpt_cat_result.exec_date,
+    rpt_cat_result.q_timestep,
+    rpt_cat_result.q_tolerance
+   FROM rpt_cat_result;
+
+-----------------------
+-- inp edit views
+-----------------------
 DROP VIEW IF EXISTS ve_inp_demand;
 CREATE VIEW ve_inp_demand AS 
  SELECT inp_demand.id,
@@ -3446,75 +3635,6 @@ CREATE VIEW v_anl_connec AS
   WHERE anl_connec.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::text AND anl_connec.cur_user::name = "current_user"();
 
 
-DROP VIEW IF EXISTS v_edit_connec;
-CREATE VIEW v_edit_connec AS 
- SELECT connec.connec_id,
-    connec.code,
-    connec.elevation,
-    connec.depth,
-    cat_connec.connectype_id,
-    connec_type.type AS sys_type,
-    connec.connecat_id,
-    connec.sector_id,
-    sector.macrosector_id,
-    connec.customer_code,
-    cat_connec.matcat_id AS cat_matcat_id,
-    cat_connec.pnom AS cat_pnom,
-    cat_connec.dnom AS cat_dnom,
-    connec.connec_length,
-    v_rtc_hydrometer_x_connec.n_hydrometer,
-    connec.state,
-    connec.state_type,
-    connec.annotation,
-    connec.observ,
-    connec.comment,
-    connec.dma_id,
-    connec.presszonecat_id,
-    connec.soilcat_id,
-    connec.function_type,
-    connec.category_type,
-    connec.fluid_type,
-    connec.location_type,
-    connec.workcat_id,
-    connec.workcat_id_end,
-    connec.buildercat_id,
-    connec.builtdate,
-    connec.enddate,
-    connec.ownercat_id,
-    connec.muni_id,
-    connec.postcode,
-    connec.streetaxis_id,
-    connec.postnumber,
-    connec.postcomplement,
-    connec.streetaxis2_id,
-    connec.postnumber2,
-    connec.postcomplement2,
-    connec.descript,
-    connec.arc_id,
-    cat_connec.svg,
-    connec.rotation,
-    concat(connec_type.link_path, connec.link) AS link,
-    connec.verified,
-    connec.the_geom,
-    connec.undelete,
-    connec.label_x,
-    connec.label_y,
-    connec.label_rotation,
-    connec.publish,
-    connec.inventory,
-    dma.macrodma_id,
-    connec.expl_id,
-    connec.num_value
-   FROM connec
-     JOIN cat_connec ON connec.connecat_id::text = cat_connec.id::text
-     JOIN connec_type ON connec_type.id::text = cat_connec.connectype_id::text
-     JOIN v_state_connec ON v_state_connec.connec_id::text = connec.connec_id::text
-     LEFT JOIN v_rtc_hydrometer_x_connec ON connec.connec_id::text = v_rtc_hydrometer_x_connec.connec_id::text
-     LEFT JOIN ext_streetaxis ON connec.streetaxis_id::text = ext_streetaxis.id::text
-     LEFT JOIN dma ON connec.dma_id = dma.dma_id
-     LEFT JOIN sector ON connec.sector_id = sector.sector_id;
-
-
 DROP VIEW IF EXISTS v_rtc_hydrometer;
 CREATE VIEW v_rtc_hydrometer AS 
  SELECT rtc_hydrometer.hydrometer_id,
@@ -3552,3 +3672,847 @@ CREATE VIEW v_rtc_hydrometer AS
      JOIN connec ON rtc_hydrometer_x_connec.connec_id::text = connec.connec_id::text
      JOIN exploitation ON exploitation.expl_id = connec.expl_id
      JOIN value_state ON value_state.id = connec.state;
+
+
+-----------------------
+-- create inp views
+-----------------------
+
+
+DROP VIEW IF EXISTS vi_title CASCADE;
+CREATE OR REPLACE VIEW vi_title AS 
+ SELECT inp_project_id.title,
+    inp_project_id.date
+   FROM inp_project_id
+  ORDER BY inp_project_id.title;
+
+
+DROP VIEW IF EXISTS vi_junctions CASCADE;
+CREATE OR REPLACE VIEW vi_junctions AS 
+ SELECT rpt_inp_node.node_id,
+    rpt_inp_node.elevation,
+    rpt_inp_node.demand,
+    inp_junction.pattern_id
+   FROM inp_selector_result,   rpt_inp_node
+   LEFT JOIN inp_junction ON inp_junction.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.epa_type::text = 'JUNCTION'::text AND rpt_inp_node.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+  ORDER BY rpt_inp_node.node_id;
+
+
+DROP VIEW IF EXISTS vi_reservoirs CASCADE;
+CREATE OR REPLACE VIEW vi_reservoirs AS 
+ SELECT inp_reservoir.node_id,
+    rpt_inp_node.elevation AS head,
+    inp_reservoir.pattern_id
+   FROM inp_selector_result, inp_reservoir
+   JOIN rpt_inp_node ON inp_reservoir.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_tanks CASCADE;
+CREATE OR REPLACE VIEW vi_tanks AS 
+ SELECT inp_tank.node_id,
+    rpt_inp_node.elevation,
+    inp_tank.initlevel,
+    inp_tank.minlevel,
+    inp_tank.maxlevel,
+    inp_tank.diameter,
+    inp_tank.minvol,
+    inp_tank.curve_id
+   FROM inp_selector_result, inp_tank
+   JOIN rpt_inp_node ON inp_tank.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_pipes CASCADE;
+CREATE OR REPLACE VIEW vi_pipes AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.length,
+    rpt_inp_arc.diameter,
+    rpt_inp_arc.roughness,
+    inp_pipe.minorloss,
+    inp_typevalue.idval as status
+   FROM inp_selector_result, rpt_inp_arc
+   JOIN inp_pipe ON rpt_inp_arc.arc_id::text = inp_pipe.arc_id::text
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_pipe.status
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text 
+  AND inp_typevalue.typevalue='inp_value_status_pipe'
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.length,
+    rpt_inp_arc.diameter,
+    rpt_inp_arc.roughness,
+    inp_shortpipe.minorloss,
+    inp_typevalue.idval as status
+   FROM inp_selector_result, rpt_inp_arc
+   JOIN inp_shortpipe ON rpt_inp_arc.arc_id::text = concat(inp_shortpipe.node_id, '_n2a')
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_shortpipe.status
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+  AND inp_typevalue.typevalue='inp_value_status_pipe';
+
+
+CREATE OR REPLACE VIEW vi_pumps AS 
+ SELECT concat(inp_pump.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    concat('POWER '::text || inp_pump.power::text) AS power,
+    concat('HEAD '::text || inp_pump.curve_id::text) AS curve_id,
+    concat('SPEED '::text || inp_pump.speed) AS speed,
+    concat('PATTERN '::text || inp_pump.pattern::text) AS pattern
+   FROM inp_selector_result,
+    inp_pump
+     JOIN rpt_inp_arc ON rpt_inp_arc.arc_id::text = concat(inp_pump.node_id, '_n2a')
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_valves CASCADE;
+CREATE OR REPLACE VIEW vi_valves AS 
+SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.diameter,
+    inp_valve.valv_type,
+    inp_valve.pressure::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result,rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE (inp_valve.valv_type::text = 'PRV'::text OR inp_valve.valv_type::text = 'PSV'::text OR inp_valve.valv_type::text = 'PBV'::text) 
+  AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.diameter,
+    inp_valve.valv_type,
+    inp_valve.flow::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE inp_valve.valv_type::text = 'FCV'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.diameter,
+    inp_valve.valv_type,
+    inp_valve.coef_loss::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE inp_valve.valv_type::text = 'TCV'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    cat_arc.dint AS diameter,
+    inp_valve.valv_type,
+    inp_valve.curve_id::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result, rpt_inp_arc
+    JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+    JOIN cat_arc ON rpt_inp_arc.arccat_id::text = cat_arc.id::text
+WHERE inp_valve.valv_type::text = 'GPV'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_tags CASCADE;
+CREATE OR REPLACE VIEW vi_tags AS 
+SELECT inp_tags.object,
+   inp_tags.node_id,
+   inp_tags.tag
+FROM inp_tags
+ORDER BY inp_tags.object;
+
+DROP VIEW IF EXISTS vi_demands CASCADE;
+CREATE OR REPLACE VIEW vi_demands AS 
+SELECT inp_demand.node_id,
+   inp_demand.demand,
+   inp_demand.pattern_id,
+   inp_demand.deman_type
+ FROM inp_selector_dscenario, inp_selector_result, inp_demand
+ JOIN rpt_inp_node ON inp_demand.node_id::text = rpt_inp_node.node_id::text
+WHERE inp_selector_dscenario.dscenario_id = inp_demand.dscenario_id AND inp_selector_dscenario.cur_user = "current_user"()::text 
+AND inp_selector_result.result_id::text = rpt_inp_node.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_status CASCADE;
+CREATE OR REPLACE VIEW vi_status AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.status
+   FROM inp_selector_result,  rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE rpt_inp_arc.status::text = 'OPEN'::text OR rpt_inp_arc.status::text = 'CLOSED'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    inp_pump.status
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_pump ON rpt_inp_arc.arc_id::text = concat(inp_pump.node_id, '_n2a')
+  WHERE inp_pump.status::text = 'OPEN'::text OR inp_pump.status::text = 'CLOSED'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text
+   AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    inp_pump_additional.status
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_pump_additional ON rpt_inp_arc.arc_id::text = concat(inp_pump_additional.node_id, '_n2a', inp_pump_additional.order_id)
+  WHERE inp_pump_additional.status::text = 'OPEN'::text OR inp_pump_additional.status::text = 'CLOSED'::text 
+  AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_patterns CASCADE;
+CREATE OR REPLACE VIEW vi_patterns AS 
+ SELECT inp_pattern_value.pattern_id,
+    concat(inp_pattern_value.factor_1,' ',inp_pattern_value.factor_2,' ',inp_pattern_value.factor_3,' ',inp_pattern_value.factor_4,' ',
+    inp_pattern_value.factor_5,' ',inp_pattern_value.factor_6,' ',inp_pattern_value.factor_7,' ',inp_pattern_value.factor_8,' ',
+    inp_pattern_value.factor_9,' ',inp_pattern_value.factor_10,' ',inp_pattern_value.factor_11,' ', inp_pattern_value.factor_12,' ',
+    inp_pattern_value.factor_13,' ', inp_pattern_value.factor_14,' ',inp_pattern_value.factor_15,' ', inp_pattern_value.factor_16,' ',
+    inp_pattern_value.factor_17,' ', inp_pattern_value.factor_18,' ',inp_pattern_value.factor_19,' ',inp_pattern_value.factor_20,' ',
+    inp_pattern_value.factor_21,' ',inp_pattern_value.factor_22,' ',inp_pattern_value.factor_23,' ',inp_pattern_value.factor_24) as multipliers
+   FROM inp_pattern_value
+  ORDER BY inp_pattern_value.pattern_id;
+
+
+DROP VIEW IF EXISTS vi_curves CASCADE;
+CREATE OR REPLACE VIEW vi_curves AS 
+SELECT
+        CASE
+            WHEN a.x_value IS NULL THEN a.curve_type::character varying(16)
+            ELSE a.curve_id
+        END AS curve_id,
+    a.x_value::numeric(12,4) AS x_value,
+    a.y_value::numeric(12,4) AS y_value
+   FROM ( SELECT DISTINCT ON (inp_curve.curve_id) ( SELECT min(sub.id) AS min
+                   FROM inp_curve sub
+                  WHERE sub.curve_id::text = inp_curve.curve_id::text) AS id,
+            inp_curve.curve_id,
+            concat(';', inp_curve_id.curve_type, ':') AS curve_type,
+            NULL::numeric AS x_value,
+            NULL::numeric AS y_value
+           FROM inp_curve_id
+             JOIN inp_curve ON inp_curve.curve_id::text = inp_curve_id.id::text
+        UNION
+         SELECT inp_curve.id,
+            inp_curve.curve_id,
+            inp_curve_id.curve_type,
+            inp_curve.x_value,
+            inp_curve.y_value
+           FROM inp_curve
+             JOIN inp_curve_id ON inp_curve.curve_id::text = inp_curve_id.id::text
+  ORDER BY 1, 4 DESC) a;
+
+
+DROP VIEW IF EXISTS vi_controls CASCADE;
+CREATE OR REPLACE VIEW vi_controls AS 
+ SELECT  inp_controls_x_arc.text
+   FROM inp_selector_result,  inp_controls_x_arc
+     JOIN rpt_inp_arc ON inp_controls_x_arc.arc_id::text = rpt_inp_arc.arc_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_arc.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT inp_controls_x_node.text
+   FROM inp_selector_result, inp_controls_x_node
+   JOIN rpt_inp_node ON inp_controls_x_node.node_id::text = rpt_inp_node.node_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_node.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_rules CASCADE;
+CREATE OR REPLACE VIEW vi_rules AS 
+ SELECT inp_rules_x_arc.text
+   FROM inp_selector_result,  inp_rules_x_arc
+     JOIN rpt_inp_arc ON inp_rules_x_arc.arc_id::text = rpt_inp_arc.arc_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_arc.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT inp_rules_x_node.text
+   FROM inp_selector_result, inp_rules_x_node
+   JOIN rpt_inp_node ON inp_rules_x_node.node_id::text = rpt_inp_node.node_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_node.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_energy CASCADE;
+CREATE OR REPLACE VIEW vi_energy AS 
+ SELECT 
+    inp_energy_el.parameter,
+    inp_energy_el.value
+   FROM inp_selector_result, inp_energy_el
+     JOIN rpt_inp_node ON inp_energy_el.pump_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+  UNION
+ SELECT
+    inp_energy_gl.parameter,
+    inp_energy_gl.value
+   FROM inp_energy_gl;
+
+
+
+DROP VIEW IF EXISTS vi_emitters CASCADE;
+CREATE OR REPLACE VIEW vi_emitters AS 
+ SELECT inp_emitter.node_id,
+    inp_emitter.coef
+    FROM inp_selector_result, inp_emitter
+     JOIN rpt_inp_node ON inp_emitter.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_quality CASCADE;
+CREATE OR REPLACE VIEW vi_quality AS 
+ SELECT inp_quality.node_id,
+    inp_quality.initqual
+   FROM inp_quality
+  ORDER BY inp_quality.node_id;
+
+
+DROP VIEW IF EXISTS vi_sources CASCADE;
+CREATE OR REPLACE VIEW vi_sources AS 
+ SELECT inp_source.node_id,
+    inp_source.sourc_type,
+    inp_source.quality,
+    inp_source.pattern_id
+   FROM inp_selector_result,  inp_source
+     JOIN rpt_inp_node ON inp_source.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_reactions;
+CREATE OR REPLACE VIEW vi_reactions AS 
+ SELECT inp_typevalue_react.idval AS react_type,
+    inp_typevalue_param.idval AS parameter,
+    inp_reactions_gl.value
+   FROM inp_reactions_gl
+     LEFT JOIN inp_typevalue inp_typevalue_react ON inp_reactions_gl.react_type::text = inp_typevalue_react.id::text AND inp_typevalue_react.typevalue::text = 'inp_typevalue_reactions_gl'::text
+     LEFT JOIN inp_typevalue inp_typevalue_param ON inp_reactions_gl.parameter::text = inp_typevalue_param.id::text AND inp_typevalue_param.typevalue::text = 'inp_value_reactions_gl'::text
+UNION
+ SELECT inp_typevalue_param.idval AS react_type,
+    inp_reactions_el.arc_id AS parameter,
+    inp_reactions_el.value
+   FROM inp_selector_result,
+    inp_reactions_el
+     JOIN rpt_inp_arc ON inp_reactions_el.arc_id::text = rpt_inp_arc.arc_id::text
+     LEFT JOIN inp_typevalue inp_typevalue_param ON inp_reactions_el.parameter::text = inp_typevalue_param.id::text AND inp_typevalue_param.typevalue::text = 'inp_value_reactions_el'::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_mixing CASCADE;
+CREATE OR REPLACE VIEW vi_mixing AS 
+ SELECT inp_mixing.node_id,
+    inp_mixing.mix_type,
+    inp_mixing.value
+   FROM inp_selector_result,
+    inp_mixing
+     JOIN rpt_inp_node ON inp_mixing.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_times CASCADE;
+CREATE OR REPLACE VIEW vi_times AS 
+ SELECT 
+unnest(array['duration','hydraulic timestep','quality timestep','rule timestep','pattern timestep','pattern start','report timeste',
+    'report start','start clocktime','statistic']) as "parameter",
+unnest(array[inp_times.duration::text,inp_times.hydraulic_timestep,inp_times.quality_timestep,inp_times.rule_timestep,inp_times.pattern_timestep,
+    inp_times.pattern_start,inp_times.report_timestep,inp_times.report_start,inp_times.start_clocktime,inp_typevalue.idval]) as "value"
+   FROM inp_times
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_times.statistic
+   WHERE inp_typevalue.typevalue='inp_value_times';
+
+
+DROP VIEW IF EXISTS vi_report CASCADE;
+CREATE OR REPLACE VIEW vi_report AS 
+ SELECT unnest(array['pagesize','status','summary','energy','nodes','links','elevation','demand','head','pressure','quality','length',
+        'diameter','flow','velocity','headloss','setting','reaction','f_factor']) as "parameter",
+        unnest(array[inp_report.pagesize::text,inp_typevalue.idval, inp_report.summary, inp_report.energy, inp_report.nodes, inp_report.links,
+        inp_report.elevation, inp_report.demand, inp_report.head, inp_report.pressure, inp_report.quality, inp_report.length, inp_report.diameter, 
+        inp_report.flow, inp_report.velocity, inp_report.headloss, inp_report.setting, inp_report.reaction, inp_report.f_factor]) as "value"
+   FROM inp_report
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_report.status
+   WHERE inp_typevalue.typevalue='inp_value_yesnofull';
+
+
+DROP VIEW IF EXISTS vi_options CASCADE;
+CREATE OR REPLACE VIEW vi_options AS 
+SELECT
+   unnest(array['units','headloss','hydraulics','specific gravity','viscosity','trials','accuracy','unbalanced','checkfreq','maxcheck','damplimit','pattern','demand multiplier','emitter exponent','quality',
+   'diffusivity','tolerance']) as "parameter",
+      unnest(array[units, headloss,((inp_options.hydraulics::text || ' '::text) || inp_options.hydraulics_fname::text),specific_gravity::text, viscosity::text,trials::text,accuracy::text,((inp_options.unbalanced::text || ' '::text) || inp_options.unbalanced_n),
+   checkfreq::text, maxcheck::text, damplimit::text, pattern, demand_multiplier::text, emitter_exponent::text,inp_typevalue.idval, diffusivity::text,tolerance::text]) as "value"
+   FROM inp_options 
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_options.quality
+   WHERE inp_typevalue.typevalue='inp_value_opti_qual'
+   AND quality!='TRACE'
+  UNION
+SELECT
+   unnest(array['units','headloss','hydraulics','specific gravity','viscosity','trials','accuracy','unbalanced','checkfreq','maxcheck','damplimit','pattern','demand multiplier','emitter exponent','quality',
+   'diffusivity','tolerance']) as "parameter",
+      unnest(array[units, headloss,((inp_options.hydraulics::text || ' '::text) || inp_options.hydraulics_fname::text),specific_gravity::text,viscosity::text,trials::text,accuracy::text,((inp_options.unbalanced::text || ' '::text) || inp_options.unbalanced_n),
+   checkfreq::text, maxcheck::text, damplimit::text, pattern, demand_multiplier::text, emitter_exponent::text,((inp_typevalue.idval::text || ' '::text) || inp_options.node_id::text) ,diffusivity::text,tolerance::text]) as "value"
+   FROM inp_options 
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_options.quality
+   WHERE inp_typevalue.typevalue='inp_value_opti_qual'
+   AND quality='TRACE';
+
+DROP VIEW IF EXISTS vi_coordinates CASCADE;
+CREATE OR REPLACE VIEW vi_coordinates AS 
+SELECT  rpt_inp_node.node_id,
+    st_x(rpt_inp_node.the_geom)::numeric(16,3) AS xcoord,
+    st_y(rpt_inp_node.the_geom)::numeric(16,3) AS ycoord
+FROM rpt_inp_node;
+
+
+DROP VIEW IF EXISTS vi_vertices CASCADE;
+CREATE OR REPLACE VIEW vi_vertices AS 
+ SELECT arc.arc_id,
+    st_x(arc.point)::numeric(16,3) AS xcoord,
+    st_y(arc.point)::numeric(16,3) AS ycoord
+   FROM ( SELECT (st_dumppoints(rpt_inp_arc.the_geom)).geom AS point,
+            st_startpoint(rpt_inp_arc.the_geom) AS startpoint,
+            st_endpoint(rpt_inp_arc.the_geom) AS endpoint,
+            rpt_inp_arc.sector_id,
+            rpt_inp_arc.arc_id
+           FROM inp_selector_result,
+            rpt_inp_arc
+          WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text) arc
+  WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) AND (arc.point < arc.endpoint OR arc.point > arc.endpoint);
+
+
+DROP VIEW IF EXISTS vi_labels CASCADE;
+CREATE OR REPLACE VIEW vi_labels AS 
+ SELECT  inp_label.xcoord,
+    inp_label.ycoord,
+    inp_label.label,
+    inp_label.node_id
+   FROM inp_label;
+
+DROP VIEW IF EXISTS vi_backdrop CASCADE;
+CREATE OR REPLACE VIEW vi_backdrop AS 
+ SELECT  inp_backdrop.text
+   FROM inp_backdrop;
+
+
+
+-- ----------------------------
+-- View structure for v_inp
+-- ----------------------------
+
+DROP VIEW IF EXISTS vi_title CASCADE;
+CREATE OR REPLACE VIEW vi_title AS 
+ SELECT inp_project_id.title,
+    inp_project_id.date
+   FROM inp_project_id
+  ORDER BY inp_project_id.title;
+
+
+DROP VIEW IF EXISTS vi_junctions CASCADE;
+CREATE OR REPLACE VIEW vi_junctions AS 
+ SELECT rpt_inp_node.node_id,
+    rpt_inp_node.elevation,
+    rpt_inp_node.demand,
+    inp_junction.pattern_id
+   FROM inp_selector_result,   rpt_inp_node
+   LEFT JOIN inp_junction ON inp_junction.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.epa_type::text = 'JUNCTION'::text AND rpt_inp_node.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+  ORDER BY rpt_inp_node.node_id;
+
+
+DROP VIEW IF EXISTS vi_reservoirs CASCADE;
+CREATE OR REPLACE VIEW vi_reservoirs AS 
+ SELECT inp_reservoir.node_id,
+    rpt_inp_node.elevation AS head,
+    inp_reservoir.pattern_id
+   FROM inp_selector_result, inp_reservoir
+   JOIN rpt_inp_node ON inp_reservoir.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_tanks CASCADE;
+CREATE OR REPLACE VIEW vi_tanks AS 
+ SELECT inp_tank.node_id,
+    rpt_inp_node.elevation,
+    inp_tank.initlevel,
+    inp_tank.minlevel,
+    inp_tank.maxlevel,
+    inp_tank.diameter,
+    inp_tank.minvol,
+    inp_tank.curve_id
+   FROM inp_selector_result, inp_tank
+   JOIN rpt_inp_node ON inp_tank.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_pipes CASCADE;
+CREATE OR REPLACE VIEW vi_pipes AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.length,
+    rpt_inp_arc.diameter,
+    rpt_inp_arc.roughness,
+    inp_pipe.minorloss,
+    inp_typevalue.idval as status
+   FROM inp_selector_result, rpt_inp_arc
+   JOIN inp_pipe ON rpt_inp_arc.arc_id::text = inp_pipe.arc_id::text
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_pipe.status
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text 
+  AND inp_typevalue.typevalue='inp_value_status_pipe'
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.length,
+    rpt_inp_arc.diameter,
+    rpt_inp_arc.roughness,
+    inp_shortpipe.minorloss,
+    inp_typevalue.idval as status
+   FROM inp_selector_result, rpt_inp_arc
+   JOIN inp_shortpipe ON rpt_inp_arc.arc_id::text = concat(inp_shortpipe.node_id, '_n2a')
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_shortpipe.status
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+  AND inp_typevalue.typevalue='inp_value_status_pipe';
+
+
+CREATE OR REPLACE VIEW vi_pumps AS 
+ SELECT concat(inp_pump.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    concat('POWER '::text || inp_pump.power::text) AS power,
+    concat('HEAD '::text || inp_pump.curve_id::text) AS curve_id,
+    concat('SPEED '::text || inp_pump.speed) AS speed,
+    concat('PATTERN '::text || inp_pump.pattern::text) AS pattern
+   FROM inp_selector_result,
+    inp_pump
+     JOIN rpt_inp_arc ON rpt_inp_arc.arc_id::text = concat(inp_pump.node_id, '_n2a')
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_valves CASCADE;
+CREATE OR REPLACE VIEW vi_valves AS 
+SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.diameter,
+    inp_valve.valv_type,
+    inp_valve.pressure::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result,rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE (inp_valve.valv_type::text = 'PRV'::text OR inp_valve.valv_type::text = 'PSV'::text OR inp_valve.valv_type::text = 'PBV'::text) 
+  AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.diameter,
+    inp_valve.valv_type,
+    inp_valve.flow::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE inp_valve.valv_type::text = 'FCV'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    rpt_inp_arc.diameter,
+    inp_valve.valv_type,
+    inp_valve.coef_loss::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE inp_valve.valv_type::text = 'TCV'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT concat(inp_valve.node_id, '_n2a') AS arc_id,
+    rpt_inp_arc.node_1,
+    rpt_inp_arc.node_2,
+    cat_arc.dint AS diameter,
+    inp_valve.valv_type,
+    inp_valve.curve_id::text AS setting,
+    inp_valve.minorloss
+   FROM inp_selector_result, rpt_inp_arc
+    JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+    JOIN cat_arc ON rpt_inp_arc.arccat_id::text = cat_arc.id::text
+WHERE inp_valve.valv_type::text = 'GPV'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_tags CASCADE;
+CREATE OR REPLACE VIEW vi_tags AS 
+SELECT inp_tags.object,
+   inp_tags.node_id,
+   inp_tags.tag
+FROM inp_tags
+ORDER BY inp_tags.object;
+
+DROP VIEW IF EXISTS vi_demands CASCADE;
+CREATE OR REPLACE VIEW vi_demands AS 
+SELECT inp_demand.node_id,
+   inp_demand.demand,
+   inp_demand.pattern_id,
+   inp_demand.deman_type
+ FROM inp_selector_dscenario, inp_selector_result, inp_demand
+ JOIN rpt_inp_node ON inp_demand.node_id::text = rpt_inp_node.node_id::text
+WHERE inp_selector_dscenario.dscenario_id = inp_demand.dscenario_id AND inp_selector_dscenario.cur_user = "current_user"()::text 
+AND inp_selector_result.result_id::text = rpt_inp_node.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_status CASCADE;
+CREATE OR REPLACE VIEW vi_status AS 
+ SELECT rpt_inp_arc.arc_id,
+    rpt_inp_arc.status
+   FROM inp_selector_result,  rpt_inp_arc
+     JOIN inp_valve ON rpt_inp_arc.arc_id::text = concat(inp_valve.node_id, '_n2a')
+  WHERE rpt_inp_arc.status::text = 'OPEN'::text OR rpt_inp_arc.status::text = 'CLOSED'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text 
+  AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    inp_pump.status
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_pump ON rpt_inp_arc.arc_id::text = concat(inp_pump.node_id, '_n2a')
+  WHERE inp_pump.status::text = 'OPEN'::text OR inp_pump.status::text = 'CLOSED'::text AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text
+   AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT rpt_inp_arc.arc_id,
+    inp_pump_additional.status
+   FROM inp_selector_result, rpt_inp_arc
+     JOIN inp_pump_additional ON rpt_inp_arc.arc_id::text = concat(inp_pump_additional.node_id, '_n2a', inp_pump_additional.order_id)
+  WHERE inp_pump_additional.status::text = 'OPEN'::text OR inp_pump_additional.status::text = 'CLOSED'::text 
+  AND rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_patterns CASCADE;
+CREATE OR REPLACE VIEW vi_patterns AS 
+ SELECT inp_pattern_value.pattern_id,
+    concat(inp_pattern_value.factor_1,' ',inp_pattern_value.factor_2,' ',inp_pattern_value.factor_3,' ',inp_pattern_value.factor_4,' ',
+    inp_pattern_value.factor_5,' ',inp_pattern_value.factor_6,' ',inp_pattern_value.factor_7,' ',inp_pattern_value.factor_8,' ',
+    inp_pattern_value.factor_9,' ',inp_pattern_value.factor_10,' ',inp_pattern_value.factor_11,' ', inp_pattern_value.factor_12,' ',
+    inp_pattern_value.factor_13,' ', inp_pattern_value.factor_14,' ',inp_pattern_value.factor_15,' ', inp_pattern_value.factor_16,' ',
+    inp_pattern_value.factor_17,' ', inp_pattern_value.factor_18,' ',inp_pattern_value.factor_19,' ',inp_pattern_value.factor_20,' ',
+    inp_pattern_value.factor_21,' ',inp_pattern_value.factor_22,' ',inp_pattern_value.factor_23,' ',inp_pattern_value.factor_24) as multipliers
+   FROM inp_pattern_value
+  ORDER BY inp_pattern_value.pattern_id;
+
+
+DROP VIEW IF EXISTS vi_curves CASCADE;
+CREATE OR REPLACE VIEW vi_curves AS 
+SELECT
+        CASE
+            WHEN a.x_value IS NULL THEN a.curve_type::character varying(16)
+            ELSE a.curve_id
+        END AS curve_id,
+    a.x_value::numeric(12,4) AS x_value,
+    a.y_value::numeric(12,4) AS y_value
+   FROM ( SELECT DISTINCT ON (inp_curve.curve_id) ( SELECT min(sub.id) AS min
+                   FROM inp_curve sub
+                  WHERE sub.curve_id::text = inp_curve.curve_id::text) AS id,
+            inp_curve.curve_id,
+            concat(';', inp_curve_id.curve_type, ':') AS curve_type,
+            NULL::numeric AS x_value,
+            NULL::numeric AS y_value
+           FROM inp_curve_id
+             JOIN inp_curve ON inp_curve.curve_id::text = inp_curve_id.id::text
+        UNION
+         SELECT inp_curve.id,
+            inp_curve.curve_id,
+            inp_curve_id.curve_type,
+            inp_curve.x_value,
+            inp_curve.y_value
+           FROM inp_curve
+             JOIN inp_curve_id ON inp_curve.curve_id::text = inp_curve_id.id::text
+  ORDER BY 1, 4 DESC) a;
+
+
+DROP VIEW IF EXISTS vi_controls CASCADE;
+CREATE OR REPLACE VIEW vi_controls AS 
+ SELECT  inp_controls_x_arc.text
+   FROM inp_selector_result,  inp_controls_x_arc
+     JOIN rpt_inp_arc ON inp_controls_x_arc.arc_id::text = rpt_inp_arc.arc_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_arc.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT inp_controls_x_node.text
+   FROM inp_selector_result, inp_controls_x_node
+   JOIN rpt_inp_node ON inp_controls_x_node.node_id::text = rpt_inp_node.node_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_node.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_rules CASCADE;
+CREATE OR REPLACE VIEW vi_rules AS 
+ SELECT inp_rules_x_arc.text
+   FROM inp_selector_result,  inp_rules_x_arc
+     JOIN rpt_inp_arc ON inp_rules_x_arc.arc_id::text = rpt_inp_arc.arc_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_arc.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+UNION
+ SELECT inp_rules_x_node.text
+   FROM inp_selector_result, inp_rules_x_node
+   JOIN rpt_inp_node ON inp_rules_x_node.node_id::text = rpt_inp_node.node_id::text
+  WHERE inp_selector_result.result_id::text = rpt_inp_node.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_energy CASCADE;
+CREATE OR REPLACE VIEW vi_energy AS 
+ SELECT 
+    inp_energy_el.parameter,
+    inp_energy_el.value
+   FROM inp_selector_result, inp_energy_el
+     JOIN rpt_inp_node ON inp_energy_el.pump_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text
+  UNION
+ SELECT
+    inp_energy_gl.parameter,
+    inp_energy_gl.value
+   FROM inp_energy_gl;
+
+
+
+DROP VIEW IF EXISTS vi_emitters CASCADE;
+CREATE OR REPLACE VIEW vi_emitters AS 
+ SELECT inp_emitter.node_id,
+    inp_emitter.coef
+    FROM inp_selector_result, inp_emitter
+     JOIN rpt_inp_node ON inp_emitter.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_quality CASCADE;
+CREATE OR REPLACE VIEW vi_quality AS 
+ SELECT inp_quality.node_id,
+    inp_quality.initqual
+   FROM inp_quality
+  ORDER BY inp_quality.node_id;
+
+
+DROP VIEW IF EXISTS vi_sources CASCADE;
+CREATE OR REPLACE VIEW vi_sources AS 
+ SELECT inp_source.node_id,
+    inp_source.sourc_type,
+    inp_source.quality,
+    inp_source.pattern_id
+   FROM inp_selector_result,  inp_source
+     JOIN rpt_inp_node ON inp_source.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_reactions;
+CREATE OR REPLACE VIEW vi_reactions AS 
+ SELECT inp_typevalue_react.idval AS react_type,
+    inp_typevalue_param.idval AS parameter,
+    inp_reactions_gl.value
+   FROM inp_reactions_gl
+     LEFT JOIN inp_typevalue inp_typevalue_react ON inp_reactions_gl.react_type::text = inp_typevalue_react.id::text AND inp_typevalue_react.typevalue::text = 'inp_typevalue_reactions_gl'::text
+     LEFT JOIN inp_typevalue inp_typevalue_param ON inp_reactions_gl.parameter::text = inp_typevalue_param.id::text AND inp_typevalue_param.typevalue::text = 'inp_value_reactions_gl'::text
+UNION
+ SELECT inp_typevalue_param.idval AS react_type,
+    inp_reactions_el.arc_id AS parameter,
+    inp_reactions_el.value
+   FROM inp_selector_result,
+    inp_reactions_el
+     JOIN rpt_inp_arc ON inp_reactions_el.arc_id::text = rpt_inp_arc.arc_id::text
+     LEFT JOIN inp_typevalue inp_typevalue_param ON inp_reactions_el.parameter::text = inp_typevalue_param.id::text AND inp_typevalue_param.typevalue::text = 'inp_value_reactions_el'::text
+  WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+
+DROP VIEW IF EXISTS vi_mixing CASCADE;
+CREATE OR REPLACE VIEW vi_mixing AS 
+ SELECT inp_mixing.node_id,
+    inp_mixing.mix_type,
+    inp_mixing.value
+   FROM inp_selector_result,
+    inp_mixing
+     JOIN rpt_inp_node ON inp_mixing.node_id::text = rpt_inp_node.node_id::text
+  WHERE rpt_inp_node.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS vi_times CASCADE;
+CREATE OR REPLACE VIEW vi_times AS 
+ SELECT 
+unnest(array['duration','hydraulic timestep','quality timestep','rule timestep','pattern timestep','pattern start','report timeste',
+    'report start','start clocktime','statistic']) as "parameter",
+unnest(array[inp_times.duration::text,inp_times.hydraulic_timestep,inp_times.quality_timestep,inp_times.rule_timestep,inp_times.pattern_timestep,
+    inp_times.pattern_start,inp_times.report_timestep,inp_times.report_start,inp_times.start_clocktime,inp_typevalue.idval]) as "value"
+   FROM inp_times
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_times.statistic
+   WHERE inp_typevalue.typevalue='inp_value_times';
+
+
+DROP VIEW IF EXISTS vi_report CASCADE;
+CREATE OR REPLACE VIEW vi_report AS 
+ SELECT unnest(array['pagesize','status','summary','energy','nodes','links','elevation','demand','head','pressure','quality','length',
+        'diameter','flow','velocity','headloss','setting','reaction','f_factor']) as "parameter",
+        unnest(array[inp_report.pagesize::text,inp_typevalue.idval, inp_report.summary, inp_report.energy, inp_report.nodes, inp_report.links,
+        inp_report.elevation, inp_report.demand, inp_report.head, inp_report.pressure, inp_report.quality, inp_report.length, inp_report.diameter, 
+        inp_report.flow, inp_report.velocity, inp_report.headloss, inp_report.setting, inp_report.reaction, inp_report.f_factor]) as "value"
+   FROM inp_report
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_report.status
+   WHERE inp_typevalue.typevalue='inp_value_yesnofull';
+
+
+DROP VIEW IF EXISTS vi_options CASCADE;
+CREATE OR REPLACE VIEW vi_options AS 
+SELECT
+   unnest(array['units','headloss','hydraulics','specific gravity','viscosity','trials','accuracy','unbalanced','checkfreq','maxcheck','damplimit','pattern','demand multiplier','emitter exponent','quality',
+   'diffusivity','tolerance']) as "parameter",
+      unnest(array[units, headloss,((inp_options.hydraulics::text || ' '::text) || inp_options.hydraulics_fname::text),specific_gravity::text, viscosity::text,trials::text,accuracy::text,((inp_options.unbalanced::text || ' '::text) || inp_options.unbalanced_n),
+   checkfreq::text, maxcheck::text, damplimit::text, pattern, demand_multiplier::text, emitter_exponent::text,inp_typevalue.idval, diffusivity::text,tolerance::text]) as "value"
+   FROM inp_options 
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_options.quality
+   WHERE inp_typevalue.typevalue='inp_value_opti_qual'
+   AND quality!='TRACE'
+  UNION
+SELECT
+   unnest(array['units','headloss','hydraulics','specific gravity','viscosity','trials','accuracy','unbalanced','checkfreq','maxcheck','damplimit','pattern','demand multiplier','emitter exponent','quality',
+   'diffusivity','tolerance']) as "parameter",
+      unnest(array[units, headloss,((inp_options.hydraulics::text || ' '::text) || inp_options.hydraulics_fname::text),specific_gravity::text,viscosity::text,trials::text,accuracy::text,((inp_options.unbalanced::text || ' '::text) || inp_options.unbalanced_n),
+   checkfreq::text, maxcheck::text, damplimit::text, pattern, demand_multiplier::text, emitter_exponent::text,((inp_typevalue.idval::text || ' '::text) || inp_options.node_id::text) ,diffusivity::text,tolerance::text]) as "value"
+   FROM inp_options 
+   LEFT JOIN inp_typevalue ON inp_typevalue.id=inp_options.quality
+   WHERE inp_typevalue.typevalue='inp_value_opti_qual'
+   AND quality='TRACE';
+
+DROP VIEW IF EXISTS vi_coordinates CASCADE;
+CREATE OR REPLACE VIEW vi_coordinates AS 
+SELECT  rpt_inp_node.node_id,
+    st_x(rpt_inp_node.the_geom)::numeric(16,3) AS xcoord,
+    st_y(rpt_inp_node.the_geom)::numeric(16,3) AS ycoord
+FROM rpt_inp_node;
+
+
+DROP VIEW IF EXISTS vi_vertices CASCADE;
+CREATE OR REPLACE VIEW vi_vertices AS 
+ SELECT arc.arc_id,
+    st_x(arc.point)::numeric(16,3) AS xcoord,
+    st_y(arc.point)::numeric(16,3) AS ycoord
+   FROM ( SELECT (st_dumppoints(rpt_inp_arc.the_geom)).geom AS point,
+            st_startpoint(rpt_inp_arc.the_geom) AS startpoint,
+            st_endpoint(rpt_inp_arc.the_geom) AS endpoint,
+            rpt_inp_arc.sector_id,
+            rpt_inp_arc.arc_id
+           FROM inp_selector_result,
+            rpt_inp_arc
+          WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text) arc
+  WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) AND (arc.point < arc.endpoint OR arc.point > arc.endpoint);
+
+
+DROP VIEW IF EXISTS vi_labels CASCADE;
+CREATE OR REPLACE VIEW vi_labels AS 
+ SELECT  inp_label.xcoord,
+    inp_label.ycoord,
+    inp_label.label,
+    inp_label.node_id
+   FROM inp_label;
+
+DROP VIEW IF EXISTS vi_backdrop CASCADE;
+CREATE OR REPLACE VIEW vi_backdrop AS 
+ SELECT  inp_backdrop.text
+   FROM inp_backdrop;

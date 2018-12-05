@@ -7,11 +7,6 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
---config_api_layer(lo que antes era config_web_layer)
---config_api_layer_child (config_web_layer_child)
---config_api_tableinfo_x_infotype (config_web_tableinfo_x_infotype)
-
-
 -----------------------
 -- config api values
 -----------------------
@@ -129,13 +124,6 @@ INSERT INTO config_api_form_tabs VALUES (302, 've_arc', 'tab_elements', 'Elem', 
 
 INSERT INTO config_api_message VALUES (10, 2, 'There are not exists the class of visit provided', NULL);
 
-
-INSERT INTO config_api_list 
-VALUES (1, 've_arc_pipe', 'SELECT arc_id as sys_id, * FROM ve_arc_pipe WHERE arc_id IS NOT NULL', 3, '{"geometry":{"name":"the_geom"}, "linkpath":{"name":"link"}}');
-INSERT INTO config_api_list 
-VALUES (2, 'v_ui_arc_x_relations', 'SELECT rid as sys_id, * FROM v_ui_arc_x_relations  WHERE rid IS NOT NULL', 3, '{"geometry":{"name":"the_geom"}, "linkpath":{"name":"link"}}');
-INSERT INTO config_api_list 
-VALUES (3, 'v_ui_node_x_connection_upstream', 'SELECT rid as sys_id, * FROM v_ui_node_x_connection_upstream  WHERE rid IS NOT NULL', 3, '{"geometry":{"name":"the_geom"}, "linkpath":{"name":"link"}}');
 
 INSERT INTO config_api_visit VALUES (2, 'visit_connec_insp', 've_visit_multievent_x_connec');
 INSERT INTO config_api_visit VALUES (1, 'visit_arc_leak', 've_visit_singlevent_x_arc');

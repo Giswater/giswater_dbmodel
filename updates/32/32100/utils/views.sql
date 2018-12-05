@@ -5,12 +5,12 @@ This version of Giswater is provided by Giswater Association
 */
 
 
-SET search_path = SCHEMA_NAME, public, pg_catalog;
+SET search_path = ud, public, pg_catalog;
 
 
 -----------------------
 -- remove all the views that are refactored in the v3.2
------------------------
+----------------------- 
 /*
 DROP VIEW IF EXISTS v_ui_doc_x_connec;
 DROP VIEW IF EXISTS v_ui_doc_x_arc;
@@ -76,6 +76,26 @@ DROP VIEW IF EXISTS v_edit_element;
 */
 
 
+-----------------------
+-- create parent views
+-----------------------
+DROP VIEW IF EXISTS vp_arc;
+CREATE OR REPLACE VIEW vp_arc AS 
+ SELECT ve_arc.arc_id AS nid,
+    ve_arc.arc_type AS custom_type
+   FROM ve_arc;
+
+DROP VIEW IF EXISTS vp_connec;
+CREATE OR REPLACE VIEW vp_connec AS 
+ SELECT ve_connec.connec_id AS nid,
+    ve_connec.connec_type AS custom_type
+   FROM ve_connec;
+
+DROP VIEW IF EXISTS vp_node;
+CREATE OR REPLACE VIEW vp_node AS 
+ SELECT ve_node.node_id AS nid,
+    ve_node.node_type AS custom_type
+   FROM ve_node;
 
 -----------------------
 -- create views
@@ -730,10 +750,10 @@ CREATE OR REPLACE VIEW ve_visit_multievent_x_arc AS
             ct.param_2,
             ct.param_3
            FROM crosstab('SELECT visit_id, om_visit_event.parameter_id, value 
-			FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
-			JOIN om_visit_class on om_visit_class.id=om_visit.class_id
-			JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
-			where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''sendiments_arc''),(''desperfectes_arc''),(''neteja_arc'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
+      FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
+      JOIN om_visit_class on om_visit_class.id=om_visit.class_id
+      JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
+      where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''sendiments_arc''),(''desperfectes_arc''),(''neteja_arc'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
   WHERE om_visit_class.ismultievent = true;
 
 
@@ -765,10 +785,10 @@ CREATE OR REPLACE VIEW ve_visit_multievent_x_connec AS
             ct.param_2,
             ct.param_3
            FROM crosstab('SELECT visit_id, om_visit_event.parameter_id, value 
-			FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
-			JOIN om_visit_class on om_visit_class.id=om_visit.class_id
-			JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
-			where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''sediments_connec''),(''desperfectes_connec''),(''neteja_connec'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
+      FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
+      JOIN om_visit_class on om_visit_class.id=om_visit.class_id
+      JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
+      where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''sediments_connec''),(''desperfectes_connec''),(''neteja_connec'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
   WHERE om_visit_class.ismultievent = true;
 
 
@@ -800,10 +820,10 @@ CREATE OR REPLACE VIEW ve_visit_multievent_x_node AS
             ct.param_2,
             ct.param_3
            FROM crosstab('SELECT visit_id, om_visit_event.parameter_id, value 
-			FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
-			JOIN om_visit_class on om_visit_class.id=om_visit.class_id
-			JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
-			where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''sendiments_node''),(''desperfectes_node''),(''neteja_node'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
+      FROM om_visit JOIN om_visit_event ON om_visit.id= om_visit_event.visit_id 
+      JOIN om_visit_class on om_visit_class.id=om_visit.class_id
+      JOIN om_visit_class_x_parameter on om_visit_class_x_parameter.parameter_id=om_visit_event.parameter_id 
+      where om_visit_class.ismultievent = TRUE ORDER  BY 1,2'::text, ' VALUES (''sendiments_node''),(''desperfectes_node''),(''neteja_node'')'::text) ct(visit_id integer, param_1 text, param_2 text, param_3 text)) a ON a.visit_id = om_visit.id
   WHERE om_visit_class.ismultievent = true;
 
 --singlevent
@@ -931,202 +951,9 @@ CREATE OR REPLACE VIEW ve_visit_singlevent_x_node AS
 
 
 
---node connections
-DROP VIEW IF EXISTS v_ui_node_x_connection_downstream;
-CREATE OR REPLACE VIEW v_ui_node_x_connection_downstream AS 
- SELECT row_number() OVER (ORDER BY v_edit_arc.node_2) AS rid,
-    v_edit_arc.node_2 AS node_id,
-    v_edit_arc.arc_id AS feature_id,
-    v_edit_arc.code AS feature_code,
-    v_edit_arc.cat_arctype_id AS featurecat_id,
-    v_edit_arc.arccat_id,
-    st_length2d(v_edit_arc.the_geom)::numeric(12,2) AS length,
-    node.node_id AS downstream_id,
-    node.code AS downstream_code,
-    've_arc'::text AS sys_table_id,
-    'arc_id'::text AS sys_id_name,
-    v_edit_arc.arc_id AS sys_id
-   FROM v_edit_arc
-     JOIN node ON v_edit_arc.node_1::text = node.node_id::text
-     JOIN arc_type ON arc_type.id::text = v_edit_arc.cat_arctype_id::text;
-
-
-DROP VIEW IF EXISTS v_ui_node_x_connection_upstream;
-CREATE OR REPLACE VIEW v_ui_node_x_connection_upstream AS 
- SELECT row_number() OVER (ORDER BY v_edit_arc.node_2) AS rid,
-    v_edit_arc.node_2 AS node_id,
-    v_edit_arc.arc_id AS feature_id,
-    v_edit_arc.code AS feature_code,
-    v_edit_arc.cat_arctype_id AS featurecat_id,
-    v_edit_arc.arccat_id,
-    st_length2d(v_edit_arc.the_geom)::numeric(12,2) AS length,
-    node.node_id AS downstream_id,
-    node.code AS downstream_code,
-    've_arc'::text AS sys_table_id,
-    'arc_id'::text AS sys_id_name,
-    v_edit_arc.arc_id AS sys_id
-   FROM v_edit_arc
-     JOIN node ON v_edit_arc.node_1::text = node.node_id::text
-     JOIN arc_type ON arc_type.id::text = v_edit_arc.cat_arctype_id::text;
-
-
-DROP VIEW IF EXISTS v_ui_node_x_relations;
-CREATE OR REPLACE VIEW v_ui_node_x_relations AS 
- SELECT row_number() OVER (ORDER BY v_edit_node.node_id) AS rid,
-    v_edit_node.parent_id,
-    v_edit_node.nodetype_id,
-    v_edit_node.nodecat_id,
-    v_edit_node.node_id,
-    v_edit_node.code,
-    've_node'::text AS sys_table_id,
-    'node_id'::text AS sys_id_name,
-    v_edit_node.node_id AS sys_id
-   FROM v_edit_node
-  WHERE v_edit_node.parent_id IS NOT NULL AND (v_edit_node.parent_id::text IN ( SELECT v_edit_node_1.node_id
-           FROM v_edit_node v_edit_node_1));
-
-
-
-
---plan
-DROP VIEW IF EXISTS v_ui_plan_arc_cost;
-CREATE OR REPLACE VIEW v_ui_plan_arc_cost AS 
- SELECT arc.arc_id,
-    1 AS orderby,
-    'element'::text AS identif,
-    cat_arc.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    1 AS measurement,
-    1::numeric * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
-     JOIN v_price_compost ON cat_arc.cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    2 AS orderby,
-    'm2bottom'::text AS identif,
-    cat_arc.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m2mlbottom AS measurement,
-    v_plan_arc.m2mlbottom * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
-     JOIN v_price_compost ON cat_arc.m2bottom_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    3 AS orderby,
-    'm3protec'::text AS identif,
-    cat_arc.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m3mlprotec AS measurement,
-    v_plan_arc.m3mlprotec * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_arc ON cat_arc.id::text = arc.arccat_id::text
-     JOIN v_price_compost ON cat_arc.m3protec_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    4 AS orderby,
-    'm3exc'::text AS identif,
-    cat_soil.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m3mlexc AS measurement,
-    v_plan_arc.m3mlexc * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN v_price_compost ON cat_soil.m3exc_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    5 AS orderby,
-    'm3fill'::text AS identif,
-    cat_soil.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m3mlfill AS measurement,
-    v_plan_arc.m3mlfill * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN v_price_compost ON cat_soil.m3fill_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    6 AS orderby,
-    'm3excess'::text AS identif,
-    cat_soil.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m3mlexcess AS measurement,
-    v_plan_arc.m3mlexcess * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN v_price_compost ON cat_soil.m3excess_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    7 AS orderby,
-    'm2trenchl'::text AS identif,
-    cat_soil.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m2mltrenchl AS measurement,
-    v_plan_arc.m2mltrenchl * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN cat_soil ON cat_soil.id::text = arc.soilcat_id::text
-     JOIN v_price_compost ON cat_soil.m2trenchl_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT arc.arc_id,
-    8 AS orderby,
-    'pavement'::text AS identif,
-    cat_pavement.id AS catalog_id,
-    v_price_compost.id AS price_id,
-    v_price_compost.unit,
-    v_price_compost.descript,
-    v_price_compost.price AS cost,
-    v_plan_arc.m2mlpav * plan_arc_x_pavement.percent AS measurement,
-    v_plan_arc.m2mlpav * plan_arc_x_pavement.percent * v_price_compost.price AS total_cost
-   FROM arc
-     JOIN plan_arc_x_pavement ON plan_arc_x_pavement.arc_id::text = arc.arc_id::text
-     JOIN cat_pavement ON cat_pavement.id::text = plan_arc_x_pavement.pavcat_id::text
-     JOIN v_price_compost ON cat_pavement.m2_cost::text = v_price_compost.id::text
-     JOIN v_plan_arc ON arc.arc_id::text = v_plan_arc.arc_id::text
-UNION
- SELECT connec.arc_id,
-    9 AS orderby,
-    'connec'::text AS identif,
-    'Various catalog'::character varying AS catalog_id,
-    'Various prices'::character varying AS price_id,
-    'ut'::character varying AS unit,
-    'Sumatory of connecs cost related to arc. The cost is calculated in combination of parameters depth/length from connec table and catalog price from cat_connec table'::character varying AS descript,
-    NULL::numeric AS cost,
-    count(connec.connec_id) AS measurement,
-    sum(connec.connec_length * (v_price_x_catconnec.cost_mlconnec + v_price_x_catconnec.cost_m3trench * connec.depth * 0.333) + v_price_x_catconnec.cost_ut)::numeric(12,2) AS total_cost
-   FROM connec
-     JOIN v_price_x_catconnec ON v_price_x_catconnec.id::text = connec.connecat_id::text
-  GROUP BY connec.arc_id
-  ORDER BY 1, 2;
-
+-----------------------
+-- plan edit views
+-----------------------
 
 DROP VIEW IF EXISTS v_ui_plan_node_cost;
 CREATE OR REPLACE VIEW v_ui_plan_node_cost AS 
@@ -1147,31 +974,10 @@ CREATE OR REPLACE VIEW v_ui_plan_node_cost AS
 
 
 
---rpt
-DROP VIEW IF EXISTS ve_ui_rpt_result_cat;
-CREATE OR REPLACE VIEW ve_ui_rpt_result_cat AS 
- SELECT rpt_cat_result.id,
-    rpt_cat_result.result_id,
-    rpt_cat_result.n_junction,
-    rpt_cat_result.n_reservoir,
-    rpt_cat_result.n_tank,
-    rpt_cat_result.n_pipe,
-    rpt_cat_result.n_pump,
-    rpt_cat_result.n_valve,
-    rpt_cat_result.head_form,
-    rpt_cat_result.hydra_time,
-    rpt_cat_result.hydra_acc,
-    rpt_cat_result.st_ch_freq,
-    rpt_cat_result.max_tr_ch,
-    rpt_cat_result.dam_li_thr,
-    rpt_cat_result.max_trials,
-    rpt_cat_result.q_analysis,
-    rpt_cat_result.spec_grav,
-    rpt_cat_result.r_kin_visc,
-    rpt_cat_result.r_che_diff,
-    rpt_cat_result.dem_multi,
-    rpt_cat_result.total_dura,
-    rpt_cat_result.exec_date,
-    rpt_cat_result.q_timestep,
-    rpt_cat_result.q_tolerance
-   FROM rpt_cat_result;
+-----------------------
+-- rpt edit views
+-----------------------
+DROP VIEW IF EXISTS  "ve_ui_rpt_result_cat" CASCADE;
+CREATE VIEW "ve_ui_rpt_result_cat" AS 
+SELECT *
+FROM rpt_cat_result

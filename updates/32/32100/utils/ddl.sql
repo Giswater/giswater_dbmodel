@@ -87,19 +87,6 @@ CREATE SEQUENCE config_api_visit_cat_multievent_id_seq
     NO MAXVALUE
     CACHE 1;
     
------------------------
--- create catalogs
------------------------
-
-CREATE TABLE cat_arc_shape
-(
-  id character varying(30) NOT NULL,
-  epa character varying(30) NOT NULL,
-  image character varying(50),
-  descript text,
-  active boolean,
-  CONSTRAINT cat_arc_shape_pkey PRIMARY KEY (id)
-);
 
 
 -----------------------
@@ -353,7 +340,6 @@ ALTER TABLE audit_cat_param_user ADD COLUMN label text;
 ALTER TABLE audit_cat_param_user ADD COLUMN dv_querytext text;
 ALTER TABLE audit_cat_param_user ADD COLUMN dv_parent_id text;
 ALTER TABLE audit_cat_param_user ADD COLUMN isenabled boolean;
-ALTER TABLE audit_cat_param_user ADD COLUMN _orderby integer;
 ALTER TABLE audit_cat_param_user ADD COLUMN layout_id integer;
 ALTER TABLE audit_cat_param_user ADD COLUMN layout_order integer;
 ALTER TABLE audit_cat_param_user ADD COLUMN project_type character varying(30);
@@ -364,7 +350,6 @@ ALTER TABLE audit_cat_param_user ADD COLUMN feature_dv_parent_value text;
 ALTER TABLE audit_cat_param_user ADD COLUMN isautoupdate boolean;
 ALTER TABLE audit_cat_param_user ADD COLUMN datatype character varying(30);
 ALTER TABLE audit_cat_param_user ADD COLUMN widgettype character varying(30);
-ALTER TABLE audit_cat_param_user ADD COLUMN _ischeckhidden boolean;
 ALTER TABLE audit_cat_param_user ADD COLUMN vdefault text;
 
 ALTER TABLE cat_arc ADD COLUMN  dn integer;
@@ -377,7 +362,7 @@ ALTER TABLE cat_connec ADD COLUMN  pn integer;
 ALTER TABLE cat_node ADD COLUMN dn integer;
 ALTER TABLE cat_node ADD COLUMN  pn integer;
 
-ALTER TABLE cat_feature ADD COLUMN  type haracter varying(30);
+ALTER TABLE cat_feature ADD COLUMN  type character varying(30);
 ALTER TABLE cat_feature ADD COLUMN shortcut_key character varying(100);
 ALTER TABLE cat_feature ADD COLUMN parent_layer character varying(100);
 ALTER TABLE cat_feature ADD COLUMN child_layer character varying(100);
@@ -397,7 +382,6 @@ ALTER TABLE config_param_system ADD COLUMN layout_order integer;
 ALTER TABLE config_param_system ADD COLUMN project_type character varying;
 ALTER TABLE config_param_system ADD COLUMN dv_isparent boolean;
 ALTER TABLE config_param_system ADD COLUMN isautoupdate boolean;
-ALTER TABLE config_param_system ADD COLUMN _isinform boolean;
 ALTER TABLE config_param_system ADD COLUMN datatype character varying;
 ALTER TABLE config_param_system ADD COLUMN widgettype character varying;
 ALTER TABLE config_param_system ADD COLUMN tooltip text;

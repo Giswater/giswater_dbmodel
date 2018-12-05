@@ -83,8 +83,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
 			ELSIF count_aux > 1 THEN
-				NEW.sector_id =(SELECT sector_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, promixity_buffer_aux) 
-				order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
+				NEW.sector_id =(SELECT sector_id FROM ve_node WHERE ST_DWithin(NEW.the_geom, ve_node.the_geom, promixity_buffer_aux) 
+				order by ST_Distance (NEW.the_geom, ve_node.the_geom) LIMIT 1);
 			END IF;	
 			IF (NEW.sector_id IS NULL) THEN
 				NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
@@ -103,8 +103,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
 			ELSIF count_aux > 1 THEN
-				NEW.dma_id =(SELECT dma_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, promixity_buffer_aux) 
-				order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
+				NEW.dma_id =(SELECT dma_id FROM ve_node WHERE ST_DWithin(NEW.the_geom, ve_node.the_geom, promixity_buffer_aux) 
+				order by ST_Distance (NEW.the_geom, ve_node.the_geom) LIMIT 1);
 			END IF;
 			IF (NEW.dma_id IS NULL) THEN
 				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);

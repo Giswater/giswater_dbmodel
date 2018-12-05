@@ -122,10 +122,10 @@ $BODY$
 
 
   
-DROP TRIGGER IF EXISTS gw_trg_edit_psector ON "SCHEMA_NAME".v_edit_om_psector;
+DROP TRIGGER IF EXISTS gw_trg_edit_psector ON "SCHEMA_NAME".ve_om_psector;
 CREATE TRIGGER gw_trg_edit_psector INSTEAD OF INSERT OR UPDATE OR DELETE
-ON SCHEMA_NAME.v_edit_om_psector  FOR EACH ROW  EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_edit_psector('om');
+ON SCHEMA_NAME.ve_om_psector  FOR EACH ROW  EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_edit_psector('om');
 
-DROP TRIGGER IF EXISTS gw_trg_edit_psector ON "SCHEMA_NAME".v_edit_plan_psector;
+DROP TRIGGER IF EXISTS gw_trg_edit_psector ON "SCHEMA_NAME".ve_plan_psector;
 CREATE TRIGGER gw_trg_edit_psector  INSTEAD OF INSERT OR UPDATE OR DELETE
-ON SCHEMA_NAME.v_edit_plan_psector  FOR EACH ROW  EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_edit_psector('plan');
+ON SCHEMA_NAME.ve_plan_psector  FOR EACH ROW  EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_edit_psector('plan');
