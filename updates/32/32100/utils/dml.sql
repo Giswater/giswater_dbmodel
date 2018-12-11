@@ -170,3 +170,16 @@ INSERT INTO value_type VALUES ('listlimit', '3', '100', NULL);
 INSERT INTO value_type VALUES ('listlimit', '4', '500', NULL);
 INSERT INTO value_type VALUES ('listlimit', '5', '1000', NULL);
 INSERT INTO value_type VALUES ('nullvalue', '0', NULL, NULL);
+
+
+-----------------------
+-- config_param_system
+-----------------------
+-- network 
+UPDATE config_param_system SET value='{"sys_table_id":"ve_arc", "sys_id_field":"arc_id", "sys_search_field":"code", "alias":"Arcs", "cat_field":"arccat_id", "orderby" :"1", "feature_type":"arc_id"}' WHERE parameter='api_search_arc';
+UPDATE config_param_system SET value='{"sys_table_id":"ve_node", "sys_id_field":"node_id", "sys_search_field":"code", "alias":"Nodes", "cat_field":"nodecat_id", "orderby":"2", "feature_type":"node_id"}' WHERE parameter='api_search_node';
+UPDATE config_param_system SET value='{"sys_table_id":"ve_connec", "sys_id_field":"connec_id", "sys_search_field":"code", "alias":"Escomeses", "cat_field":"connecat_id", "orderby":"3", "feature_type":"connec_id"}' WHERE parameter='api_search_connec';
+UPDATE  config_param_system SET value='{"sys_table_id":"ve_element", "sys_id_field":"element_id", "sys_search_field":"code", "alias":"Elements", "cat_field":"elementcat_id", "orderby":"5", "feature_type":"element_id"}' WHERE parameter='api_search_element';
+-- psector
+UPDATE config_param_system SET value='{"sys_table_id":"v_edit_plan_psector","WARNING":"sys_table_id only web, python is hardcoded: v_edit_plan_psector as self.plan_om =''plan''", "sys_id_field":"psector_id", "sys_search_field":"name", "sys_parent_field":"expl_id", "sys_geom_field":"the_geom"}'
+WHERE parameter='api_search_psector';
