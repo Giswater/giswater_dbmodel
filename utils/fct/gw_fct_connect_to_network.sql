@@ -47,7 +47,7 @@ BEGIN
     -- Search path
     SET search_path = "SCHEMA_NAME", public;
 
-    node_proximity_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
+    node_proximity_aux = (SELECT "value" FROM config_param_user WHERE parameter = 'node_proximity' and cur_user=current_user);
 
     -- Main loop
     IF connec_array IS NOT NULL THEN

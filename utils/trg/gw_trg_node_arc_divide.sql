@@ -26,7 +26,7 @@ BEGIN
 	IF TG_OP = 'INSERT' AND edit_arc_division_dsbl_aux IS NOT TRUE THEN
 
    	 --Get data from config table
-		node_proximity_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
+		node_proximity_aux = (SELECT "value" FROM config_param_user WHERE parameter = 'node_proximity' and cur_user=current_user);
 	
 		SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_intersects((NEW.the_geom), St_buffer(v_edit_arc.the_geom,node_proximity_aux)) AND NEW.state>0 LIMIT 1;
 		IF arc_id_aux IS NOT NULL THEN

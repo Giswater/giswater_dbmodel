@@ -94,9 +94,9 @@ BEGIN
 
 --  Get parameters
     --SELECT * INTO rec FROM config;
-    SELECT value INTO v_node_proximity FROM config_param_system WHERE parameter = 'node_proximity';
+    SELECT value INTO v_node_proximity FROM config_param_user WHERE parameter = 'node_proximity' and cur_user=current_user;
     SELECT value INTO v_node_proximity_control FROM config_param_system WHERE parameter = 'node_proximity_control';
-    SELECT value INTO v_arc_searchnodes FROM config_param_system WHERE parameter = 'arc_searchnodes';
+    SELECT value INTO v_arc_searchnodes FROM config_param_user WHERE parameter = 'arc_searchnodes'and cur_user=current_user;
     SELECT value INTO v_samenode_init_end_control FROM config_param_system WHERE parameter = 'samenode_init_end_control';
     SELECT value INTO v_arc_searchnodes_control FROM config_param_system WHERE parameter = 'arc_searchnodes_control';
 

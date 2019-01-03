@@ -16,7 +16,7 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
     -- Get connec tolerance from config table
-    connec_proximity_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='connec_proximity');
+    connec_proximity_aux = (SELECT "value" FROM config_param_user WHERE "parameter"='connec_proximity' AND cur_user=current_user);
     connec_proximity_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='connec_proximity_control');
     
     IF TG_OP = 'INSERT' THEN

@@ -24,7 +24,7 @@ BEGIN
     DELETE FROM anl_arc_x_node WHERE cur_user="current_user"() AND fprocesscat_id=3;
 
 	-- Get data from config table
-	arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+	arc_searchnodes_aux = (SELECT "value" FROM config_param_user WHERE "parameter"='arc_searchnodes' AND cur_user=current_user);
 	
 	-- Computing process
 	FOR arc_rec IN SELECT * FROM v_edit_arc

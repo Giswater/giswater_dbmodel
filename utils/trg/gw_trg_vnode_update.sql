@@ -21,7 +21,7 @@ BEGIN
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
      --Get data from config table
-	vnode_update_tolerance_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='vnode_update_tolerance');
+	vnode_update_tolerance_aux = (SELECT "value" FROM config_param_user WHERE "parameter"='vnode_update_tolerance' AND cur_user=current_user);
 
        -- Start process
 	SELECT * INTO arcrec FROM v_edit_arc WHERE ST_DWithin((NEW.the_geom), v_edit_arc.the_geom, vnode_update_tolerance_aux) 

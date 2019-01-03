@@ -18,7 +18,7 @@ BEGIN
     SET search_path = "SCHEMA_NAME", public;
 
     -- Get data from config table
-    node_duplicated_tolerance_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='connec_duplicated_tolerance');
+    node_duplicated_tolerance_aux=(SELECT "value" FROM config_param_user WHERE "parameter"='node_duplicated_tolerance' AND cur_user=current_user);
     
     -- Reset values
     DELETE FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id=6;

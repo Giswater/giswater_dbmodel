@@ -25,7 +25,7 @@ BEGIN
     SET search_path = SCHEMA_NAME, public;
 
 	-- Get data from config tables
-	node_proximity_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');
+	node_proximity_aux = (SELECT "value" FROM config_param_user WHERE parameter = 'node_proximity' and cur_user=current_user);
 
 	--  Reset values
 	DELETE FROM temp_table WHERE user_name=current_user AND fprocesscat_id=16;

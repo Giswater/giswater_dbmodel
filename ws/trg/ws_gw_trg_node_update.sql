@@ -31,7 +31,7 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
     -- Get parameters
-  	node_proximity_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity');	
+  	node_proximity_aux= (SELECT "value" FROM config_param_user WHERE parameter = 'node_proximity' and cur_user=current_user);
 	node_proximity_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='node_proximity_control');	
  
 	SELECT * INTO optionsRecord FROM inp_options LIMIT 1;

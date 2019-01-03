@@ -26,7 +26,7 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
     
  -- Get data from config table
-    arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+    arc_searchnodes_aux = (SELECT "value" FROM config_param_user WHERE "parameter"='arc_searchnodes' AND cur_user=current_user);
     arc_searchnodes_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes_control');
     samenode_init_end_control_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
     nodeinsert_arcendpoint_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='nodeinsert_arcendpoint');

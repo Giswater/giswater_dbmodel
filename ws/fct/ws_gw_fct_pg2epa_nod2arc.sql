@@ -37,8 +37,8 @@ BEGIN
 --  Looking for parameters
     SELECT * INTO rec_options FROM inp_options;
 
-	node2arc_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='node2arc');
-    arc_searchnodes_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+	node2arc_aux = (SELECT "value" FROM config_param_user WHERE "parameter"='node2arc' AND cur_user=current_user );
+    arc_searchnodes_aux = (SELECT "value" FROM config_param_user WHERE "parameter"='arc_searchnodes' AND cur_user=current_user);
 
 --  Move valves to arc
     RAISE NOTICE 'Start loop.....';

@@ -32,7 +32,7 @@ BEGIN
     value2:= true;
     
     -- Get data from config table
-    arc_searchnodes_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='arc_searchnodes');
+    arc_searchnodes_aux=(SELECT "value" FROM config_param_user WHERE "parameter"='arc_searchnodes' AND cur_user=current_user);
     samenode_init_end_control_aux=(SELECT "value" FROM config_param_system WHERE "parameter"='samenode_init_end_control');
 
 	-- Starting loop process
