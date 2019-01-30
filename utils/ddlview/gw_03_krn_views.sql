@@ -72,10 +72,6 @@ JOIN element ON element.element_id = element_x_arc.element_id
 LEFT JOIN cat_element ON cat_element.id=element.elementcat_id
 JOIN selector_state ON element.state=selector_state.state_id
 AND selector_state.cur_user = "current_user"()::text;
-<<<<<<< HEAD:utils/view/gw_03_krn_views.sql
-
-=======
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:utils/ddlview/gw_03_krn_views.sql
 
 
 drop view if exists v_ui_element_x_node cascade; 
@@ -101,10 +97,6 @@ JOIN element ON element.element_id = element_x_node.element_id
 LEFT JOIN cat_element ON cat_element.id=element.elementcat_id
 JOIN selector_state ON element.state=selector_state.state_id
 AND selector_state.cur_user = "current_user"()::text;
-<<<<<<< HEAD:utils/view/gw_03_krn_views.sql
-
-=======
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:utils/ddlview/gw_03_krn_views.sql
 
 
 drop view if exists v_ui_element_x_connec cascade; 

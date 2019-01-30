@@ -232,10 +232,6 @@ connec.state_type,
 connec.annotation,
 connec.observ,
 connec.comment,
-<<<<<<< HEAD:ws/view/ws_02_2_krn_views_edit.sql
-cat_connec.label,
-=======
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:ws/ddlview/ws_02_2_krn_views_edit.sql
 connec.dma_id,
 connec.presszonecat_id,
 connec.soilcat_id,
@@ -259,10 +255,7 @@ connec.postnumber2,
 connec.postcomplement2,
 connec.descript,
 connec.arc_id,
-<<<<<<< HEAD:ws/view/ws_02_2_krn_views_edit.sql
-=======
 cat_connec.label,
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:ws/ddlview/ws_02_2_krn_views_edit.sql
 cat_connec.svg AS svg,
 connec.rotation,
 concat(connec_type.link_path,connec.link) as link,
@@ -284,10 +277,6 @@ FROM  connec
 	LEFT JOIN dma ON connec.dma_id = dma.dma_id
 	LEFT JOIN sector ON connec.sector_id=sector.sector_id;
 
-<<<<<<< HEAD:ws/view/ws_02_2_krn_views_edit.sql
-	
-=======
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:ws/ddlview/ws_02_2_krn_views_edit.sql
 	
    
   

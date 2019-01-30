@@ -172,8 +172,6 @@ This version of Giswater is provided by Giswater Association
 			IF (NEW.builtdate IS NULL) THEN
 				NEW.builtdate:=(SELECT "value" FROM config_param_user WHERE "parameter"='builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF;
-<<<<<<< HEAD:ud/trg/ud_gw_trg_edit_man_arc.sql
-=======
 
 			
 			--Copy id to code field
@@ -182,7 +180,6 @@ This version of Giswater is provided by Giswater Association
 			IF (NEW.code IS NULL AND code_autofill_bool IS TRUE) THEN 
 				NEW.code=NEW.arc_id;
 			END IF;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:ud/ftrg/ud_gw_trg_edit_man_arc.sql
 			
 			-- LINK
 			IF (SELECT "value" FROM config_param_system WHERE "parameter"='edit_automatic_insert_link')::boolean=TRUE THEN

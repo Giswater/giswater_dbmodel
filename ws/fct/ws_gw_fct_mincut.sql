@@ -70,11 +70,6 @@ DECLARE
     macroexpl_id_arg	integer;
     v_return		json;
     cont1 		integer default 0;
-<<<<<<< HEAD
-    v_om_mincut_areas	boolean;
-    v_publish_user 	text;
-    v_muni_id 		integer;
-=======
     v_publish_user 	text;
     v_muni_id 		integer;
     v_numarcs		integer;
@@ -84,7 +79,6 @@ DECLARE
     v_debug		Boolean;
     v_overlap		text;
     v_geometry 		text;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 
 BEGIN
     -- Search path
@@ -102,13 +96,9 @@ BEGIN
     DELETE FROM "anl_mincut_result_hydrometer" where result_id=result_id_arg; 
     DELETE FROM "anl_mincut_result_valve" where result_id=result_id_arg;
 
-<<<<<<< HEAD
-    RAISE NOTICE '2-Identification exploitation, macroexploitation and municipality';
-=======
     IF v_debug THEN
 	RAISE NOTICE '2-Identification exploitation, macroexploitation and municipality';
     END IF;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
     IF type_element_arg='node' OR type_element_arg='NODE' THEN
 		SELECT expl_id INTO expl_id_arg FROM node WHERE node_id=element_id_arg;
 		SELECT muni_id INTO v_muni_id FROM node WHERE node_id=element_id_arg;
@@ -121,14 +111,9 @@ BEGIN
 
     UPDATE anl_mincut_result_cat SET muni_id=v_muni_id WHERE id=result_id_arg;
     
-<<<<<<< HEAD
-    
-    RAISE NOTICE '3-Update exploitation selector (of user) according the macroexploitation system';
-=======
     IF v_debug THEN
 	RAISE NOTICE '3-Update exploitation selector (of user) according the macroexploitation system';
     END IF;    
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
     INSERT INTO selector_expl (expl_id, cur_user)
     SELECT expl_id, current_user from exploitation 
     where macroexpl_id=macroexpl_id_arg and expl_id not in (select expl_id from selector_expl);
@@ -285,26 +270,6 @@ BEGIN
 			RAISE NOTICE '10-Update mincut selector';
 		END IF;
 		
-<<<<<<< HEAD
-		RAISE NOTICE '10-Update mincut selector';
-		--    Update the selector
-		IF (SELECT COUNT(*) FROM anl_mincut_result_selector WHERE cur_user = current_user) > 0 THEN
-			UPDATE anl_mincut_result_selector SET result_id = result_id_arg WHERE cur_user = current_user;
-		ELSE
-			INSERT INTO anl_mincut_result_selector(cur_user, result_id) VALUES (current_user, result_id_arg);
-		END IF;
-		--    Update the selector for publish_user
-		-- Get publish user
-		SELECT value FROM config_param_system WHERE parameter='api_publish_user' 
-		INTO v_publish_user;
-		IF v_publish_user IS NOT NULL THEN
-			IF (SELECT COUNT(*) FROM anl_mincut_result_selector WHERE cur_user = v_publish_user AND result_id=result_id_arg) = 0 THEN
-				INSERT INTO anl_mincut_result_selector(cur_user, result_id) VALUES (v_publish_user, result_id_arg);
-			END IF;
-		END IF;	
-					
-		RAISE NOTICE '11-Insert into anl_mincut_result_connec table ';
-=======
 		--    Update the selector
 		-- current user
 		DELETE FROM anl_mincut_result_selector WHERE result_id = result_id_arg AND cur_user = current_user;
@@ -321,7 +286,6 @@ BEGIN
 		IF v_debug THEN
 			RAISE NOTICE '11-Insert into anl_mincut_result_connec table ';
 		END IF;			
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 		INSERT INTO anl_mincut_result_connec (result_id, connec_id, the_geom)
 		SELECT result_id_arg, connec_id, connec.the_geom FROM connec JOIN anl_mincut_result_arc ON connec.arc_id=anl_mincut_result_arc.arc_id WHERE result_id=result_id_arg AND state=1;
 

@@ -1,27 +1,44 @@
-﻿DROP VIEW SCHEMA_NAME.v_ui_hydrometer ;
+﻿/*
+This file is part of Giswater 3
+The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This version of Giswater is provided by Giswater Association
+*/
 
-CREATE OR REPLACE VIEW SCHEMA_NAME.v_ui_hydrometer AS 
- SELECT v_rtc_hydrometer.hydrometer_id AS sys_hydrometer_id,
-    v_rtc_hydrometer.connec_id AS sys_connec_id,
-    v_rtc_hydrometer.hydrometer_customer_code AS "Codi abonat:",
-    v_rtc_hydrometer.connec_customer_code AS "Codi escomesa:",
-    v_rtc_hydrometer.plot_code AS "Codi finca:",
-    v_rtc_hydrometer.hydro_number AS "Núm. comptador:",
-    v_rtc_hydrometer.state AS "Estat:",
-    v_rtc_hydrometer.expl_name AS "Explotació:",
-    v_rtc_hydrometer.customer_name AS "Titular:",
-    v_rtc_hydrometer.address1 AS "Adreça 1",
-    v_rtc_hydrometer.address2 AS "Adreça 2",
-    v_rtc_hydrometer.address3 AS "Adreça 3",
-    v_rtc_hydrometer.address2_1 AS "Adreça 2-1",
-    v_rtc_hydrometer.address2_2 AS "Adreça 2-2",
-    v_rtc_hydrometer.address2_3 AS "Adreça 2-3"
-   FROM SCHEMA_NAME.v_rtc_hydrometer;
-   
-   
-GRANT SELECT ON TABLE SCHEMA_NAME.v_ui_hydrometer TO role_basic;
-GRANT SELECT ON TABLE SCHEMA_NAME.v_ui_hydrometer TO role_edit;
-GRANT SELECT ON TABLE SCHEMA_NAME.v_ui_hydrometer TO role_om;
-GRANT SELECT ON TABLE SCHEMA_NAME.v_ui_hydrometer TO role_epa;
-GRANT SELECT ON TABLE SCHEMA_NAME.v_ui_hydrometer TO role_master;
-GRANT SELECT ON TABLE SCHEMA_NAME.v_ui_hydrometer TO role_admin;
+
+CREATE OR REPLACE VIEW ws.ext_rtc_hydrometer AS 
+ SELECT hydrometer.id,
+    hydrometer.code,
+    hydrometer.connec_id,
+    hydrometer.muni_id,
+    hydrometer.plot_code,
+    hydrometer.priority_id,
+    hydrometer.catalog_id,
+    hydrometer.category_id,
+    hydrometer.state_id,
+    hydrometer.hydro_number,
+    hydrometer.hydro_man_date,
+    hydrometer.crm_number,
+    hydrometer.customer_name,
+    hydrometer.address1,
+    hydrometer.address2,
+    hydrometer.address3,
+    hydrometer.address2_1,
+    hydrometer.address2_2,
+    hydrometer.address2_3,
+    hydrometer.m3_volume,
+    hydrometer.start_date,
+    hydrometer.end_date,
+    hydrometer.update_date,
+    hydrometer.expl_id
+   FROM crm.hydrometer;
+
+
+--views
+FILE ws_52_1_krn_views_edit
+FILE ws_52_2_rtc_views_edit
+FILE ws_53_rtc_views
+
+-- triggers
+FILE ws_gw_trg_edit_man_connec
+FILE ws_gw_trg_edit_man_connec_pol
+FILE ws_gw_trg_edit_rtc_hydro_data

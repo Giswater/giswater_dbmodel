@@ -39,10 +39,7 @@ DECLARE
 	array_agg_gully varchar [];
 	v_arcsearch_nodes float;
     rec_node record;
-<<<<<<< HEAD
-=======
     v_newarc varchar;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 
 
 
@@ -150,11 +147,7 @@ BEGIN
 			LOOP
 				UPDATE node SET arc_id=(SELECT arc_id FROM v_edit_arc WHERE ST_DWithin(rec_node.the_geom, 
 				v_edit_arc.the_geom,0.001) AND arc_id != arc_id_aux LIMIT 1) 
-<<<<<<< HEAD
-				AND node_id=rec_node.node_id;
-=======
 				WHERE node_id=rec_node.node_id;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 			END LOOP;
 
 			-- Capture linked feature information to redraw (later on this function)
@@ -175,11 +168,7 @@ BEGIN
 				UPDATE gully SET arc_id=NULL WHERE arc_id=arc_id_aux;		
 			END IF;
 					
-<<<<<<< HEAD
-			--INSERT DATA INTO OM_TRACEABILITY
-=======
 			-- Insert data into traceability table
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 			INSERT INTO audit_log_arc_traceability ("type", arc_id, arc_id1, arc_id2, node_id, "tstamp", "user") 
 			VALUES ('DIVIDE ARC',  arc_id_aux, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
 		

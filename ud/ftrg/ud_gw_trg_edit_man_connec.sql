@@ -150,12 +150,6 @@ BEGIN
 				NEW.code=NEW.connec_id;
 			END IF;
 
-<<<<<<< HEAD:ud/trg/ud_gw_trg_edit_man_connec.sql
-		--Inventory
-		IF (NEW.inventory IS NULL) THEN
-			NEW.inventory :='TRUE';
-		END IF; 
-=======
 		--Inventory	
 		NEW.inventory := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_inventory_sysvdefault');
 
@@ -164,7 +158,6 @@ BEGIN
 
 		--Uncertain
 		NEW.uncertain := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_uncertain_sysvdefault');		
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:ud/ftrg/ud_gw_trg_edit_man_connec.sql
 		
 	    -- LINK
 	    IF (SELECT "value" FROM config_param_system WHERE "parameter"='edit_automatic_insert_link')::boolean= TRUE THEN

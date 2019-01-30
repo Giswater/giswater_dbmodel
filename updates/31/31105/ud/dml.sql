@@ -12,17 +12,6 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 SELECT setval('SCHEMA_NAME.config_param_system_id_seq', (SELECT max(id) FROM config_param_system), true);
 INSERT INTO config_param_system (parameter, value, data_type, context, descript) VALUES ('code_vd', 'No code', 'Text', 'OM', 'UD');
 
-<<<<<<< HEAD:updates/ud/31100.sql
-
-
-
-
-
-
-
-
-
-=======
 --2019/01/21
 UPDATE audit_cat_param_user SET description = 'Default value for cat_arc parameter' WHERE id='arccat_vdefault';
 UPDATE audit_cat_param_user SET description = 'Default value for builtdate parameter' WHERE id='builtdate_vdefault';
@@ -69,4 +58,3 @@ UPDATE audit_cat_param_user SET description = 'Deprecated' WHERE id='qgis_templa
 UPDATE audit_cat_param_user SET description = 'Deprecated' WHERE id='virtual_line_vdefault';
 UPDATE audit_cat_param_user SET description = 'Deprecated' WHERE id='virtual_point_vdefault';
 UPDATE audit_cat_param_user SET description = 'Deprecated' WHERE id='virtual_polygon_vdefault';
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:updates/31/31105/ud/dml.sql

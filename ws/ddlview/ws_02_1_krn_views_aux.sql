@@ -169,11 +169,7 @@ FROM node
 	LEFT JOIN sector ON node.sector_id = sector.sector_id;
 
 
-<<<<<<< HEAD:ws/view/ws_02_1_krn_views_aux.sql
-DROP VIEW IF EXISTS vu_node CASCADE;;
-=======
 DROP VIEW IF EXISTS vu_node CASCADE;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:ws/ddlview/ws_02_1_krn_views_aux.sql
 CREATE VIEW vu_node AS SELECT
 node.node_id, 
 code,

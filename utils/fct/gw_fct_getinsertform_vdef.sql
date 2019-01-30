@@ -246,21 +246,10 @@ BEGIN
         '}')::json;
 
 --   Exception handling
-<<<<<<< HEAD
-    EXCEPTION WHEN OTHERS THEN 
-        RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "apiVersion":'|| api_version ||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
-=======
   --  EXCEPTION WHEN OTHERS THEN 
     --    RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "apiVersion":'|| api_version ||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
-<<<<<<< HEAD
   COST 100;
-
-
-=======
-  COST 100;
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66

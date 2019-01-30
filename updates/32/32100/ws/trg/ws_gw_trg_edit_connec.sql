@@ -144,22 +144,18 @@ BEGIN
 			IF (NEW.builtdate IS NULL) THEN
 				NEW.builtdate :=(SELECT "value" FROM config_param_user WHERE "parameter"='builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF;  
-			
-			
-	    -- LINK
-	    IF (SELECT "value" FROM config_param_system WHERE "parameter"='edit_automatic_insert_link')::boolean=TRUE THEN
-	       NEW.link=NEW.connec_id;
-	    END IF;
 
-		
+        
         -- FEATURE INSERT
-		INSERT INTO connec (connec_id, code, elevation, depth,connecat_id,  sector_id, customer_code,  state, state_type, annotation, observ, comment,dma_id, presszonecat_id, soilcat_id, function_type, category_type, fluid_type, location_type, 
-		workcat_id, workcat_id_end, buildercat_id, builtdate, enddate, ownercat_id, streetaxis2_id, postnumber, postnumber2, muni_id, streetaxis_id, postcode, postcomplement, postcomplement2, descript, link, verified, rotation, the_geom, undelete, label_x,label_y,label_rotation,
-		expl_id, publish, inventory,num_value, connec_length, arc_id) 
-		VALUES (NEW.connec_id, NEW.code, NEW.elevation, NEW.depth, NEW.connecat_id, NEW.sector_id, NEW.customer_code,  NEW.state, NEW.state_type, NEW.annotation,   NEW.observ, NEW.comment, NEW.dma_id, NEW.presszonecat_id, NEW.soilcat_id, 
-		NEW.function_type, NEW.category_type, NEW.fluid_type,  NEW.location_type, NEW.workcat_id, NEW.workcat_id_end,  NEW.buildercat_id, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.streetaxis2_id, NEW.postnumber, NEW.postnumber2, 
-		NEW.muni_id, NEW.streetaxis_id, NEW.postcode, NEW.postcomplement, NEW.postcomplement2, NEW.descript, NEW.link, NEW.verified, NEW.rotation, NEW.the_geom,NEW.undelete,NEW.label_x,NEW.label_y,NEW.label_rotation,  NEW.expl_id, NEW.publish, NEW.inventory, NEW.num_value, NEW.connec_length, NEW.arc_id);
-		 
+		INSERT INTO connec (connec_id, code, elevation, "depth",connecat_id, sector_id, customer_code,  connec_length,  "state", state_type, annotation, observ, "comment",dma_id, presszonecat_id, soilcat_id, function_type, category_type, fluid_type, 
+				location_type, workcat_id, workcat_id_end, buildercat_id, builtdate, enddate, ownercat_id, streetaxis2_id, postnumber2, muni_id, streetaxis_id, postnumber, descript, rotation, verified, the_geom, undelete, label_x,label_y,label_rotation,
+				postcomplement, postcomplement2, expl_id, publish, inventory, num_value, arc_id) 
+				VALUES (NEW.connec_id, NEW.code, NEW.elevation, NEW.depth, NEW.connecat_id, NEW.sector_id, NEW.customer_code, NEW.connec_length,  NEW.state, NEW.state_type, NEW.annotation, 
+				NEW.observ, NEW.comment,NEW.dma_id, NEW.presszonecat_id, NEW.soilcat_id, NEW.function_type, NEW.category_type, NEW.fluid_type, NEW.location_type, NEW.workcat_id, NEW.workcat_id_end,
+				NEW.buildercat_id, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.streetaxis2_id, NEW.postnumber2, NEW.muni_id, NEW.streetaxis_id, NEW.postnumber, 
+				NEW.descript, NEW.rotation, NEW.verified, NEW.the_geom,NEW.undelete,NEW.label_x,NEW.label_y,NEW.label_rotation, NEW.postcomplement, NEW.postcomplement2,
+				NEW.expl_id, NEW.publish, NEW.inventory, NEW.num_value, NEW.arc_id );
+        RETURN NEW;
 		
 		-- Control of automatic insert of link and vnode
 		IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
@@ -192,21 +188,6 @@ BEGIN
 		NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);         			
         END IF;
 		
-<<<<<<< HEAD:ws/trg/ws_gw_trg_edit_connec.sql
-		
-		-- Reconnect arc_id
-		IF NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL THEN
-			UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
-			IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
-				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.connec_id AND exit_type='VNODE' LIMIT 1)::int8;
-				PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
-			ELSIF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' AND cur_user=current_user LIMIT 1) IS TRUE THEN
-				PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
-			END IF;
-		END IF;
-		
-=======
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66:updates/32/32100/ws/trg/ws_gw_trg_edit_connec.sql
 		-- State_type
 		IF NEW.state=0 AND OLD.state=1 THEN
 			IF (SELECT state FROM value_state_type WHERE id=NEW.state_type) != NEW.state THEN

@@ -6,17 +6,12 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2222
 
-<<<<<<< HEAD
-DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_pg2epa(character varying, boolean );
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_pg2epa(result_id_var character varying, only_check_bool boolean)  RETURNS integer AS $BODY$
-=======
 
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_pg2epa(result_id_var character varying, only_check_bool boolean)  
 RETURNS integer AS 
 $BODY$
 
 -- only_check_bool NOT USED VARIABLE
->>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 
 DECLARE
 	check_count_aux integer; 
