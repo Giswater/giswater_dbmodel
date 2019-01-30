@@ -718,6 +718,7 @@ INSERT INTO audit_cat_param_user VALUES ('statetype_plan_vdefault', NULL, NULL, 
 
 
 
+<<<<<<< HEAD
 UPDATE audit_cat_param_user SET description = 'Default value for cat_arc parameter' WHERE id='arccat_vdefault';
 UPDATE audit_cat_param_user SET description = 'Default value for builtdate parameter' WHERE id='builtdate_vdefault';
 UPDATE audit_cat_param_user SET description = 'If true, when you finish element insertion, QGIS edition will keep opened. If false, QGIS edition will be closed automatically' WHERE id='cf_keep_opened_edition';
@@ -764,3 +765,5 @@ UPDATE audit_cat_param_user SET description = 'If true, the automatic rotation c
 
 --temporal insert of version data in order to use fk function for ud
 INSERT INTO version VALUES (1,'3.0.100','UD','PostgreSQL 9.5.10, compiled by Visual C++ build 1800, 64-bit','''',now(),'en',25831);
+=======
+>>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66

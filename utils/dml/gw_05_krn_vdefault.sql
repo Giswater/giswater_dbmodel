@@ -8,10 +8,6 @@ This version of Giswater is provided by Giswater Association
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
 
-ALTER TABLE node ALTER COLUMN feature_type SET DEFAULT 'NODE';
-ALTER TABLE arc ALTER COLUMN feature_type SET DEFAULT 'ARC';
-ALTER TABLE connec ALTER COLUMN feature_type SET DEFAULT 'CONNEC';
-
 ALTER TABLE om_visit ALTER COLUMN is_done SET DEFAULT TRUE;
 
 ALTER TABLE value_state_type ALTER COLUMN is_operative SET DEFAULT TRUE;

@@ -8,7 +8,11 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: XXXX
 
 DROP FUNCTION IF EXISTS utils.gw_fct_utils_daily_update();
+<<<<<<< HEAD
 CREATE OR REPLACE FUNCTION utils.gw_fct_utils_daily_update ()
+=======
+CREATE OR REPLACE FUNCTION utils.gw_fct_utils_daily_update()
+>>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 
 RETURNS integer AS
 $BODY$
@@ -23,6 +27,10 @@ BEGIN
 	PERFORM crm.gw_fct_crm2gis();
 	PERFORM ud.gw_fct_refresh_mat_view();
 	PERFORM ws.gw_fct_refresh_mat_view();
+<<<<<<< HEAD
+=======
+	PERFORM ws.gw_fct_utils_update_dma_hydroval();
+>>>>>>> 8d7fd47b43ae5059903d2efae8ad7c296c9fff66
 
 	-- Log
 	INSERT INTO utils.audit_log (fprocesscat_id, log_message) VALUES (999, 'Ok');
