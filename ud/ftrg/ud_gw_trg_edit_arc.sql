@@ -272,8 +272,10 @@ BEGIN
 			ELSIF (OLD.epa_type = 'VIRTUAL') THEN 
 				inp_table:= 'inp_virtual';
 			END IF;
-			v_sql:= 'DELETE FROM '||inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
-			EXECUTE v_sql;
+			IF inp_table IS NOT NULL THEN
+				v_sql:= 'DELETE FROM '||inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
+				EXECUTE v_sql;
+			END IF;
 				
 			inp_table := NULL;
 
@@ -290,8 +292,10 @@ BEGIN
 			ELSIF (NEW.epa_type = 'VIRTUAL') THEN 
 				inp_table:= 'inp_virtual';
 			END IF;
-			v_sql:= 'INSERT INTO '||inp_table||' (arc_id) VALUES ('||quote_literal(NEW.arc_id)||')';
-			EXECUTE v_sql;
+			IF inp_table IS NOT NULL THEN
+				v_sql:= 'DELETE FROM '||inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
+				EXECUTE v_sql;
+			END IF;
 
 		END IF;
 
