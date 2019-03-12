@@ -23,12 +23,11 @@ BEGIN
 
 	ALTER TABLE arc DISABLE TRIGGER gw_trg_topocontrol_arc;
 	ALTER TABLE node DISABLE TRIGGER gw_trg_topocontrol_node;
-	TRUNCATE inp_cat_mat_roughness;
-	TRUNCATE inp_report;
-	TRUNCATE inp_times;
 
 
-	--truncate admin tables
+
+
+	--truncate admin tables that may be customized
 	TRUNCATE cat_feature;
 	TRUNCATE arc_type;
 	TRUNCATE node_type;
@@ -39,6 +38,10 @@ BEGIN
 	TRUNCATE element_type;
 	TRUNCATE man_addfields_parameter;
 	TRUNCATE om_visit_parameter;
+		
+	TRUNCATE inp_cat_mat_roughness;
+	TRUNCATE inp_report;
+	TRUNCATE inp_times;
 	
 	EXECUTE 'INSERT INTO cat_feature SELECT * FROM '||p_source_schema||'.cat_feature;';
 	EXECUTE 'INSERT INTO arc_type SELECT * FROM '||p_source_schema||'.arc_type;';
@@ -51,13 +54,14 @@ BEGIN
 	EXECUTE 'INSERT INTO man_addfields_parameter SELECT * FROM '||p_source_schema||'.man_addfields_parameter;';
 	EXECUTE 'INSERT INTO om_visit_parameter SELECT * FROM '||p_source_schema||'.om_visit_parameter;';
 	
+	--loop over tables that are not assigned to role_admin
     FOR rec IN EXECUTE 
     'SELECT id FROM '||p_source_schema||'.audit_cat_table WHERE sys_role_id!=''role_admin'' 
-    and (id not ilike ''v_%'' and id not ilike ''%selector%'' and id not ilike ''plan_arc_x_pavement'') order by id' 
+    and (id not ilike ''v_%'' and id not ilike ''%selector%'') order by id' 
     LOOP
-
+    	--direct insert from one schema to another. Special ELSIF for the tables which need transformation
 		IF rec.id!='ext_streetaxis' AND rec.id!='inp_cat_mat_roughness'  AND rec.id!='inp_pump' AND rec.id!='inp_pipe' AND rec.id!='inp_shortpipe' 
-		AND rec.id!='inp_valve' AND rec.id!='plan_psector_x_node' AND rec.id!='plan_psector_x_arc' THEN
+		AND rec.id!='inp_valve' AND rec.id!='plan_psector_x_node' AND rec.id!='plan_psector_x_arc' AND rec.id!='plan_arc_x_pavement' THEN
 			
 			EXECUTE 'INSERT INTO '||rec.id||' SELECT * FROM '||p_source_schema||'.'||rec.id||';';
 
@@ -95,6 +99,9 @@ BEGIN
 
 		END IF;
     END LOOP;
+
+	ALTER TABLE arc ENABLE TRIGGER gw_trg_topocontrol_arc;
+	ALTER TABLE node ENABLE TRIGGER gw_trg_topocontrol_node;
 
     return 1;
 END;
