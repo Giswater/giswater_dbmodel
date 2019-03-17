@@ -13,7 +13,8 @@ DECLARE
 	code_autofill_bool boolean;
 	count_aux integer;
 	promixity_buffer_aux double precision;
-	
+	link_path_aux varchar;
+
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
@@ -164,6 +165,11 @@ BEGIN
 	       NEW.link=NEW.connec_id;
 	    END IF;
 		
+	    -- Customer code  
+	    IF (NEW.customer_code IS NULL AND (SELECT "value" FROM config_param_system WHERE "parameter"='customer_code_autofill')::boolean= TRUE) THEN
+			NEW.customer_code = NEW.connec_id;
+	    END IF;
+		
 
         -- FEATURE INSERT
 		INSERT INTO connec (connec_id, code, customer_code, top_elev, y1, y2,connecat_id, connec_type, sector_id, demand, "state",  state_type, connec_depth, connec_length, arc_id, annotation, "observ",
@@ -228,7 +234,13 @@ BEGIN
         IF (NEW.state != OLD.state) THEN   
 		PERFORM gw_fct_state_control('CONNEC', NEW.connec_id, NEW.state, TG_OP);	
 		END IF;
-   
+
+			--link_path
+		SELECT link_path INTO link_path_aux FROM connec_type WHERE id=NEW.connec_type;
+		IF link_path_aux IS NOT NULL THEN
+			NEW.link = replace(NEW.link, link_path_aux,'');
+		END IF;
+
         UPDATE connec 
         SET  code=NEW.code, customer_code=NEW.customer_code, top_elev=NEW.top_elev, y1=NEW.y1, y2=NEW.y2, connecat_id=NEW.connecat_id, connec_type=NEW.connec_type, sector_id=NEW.sector_id, demand=NEW.demand,
 			"state"=NEW."state", state_type=NEW.state_type, connec_depth=NEW.connec_depth, connec_length=NEW.connec_length, annotation=NEW.annotation, "observ"=NEW."observ", 
