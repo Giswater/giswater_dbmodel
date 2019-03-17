@@ -1,29 +1,60 @@
-﻿/*
-This file is part of Giswater
-The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-This version of Giswater is provided by Giswater Association
-*/
-
---FUNCTION CODE: 2548
-
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_om_visit()
+﻿
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_om_visit()
   RETURNS trigger AS
 $BODY$
 DECLARE 
+
+v_version text;
   
 
 BEGIN
 
-    EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
+   EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
-    -- automatic creation of workcat
-    IF (SELECT (value::json->>'AutoNewWorkcat') FROM config_param_system WHERE parameter='om_visit_parameters') THEN
-		INSERT INTO cat_work (id) VALUES (NEW.id);
+   v_version = (SELECT giswater FROM version ORDER by 1 desc LIMIT 1);
+
+   IF TG_OP='INSERT' THEN
+	
+		-- automatic creation of workcat
+		IF (SELECT (value::json->>'AutoNewWorkcat') FROM config_param_system WHERE parameter='om_visit_parameters') THEN
+			INSERT INTO cat_work (id) VALUES (NEW.id);
+		END IF;
+
+		-- setting values of enddate
+		IF NEW.is_done IS FALSE THEN
+			NEW.enddate=null;
+		END IF;	
+
+		RETURN NEW;
+
+
+    ELSIF TG_OP='UPDATE' THEN	
+
+		-- setting values of enddate
+		IF NEW.is_done IS FALSE THEN
+			NEW.enddate=null;
+		END IF;	
+
+		IF v_version > '3.2.019' THEN
+			IF NEW.class_id != OLD.class_id THEN
+				DELETE FROM om_visit_event WHERE visit_id=NEW.id;			
+			END IF;
+		END IF;
+
+		RETURN NEW;
+				
+    ELSIF TG_OP='DELETE' THEN
+	
+    	-- automatic creation of workcat
+		IF (SELECT (value::json->>'AutoNewWorkcat') FROM config_param_system WHERE parameter='om_visit_parameters') THEN
+			DELETE FROM cat_work WHERE id=OLD.id::text;
+		END IF;
+		
+		RETURN OLD;
+		
     END IF;
 
-RETURN NEW;
-    
-END; 
+END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
