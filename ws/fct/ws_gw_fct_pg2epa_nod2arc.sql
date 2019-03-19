@@ -78,8 +78,8 @@ BEGIN
         SELECT COUNT(*) INTO num_arcs FROM rpt_inp_arc WHERE (node_1 = node_id_aux OR node_2 = node_id_aux) AND result_id=result_id_var;
 
         -- Get arcs
-        SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_1 = node_id_aux;
-        SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_2 = node_id_aux;
+        SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_1 = node_id_aux AND result_id=result_id_var ;
+        SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_2 = node_id_aux AND result_id=result_id_var ;
 
         -- Just 1 arcs
         IF num_arcs = 1 THEN
@@ -127,8 +127,8 @@ BEGIN
             IF record_arc1 ISNULL THEN
 
                 -- Get arcs
-                SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_2 = node_id_aux ORDER BY arc_id DESC LIMIT 1;
-                SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_2 = node_id_aux ORDER BY arc_id ASC LIMIT 1;
+                SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_2 = node_id_aux AND result_id=result_id_var ORDER BY arc_id DESC LIMIT 1;
+                SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_2 = node_id_aux AND result_id=result_id_var ORDER BY arc_id ASC LIMIT 1;
 
                 -- Use arc 1 as reference (TODO: Why?)
                 record_new_arc = record_arc1;
@@ -157,8 +157,8 @@ BEGIN
             ELSIF record_arc2 ISNULL THEN
 
                 -- Get arcs
-                SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_1 = node_id_aux ORDER BY arc_id DESC LIMIT 1;
-                SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_1 = node_id_aux ORDER BY arc_id ASC LIMIT 1;
+                SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_1 = node_id_aux AND result_id=result_id_var ORDER BY arc_id DESC LIMIT 1;
+                SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_1 = node_id_aux AND result_id=result_id_var ORDER BY arc_id ASC LIMIT 1;
 
                 -- Use arc 1 as reference (TODO: Why?)
                 record_new_arc = record_arc1;
