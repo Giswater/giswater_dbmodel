@@ -13,4 +13,4 @@ UPDATE config_param_system SET value='TRUE' WHERE parameter='sys_daily_updates';
 
 
 INSERT INTO utils.config_param_system VALUES 
-(1, 'daily_update_mails', '{"mails": [{"mail":"info@bgeo.es"},{"mail":"info@giswater.org"}]}', 'json', 'daily_update_mails', 'Daily update mails');
+(1, 'daily_update_mails', '{"mails": [{"mail":"processlog@bgeo.es"}]}', 'json', 'daily_update_mails', 'Daily update mails');
