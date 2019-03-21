@@ -1,4 +1,4 @@
-/*
+﻿/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -16,12 +16,18 @@ DECLARE
 
 BEGIN
 
-
-	--  Search path
+    --  Search path
     SET search_path = "SCHEMA_NAME", public;
 
-	--  Reset values
-	DELETE FROM temp_table WHERE user_name=cur_user AND fprocesscat_id=17;
+    --  Reset values
+    DELETE FROM temp_table WHERE user_name=current_user AND fprocesscat_id=17;
+
+    INSERT INTO temp_table (fprocesscat_id, text_column) VALUES (17,'');
+    INSERT INTO temp_table (fprocesscat_id, text_column) VALUES (17,'');
+    INSERT INTO temp_table (fprocesscat_id, text_column) VALUES (17,'[Polygons]');
+    INSERT INTO temp_table (fprocesscat_id, text_column) VALUES (17,';;Subcathment       X-Coord               Y-Coord');
+    INSERT INTO temp_table (fprocesscat_id, text_column) VALUES (17,';;--------------    ------------------    -------------------');
+
 
     -- Dump node coordinates for every polygon
     FOR row_id IN SELECT subc_id FROM v_edit_subcatchment
@@ -35,13 +41,13 @@ BEGIN
         FOR point_aux IN SELECT (ST_dumppoints(subcatchment_polygon)).geom
         LOOP
             -- Insert result into outfile table
-            INSERT INTO temp_table (fprocesscat_id, text) VALUES ( 17, format('%s       %s       %s       ', row_id, to_char(ST_X(point_aux),'99999999.999'), to_char(ST_Y(point_aux),'99999999.999')) );
+            INSERT INTO temp_table (fprocesscat_id, text_column) VALUES ( 17, format('%s       %s       %s       ', row_id, to_char(ST_X(point_aux),'99999999.999'), to_char(ST_Y(point_aux),'99999999.999')) );
         END LOOP;
 
     END LOOP;
 
     -- Return the temporal table
-    RETURN QUERY SELECT text FROM temp_table WHERE user_name=cur_user AND fprocesscat_id=17 ORDER BY index;
+    RETURN QUERY SELECT text_column::varchar FROM temp_table WHERE user_name=current_user AND fprocesscat_id=17;
 
 END
 $$;

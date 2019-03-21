@@ -268,3 +268,29 @@ LEFT JOIN cat_element ON cat_element.id=element.elementcat_id
 WHERE element.state = 1 and man_type_location.feature_type='ELEMENT';
 
 
+
+DROP VIEW IF EXISTS v_inp_vertice;
+CREATE OR REPLACE VIEW v_inp_vertice AS 
+SELECT nextval('SCHEMA_NAME.inp_vertice_seq'::regclass) AS id,
+    arc.arc_id::text,
+    st_x(arc.point)::numeric(16,3) AS xcoord,
+    st_y(arc.point)::numeric(16,3) AS ycoord
+   FROM ( SELECT (st_dumppoints(rpt_inp_arc.the_geom)).geom AS point,
+            st_startpoint(rpt_inp_arc.the_geom) AS startpoint,
+            st_endpoint(rpt_inp_arc.the_geom) AS endpoint,
+            rpt_inp_arc.sector_id,
+            rpt_inp_arc.state,
+            rpt_inp_arc.arc_id
+           FROM inp_selector_result,
+            rpt_inp_arc
+          WHERE rpt_inp_arc.result_id::text = inp_selector_result.result_id::text AND inp_selector_result.cur_user = "current_user"()::text) arc
+  WHERE (arc.point < arc.startpoint OR arc.point > arc.startpoint) AND (arc.point < arc.endpoint OR arc.point > arc.endpoint)
+UNION SELECT * FROM (
+ SELECT nextval('SCHEMA_NAME.inp_vertice_seq'::regclass) AS id2,
+    temp_table.text_column AS arc_id,
+    NULL::numeric AS xcoord,
+    NULL::numeric AS ycoord
+   FROM temp_table
+  WHERE temp_table.user_name = "current_user"()::text AND temp_table.fprocesscat_id = 17 ORDER BY id) a
+  ORDER BY 1;
+

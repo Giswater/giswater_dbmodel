@@ -12,9 +12,13 @@ RETURNS integer AS
 $BODY$
 
 -- only_check_bool NOT USED VARIABLE
+/*
+SELECT  "SCHEMA_NAME".gw_fct_pg2epa('1', false)  
+*/
 
 DECLARE
-	check_count_aux integer; 
+	check_count_aux integer;
+	v_epaexportsubcatchment boolean;
 
 BEGIN
 
@@ -25,7 +29,6 @@ BEGIN
 	
 	-- Fill inprpt tables
 	PERFORM gw_fct_pg2epa_fill_data(result_id_var);
-
 
 	-- Make virtual arcs (EPA) transparents for hydraulic model
 	PERFORM gw_fct_pg2epa_join_virtual(result_id_var);
@@ -38,6 +41,15 @@ BEGIN
 	
 	-- Check data quality
 	SELECT gw_fct_pg2epa_check_data(result_id_var) INTO check_count_aux;
+	
+	-- Export subcatchments
+        DELETE FROM temp_table WHERE user_name=current_user AND fprocesscat_id=17;
+
+	SELECT value::boolean INTO v_epaexportsubcatchment FROM config_param_system WHERE parameter='epa_export_subcatchment';
+
+	IF v_epaexportsubcatchment IS TRUE THEN
+		PERFORM gw_fct_pg2epa_dump_subcatch();
+	END IF;
 
 	
 RETURN check_count_aux;
