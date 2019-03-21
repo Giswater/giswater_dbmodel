@@ -50,8 +50,9 @@ INSERT INTO cat_feature VALUES ('DILATADOR', 'FLEXUNION', 'NODE');
 INSERT INTO cat_feature VALUES ('VALVULA_AIRE', 'VALVE', 'NODE');
 INSERT INTO cat_feature VALUES ('MEDIDOR', 'METER', 'NODE');
 INSERT INTO cat_feature VALUES ('CALDERIN_EXPANSION', 'EXPANSIONTANK', 'NODE');
-INSERT INTO cat_feature VALUES ('MEDIDOR_PRESION', 'METER', 'NODE');
+INSERT INTO cat_feature VALUES ('MEDIDOR_PRESSION', 'METER', 'NODE');
 INSERT INTO cat_feature VALUES ('ADAPTACION', 'JUNCTION', 'NODE');
+INSERT INTO cat_feature VALUES ('TAP', 'JUNCTION', 'NODE');
 
 -- Records of node type system table
 -- ----------------------------
