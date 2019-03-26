@@ -60,6 +60,12 @@ BEGIN
     EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
 		INTO api_version;
 
+-- fix client null mistakes
+	insert_data = REPLACE (insert_data::text, '"NULL"', 'null');
+	insert_data = REPLACE (insert_data::text, '"null"', 'null');
+	insert_data = REPLACE (insert_data::text, '""', 'null');
+    insert_data = REPLACE (insert_data::text, '''''', 'null');
+    
 --    Get visible layers
     v_visible_layers := (SELECT value FROM config_param_system WHERE parameter='api_mincut_visible_layers');
 		
@@ -110,7 +116,7 @@ BEGIN
         END IF;     
 
 	-- setting sequence of mincut (as profilactic issue)
-	PERFORM setval ('ws_sample.anl_mincut_result_cat_seq', (SELECT max(id) FROM ws_sample.anl_mincut_result_cat), true);
+	PERFORM setval ('anl_mincut_result_cat_seq', (SELECT max(id) FROM anl_mincut_result_cat), true);
      
         -- Insert mincut
         EXECUTE 'INSERT INTO anl_mincut_result_cat (anl_the_geom) VALUES ($1) RETURNING id'
