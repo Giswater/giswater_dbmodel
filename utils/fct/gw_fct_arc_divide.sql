@@ -108,12 +108,14 @@ BEGIN
 
 		-- Update values of new arc_id (1)
 		rec_aux1.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
+		rec_aux1.code := rec_aux1.arc_id;
 		rec_aux1.node_1 := null;
 		rec_aux1.node_2 := null;
 		rec_aux1.the_geom := line1;
 
 		-- Update values of new arc_id (2)
-		rec_aux2.arc_id := nextval('SCHEMA_NAME.urn_id_seq');	
+		rec_aux2.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
+		rec_aux2.code := rec_aux2.arc_id;
 		rec_aux2.node_1 := null;
 		rec_aux2.node_2 := null;
 		rec_aux2.the_geom := line2;
@@ -222,10 +224,10 @@ BEGIN
 	
 		ELSIF (state_aux=1 AND state_node_arg=2 AND plan_arc_vdivision_dsbl_aux IS NOT TRUE) THEN 
 			rec_aux1.state=2;
-			rec_aux1.state_type=(SELECT value::smallint FROM config_param_user WHERE "parameter"='statetype_plan_vdefault' AND cur_user=current_user);
+			rec_aux1.state_type=(SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius');
 			
 			rec_aux2.state=2;
-			rec_aux2.state_type=(SELECT value::smallint FROM config_param_user WHERE "parameter"='statetype_plan_vdefault' AND cur_user=current_user);
+			rec_aux2.state_type=(SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius');
 			
 			-- Insert new records into arc table
 			-- downgrade temporary the state_topocontrol to prevent conflicts	
