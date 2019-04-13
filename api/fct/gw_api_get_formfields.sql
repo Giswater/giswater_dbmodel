@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2562
 
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_get_formfields(
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_api_get_formfields(
     p_formname character varying,
     p_formtype character varying,
     p_tabname character varying,
@@ -21,14 +21,11 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_get_formfields(
 $BODY$
 
 /*EXAMPLE
-
-SELECT SCHEMA_NAME.gw_api_get_formfields('visit_arc_insp', 'visit', 'data', NULL, NULL, NULL, NULL, 'INSERT', null, 3)
+SELECT "SCHEMA_NAME".gw_api_get_formfields('visit_arc_insp', 'visit', 'data', NULL, NULL, NULL, NULL, 'INSERT', null, 3)
 only 32
-SELECT SCHEMA_NAME.gw_api_get_formfields('go2epa', 'form', 'data', null, null, null, null, null, null,null)
-SELECT SCHEMA_NAME.gw_api_get_formfields('ve_arc_pipe', 'feature', 'data', NULL, NULL, NULL, NULL, 'INSERT', null, 3)
-SELECT SCHEMA_NAME.gw_api_get_formfields('ve_arc_pipe', 'list', NULL, NULL, NULL, NULL, NULL, 'INSERT', null, 3)
-
-
+SELECT "SCHEMA_NAME".gw_api_get_formfields('go2epa', 'form', 'data', null, null, null, null, null, null,null)
+SELECT "SCHEMA_NAME".gw_api_get_formfields('ve_arc_pipe', 'feature', 'data', NULL, NULL, NULL, NULL, 'INSERT', null, 3)
+SELECT "SCHEMA_NAME".gw_api_get_formfields('ve_arc_pipe', 'list', NULL, NULL, NULL, NULL, NULL, 'INSERT', null, 3)
 */
 
 
@@ -86,10 +83,15 @@ BEGIN
 --   Get fields	
 	IF p_formname!='infoplan' THEN 
 		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT label, column_id, concat('||quote_literal(p_tabname)||',''_'',column_id) AS widgetname, widgettype,
-			widgettype as type, column_id as name, datatype AS "dataType",widgetfunction as "widgetAction", (CASE WHEN layout_id=0 THEN ''header'' WHEN layout_id=9 THEN ''footer'' ELSE ''body'' END) AS "position",
+
+			widgettype as type, column_id as name, datatype AS "dataType",widgetfunction as "widgetAction", widgetfunction as "updateAction",widgetfunction as "changeAction", widgetfunction,
+			(CASE WHEN layout_id=0 THEN ''header'' WHEN layout_id=9 THEN ''footer'' ELSE ''body'' END) AS "position",
+			(CASE WHEN iseditable=true THEN false ELSE true END)  AS disabled,
+
 			widgetdim, datatype , tooltip, placeholder, iseditable, row_number()over(ORDER BY layout_id, layout_order) AS orderby, layout_id, 
-			concat('||quote_literal(p_tabname)||',''_'',layout_id) as layoutname, layout_order, dv_parent_id, isparent, widgetfunction, dv_querytext, dv_querytext_filterc, 
-			action_function, isautoupdate, isnotupdate, dv_orderby_id, dv_isnullvalue, isreload, stylesheet, typeahead FROM config_api_form_fields WHERE formname = $1 AND formtype= $2 ORDER BY orderby) a'
+			concat('||quote_literal(p_tabname)||',''_'',layout_id) as layoutname, layout_order, dv_parent_id, isparent, action_function, dv_querytext, dv_querytext_filterc, 
+			isautoupdate, isnotupdate, dv_orderby_id, dv_isnullvalue, isreload, stylesheet, typeahead FROM config_api_form_fields WHERE formname = $1 AND formtype= $2 
+			AND isenabled IS TRUE ORDER BY orderby) a'
 				INTO fields_array
 				USING p_formname, p_formtype;
 	ELSE
@@ -98,12 +100,12 @@ BEGIN
 			(SELECT ''individual'' as widtget_context, concat(unit, ''. '', descript) AS label, identif AS column_id, ''label'' AS widgettype, concat ('||quote_literal(p_tabname)||',''_'',identif) AS widgetname, ''string'' AS datatype, 
 			NULL AS tooltip, NULL AS placeholder, FALSE AS iseditable, orderby as ordby, 1 AS layout_id,  NULL AS dv_parent_id, NULL AS isparent, NULL AS button_function, NULL AS dv_querytext, 
 			NULL AS dv_querytext_filterc, NULL AS action_function, NULL AS isautoupdate, concat (measurement,'' '',unit,'' x '', cost , '' €/'',unit,'' = '', total_cost::numeric(12,2), '' €'') as value, stylesheet
-			FROM ' ||p_tablename|| ' WHERE ' ||p_idname|| ' = $2
+			FROM ' ||quote_ident(p_tablename)|| ' WHERE ' ||quote_ident(p_idname)|| ' = $2
 			UNION
 			SELECT ''resumen'' as widtget_context, label AS form_label, column_id, widgettype, concat ('||quote_literal(p_tabname)||',''_'',column_id) AS widgetname, datatype, 
 			tooltip, placeholder, iseditable, layout_order AS ordby, layout_id,  NULL AS dv_parent_id, NULL AS isparent, NULL AS widgetfunction, NULL AS dv_querytext, 
 			NULL AS dv_querytext_filterc, NULL AS action_function, NULL AS isautoupdate, null as value
-			FROM config_api_form_fields WHERE formname  = ''infoplan'' ORDER BY 1,ordby) a
+			FROM config_api_form_fields WHERE formname  = ''infoplan'' AND isenabled IS TRUE ORDER BY 1,ordby) a
 			ORDER BY 1) b'
 				INTO fields_array
 				USING p_formname, p_id ;
@@ -126,6 +128,12 @@ BEGIN
 				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'orderById', (aux_json->>'dv_orderby_id'));
 		END IF;
 
+		-- Refactor widget
+		IF (aux_json->>'widgettype')='image' THEN
+		      	EXECUTE quote_literal((aux_json->>'dv_querytext')) INTO v_image; 
+			fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'imageVal', COALESCE(v_image, '[]'));
+		END IF;
+
 		-- setting the not updateable fields
 		IF p_tgop ='UPDATE' THEN
 			IF (aux_json->>'isnotupdate')::boolean IS TRUE THEN
@@ -135,7 +143,7 @@ BEGIN
 		
 		-- for image widgets
 		IF (aux_json->>'widgettype')='image' THEN
-		      	EXECUTE (aux_json->>'dv_querytext') INTO v_image; 
+		      	EXECUTE quote_literal((aux_json->>'dv_querytext')) INTO v_image; 
 			fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'imageVal', COALESCE(v_image, '[]'));
 		END IF;
 	
@@ -154,7 +162,7 @@ BEGIN
 			IF (aux_json->>'widgettype') = 'combo' THEN
 			
 				-- Get combo id's
-				EXECUTE 'SELECT (array_agg(id)) FROM ('||v_dv_querytext||' ORDER BY '||v_orderby||')a'
+				EXECUTE 'SELECT (array_agg(id)) FROM ('||(v_dv_querytext)||' ORDER BY '||quote_ident(v_orderby)||')a'
 					INTO v_array;
 				
 				-- Enable null values
@@ -166,7 +174,7 @@ BEGIN
 				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'comboIds', COALESCE(combo_json, '[]'));		
 
 				-- Get combo values
-				EXECUTE 'SELECT (array_agg(idval)) FROM ('||v_dv_querytext||' ORDER BY '||v_orderby||')a'
+				EXECUTE 'SELECT (array_agg(idval)) FROM ('||(v_dv_querytext)||' ORDER BY '||quote_ident(v_orderby)||')a'
 					INTO v_array;
 
 				-- Enable null values
@@ -176,15 +184,17 @@ BEGIN
 				combo_json = array_to_json(v_array);
 				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'comboNames', COALESCE(combo_json, '[]'));
 	
+				
 				-- Get selected value
 				IF p_tgop ='INSERT' THEN
 					v_vdefault:=quote_ident(aux_json->>'column_id');
 					EXECUTE 'SELECT value::text FROM audit_cat_param_user JOIN config_param_user ON audit_cat_param_user.id=parameter WHERE cur_user=current_user AND feature_field_id='||quote_literal(v_vdefault)
 						INTO field_value_parent;
-				ELSE 
-					EXECUTE 'SELECT ' || quote_ident(aux_json->>'column_id') || ' FROM ' || quote_ident(p_tablename) || ' WHERE ' || quote_ident(p_idname) || ' = CAST(' || quote_literal(p_id) || ' AS ' || p_columntype || ')' 
-						INTO field_value_parent; 
+				ELSIF  p_tgop ='UPDATE' THEN
+					EXECUTE 'SELECT ' || quote_ident(quote_ident(aux_json->>'column_id')) || ' FROM ' || quote_ident(p_tablename) || ' WHERE ' || quote_ident(p_idname) || ' = CAST(' || quote_literal(p_id) || ' AS ' || quote_literal(p_columntype) || ')' 
+						INTO field_value_parent; 				
 				END IF;
+				
 
 				IF v_vdefault IS NULL THEN
 					IF p_filterfield is not null THEN
@@ -231,10 +241,10 @@ BEGIN
 						
 						-- Get combo id's
 						IF (aux_json_child->>'dv_querytext_filterc') IS NOT NULL AND v_selected_id IS NOT NULL THEN		
-							query_text= 'SELECT (array_agg(id)) FROM ('|| v_dv_querytext_child || (aux_json_child->>'dv_querytext_filterc')||' '||quote_literal(v_selected_id)||' ORDER BY idval) a';
+							query_text= 'SELECT (array_agg(id)) FROM ('|| quote_ident(v_dv_querytext_child) || ((aux_json_child->>'dv_querytext_filterc'))||' '||quote_literal(v_selected_id)||' ORDER BY idval) a';
 							execute query_text INTO v_array_child;									
 						ELSE 	
-							EXECUTE 'SELECT (array_agg(id)) FROM ('||(aux_json_child->>'dv_querytext')||' ORDER BY '||v_orderby_child||')a' INTO v_array_child;
+							EXECUTE 'SELECT (array_agg(id)) FROM ('||quote_literal((aux_json_child->>'dv_querytext'))||' ORDER BY '||quote_ident(v_orderby_child)||')a' INTO v_array_child;
 							
 						END IF;
 						
@@ -248,10 +258,10 @@ BEGIN
 						
 						-- Get combo values
 						IF (aux_json_child->>'dv_querytext_filterc') IS NOT NULL THEN
-							query_text= 'SELECT (array_agg(idval)) FROM ('|| v_dv_querytext_child ||(aux_json_child->>'dv_querytext_filterc')||' '||quote_literal(v_selected_id)||' ORDER BY idval) a';
+							query_text= 'SELECT (array_agg(idval)) FROM ('|| quote_literal(v_dv_querytext_child) ||quote_literal((aux_json_child->>'dv_querytext_filterc'))||' '||quote_literal(quote_literal(v_selected_id))||' ORDER BY idval) a';
 							execute query_text INTO v_array_child;
 						ELSE 	
-							EXECUTE 'SELECT (array_agg(idval)) FROM ('||(aux_json_child->>'dv_querytext')||' ORDER BY '||v_orderby_child||')a'
+							EXECUTE 'SELECT (array_agg(idval)) FROM ('||quote_literal((aux_json_child->>'dv_querytext'))||' ORDER BY '||quote_ident(v_orderby_child)||')a'
 								INTO v_array_child;
 						END IF;
 						
@@ -267,7 +277,8 @@ BEGIN
 
 						--removing the not used fields
 						fields_array[(aux_json_child->>'orderby')::INT] := gw_fct_json_object_delete_keys(fields_array[(aux_json_child->>'orderby')::INT],
-						'dv_querytext', 'dv_orderby_id', 'dv_isnullvalue', 'dv_parent_id', 'dv_querytext_filterc', 'typeahead');								
+						'dv_querytext', 'dv_orderby_id', 'dv_isnullvalue', 'dv_parent_id', 'dv_querytext_filterc', 'typeahead');
+						
 					  END IF;
 				END IF;
 			END LOOP;
@@ -302,5 +313,3 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION SCHEMA_NAME.gw_api_get_formfields(character varying, character varying, character varying, character varying, character varying, character varying, character varying, character varying, character varying, integer)
-  OWNER TO postgres;
