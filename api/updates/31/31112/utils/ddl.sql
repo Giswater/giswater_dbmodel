@@ -40,8 +40,6 @@ CREATE TABLE config_api_form_fields(
   isnotupdate boolean,
   typeahead json,
   listfilterparam json,
-  vdefault text,
-  layoutname text,
   CONSTRAINT config_api_form_fields_pkey PRIMARY KEY (id),
   CONSTRAINT config_api_form_fields_pkey2 UNIQUE (formname, formtype, column_id)
 );
