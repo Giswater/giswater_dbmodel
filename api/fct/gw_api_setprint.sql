@@ -146,7 +146,7 @@ BEGIN
 
    
    -- generating the geometry
-   v_geometry = '{"st_astext":"POLYGON(('  || p21x ||' '|| p21y || ',' || p22x ||' '|| p22y || ',' || p02x || ' ' || p02y || ','|| p01x ||' '|| p01y || ',' || p21x ||' '|| p21y || '))"}';
+   v_geometry = '{"st_astext":"POLYGON('  || p21x ||' '|| p21y || ',' || p22x ||' '|| p22y || ',' || p02x || ' ' || p02y || ','|| p01x ||' '|| p01y || ',' || p21x ||' '|| p21y || ')"}';
    v_extent = '"[' || v_xmin || ',' || v_ymin || ',' || v_xmax || ',' || v_ymax || ']"';
 
   
