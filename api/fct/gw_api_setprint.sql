@@ -8,11 +8,11 @@ This version of Giswater is provided by Giswater Association
 -- FUNCTION CODE: 2684
 
 
-CREATE OR REPLACE FUNCTION "ws_sample31"."gw_api_setprint"(p_data json) RETURNS pg_catalog.json AS 
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME"."gw_api_setprint"(p_data json) RETURNS pg_catalog.json AS 
 $BODY$
 
 /*
-SELECT ws_sample31.gw_api_setprint($${
+SELECT SCHEMA_NAME.gw_api_setprint($${
 "client":{"device":3, "infoType":100, "lang":"ES"},
 "form":{},
 "feature":{},
@@ -71,7 +71,7 @@ DECLARE
 BEGIN
 
     --    Set search path to local schema
-    SET search_path = "ws_sample31", public;
+    SET search_path = "SCHEMA_NAME", public;
 	
 
 	-- fix client null mistakes
