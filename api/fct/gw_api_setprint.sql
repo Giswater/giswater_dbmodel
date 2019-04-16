@@ -8,17 +8,17 @@ This version of Giswater is provided by Giswater Association
 -- FUNCTION CODE: 2684
 
 
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME"."gw_api_setprint"(p_data json) RETURNS pg_catalog.json AS 
+CREATE OR REPLACE FUNCTION "ws_sample31"."gw_api_setprint"(p_data json) RETURNS pg_catalog.json AS 
 $BODY$
 
 /*
-SELECT SCHEMA_NAME.gw_api_setprint($${
+SELECT ws_sample31.gw_api_setprint($${
 "client":{"device":3, "infoType":100, "lang":"ES"},
 "form":{},
 "feature":{},
 "data":{"composer":"mincutA3","scale":"10000","rotation":"10",
-		"ComposerTemplates":[{"ComposerTemplate":"mincutA4","ComposerMap":[{"width":"179.414","height":"140.826","name":"map0"},{"width":"77.729","height":"55.9066","name":"map7"}]},
-					{"ComposerTemplate":"mincutA3","ComposerMap":[{"width":"53.44","height":"55.9066","name":"map7"},{"width":"337.865","height":"275.914","name":"map6"}]}],
+		"ComposerTemplates":[{"ComposerTemplate":"mincutA4", "ComposerMap":[{"width":"179.414","height":"140.826","index":0, "name":"map0"},{"width":"77.729","height":"55.9066","index":1, "name":"map7"}]},
+                             {"ComposerTemplate":"mincutA3","ComposerMap":[{"width":"53.44","height":"55.9066","index":0, "name":"map7"},{"width":"337.865","height":"275.914","index":1, "name":"map6"}]}],
 		"extent":{"p1":{"xcoord":418284.06010078074,"ycoord":4576197.139572782},"p2":{"xcoord":419429.332014571, "ycoord":4576756.056126544}}}}$$)
 */
 
@@ -66,11 +66,12 @@ DECLARE
     v_ymin float;
     v_xmax float;
     v_ymax float;
+    v_index integer;
 
 BEGIN
 
     --    Set search path to local schema
-    SET search_path = "SCHEMA_NAME", public;
+    SET search_path = "ws_sample31", public;
 	
 
 	-- fix client null mistakes
@@ -114,7 +115,9 @@ BEGIN
     SELECT max (a) INTO v_width FROM unnest(v_array_width) AS a;
     SELECT a->>'name' INTO v_mapcomposer_name FROM json_array_elements(v_json3) AS a WHERE a->>'width' = v_width::text;
     SELECT a->>'height' INTO v_height FROM json_array_elements(v_json3) AS a WHERE a->>'name' = v_mapcomposer_name;  
+    SELECT a->>'index' INTO v_index FROM json_array_elements(v_json3) AS a WHERE a->>'name' = v_mapcomposer_name;  
 
+    
   raise notice 'v_rotation %', v_rotation;
 
 
@@ -163,6 +166,7 @@ BEGIN
      ',"data":{'||
          '"geometry":'|| v_geometry ||
         ',"map":"' || v_mapcomposer_name || '"'
+        ',"mapIndex":' || v_index || 
         ',"extent":'||v_extent ||'}}')::json;
 
 --    Exception handling
