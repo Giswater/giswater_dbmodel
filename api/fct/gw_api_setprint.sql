@@ -59,7 +59,7 @@ DECLARE
     v_json3 json;
     v_extent json;
     v_geometry text;
-    v_array_width float[];
+    v_array_width text[];
     v_mapcomposer_name text;
     v_rotation float;
     v_xmin float;
