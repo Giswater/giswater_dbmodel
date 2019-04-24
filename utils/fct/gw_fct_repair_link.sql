@@ -29,7 +29,7 @@ v_status text ;
 
 BEGIN
 	-- set set path
-	SET search_path='ud', public;
+	SET search_path='SCHEMA_NAME', public;
 
 	-- get values
 	SELECT * INTO v_link FROM link WHERE link_id=p_link_id;
