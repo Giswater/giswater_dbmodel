@@ -11,6 +11,7 @@ DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_pg2epa_fill_data(varchar);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2epa_fill_data(result_id_var varchar)  RETURNS integer AS $BODY$
 DECLARE
     
+	v_usedmapattern boolean;
    
 
 BEGIN
@@ -18,6 +19,10 @@ BEGIN
 
 --  Search path
     SET search_path = "SCHEMA_NAME", public;
+	
+	
+	--  Get variables
+    v_usedmapattern = (SELECT value FROM config_param_user WHERE parameter='inp_options_use_dma_pattern' AND cur_user=current_user);
 
 	
 -- Upsert on rpt_cat_table
@@ -40,6 +45,9 @@ BEGIN
 
 	UPDATE rpt_inp_node SET demand=inp_junction.demand FROM inp_junction WHERE rpt_inp_node.node_id=inp_junction.node_id AND result_id=result_id_var;
 	
+	IF v_usedmapattern THEN
+		UPDATE rpt_inp_node SET pattern_id=dma.pattern_id FROM node JOIN dma ON dma.dma_id=node.dma_id WHERE rpt_inp_node.node_id=node.node_id AND result_id=result_id_var;
+	END IF;
 
 -- Upsert on arc rpt_inp table
 	INSERT INTO rpt_inp_arc (result_id, arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, diameter, roughness, length, the_geom)
