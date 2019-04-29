@@ -8,4 +8,4 @@ This version of Giswater is provided by Giswater Association
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 --29/04/2019
-INSERT INTO audit_cat_param_user VALUES ('inp_options_use_dma_pattern', 'epaoptions', 'Use dma standard pattern for non CRM simulations', 'role_epa', NULL, NULL, 'Use dma default pattern', NULL, NULL, true, 15, 3, 'ws', false, NULL, NULL, NULL, false, 'boolean', 'check', false, NULL, 'TRUE', 'grl_inpother_15', NULL, true, NULL, NULL, NULL, NULL, false);
+INSERT INTO audit_cat_param_user VALUES ('inp_options_use_dma_pattern', 'epaoptions', 'Use dma standard pattern for non CRM simulations', 'role_epa', NULL, NULL);
