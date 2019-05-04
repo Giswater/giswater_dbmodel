@@ -58,6 +58,10 @@ BEGIN
 
 	ELSIF csv2pgcat_id_aux=12 AND project_type_aux='UD' THEN
 		SELECT gw_fct_utils_csv2pg_import_swmm_inp(csv2pgcat_id_aux, label_aux) INTO v_return;
+
+	-- import dma patterns
+	ELSIF csv2pgcat_id_aux=17 AND project_type_aux='WS' THEN
+		SELECT gw_fct_utils_csv2pg_import_patterns() INTO v_return;
 	
 	END IF;
 		
