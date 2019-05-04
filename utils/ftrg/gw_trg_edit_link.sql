@@ -240,29 +240,37 @@ BEGIN
 			INSERT INTO link (link_id, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom)
 			VALUES (NEW.link_id,  NEW.feature_type, NEW.feature_id, NEW.expl_id, node_id_end, 'NODE', TRUE,  NEW.state, NEW.the_geom);
 
-			-- Update connec or gully arc_id
-			IF gully_geom_start IS NOT NULL  THEN
-				UPDATE v_edit_gully SET arc_id=arc_id_end WHERE gully_id=gully_id_start	;
-					
-			ELSIF connec_geom_start IS NOT NULL THEN
-				UPDATE v_edit_connec SET arc_id=arc_id_end WHERE connec_id=connec_id_start;	
+			-- update values for connec/gully
+			UPDATE connec SET arc_id=arc_id_end, featurecat_id=(SELECT node_type FROM node WHERE node_id=node_id_end), feature_id=node_id_end WHERE connec_id = connec_id_start;
+			IF project_type_aux='UD' THEN
+				UPDATE gully SET arc_id=arc_id_end, featurecat_id=(SELECT node_type FROM node WHERE node_id=node_id_end), feature_id=node_id_end WHERE gully_id = gully_id_start;
 			END IF;
 
-
 		ELSIF connec_geom_end IS NOT NULL THEN
-					
+
+			-- Inserting link values					
 			SELECT arc_id INTO arc_id_end FROM connec WHERE connec_id=connec_id_end;
 			INSERT INTO link (link_id,feature_type, feature_id, expl_id, exit_id,  exit_type, userdefined_geom, state, the_geom)
 			VALUES (NEW.link_id,  NEW.feature_type, NEW.feature_id, NEW.expl_id, connec_id_end, 'CONNEC', TRUE,  NEW.state, NEW.the_geom);
-			UPDATE v_edit_connec SET arc_id=arc_id_end WHERE connec_id=connec_id_start;
+
+			-- update values for connec/gully
+			UPDATE connec SET arc_id=arc_id_end, featurecat_id=(SELECT connec_type FROM connec WHERE connec_id=connec_id_end), feature_id=connec_id_end WHERE connec_id = connec_id_start;
+			IF project_type_aux='UD' THEN
+				UPDATE gully SET arc_id=arc_id_end, featurecat_id=(SELECT connec_type FROM connec WHERE connec_id=connec_id_end), feature_id=connec_id_end WHERE gully_id = gully_id_start;
+			END IF;
 
 
 		ELSIF gully_geom_end IS NOT NULL AND project_type_aux='UD' THEN
-				
+
+			-- Inserting link values					
 			SELECT arc_id INTO arc_id_end FROM gully WHERE gully_id=gully_id_end;
 			INSERT INTO link (link_id,feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom)
 			VALUES (NEW.link_id, NEW.feature_type, NEW.feature_id, NEW.expl_id, gully_id_end, 'GULLY', TRUE,  NEW.state, NEW.the_geom);
-			UPDATE v_edit_gully SET arc_id=arc_id_end WHERE gully_id=gully_id_start;
+
+			-- update values for connec/gully
+			UPDATE connec SET arc_id=arc_id_end, featurecat_id=(SELECT gully_type FROM gully WHERE gully_id=gully_id_end), feature_id=gully_id_end WHERE connec_id = connec_id_start;
+			UPDATE gully SET arc_id=arc_id_end, featurecat_id=(SELECT gully_type FROM gully WHERE gully_id=gully_id_end), feature_id=gully_id_end WHERE gully_id = gully_id_start;
+
 		ELSE 
 			PERFORM audit_function(2015,1116);
 		END IF;
