@@ -9,9 +9,12 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 -- 2019/04/13
-INSERT INTO audit_cat_function VALUES (2682, 'gw_fct_api_getprint', 'utils', 'api function', NULL, NULL, NULL, 'Get print form', 'role_basic', false);
-INSERT INTO audit_cat_function VALUES (2684, 'gw_fct_api_setprint', 'utils', 'api function', NULL, NULL, NULL, 'Set print form', 'role_basic', false);
-INSERT INTO audit_cat_function VALUES (2686, 'gw_trg_doc', 'utils', 'function trigger', NULL, NULL, NULL, 'Automatic replace of path for docs', 'role_edit', false);
+INSERT INTO audit_cat_function VALUES (2682, 'gw_fct_api_getprint', 'utils', 'api function', NULL, NULL, NULL, 'Get print form', 'role_basic', false)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO audit_cat_function VALUES (2684, 'gw_fct_api_setprint', 'utils', 'api function', NULL, NULL, NULL, 'Set print form', 'role_basic', false)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO audit_cat_function VALUES (2686, 'gw_trg_doc', 'utils', 'function trigger', NULL, NULL, NULL, 'Automatic replace of path for docs', 'role_edit', false)
+ON CONFLICT (id) DO NOTHING;
 
 
 -- 2019/04/13
