@@ -33,13 +33,13 @@ BEGIN
 	PERFORM gw_fct_pg2epa_dscenario(result_id_var);
 	
 	-- Calling for gw_fct_pg2epa_nod2arc function
-	PERFORM gw_fct_pg2epa_nod2arc(result_id_var);
+	PERFORM gw_fct_pg2epa_nod2arc(result_id_var, false);
 
 	-- Calling for gw_fct_pg2epa_pump_additional function;
 	PERFORM gw_fct_pg2epa_pump_additional(result_id_var);
 
 	-- Check data quality
-	SELECT gw_fct_pg2epa_check_data(result_id_var) INTO check_count_aux;
+	--SELECT gw_fct_pg2epa_check_data(result_id_var) INTO check_count_aux;
 
 	-- Real values of demand if rtc is enabled;
 	IF rec_options.rtc_enabled IS TRUE THEN
@@ -47,7 +47,7 @@ BEGIN
 	END IF;
 
 	-- Calling for modify the valve status
-	PERFORM gw_fct_pg2epa_valve_status(result_id_var);
+	PERFORM gw_fct_pg2epa_valve_status(result_id_var, false);
 		
 	
 
