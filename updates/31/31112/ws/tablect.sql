@@ -12,11 +12,12 @@ ALTER TABLE sys_feature_cat DROP CONSTRAINT IF EXISTS sys_feature_cat_unique;
 ALTER TABLE cat_feature DROP CONSTRAINT IF EXISTS cat_feature_system_fkey;
 
 -- ADD
+ALTER TABLE sys_feature_cat
+  ADD CONSTRAINT sys_feature_cat_unique UNIQUE(id, type);
+  
 ALTER TABLE cat_feature
-  ADD CONSTRAINT IF NOT EXISTS cat_feature_system_fkey FOREIGN KEY (system_id, feature_type)
+  ADD CONSTRAINT cat_feature_system_fkey FOREIGN KEY (system_id, feature_type)
       REFERENCES sys_feature_cat (id, type) MATCH SIMPLE
       ON UPDATE CASCADE ON DELETE CASCADE;
       
         
-ALTER TABLE sys_feature_cat
-  ADD CONSTRAINT sys_feature_cat_unique UNIQUE(id, type);
