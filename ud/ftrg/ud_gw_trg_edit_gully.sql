@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -25,6 +25,8 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
+	IF promixity_buffer_aux IS NULL THEN promixity_buffer_aux=0.5; END IF;
+
 	
 	gully_geometry:= TG_ARGV[0];
     
@@ -196,7 +198,7 @@ BEGIN
         END IF;
 		
 		-- Reconnect arc_id
-		IF NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL THEN
+		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN
 			UPDATE gully SET arc_id=NEW.arc_id where gully_id=NEW.gully_id;
 			IF (SELECT link_id FROM link WHERE feature_id=NEW.gully_id AND feature_type='GULLY' LIMIT 1) IS NOT NULL THEN
 				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.gully_id AND exit_type='VNODE' LIMIT 1)::int8;
@@ -231,8 +233,12 @@ BEGIN
 		PERFORM gw_fct_state_control('GULLY', NEW.gully_id, NEW.state, TG_OP);	
 		END IF;
 	
+		-- rotation
+		IF NEW.rotation != OLD.rotation THEN
+			UPDATE gully SET rotation=NEW.rotation WHERE gully_id = OLD.gully_id;
+		END IF;			
 		
-			--link_path
+		--link_path
 		SELECT link_path INTO link_path_aux FROM gully_type WHERE id=NEW.gully_type;
 		IF link_path_aux IS NOT NULL THEN
 			NEW.link = replace(NEW.link, link_path_aux,'');
@@ -247,7 +253,7 @@ BEGIN
             fluid_type=NEW.fluid_type, location_type=NEW.location_type, workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end,buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate, enddate=NEW.enddate,
             ownercat_id=NEW.ownercat_id, postcode=NEW.postcode, streetaxis2_id=NEW.streetaxis2_id, postnumber2=NEW.postnumber2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, descript=NEW.descript,
             rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, the_geom=NEW.the_geom,undelete=NEW.undelete,featurecat_id=NEW.featurecat_id, feature_id=NEW.feature_id,
-			label_x=NEW.label_x, label_y=NEW.label_y,label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, 
+			label_x=NEW.label_x, label_y=NEW.label_y,label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, arc_id=NEW.arc_id,
 			muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber,  expl_id=NEW.expl_id, uncertain=NEW.uncertain, num_value=NEW.num_value
 			WHERE gully_id = OLD.gully_id;
 
@@ -260,7 +266,7 @@ BEGIN
             ownercat_id=NEW.ownercat_id, postcode=NEW.postcode, streetaxis2_id=NEW.streetaxis2_id, postnumber2=NEW.postnumber2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, descript=NEW.descript,
             rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, the_geom_pol=NEW.the_geom,undelete=NEW.undelete,featurecat_id=NEW.featurecat_id, feature_id=NEW.feature_id,
 			label_x=NEW.label_x, label_y=NEW.label_y,label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, 
-			muni_id=NEW.muni_id,streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber,   expl_id=NEW.expl_id, uncertain=NEW.uncertain,num_value=NEW.num_value
+			muni_id=NEW.muni_id,streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber,   expl_id=NEW.expl_id, uncertain=NEW.uncertain,num_value=NEW.num_value, arc_id=NEW.arc_id
 
 
 			WHERE gully_id = OLD.gully_id;

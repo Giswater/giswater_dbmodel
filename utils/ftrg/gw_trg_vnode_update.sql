@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -12,17 +12,18 @@ DECLARE
 
 linkrec record;
 arcrec record;
-rec record;
 querystring text;
-
+v_vnode_update_tolerance double precision;
 
 BEGIN
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
         -- Start process
-	SELECT * INTO rec FROM config;
-	SELECT * INTO arcrec FROM v_edit_arc WHERE ST_DWithin((NEW.the_geom), v_edit_arc.the_geom, rec.vnode_update_tolerance) 
+	v_vnode_update_tolerance = (SELECT value FROM config_param_system WHERE "parameter"='vnode_update_tolerance');
+	IF v_vnode_update_tolerance IS NULL THEN v_vnode_update_tolerance = 0.01; END IF;
+	
+	SELECT * INTO arcrec FROM v_edit_arc WHERE ST_DWithin((NEW.the_geom), v_edit_arc.the_geom, v_vnode_update_tolerance) 
 	ORDER BY ST_Distance(v_edit_arc.the_geom, (NEW.the_geom)) LIMIT 1;
 
         -- Snnaping to arc

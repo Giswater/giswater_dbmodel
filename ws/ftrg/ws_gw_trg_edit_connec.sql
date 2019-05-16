@@ -1,10 +1,10 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 1304
+--FUNCTION CODE: 1304F
 
 
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_connec() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -26,6 +26,8 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
+	IF promixity_buffer_aux IS NULL THEN promixity_buffer_aux = 0.5; END IF;
+	
     
     -- Control insertions ID
     IF TG_OP = 'INSERT' THEN
@@ -38,8 +40,14 @@ BEGIN
 
         -- connec Catalog ID
         IF (NEW.connecat_id IS NULL) THEN
-            PERFORM audit_function(1022,1304); 
-            RETURN NULL;                   
+        	NEW.connecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		IF (NEW.connecat_id IS NULL) THEN
+			NEW.connecat_id := (SELECT id FROM cat_connec LIMIT 1);
+			IF (NEW.connecat_id IS NULL) THEN
+				PERFORM audit_function(1022,1304); 
+				RETURN NULL;
+			END IF;
+		END IF;
         END IF;
 
         -- Sector ID
@@ -199,7 +207,7 @@ BEGIN
 		
 		
 		-- Reconnect arc_id
-		IF NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL THEN
+		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN
 			UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
 			IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
 				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.connec_id AND exit_type='VNODE' LIMIT 1)::int8;
@@ -234,6 +242,11 @@ BEGIN
         IF (NEW.state != OLD.state) THEN   
 			PERFORM gw_fct_state_control('CONNEC', NEW.connec_id, NEW.state, TG_OP);	
 		END IF;
+		
+		-- rotation
+		IF NEW.rotation != OLD.rotation THEN
+			UPDATE connec SET rotation=NEW.rotation WHERE connec_id = OLD.connec_id;
+		END IF;
 
 		--link_path
 		SELECT link_path INTO link_path_aux FROM connec_type JOIN cat_connec ON cat_connec.connectype_id=connec_type.id WHERE cat_connec.id=NEW.connecat_id;
@@ -248,7 +261,7 @@ BEGIN
 			workcat_id_end=NEW.workcat_id_end, buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate, enddate=NEW.enddate, ownercat_id=NEW.ownercat_id, streetaxis2_id=NEW.streetaxis2_id, 
 			postnumber2=NEW.postnumber2, muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber, descript=NEW.descript,  rotation=NEW.rotation, verified=NEW.verified, 
 			postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2,undelete=NEW.undelete, label_x=NEW.label_x,label_y=NEW.label_y, label_rotation=NEW.label_rotation,
-			publish=NEW.publish, inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, link=NEW.link
+			publish=NEW.publish, inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, link=NEW.link, arc_id=NEW.arc_id
 			WHERE connec_id=OLD.connec_id;
       
         RETURN NEW;

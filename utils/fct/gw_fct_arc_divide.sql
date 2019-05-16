@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -40,7 +40,7 @@ DECLARE
 	plan_arc_vdivision_dsbl_aux boolean;
 	array_agg_connec varchar [];
 	array_agg_gully varchar [];
-	v_arcsearch_nodes float;
+	v_arc_searchnodes float;
     rec_node record;
     v_newarc varchar;
 
@@ -60,9 +60,9 @@ BEGIN
 	SELECT state INTO state_node_arg FROM node WHERE node_id=node_id_arg;
 
     -- Get parameters from configs table
-	SELECT value::boolean INTO plan_arc_vdivision_dsbl_aux FROM config_param_user WHERE "parameter"='plan_arc_vdivision_dsbl' AND cur_user=current_user;
-	SELECT arc_searchnodes INTO v_arcsearch_nodes FROM config;
-	
+	SELECT value::boolean INTO plan_arc_vdivision_dsbl_aux FROM config_param_user WHERE "parameter"='plan_arc_vdivision_dsbl' AND cur_user=current_user;	  
+	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='arc_searchnodes';
+
 	-- State control
 	IF state_aux=0 THEN
 		PERFORM audit_function(1050,2114);
@@ -71,13 +71,16 @@ BEGIN
 	END IF;
 
 	-- Check if it's a end/start point node in case of wrong topology without start or end nodes
-	SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_DWithin(ST_startpoint(the_geom), node_geom, v_arcsearch_nodes) 
-		    OR ST_DWithin(ST_endpoint(the_geom), node_geom, v_arcsearch_nodes) LIMIT 1;
+	SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_DWithin(ST_startpoint(the_geom), node_geom, v_arc_searchnodes) OR ST_DWithin(ST_endpoint(the_geom), node_geom, v_arc_searchnodes) LIMIT 1;
 	IF arc_id_aux IS NOT NULL THEN
 		-- force trigger of topology in order to reconnect extremal nodes (in case of null's)
 		UPDATE arc SET the_geom=the_geom WHERE arc_id=arc_id_aux;
-		SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_DWithin(the_geom, node_geom, v_arcsearch_nodes) AND arc_id != arc_id_aux;
+		-- get another arc if exists
+		SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_DWithin(the_geom, node_geom, v_arc_searchnodes) AND arc_id != arc_id_aux;
 	END IF;
+
+	-- For the specificic case of extremal node not reconnected due topology issues (i.e. arc state (1) and node state (2)
+	
 
 	-- Find closest arc inside tolerance
 	SELECT arc_id, state, the_geom INTO arc_id_aux, state_aux, arc_geom  FROM v_edit_arc AS a 
@@ -85,7 +88,7 @@ BEGIN
 	ORDER BY ST_Distance(node_geom, a.the_geom) LIMIT 1;
 
 
-	RAISE NOTICE 'arc_id_aux %', arc_id_aux;
+	--RAISE EXCEPTION 'arc_id_aux %', arc_id_aux;
 
 	IF arc_id_aux IS NOT NULL THEN 
 
@@ -159,7 +162,7 @@ BEGIN
 
 			-- Capture linked feature information to redraw (later on this function)
 			-- connec
-			FOR connec_id_aux IN SELECT connec_id FROM connec WHERE arc_id=arc_id_aux
+			FOR connec_id_aux IN SELECT connec_id FROM connec JOIN link ON link.feature_id=connec_id WHERE link.feature_type='CONNEC' AND exit_type='VNODE' AND arc_id=arc_id_aux
 			LOOP
 				array_agg_connec:= array_append(array_agg_connec, connec_id_aux);
 			END LOOP;
@@ -168,7 +171,7 @@ BEGIN
 			-- gully
 			IF project_type_aux='UD' THEN
 
-				FOR gully_id_aux IN SELECT gully_id FROM gully WHERE arc_id=arc_id_aux
+				FOR gully_id_aux IN SELECT gully_id FROM gully JOIN link ON link.feature_id=gully_id WHERE link.feature_type='GULLY' AND exit_type='VNODE' AND arc_id=arc_id_auxº
 				LOOP
 					array_agg_gully:= array_append(array_agg_gully, gully_id_aux);
 				END LOOP;
@@ -338,8 +341,7 @@ BEGIN
 			
 		END IF;
 	ELSE
-		PERFORM audit_function(2122,2114);
-	
+		RETURN 0;
 	END IF;
 
 	

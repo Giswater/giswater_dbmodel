@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -19,13 +19,14 @@ DECLARE
     connec_id_seq int8;
 	code_autofill_bool boolean;
 	man_table_2 varchar;
-	rec Record;
 	count_aux integer;
 	promixity_buffer_aux double precision;
 	link_path_aux varchar;
 	v_record_link record;
 	v_record_vnode record;
 	v_count integer;
+	v_insert_double_geom boolean;
+	v_double_geom_buffer double precision;
 
 BEGIN
 
@@ -34,9 +35,15 @@ BEGIN
 	man_table_2:=man_table;
 	
 	--Get data from config table
-	SELECT * INTO rec FROM config;	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
+	SELECT ((value::json)->>'activated') INTO v_insert_double_geom FROM config_param_system WHERE parameter='insert_double_geometry';
+	SELECT ((value::json)->>'value') INTO v_double_geom_buffer FROM config_param_system WHERE parameter='insert_double_geometry';
 	
+	IF promixity_buffer_aux IS NULL THEN promixity_buffer_aux=0.5; END IF;
+	IF v_insert_double_geom IS NULL THEN v_insert_double_geom=FALSE; END IF;
+	IF v_double_geom_buffer IS NULL THEN v_double_geom_buffer=1; END IF;
+	
+
     -- Control insertions ID
     IF TG_OP = 'INSERT' THEN
 
@@ -208,12 +215,12 @@ BEGIN
 			INSERT INTO man_greentap (connec_id, linked_connec) VALUES(NEW.connec_id, NEW.linked_connec); 
 		
 		ELSIF man_table='man_fountain' THEN 
-			IF (rec.insert_double_geometry IS TRUE) THEN
+			IF (v_insert_double_geom IS TRUE) THEN
 				IF (NEW.pol_id IS NULL) THEN
 					NEW.pol_id:= (SELECT nextval('urn_id_seq'));
 				END IF;
 		
-				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(connec.the_geom,rec.buffer_value))) from connec where connec_id=NEW.connec_id));
+				INSERT INTO polygon(pol_id,the_geom) VALUES (NEW.pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(connec.the_geom,v_double_geom_buffer))) from connec where connec_id=NEW.connec_id));
 					
 				INSERT INTO man_fountain(connec_id, linked_connec, vmax, vtotal, container_number, pump_number, power, regulation_tank,name,  chlorinator, arq_patrimony, pol_id) 
 				VALUES (NEW.connec_id, NEW.linked_connec, NEW.vmax, NEW.vtotal,NEW.container_number, NEW.pump_number, NEW.power, NEW.regulation_tank, NEW.name, 
@@ -261,7 +268,7 @@ BEGIN
 
 
 		-- Reconnect arc_id
-		IF NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL THEN
+		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN
 			UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
 			IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
 				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.connec_id AND exit_type='VNODE' LIMIT 1)::int8;
@@ -296,6 +303,11 @@ BEGIN
 				UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
 			END IF;
 		END IF;
+		
+		-- rotation
+		IF NEW.rotation != OLD.rotation THEN
+			UPDATE connec SET rotation=NEW.rotation WHERE connec_id = OLD.connec_id;
+		END IF;
 
 		--link_path
 		SELECT link_path INTO link_path_aux FROM connec_type JOIN cat_connec ON cat_connec.connectype_id=connec_type.id WHERE cat_connec.id=NEW.connecat_id;
@@ -310,7 +322,7 @@ BEGIN
 			workcat_id_end=NEW.workcat_id_end, buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate, enddate=NEW.enddate, ownercat_id=NEW.ownercat_id, streetaxis2_id=NEW.streetaxis2_id, 
 			postnumber=NEW.postnumber, postnumber2=NEW.postnumber2, muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, postcode=NEW.postcode, descript=NEW.descript, verified=NEW.verified, 
 			postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, undelete=NEW.undelete, label_x=NEW.label_x,label_y=NEW.label_y, label_rotation=NEW.label_rotation,
-			publish=NEW.publish, inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, connec_length=NEW.connec_length, link=NEW.link
+			publish=NEW.publish, inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, connec_length=NEW.connec_length, link=NEW.link, arc_id=NEW.arc_id
 			WHERE connec_id=OLD.connec_id;
 			
         IF man_table ='man_greentap' THEN

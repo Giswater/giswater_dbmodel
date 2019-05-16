@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -23,7 +23,8 @@ BEGIN
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
-        
+	IF promixity_buffer_aux IS NULL THEN promixity_buffer_aux=0.5; END IF;
+
     -- Control insertions ID
     IF TG_OP = 'INSERT' THEN
 
@@ -183,7 +184,7 @@ BEGIN
         END IF;
 
 		-- Reconnect arc_id
-		IF NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL THEN
+		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN
 			UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
 			IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
 				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.connec_id AND exit_type='VNODE' LIMIT 1)::int8;
@@ -216,10 +217,14 @@ BEGIN
         -- Looking for state control
         IF (NEW.state != OLD.state) THEN   
 		PERFORM gw_fct_state_control('CONNEC', NEW.connec_id, NEW.state, TG_OP);	
- 	END IF;
+		END IF;
 
- 		
-			--link_path
+ 		-- rotation
+		IF NEW.rotation != OLD.rotation THEN
+			UPDATE connec SET rotation=NEW.rotation WHERE connec_id = OLD.connec_id;
+		END IF;		
+		
+		--link_path
 		SELECT link_path INTO link_path_aux FROM connec_type WHERE id=NEW.connec_type;
 		IF link_path_aux IS NOT NULL THEN
 			NEW.link = replace(NEW.link, link_path_aux,'');
@@ -234,7 +239,7 @@ BEGIN
 			streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, descript=NEW.descript,
             rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, undelete=NEW.undelete, featurecat_id=NEW.featurecat_id,feature_id=NEW.feature_id, 
 			label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, accessibility=NEW.accessibility, diagonal=NEW.diagonal, publish=NEW.publish, inventory=NEW.inventory, uncertain=NEW.uncertain, 
-			expl_id=NEW.expl_id,num_value=NEW.num_value, private_connecat_id=NEW.private_connecat_id
+			expl_id=NEW.expl_id,num_value=NEW.num_value, private_connecat_id=NEW.private_connecat_id, arc_id=NEW.arc_id
         WHERE connec_id = OLD.connec_id;
                 
         RETURN NEW;
