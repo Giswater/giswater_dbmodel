@@ -13,6 +13,9 @@ DROP TRIGGER gw_trg_node_update ON SCHEMA_NAME.node;
 DROP TRIGGER gw_trg_arc_vnodelink_update ON SCHEMA_NAME.arc;
 
 DROP TRIGGER gw_trg_topocontrol_node ON SCHEMA_NAME.node;
-
 CREATE TRIGGER gw_trg_topocontrol_node AFTER INSERT OR UPDATE OF the_geom, state
 ON SCHEMA_NAME.node FOR EACH ROW EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_topocontrol_node();
+
+DROP TRIGGER gw_trg_topocontrol_arc ON SCHEMA_NAME.arc;
+CREATE TRIGGER gw_trg_topocontrol_arc AFTER INSERT OR UPDATE OF the_geom, state
+ON SCHEMA_NAME.arc  FOR EACH ROW  EXECUTE PROCEDURE SCHEMA_NAME.gw_trg_topocontrol_arc();
