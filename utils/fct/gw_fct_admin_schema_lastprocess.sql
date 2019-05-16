@@ -1,6 +1,12 @@
-﻿-- Function: aa1.gw_fct_admin_schema_lastprocess(json)
+/*
+This file is part of Giswater 3
+The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This version of Giswater is provided by Giswater Association
+*/
 
--- DROP FUNCTION aa1.gw_fct_admin_schema_lastprocess(json);
+--FUNCTION CODE: 2650
+
+
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_admin_schema_lastprocess(p_data json)
   RETURNS json AS
@@ -31,6 +37,7 @@ DECLARE
 	v_title text;
 	v_author text;
 	v_date text;
+	v_schema_info json;
 
 BEGIN 
 	-- search path
@@ -50,22 +57,34 @@ BEGIN
 	-- last proccess
 	IF v_isnew IS TRUE THEN
 	
-		-- clean schema of all tables/views/triggers not used in this version
-		IF v_gwversion > '3.2' THEN
-			PERFORM gw_fct_admin_schema_dropdeprecated_rel();	
-		END IF;	
+		--untill 3.2.004 is not possible
+		--PERFORM gw_fct_admin_schema_dropdeprecated_rel();	
+		
 
 		-- inserting version table
 		INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg) VALUES (v_gwversion, upper(v_projecttype), (select version()),(select postgis_version()), v_language, v_epsg);	
 		v_message='Project sucessfully created';
 		
-		-- inserting on inp_project table
-		INSERT INTO inp_project_id VALUES (v_title, v_author, v_date);
+		-- create json info_schema
+		v_title := COALESCE(v_title, '');
+		v_author := COALESCE(v_author, '');
+		v_date := COALESCE(v_date, '');
+		v_schema_info = '{"title":"'||v_title||'","author":"'||v_author||'","date":"'||v_date||'"}';
 		
+		-- inserting on config_param_system table
+		INSERT INTO config_param_system (parameter, value, data_type, context, descript)
+		VALUES ('schema_manager', v_schema_info,'json','system', 'Basic information about schema');
+
 		-- fk from utils schema
 		PERFORM gw_fct_admin_schema_utils_fk();  -- this is the posiition to use it because of we need values on version table to workwith
 		
 	ELSIF v_isnew IS FALSE THEN
+		
+		-- clean schema of all tables/views/triggers not used in this version
+		-- to do: stabilize before activate this
+		--IF v_gwversion > '3.2.002' AND v_gwversion < '3.2.004 AND upper(v_projecttype) = 'WS' THEN
+		--END IF;
+	
 		-- check project consistency
 		IF v_projecttype = 'WS' THEN
 	
@@ -109,5 +128,3 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-ALTER FUNCTION SCHEMA_NAME.gw_fct_admin_schema_lastprocess(json)
-  OWNER TO postgres;
