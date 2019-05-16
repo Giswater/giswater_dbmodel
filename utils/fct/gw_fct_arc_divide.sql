@@ -8,12 +8,12 @@ This version of Giswater is provided by Giswater Association
 
 
 
-CREATE OR REPLACE FUNCTION ws_sample.gw_fct_arc_divide(node_id_arg character varying)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_arc_divide(node_id_arg character varying)
   RETURNS smallint AS
 
 $BODY$
 /*
-SELECT "ws_sample".gw_fct_arc_divide('1079');
+SELECT "SCHEMA_NAME".gw_fct_arc_divide('1079');
 */
 DECLARE
     node_geom    geometry;
@@ -22,8 +22,8 @@ DECLARE
     line1        geometry;
     line2        geometry;
     rec_aux        record;
-    rec_aux1	"ws_sample".v_edit_arc;
-    rec_aux2    "ws_sample".v_edit_arc;
+    rec_aux1	"SCHEMA_NAME".v_edit_arc;
+    rec_aux2    "SCHEMA_NAME".v_edit_arc;
     intersect_loc    double precision;
     numArcs    integer;
     rec_doc record;
@@ -50,7 +50,7 @@ DECLARE
 BEGIN
 
     -- Search path
-    SET search_path = "ws_sample", public;
+    SET search_path = "SCHEMA_NAME", public;
 	
 	-- Get project type
 	SELECT wsoftware INTO project_type_aux FROM version LIMIT 1;
@@ -105,13 +105,13 @@ BEGIN
 		SELECT * INTO rec_aux2 FROM v_edit_arc WHERE arc_id = arc_id_aux;
 
 		-- Update values of new arc_id (1)
-		rec_aux1.arc_id := nextval('ws_sample.urn_id_seq');
+		rec_aux1.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
 		rec_aux1.code := rec_aux1.arc_id;
 		rec_aux1.node_2 := node_id_arg ;-- rec_aux1.node_1 take values from original arc
 		rec_aux1.the_geom := line1;
 
 		-- Update values of new arc_id (2)
-		rec_aux2.arc_id := nextval('ws_sample.urn_id_seq');
+		rec_aux2.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
 		rec_aux2.code := rec_aux2.arc_id;
 		rec_aux2.node_1 := node_id_arg; -- rec_aux2.node_2 take values from original arc
 		rec_aux2.the_geom := line2;
