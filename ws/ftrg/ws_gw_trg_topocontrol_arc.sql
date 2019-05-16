@@ -35,6 +35,11 @@ BEGIN
     SELECT ((value::json)->>'activated') INTO v_arc_searchnodes_control FROM config_param_system WHERE parameter='arc_searchnodes';
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='arc_searchnodes';
 
+	v_samenode_init_end_control = TRUE;
+	v_nodeinsert_arcendpoint = FALSE;
+	v_arc_searchnodes_control = (SELECT arc_searchnodes_control FROM config);
+	v_arc_searchnodes = 0.1;
+
     -- disable trigger
     IF v_arc_searchnodes_control IS FALSE THEN
 	RETURN NEW;

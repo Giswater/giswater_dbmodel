@@ -25,8 +25,4 @@ VALUES ('edit_replace_doc_folderpath','{"enabled":true, "values":[{"source":"c:/
 
 -- 2019/04/15
 SELECT setval('SCHEMA_NAME.config_param_system_id_seq', (SELECT max(id) FROM config_param_system), true);
-INSERT INTO config_param_system (parameter, value, data_type, context, descript)
-VALUES ('plan_statetype_ficticius','99','integer', 'plan', 'Value used to identify ficticius arcs in case of new creation on planning operations to keep topology');
-
-INSERT INTO value_state_type VALUES (99, 2, 'Ficticius', true, false);
-
+UPDATE config_param_system SET value=99 WHERE parameter='plan_statetype_ficticius';

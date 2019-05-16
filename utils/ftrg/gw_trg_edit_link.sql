@@ -164,7 +164,6 @@ BEGIN
 			END IF;	
 		ELSE 
 			UPDATE connec SET arc_id=v_arc.arc_id WHERE connec_id=v_connec1.connec_id;
-			UPDATE connec SET feature_id=v_node.node_id, featurecat_id=v_node.nodetype_id WHERE connec_id=v_connec1.connec_id;
 		END IF;
 
 		NEW.exit_type='VNODE';
@@ -193,7 +192,6 @@ BEGIN
 			END IF;
 		ELSE
 			UPDATE connec SET arc_id=v_arc.arc_id WHERE connec_id=v_connec1.connec_id;
-			UPDATE connec SET feature_id=v_node.node_id, featurecat_id=v_node.nodetype_id WHERE connec_id=v_connec1.connec_id;
 		END IF;
 		
 		NEW.exit_type='NODE';
@@ -213,7 +211,6 @@ BEGIN
 			WHERE connec_id=v_connec1.connec_id;
 		ELSE 
 			UPDATE connec SET arc_id=v_arc.arc_id WHERE connec_id=v_connec1.connec_id;
-			UPDATE connec SET feature_id=v_connec2.connec_id, featurecat_id=v_connec2.connectype_id WHERE connec_id=v_connec1.connec_id;
 		END IF;
 
 		NEW.exit_type='CONNEC';

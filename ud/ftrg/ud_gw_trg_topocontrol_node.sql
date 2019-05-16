@@ -42,8 +42,8 @@ BEGIN
     -- Get parameters
     SELECT ((value::json)->>'activated') INTO v_node_proximity_control FROM config_param_system WHERE parameter='node_proximity';
 	SELECT ((value::json)->>'value') INTO v_node_proximity FROM config_param_system WHERE parameter='node_proximity';
-	--SELECT * INTO optionsRecord FROM inp_options LIMIT 1;
-
+	v_node_proximity_control = TRUE;
+	v_node_proximity = 0.1;
 
 	-- For state=0
     IF NEW.state=0 THEN
@@ -110,7 +110,7 @@ BEGIN
 							v_arcrecord.arc_id:= (SELECT nextval('urn_id_seq'));
 							v_arcrecord.code = v_arcrecord.arc_id;
 							v_arcrecord.state=2;
-							v_arcrecord.state_type := (SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius');
+							v_arcrecord.state_type := (SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius' LIMIT 1);
 							IF (SELECT node_1 FROM arc WHERE arc_id=v_arc.arc_id)=v_arc.node_id THEN
 								v_arcrecord.node_1 = NEW.node_id;
 							ELSE
