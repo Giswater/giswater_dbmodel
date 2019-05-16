@@ -101,8 +101,8 @@ BEGIN
 
                 -- Create a new arc values
                 newRecord.the_geom := arc_geom;
-                newRecord.node_1 := (SELECT node_id FROM node WHERE state=1 AND ST_DWithin(ST_StartPoint(arc_geom), node.the_geom, 0.01) LIMIT 1);
-                newRecord.node_2 := (SELECT node_id FROM node WHERE state=1 AND ST_DWithin(ST_EndPoint(arc_geom), node.the_geom, 0.01) LIMIT 1);
+                newRecord.node_1 := (SELECT node_id FROM v_edit_node WHERE state=1 AND ST_DWithin(ST_StartPoint(arc_geom), v_edit_node.the_geom, 0.01) LIMIT 1);
+                newRecord.node_2 := (SELECT node_id FROM v_edit_node WHERE state=1 AND ST_DWithin(ST_EndPoint(arc_geom), v_edit_node.the_geom, 0.01) LIMIT 1);
 		newRecord.arc_id := (SELECT nextval('urn_id_seq'));
 
             --Compare addfields and assign them to new arc
