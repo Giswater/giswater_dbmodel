@@ -6,7 +6,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2542
 
-
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_arc_vnodelink_update()
   RETURNS trigger AS
 $BODY$
@@ -15,19 +14,17 @@ DECLARE
     gully_id_aux text;
     array_connec_agg text[];
     array_gully_agg text[];
-
         
 BEGIN 
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
-    
+  
     IF TG_OP='UPDATE' THEN
 
 		-- Update vnode/link
-			
 		-- Redraw the link and vnode
-		FOR connec_id_aux IN SELECT connec_id FROM connec WHERE arc_id=NEW.arc_id
+		FOR connec_id_aux IN SELECT connec_id FROM connec JOIN link ON link.feature_id=connec_id WHERE link.feature_type='CONNEC' AND exit_type='VNODE' AND arc_id=NEW.arc_id
 		LOOP
 			array_connec_agg:= array_append(array_connec_agg, connec_id_aux);
 			UPDATE connec SET arc_id=NULL WHERE connec_id=connec_id_aux;
@@ -38,7 +35,7 @@ BEGIN
 		
 		IF (select wsoftware FROM version LIMIT 1)='ud' THEN 
 
-			FOR gully_id_aux IN SELECT gully_id FROM gully WHERE arc_id=NEW.arc_id
+			FOR gully_id_aux IN SELECT gully_id FROM gully JOIN link ON link.feature_id=gully_id WHERE link.feature_type='GULLY' AND exit_type='VNODE' AND arc_id=NEW.arc_id
 			LOOP
 				array_gully_agg:= array_append(array_gully_agg, gully_id_aux);
 				UPDATE gully SET arc_id=NULL WHERE gully_id=gully_id_aux;

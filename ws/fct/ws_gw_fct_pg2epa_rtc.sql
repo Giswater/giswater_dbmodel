@@ -36,15 +36,16 @@ BEGIN
 	EXECUTE 'SELECT value::json->>'||quote_literal(v_options.units)||' FROM config_param_system WHERE parameter=''epa_units_factor'''
 		INTO v_epaunitsfactor;
 
+
 	-- Updating values from rtc into inp_rpt table
 	IF v_options.rtc_coefficient='MIN' THEN
-		UPDATE rpt_inp_node SET demand=lps_min::numeric(12,6)*v_epaunitsfactor FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
+		UPDATE rpt_inp_node SET demand=(lps_min*v_epaunitsfactor)::numeric(12,8) FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
 	ELSIF v_options.rtc_coefficient='AVG' THEN
-		UPDATE rpt_inp_node SET demand=lps_avg::numeric(12,6)*v_epaunitsfactor FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
+		UPDATE rpt_inp_node SET demand=(lps_avg*v_epaunitsfactor)::numeric(12,8) FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
 	ELSIF v_options.rtc_coefficient='MAX' THEN
-		UPDATE rpt_inp_node SET demand=lps_max::numeric(12,6)*v_epaunitsfactor FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
+		UPDATE rpt_inp_node SET demand=(lps_max*v_epaunitsfactor)::numeric(12,8) FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
 	ELSIF v_options.rtc_coefficient='REAL' THEN
-		UPDATE rpt_inp_node SET demand=lps_avg::numeric(12,6)*v_epaunitsfactor, pattern_id=a.pattern_id FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
+		UPDATE rpt_inp_node SET demand=(lps_avg*v_epaunitsfactor)::numeric(12,8), pattern_id=a.pattern_id FROM v_rtc_hydrometer_x_node_period a WHERE result_id=result_id_var AND rpt_inp_node.node_id=a.node_id;
 	END IF;
 	
 RETURN 1;

@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -10,20 +10,22 @@ This version of Giswater is provided by Giswater Association
 DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_pg2epa_fill_data(varchar);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2epa_fill_data(result_id_var varchar)  RETURNS integer AS $BODY$
 DECLARE
-    
-	v_usedmapattern boolean;
-   
-
+   	v_usedmapattern boolean;
+	rec_options 	record;
 BEGIN
-
 
 --  Search path
     SET search_path = "SCHEMA_NAME", public;
-	
-	
-	--  Get variables
-    v_usedmapattern = (SELECT value FROM config_param_user WHERE parameter='inp_options_use_dma_pattern' AND cur_user=current_user);
 
+	
+--  Get variables
+	SELECT * INTO rec_options FROM inp_options;
+
+	IF rec_options.rtc_enabled IS TRUE THEN
+		v_usedmapattern = TRUE;
+	ELSE
+		v_usedmapattern = FALSE;
+	END IF;
 	
 -- Upsert on rpt_cat_table
 	DELETE FROM rpt_cat_result WHERE result_id=result_id_var;
