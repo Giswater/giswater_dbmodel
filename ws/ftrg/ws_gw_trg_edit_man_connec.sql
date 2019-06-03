@@ -198,13 +198,13 @@ BEGIN
 	    END IF;
 
 	    -- Customer code  
-		IF NEW.customer_code IS NULL AND (SELECT (value::json->>'status')::boolean FROM config_param_system WHERE parameter = 'customer_code_autofill') IS TRUE 
+		IF NEW.customer_code IS NULL AND (SELECT (value::json->>'status')::boolean FROM config_param_system WHERE parameter = 'customer_code_autofill') IS TRUE
 		AND (SELECT (value::json->>'field')::text FROM config_param_system WHERE parameter = 'customer_code_autofill')='code'  THEN
 		
 			NEW.customer_code = NEW.code;
 			
 		ELSIF NEW.customer_code IS NULL AND (SELECT (value::json->>'status')::boolean FROM config_param_system WHERE parameter = 'customer_code_autofill') IS TRUE 
-		AND (SELECT (value::json->>'field')::text FROM config_param_system WHERE parameter = 'customer_code_autofill')='id'  THEN
+		AND (SELECT (value::json->>'field')::text FROM config_param_system WHERE parameter = 'customer_code_autofill')='connec_id'  THEN
 
 			NEW.customer_code = NEW.connec_id;
 
