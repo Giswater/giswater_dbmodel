@@ -260,7 +260,7 @@ FROM selector_expl,arc
 	WHERE arc.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::text;
 
 
-
+--definiton updated on 3.1.122
 DROP VIEW IF EXISTS v_node CASCADE;
 CREATE OR REPLACE VIEW v_node AS
 SELECT
