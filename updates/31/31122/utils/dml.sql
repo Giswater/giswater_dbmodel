@@ -4,9 +4,8 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
+
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
-ALTER TABLE price_compost ADD COLUMN pricecat_id character varying(16);
-
--- 27/06/2019
-ALTER TABLE sys_csv2pg_cat ADD COLUMN readheader boolean  NOT NULL DEFAULT true;
+--27/06/2019
+UPDATE sys_csv2pg_cat SET readheader=false WHERE name='Import db prices';
