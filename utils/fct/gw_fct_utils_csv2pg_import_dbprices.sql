@@ -9,13 +9,27 @@ This version of Giswater is provided by Giswater Association
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_utils_csv2pg_import_dbprices(csv2pgcat_id_aux integer, label_aux text)
 RETURNS integer AS
 $BODY$
+
+
+/*example
+SELECT SCHEMA_NAME.gw_fct_utils_csv2pg_import_dbprices(1, 'TEST')
+*/
+
 DECLARE
 	units_rec record;
+	v_count integer;
 
 BEGIN
 
 	--  Search path
     SET search_path = "SCHEMA_NAME", public;
+
+	-- control of rows
+	SELECT count(*) INTO v_count FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
+
+	IF v_count =0 THEN
+		RETURN 1;
+	END IF;
 
 	-- control of price code (csv1)
 	SELECT csv1 INTO units_rec FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
@@ -56,18 +70,19 @@ BEGIN
 		INSERT INTO price_cat_simple (id) VALUES (label_aux);
 	END IF;
 
-	-- Upsert into price_simple table
-	INSERT INTO price_simple (id, pricecat_id, unit, descript, text, price)
+	-- Insert into price_compost table
+	INSERT INTO price_compost (id, pricecat_id, unit, descript, text, price)
 	SELECT csv1, label_aux, csv2, csv3, csv4, csv5::numeric(12,4)
 	FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1
-	AND csv1 NOT IN (SELECT id FROM price_simple);
+	ON CONFLICT (id) DO NOTHING;
 
-	UPDATE price_simple SET pricecat_id=label_aux, price=csv5::numeric(12,4) FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1 AND price_simple.id=csv1;
+	-- update prices if exists
+	UPDATE price_compost SET pricecat_id=label_aux, price=csv5::numeric(12,4) FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1 AND price_compost.id=csv1;
 		
 	-- Delete values on temporal table
 	DELETE FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;	
 	
-RETURN 0;
+RETURN v_count;
 	
 	
 END;
