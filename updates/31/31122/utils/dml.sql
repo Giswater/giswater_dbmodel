@@ -8,4 +8,4 @@ This version of Giswater is provided by Giswater Association
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 --27/06/2019
-UPDATE sys_csv2pg_cat SET readheader=false WHERE name='Import db prices';
+UPDATE sys_csv2pg_cat SET readheader=false WHERE id=1;
