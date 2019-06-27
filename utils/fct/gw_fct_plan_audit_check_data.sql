@@ -52,7 +52,7 @@ BEGIN
 		--cost column
 		SELECT count(*) INTO count_aux FROM cat_arc WHERE cost IS NOT NULL and active=TRUE;
 		IF table_count_aux>count_aux THEN
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, column_id, criticity, enabled,  error_message)
+			INSERT INTO audit_check_data (fprocesscat_id, result_id, column_id, table_id, criticity, enabled,  error_message)
 			VALUES (15, result_id_var, 'cat_arc', 'cost', 2, FALSE, concat('There are ',(table_count_aux-count_aux),' row(s) without values on cost column'));
 			count_global_aux=count_global_aux+(table_count_aux-count_aux);
 		END IF;
