@@ -2,3 +2,7 @@
 *******
 Bug fix on v_node.sys_elev view (UD)
 Enhance prices table strategy
+Update import_dbprices function
+Modify triggers to capture inventory, uncertain and publish values
+Bug fix on v_node.sys_elev view (UD)
+

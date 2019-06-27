@@ -145,15 +145,21 @@ This version of Giswater is provided by Giswater Association
 				END IF;
 			END IF;
 
-			--Inventory	
-			NEW.inventory := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_inventory_sysvdefault');
-
-			--Publish
-			NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');	
-
-			--Uncertain
-			NEW.uncertain := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_uncertain_sysvdefault');	       	
-			
+            --Inventory
+            IF (NEW.inventory IS NULL) THEN        
+                NEW.inventory := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_inventory_sysvdefault');
+            END IF;
+            
+            --Publish
+            IF (NEW.publish IS NULL) THEN
+                NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
+            END IF;
+            
+            --Uncertain
+            IF (NEW.uncertain IS NULL) THEN
+                NEW.uncertain := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_uncertain_sysvdefault');		
+            END IF;
+        
 			-- Workcat_id
 			IF (NEW.workcat_id IS NULL) THEN
 				NEW.workcat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='workcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
