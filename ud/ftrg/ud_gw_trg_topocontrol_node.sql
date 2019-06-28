@@ -116,10 +116,16 @@ BEGIN
 								v_arcrecord.node_2 = NEW.node_id;
 							END IF;
 	
+							-- set temporary values for config variables
 							UPDATE config SET arc_searchnodes_control=false;
+							UPDATE config_param_system  SET value='TRUE' WHERE parameter='edit_enable_arc_nodes_update';
 	
 							-- Insert new records into arc table
 							INSERT INTO v_edit_arc SELECT v_arcrecord.*;
+
+							-- restore temporary value for config variables
+							UPDATE config SET arc_searchnodes_control=true;
+							UPDATE config_param_system SET value='TRUE' WHERE parameter='edit_enable_arc_nodes_update';
 	
 							--Copy addfields from old arc to new arcs	
 							INSERT INTO man_addfields_value (feature_id, parameter_id, value_param)
@@ -135,7 +141,6 @@ BEGIN
 							-- insert old arc on the alternative							
 							INSERT INTO plan_psector_x_arc (psector_id, arc_id, state, doable) VALUES (v_psector_id, v_arc.arc_id, 0, FALSE);
 	
-							UPDATE config SET arc_searchnodes_control=true;
 						END IF;
 					END LOOP;				
 
