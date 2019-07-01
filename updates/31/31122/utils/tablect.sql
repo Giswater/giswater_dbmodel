@@ -17,5 +17,5 @@ REFERENCES price_cat_simple (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRI
 
 ALTER TABLE audit_price_simple ADD CONSTRAINT audit_price_simple_pkey PRIMARY KEY (id, pricecat_id);
 
-ALTER TABLE price_compost_value ADD CONSTRAINT price_compost_value_compost_id2_fkey FOREIGN KEY (simple_id)
-REFERENCES price_compost (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+--ALTER TABLE price_compost_value ADD CONSTRAINT price_compost_value_compost_id2_fkey FOREIGN KEY (simple_id)
+--REFERENCES price_compost (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
