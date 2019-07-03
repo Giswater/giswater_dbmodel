@@ -99,6 +99,7 @@ JOIN v_price_compost ON (((cat_node."cost") = (v_price_compost.id))));
 -- View structure for v_plan_node
 -- ----------------------------
 
+--'definiton updated on 3.1.123'
 DROP VIEW IF EXISTS "v_plan_node" CASCADE;
 CREATE VIEW "v_plan_node" AS 
 SELECT
