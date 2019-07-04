@@ -1,4 +1,6 @@
 3.1.123
 *******
 Bug fix on v_plan_node definition
+Enhance sys_elev on arc using sys_elev of node_1 and node_2 , when null values for y1,y2 and elev1.elev2
+
 
