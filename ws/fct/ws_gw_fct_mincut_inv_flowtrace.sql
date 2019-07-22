@@ -28,11 +28,8 @@ node_1_aux	varchar(16);
 node_2_aux	varchar(16);
 query_text	text;
 v_debug		Boolean;
-<<<<<<< HEAD
-=======
-v_data		json;
 v_macroexpl integer;
->>>>>>> dbfa0e98... Enhance mincut using macroexploitation in spite of exploitation to follow the network to detect inlets
+
 
 BEGIN
 
