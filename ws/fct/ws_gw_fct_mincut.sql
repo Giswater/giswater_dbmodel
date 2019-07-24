@@ -168,7 +168,7 @@ BEGIN
 
             -- Check extreme being a valve
             SELECT COUNT(*) INTO controlValue FROM anl_mincut_result_valve 
-            WHERE node_id = node_1_aux AND (unaccess = FALSE) AND (broken  = FALSE) AND result_id=result_id_arg;
+            WHERE node_id = node_1_aux AND result_id=result_id_arg AND ((unaccess = FALSE AND broken = FALSE) OR (closed = TRUE));
 
             IF controlValue = 1 THEN
                 -- Set proposed valve
@@ -183,13 +183,13 @@ BEGIN
 					PERFORM gw_fct_mincut_engine(node_1_aux, result_id_arg);	
 				ELSE
 					SELECT the_geom INTO node_aux FROM v_edit_node WHERE node_id = node_1_aux;
-					INSERT INTO anl_mincut_result_node (node_id, the_geom, result_id) VALUES(node_1_aux, node_aux, result_id_arg);	
+					INSERT INTO anl_mincut_result_node (node_id, the_geom, result_id) VALUES (node_1_aux, node_aux, result_id_arg);	
 				END IF;
 			END IF;
 
 			-- Check other extreme being a valve
             SELECT COUNT(*) INTO controlValue FROM anl_mincut_result_valve 
-            WHERE node_id = node_2_aux AND (unaccess = FALSE) AND (broken  = FALSE) AND result_id=result_id_arg;
+            WHERE node_id = node_2_aux AND result_id=result_id_arg AND ((unaccess = FALSE AND broken = FALSE) OR (closed = TRUE));
             IF controlValue = 1 THEN
 
 				-- Check if the valve is already computed

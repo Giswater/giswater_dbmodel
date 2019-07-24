@@ -46,7 +46,7 @@ BEGIN
 
         -- Check node_id being a valve
         SELECT node_id INTO exists_id FROM anl_mincut_result_valve WHERE node_id = node_id_arg 
-        AND (unaccess = FALSE) AND (broken  = FALSE) AND result_id=result_id_arg;
+        AND result_id=result_id_arg AND ((unaccess = FALSE AND broken = FALSE) OR (closed = TRUE));
         
         IF FOUND THEN
             UPDATE anl_mincut_result_valve SET proposed = TRUE WHERE node_id=node_id_arg AND result_id=result_id_arg;
