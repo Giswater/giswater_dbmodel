@@ -41,7 +41,7 @@ BEGIN
 
     -- Starting process
     SELECT * INTO mincut_rec FROM anl_mincut_result_cat WHERE id=result_id_arg;
-	SELECT expl_id INTO v_macroexpl FROM exploitation WHERE expl_id=mincut_rec.expl_id;
+	SELECT macroexpl_id INTO v_macroexpl FROM exploitation WHERE expl_id=mincut_rec.expl_id;
 	
     -- Loop for all the proposed valves
     FOR rec_valve IN SELECT node_id FROM anl_mincut_result_valve WHERE result_id=result_id_arg AND proposed=TRUE
