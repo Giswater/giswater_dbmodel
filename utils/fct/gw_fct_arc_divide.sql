@@ -37,7 +37,6 @@ DECLARE
     count_aux2 smallint;
     return_aux smallint;
 	arc_divide_tolerance_aux float =0.05;
-	plan_arc_vdivision_dsbl_aux boolean;
 	array_agg_connec varchar [];
 	array_agg_gully varchar [];
 	v_arc_searchnodes float;
@@ -49,6 +48,8 @@ DECLARE
     v_srid integer;
     v_newvisit1 int8;
     v_newvisit2 int8;
+    v_psector integer;
+    v_ficticius int2;
 
 	
 BEGIN
@@ -64,8 +65,9 @@ BEGIN
 	SELECT state INTO state_node_arg FROM node WHERE node_id=node_id_arg;
 
     -- Get parameters from configs table
-	SELECT value::boolean INTO plan_arc_vdivision_dsbl_aux FROM config_param_user WHERE "parameter"='plan_arc_vdivision_dsbl' AND cur_user=current_user; -- deprecated variable	  
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='arc_searchnodes';
+	SELECT value::smallint INTO v_psector FROM config_param_user WHERE "parameter"='psector_vdefault' AND cur_user=current_user;
+	SELECT value::smallint INTO v_ficticius FROM config_param_system WHERE "parameter"='plan_statetype_ficticius';
 
 	IF v_arc_searchnodes IS NULL THEN v_arc_searchnodes=0.5; END IF;
 
@@ -280,10 +282,10 @@ BEGIN
 	
 		ELSIF (state_aux=1 AND state_node_arg=2) THEN
 			rec_aux1.state=2;
-			rec_aux1.state_type=(SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius');
+			rec_aux1.state_type=v_ficticius;
 			
 			rec_aux2.state=2;
-			rec_aux2.state_type=(SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius');
+			rec_aux2.state_type=v_ficticius;
 			
 			-- Insert new records into arc table
 			UPDATE config SET arc_searchnodes_control='false';
@@ -302,12 +304,16 @@ BEGIN
 			UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux2.arc_id;
 		
 			-- Insert existig arc (on service) to the current alternative
-			INSERT INTO plan_psector_x_arc (psector_id, arc_id, state, doable) VALUES (
-			(SELECT value::smallint FROM config_param_user WHERE "parameter"='psector_vdefault' AND cur_user=current_user), arc_id_aux, 0, FALSE);
+			INSERT INTO plan_psector_x_arc (psector_id, arc_id, state, doable) VALUES (v_psector, arc_id_aux, 0, FALSE);
             
             -- Insert data into traceability table
 			INSERT INTO audit_log_arc_traceability ("type", arc_id, arc_id1, arc_id2, node_id, "tstamp", "user") 
 			VALUES ('DIVIDE WITH PLANIFIED NODE',  arc_id_aux, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
+            
+            -- Set addparam (parent/child)
+			UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"parent"}' WHERE psector_id=v_psector AND arc_id=arc_id_aux;
+			UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}'  WHERE psector_id=v_psector AND arc_id=rec_aux1.arc_id;
+			UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}'  WHERE psector_id=v_psector AND arc_id=rec_aux2.arc_id;
 
 				
 		ELSIF (state_aux=2 AND state_node_arg=2) THEN 
@@ -377,6 +383,12 @@ BEGIN
 				UPDATE node SET arc_id=v_newarc WHERE node_id=rec_aux.node_id;
 					
 			END LOOP;
+
+			-- in case of divide ficitius arc, new arcs will be ficticius, but we need to set doable false because they are inserted by default as true
+			IF (SELECT state_type FROM arc WHERE arc_id=arc_id_aux) = v_ficticius THEN
+				UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux1.arc_id;
+				UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux2.arc_id;
+			END IF;
 			
 			-- delete old arc
 			DELETE FROM arc WHERE arc_id=arc_id_aux;		

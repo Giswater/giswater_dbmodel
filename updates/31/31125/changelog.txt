@@ -1,3 +1,5 @@
 3.1.125
 *******
 Add DIVIDE WITH PLANIFIED NODE to audit_log_arc_traceability (fct_divide_arc)
+Manage affec, planif and current_length of arcs in psector
+
