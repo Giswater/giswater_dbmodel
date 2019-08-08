@@ -86,9 +86,10 @@ BEGIN
 					-- looking for all the arcs (1 and 2) using existing node
 					FOR v_arc IN (SELECT arc_id, node_1 as node_id FROM arc WHERE node_1=node_rec.node_id AND state >0 UNION SELECT arc_id, node_2 FROM arc WHERE node_2=node_rec.node_id AND state >0)
 					LOOP
+					
 						-- if exists some arc planified on same alternative attached to that existing node
-						IF v_arc.arc_id IN (SELECT arc_id FROM plan_psector_x_arc WHERE psector_id=v_psector_id) THEN 
-							
+						IF v_arc.arc_id IN (SELECT arc_id FROM plan_psector_x_arc WHERE psector_id=v_psector_id AND arc.state=2) THEN 
+					
 							-- reconnect the planified arc to the new planified node in spite of connected to the node state=1
 							IF (SELECT node_1 FROM arc WHERE arc_id=v_arc.arc_id)=v_arc.node_id THEN
 								UPDATE arc SET node_1=NEW.node_id WHERE arc_id=v_arc.arc_id AND node_1=node_rec.node_id;							
