@@ -1,0 +1,8 @@
+3.1.126
+*******
+Modify edit psector trigger to delete features
+Bug fix on topocontrol node trigger when insert planified node
+Enhance arc_divide function
+Add admin_manage_fields function
+Add notified column to anl_mincut_result_cat and related views
+
