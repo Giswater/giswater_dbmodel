@@ -14,6 +14,11 @@ DECLARE
 	v_sql varchar;
 	plan_psector_seq int8;
 	om_aux text;
+    rec_type record;
+    v_plan_table text;
+	v_plan_table_id text;
+    rec record;
+    v_id text;
 	
 BEGIN
 
@@ -110,6 +115,30 @@ BEGIN
 		DELETE FROM om_psector WHERE psector_id = OLD.psector_id;      
 
 	ELSIF om_aux='plan' THEN
+    
+		FOR rec_type IN (SELECT * FROM sys_feature_type WHERE id='ARC' OR id='NODE' ORDER BY id asc) LOOP
+		
+			v_plan_table=concat('plan_psector_x_',lower(rec_type.id));
+			v_plan_table_id=concat(lower(rec_type.id),'_id');
+
+			FOR rec IN EXECUTE 'SELECT * FROM '||v_plan_table||' WHERE psector_id = '||OLD.psector_id||'
+			and '||v_plan_table_id||' not IN (SELECT '||v_plan_table_id||' FROM '||v_plan_table||' WHERE psector_id != '||OLD.psector_id||')' LOOP
+	
+				IF rec_type.id='ARC' THEN
+					v_id = rec.arc_id;		
+				ELSIF rec_type.id='NODE' THEN
+					v_id = rec.node_id;	
+				END IF;
+				
+					EXECUTE 'DELETE FROM '||lower(rec_type.id)||' WHERE state=2 and '||v_plan_table_id||' =  '''||v_id||'''';
+					
+			END LOOP;
+			
+
+		END LOOP;
+
+		DELETE FROM config_param_user WHERE parameter = 'psector_vdefault' and value = OLD.psector_id::text;
+
 		DELETE FROM plan_psector WHERE psector_id = OLD.psector_id;
 
 	END IF;
