@@ -332,6 +332,9 @@ BEGIN
 			
 			rec_aux2.state=2;
 			rec_aux2.state_type=v_ficticius;
+
+			UPDATE config SET arc_searchnodescontrol = 'false';
+			UPDATE config_param_system SET value = replace (value, 'true', 'false') WHERE parameter='arc_searchnodes';
 			
 			-- Insert new records into arc table
 			INSERT INTO arc SELECT rec_aux1.*;
@@ -344,6 +347,9 @@ BEGIN
 			-- insert new records into epa_table
 			EXECUTE v_epaquerytext1||rec_aux1.arc_id::text||v_epaquerytext2;
 			EXECUTE v_epaquerytext1||rec_aux2.arc_id::text||v_epaquerytext2;
+			
+			UPDATE config SET arc_searchnodescontrol = 'true';
+			UPDATE config_param_system SET value = replace (value, 'false', 'true') WHERE parameter='arc_searchnodes';
 
 			-- update node_1 and node_2 because it's not possible to pass using parameters
 			UPDATE arc SET node_1=rec_aux1.node_1,node_2=rec_aux1.node_2 where arc_id=rec_aux1.arc_id;
@@ -366,7 +372,10 @@ BEGIN
 			UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}'  WHERE psector_id=v_psector AND arc_id=rec_aux2.arc_id;
 
 				
-		ELSIF (state_aux=2 AND state_node_arg=2) THEN 
+		ELSIF (state_aux=2 AND state_node_arg=2) THEN
+
+			UPDATE config SET arc_searchnodescontrol = 'false';
+			UPDATE config_param_system SET value = replace (value, 'true', 'false') WHERE parameter='arc_searchnodes';
 		
 			-- Insert new records into arc table
 			INSERT INTO arc SELECT rec_aux1.*;
@@ -379,7 +388,10 @@ BEGIN
 			-- insert new records into epa_table
 			EXECUTE v_epaquerytext1||rec_aux1.arc_id::text||v_epaquerytext2;
 			EXECUTE v_epaquerytext1||rec_aux2.arc_id::text||v_epaquerytext2;
-
+			
+			UPDATE config SET arc_searchnodescontrol = 'true';
+			UPDATE config_param_system SET value = replace (value, 'false', 'true') WHERE parameter='arc_searchnodes';
+	
 			-- update node_1 and node_2 because it's not possible to pass using parameters
 			UPDATE arc SET node_1=rec_aux1.node_1,node_2=rec_aux1.node_2 where arc_id=rec_aux1.arc_id;
 			UPDATE arc SET node_1=rec_aux2.node_1,node_2=rec_aux2.node_2 where arc_id=rec_aux2.arc_id;
