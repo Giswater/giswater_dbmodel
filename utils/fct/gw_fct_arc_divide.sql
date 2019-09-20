@@ -333,7 +333,7 @@ BEGIN
 			rec_aux2.state=2;
 			rec_aux2.state_type=v_ficticius;
 
-			UPDATE config SET arc_searchnodescontrol = 'false';
+			UPDATE config SET arc_searchnodes_control = 'false';
 			UPDATE config_param_system SET value = replace (value, 'true', 'false') WHERE parameter='arc_searchnodes';
 			
 			-- Insert new records into arc table
@@ -348,7 +348,7 @@ BEGIN
 			EXECUTE v_epaquerytext1||rec_aux1.arc_id::text||v_epaquerytext2;
 			EXECUTE v_epaquerytext1||rec_aux2.arc_id::text||v_epaquerytext2;
 			
-			UPDATE config SET arc_searchnodescontrol = 'true';
+			UPDATE config SET arc_searchnodes_control = 'true';
 			UPDATE config_param_system SET value = replace (value, 'false', 'true') WHERE parameter='arc_searchnodes';
 
 			-- update node_1 and node_2 because it's not possible to pass using parameters
@@ -374,7 +374,7 @@ BEGIN
 				
 		ELSIF (state_aux=2 AND state_node_arg=2) THEN
 
-			UPDATE config SET arc_searchnodescontrol = 'false';
+			UPDATE config SET arc_searchnodes_control = 'false';
 			UPDATE config_param_system SET value = replace (value, 'true', 'false') WHERE parameter='arc_searchnodes';
 		
 			-- Insert new records into arc table
@@ -389,7 +389,7 @@ BEGIN
 			EXECUTE v_epaquerytext1||rec_aux1.arc_id::text||v_epaquerytext2;
 			EXECUTE v_epaquerytext1||rec_aux2.arc_id::text||v_epaquerytext2;
 			
-			UPDATE config SET arc_searchnodescontrol = 'true';
+			UPDATE config SET arc_searchnodes_control = 'true';
 			UPDATE config_param_system SET value = replace (value, 'false', 'true') WHERE parameter='arc_searchnodes';
 	
 			-- update node_1 and node_2 because it's not possible to pass using parameters
