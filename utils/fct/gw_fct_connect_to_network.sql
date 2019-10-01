@@ -148,9 +148,15 @@ BEGIN
 			UPDATE link SET the_geom=v_link.the_geom, exit_type=v_link.exit_type, exit_id=v_exit_id WHERE link_id=v_link.link_id;
 		END IF;
 
-		-- Update feaute arc_id and state_type
+		-- Update connect propierties
 		IF feature_type_aux ='CONNEC' THEN          
-			UPDATE connec SET arc_id=v_connect.arc_id WHERE connec_id = connect_id_aux;
+
+			UPDATE connec SET arc_id=v_connect.arc_id, dma_id=v_connect.dma_id, sector_id=v_connect.sector_id WHERE connec_id = connect_id_aux;
+
+			-- update specific fields for ws projects
+			IF v_projecttype = 'WS' THEN
+				UPDATE connec SET presszonecat_id=v_connect.presszonecat_id WHERE connec_id = connect_id_aux;
+			END IF;			
 			
 			-- Update state_type if edit_connect_update_statetype is TRUE
 			IF (SELECT ((value::json->>'connec')::json->>'status')::boolean FROM config_param_system WHERE parameter = 'edit_connect_update_statetype') IS TRUE THEN
@@ -158,7 +164,7 @@ BEGIN
 				FROM config_param_system WHERE parameter = 'edit_connect_update_statetype') WHERE connec_id=connect_id_aux;
 			END IF;
 		ELSIF feature_type_aux ='GULLY' THEN 
-			UPDATE gully SET arc_id=v_connect.arc_id  WHERE gully_id = connect_id_aux;
+			UPDATE gully SET arc_id=v_connect.arc_id, dma_id=v_connect.dma_id, sector_id=v_connect.sector_id WHERE gully_id = connect_id_aux;
 
 			-- Update state_type if edit_connect_update_statetype is TRUE
 			IF (SELECT ((value::json->>'gully')::json->>'status')::boolean FROM config_param_system WHERE parameter = 'edit_connect_update_statetype') IS TRUE THEN
