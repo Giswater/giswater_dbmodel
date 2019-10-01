@@ -178,11 +178,23 @@ BEGIN
 			is_reversed= FALSE;
 			sys_y1_aux:= (CASE WHEN (NEW.custom_y1 IS NOT NULL) THEN NEW.custom_y1::numeric (12,3) ELSE NEW.y1::numeric (12,3) END);
 			sys_y2_aux:= (CASE WHEN (NEW.custom_y2 IS NOT NULL) THEN NEW.custom_y2::numeric (12,3) ELSE NEW.y2::numeric (12,3) END);
+			
 			sys_elev1_aux:= (CASE WHEN (NEW.custom_elev1 IS NOT NULL) THEN NEW.custom_elev1 ELSE NEW.elev1 END);
 			sys_elev2_aux:= (CASE WHEN (NEW.custom_elev2 IS NOT NULL) THEN NEW.custom_elev2 ELSE NEW.elev2 END);
-			sys_elev1_aux:= (CASE WHEN sys_elev1_aux IS NOT NULL THEN sys_elev1_aux ELSE (SELECT sys_top_elev FROM v_node WHERE node_id=nodeRecord1.node_id) - (CASE WHEN sys_y1_aux IS NOT NULL THEN sys_y1_aux ELSE 0 END) END);
-			sys_elev2_aux:= (CASE WHEN sys_elev2_aux IS NOT NULL THEN sys_elev2_aux ELSE (SELECT sys_top_elev FROM v_node WHERE node_id=nodeRecord2.node_id) - (CASE WHEN sys_y2_aux IS NOT NULL THEN sys_y2_aux ELSE 0 END) END);
-		
+			
+			sys_elev1_aux:= (CASE WHEN sys_elev1_aux IS NOT NULL THEN sys_elev1_aux ELSE (SELECT sys_top_elev 
+			FROM v_node WHERE node_id=nodeRecord1.node_id) - (CASE WHEN sys_y1_aux IS NOT NULL THEN sys_y1_aux ELSE 0 END) END);
+			
+			sys_elev2_aux:= (CASE WHEN sys_elev2_aux IS NOT NULL THEN sys_elev2_aux ELSE (SELECT sys_top_elev 
+			FROM v_node WHERE node_id=nodeRecord2.node_id) - (CASE WHEN sys_y2_aux IS NOT NULL THEN sys_y2_aux ELSE 0 END) END);
+
+			sys_elev1_aux:= (CASE WHEN sys_elev1_aux IS NOT NULL THEN sys_elev1_aux ELSE (SELECT sys_elev 
+			FROM v_node WHERE node_id=nodeRecord1.node_id) END);
+			
+			sys_elev2_aux:= (CASE WHEN sys_elev2_aux IS NOT NULL THEN sys_elev2_aux ELSE (SELECT sys_elev 
+			FROM v_node WHERE node_id=nodeRecord2.node_id) END);
+
+	
 			-- Update coordinates
 			NEW.the_geom := ST_SetPoint(NEW.the_geom, 0, nodeRecord1.the_geom);
 			NEW.the_geom := ST_SetPoint(NEW.the_geom, ST_NumPoints(NEW.the_geom) - 1, nodeRecord2.the_geom);
@@ -190,15 +202,20 @@ BEGIN
 			IF ( (sys_elev1_aux IS NULL OR sys_elev2_aux IS NULL)) THEN
 					NEW.node_1 := nodeRecord1.node_id; 
 					NEW.node_2 := nodeRecord2.node_id;
+
+					NEW.sys_elev1 := sys_elev1_aux;
+					NEW.sys_elev2 := sys_elev2_aux;
+					
 			ELSE 
 
-				IF (((sys_elev1_aux >= sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE)) OR ((sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS TRUE)) OR (geom_slp_direction_bool IS FALSE)) THEN
+				IF (((sys_elev1_aux >= sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE)) OR ((sys_elev1_aux < sys_elev2_aux) 
+				AND (NEW.inverted_slope IS TRUE)) OR (geom_slp_direction_bool IS FALSE)) THEN
 					NEW.node_1 := nodeRecord1.node_id; 
 					NEW.node_2 := nodeRecord2.node_id;
+					
 					NEW.sys_elev1 := sys_elev1_aux;
 					NEW.sys_elev2 := sys_elev2_aux;
 
-		
 				ELSE 
 					-- Update conduit direction
 					-- Geometry
