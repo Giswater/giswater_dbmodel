@@ -283,7 +283,7 @@ This version of Giswater is provided by Giswater Association
 			END IF;
 				
 			-- The geom
-			IF st_equals(NEW.the_geom, OLD.the_geom) IS FALSE  THEN
+			IF st_orderingequals(NEW.the_geom, OLD.the_geom) IS FALSE  THEN
 				UPDATE arc SET the_geom=NEW.the_geom WHERE arc_id = OLD.arc_id;
 			END IF;
 
