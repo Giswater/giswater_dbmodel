@@ -40,11 +40,15 @@ DECLARE
 	point_aux public.geometry;
 	aux_geom public.geometry;
 	v_node_proximity double precision;
+	v_projecttype varchar;
 
 BEGIN
 
     -- Search path
     SET search_path = "SCHEMA_NAME", public;
+
+    -- get project type
+    SELECT wsoftware INTO v_projecttype FROM version LIMIT 1;
 
     SELECT ((value::json)->>'value') INTO v_node_proximity FROM config_param_system WHERE parameter='node_proximity';
     IF v_node_proximity IS NULL THEN v_node_proximity=0.01; END IF;
@@ -143,19 +147,22 @@ BEGIN
 		-- Insert new link
 		IF v_link.link_id IS NULL THEN
 			INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, userdefined_geom, state, expl_id) 
-			VALUES ((SELECT nextval('link_link_id_seq')), v_link.the_geom, connect_id_aux, feature_type_aux, v_link.exit_type, v_exit_id, v_link.userdefined_geom, v_connect.state, v_connect.expl_id);
+			VALUES ((SELECT nextval('link_link_id_seq')), v_link.the_geom, connect_id_aux, feature_type_aux, v_link.exit_type, v_exit_id, v_link.userdefined_geom, v_connect.state, v_arc.expl_id);
 		ELSE
 			UPDATE link SET the_geom=v_link.the_geom, exit_type=v_link.exit_type, exit_id=v_exit_id WHERE link_id=v_link.link_id;
 		END IF;
 
 		-- Update connect propierties
 		IF feature_type_aux ='CONNEC' THEN          
-
-			UPDATE connec SET arc_id=v_connect.arc_id, dma_id=v_connect.dma_id, sector_id=v_connect.sector_id WHERE connec_id = connect_id_aux;
+			raise exception ' v_connect %', v_connect;
+			UPDATE connec SET arc_id=v_arc.arc_id, expl_id=v_arc.expl_id, dma_id=v_arc.dma_id, sector_id=v_arc.sector_id
+			 WHERE connec_id = connect_id_aux;
 
 			-- update specific fields for ws projects
 			IF v_projecttype = 'WS' THEN
-				UPDATE connec SET presszonecat_id=v_connect.presszonecat_id WHERE connec_id = connect_id_aux;
+				UPDATE connec SET presszonecat_id=v_arc.presszonecat_id WHERE connec_id = connect_id_aux;
+			ELSE
+				UPDATE connec SET feature_id=v_arc.arc_id, featurecat_id=v_arc.arc_type WHERE connec_id = connect_id_aux;
 			END IF;			
 			
 			-- Update state_type if edit_connect_update_statetype is TRUE
@@ -164,7 +171,8 @@ BEGIN
 				FROM config_param_system WHERE parameter = 'edit_connect_update_statetype') WHERE connec_id=connect_id_aux;
 			END IF;
 		ELSIF feature_type_aux ='GULLY' THEN 
-			UPDATE gully SET arc_id=v_connect.arc_id, dma_id=v_connect.dma_id, sector_id=v_connect.sector_id WHERE gully_id = connect_id_aux;
+			UPDATE gully SET arc_id=v_arc.arc_id, expl_id=v_arc.expl_id, dma_id=v_arc.dma_id, sector_id=v_arc.sector_id, feature_id=v_arc.arc_id, featurecat_id=v_arc.arc_type
+			WHERE gully_id = connect_id_aux;
 
 			-- Update state_type if edit_connect_update_statetype is TRUE
 			IF (SELECT ((value::json->>'gully')::json->>'status')::boolean FROM config_param_system WHERE parameter = 'edit_connect_update_statetype') IS TRUE THEN

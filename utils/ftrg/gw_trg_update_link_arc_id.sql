@@ -24,12 +24,12 @@ BEGIN
 	FOR v_link IN SELECT * FROM link WHERE (exit_type='CONNEC' AND exit_id=OLD.connec_id)
 		LOOP
 			IF v_link.feature_type='CONNEC' THEN
-			
-				UPDATE v_edit_connec SET arc_id=NEW.arc_id WHERE connec_id=v_link.feature_id;
+				
+				UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id=NEW.dma_id, sector_id=NEW.sector_id WHERE connec_id=v_link.feature_id;
 			
 			ELSIF v_link.feature_type='GULLY' THEN
  		
-				UPDATE v_edit_gully SET arc_id=NEW.arc_id WHERE gully_id=v_link.feature_id;
+				UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id=NEW.dma_id, sector_id=NEW.sector_id WHERE gully_id=v_link.feature_id;
 				
 			END IF;
 		END LOOP;
@@ -39,11 +39,11 @@ BEGIN
 		LOOP
 			IF v_link.feature_type='CONNEC' THEN
 			
-				UPDATE v_edit_connec SET arc_id=NEW.arc_id WHERE connec_id=v_link.feature_id;
+				UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id=NEW.dma_id, sector_id=NEW.sector_id WHERE connec_id=v_link.feature_id;
 			
 			ELSIF v_link.feature_type='GULLY' THEN
 		
-				UPDATE v_edit_gully SET arc_id=NEW.arc_id WHERE gully_id=v_link.feature_id;
+				UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id=NEW.dma_id, sector_id=NEW.sector_id WHERE gully_id=v_link.feature_id;
 			END IF;
 		END LOOP;
 		
