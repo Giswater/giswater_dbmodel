@@ -295,7 +295,7 @@ BEGIN
 		INSERT INTO anl_mincut_result_hydrometer (result_id, hydrometer_id)
 		SELECT result_id_arg,rtc_hydrometer_x_connec.hydrometer_id FROM rtc_hydrometer_x_connec 
 		JOIN anl_mincut_result_connec ON rtc_hydrometer_x_connec.connec_id=anl_mincut_result_connec.connec_id 
-		JOIN v_rtc_hydrometer ON v_rtc_hydrometer.hydrometer_id=rtc_hydrometer_x_connec.hydrometer_id
+		LEFT JOIN v_rtc_hydrometer ON v_rtc_hydrometer.hydrometer_id=rtc_hydrometer_x_connec.hydrometer_id
 		WHERE result_id=result_id_arg;
 
 		-- Working with the case of study of mincut pipe hazard analysis  (om_mincut_analysis_pipehazard=true)
