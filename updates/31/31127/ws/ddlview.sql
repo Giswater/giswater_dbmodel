@@ -13,8 +13,8 @@ CREATE OR REPLACE VIEW v_rtc_hydrometer AS
  SELECT ext_rtc_hydrometer.id::text AS hydrometer_id,
     ext_rtc_hydrometer.code AS hydrometer_customer_code,
         CASE
-            WHEN v_edit_connec.connec_id IS NULL THEN 'XXXX'::character varying
-            ELSE v_edit_connec.connec_id
+            WHEN connec.connec_id IS NULL THEN 'XXXX'::character varying
+            ELSE connec.connec_id
         END AS connec_id,
         CASE
             WHEN ext_rtc_hydrometer.connec_id::text IS NULL THEN 'XXXX'::text
@@ -22,7 +22,7 @@ CREATE OR REPLACE VIEW v_rtc_hydrometer AS
         END AS connec_customer_code,
     ext_rtc_hydrometer_state.name AS state,
     ext_municipality.name AS muni_name,
-    v_edit_connec.expl_id,
+    ext_rtc_hydrometer.expl_id,
     exploitation.name AS expl_name,
     ext_rtc_hydrometer.plot_code,
     ext_rtc_hydrometer.priority_id,
@@ -54,7 +54,7 @@ CREATE OR REPLACE VIEW v_rtc_hydrometer AS
     rtc_hydrometer
      LEFT JOIN ext_rtc_hydrometer ON ext_rtc_hydrometer.id::text = rtc_hydrometer.hydrometer_id::text
      JOIN ext_rtc_hydrometer_state ON ext_rtc_hydrometer_state.id = ext_rtc_hydrometer.state_id
-     LEFT JOIN v_edit_connec ON v_edit_connec.customer_code::text = ext_rtc_hydrometer.connec_id::text
-     LEFT JOIN ext_municipality ON ext_municipality.muni_id = v_edit_connec.muni_id
-     LEFT JOIN exploitation ON exploitation.expl_id = v_edit_connec.expl_id
+     LEFT JOIN connec ON connec.customer_code::text = ext_rtc_hydrometer.connec_id::text
+     LEFT JOIN ext_municipality ON ext_municipality.muni_id = ext_rtc_hydrometer.muni_id
+     LEFT JOIN exploitation ON exploitation.expl_id = ext_rtc_hydrometer.expl_id
   WHERE selector_hydrometer.state_id = ext_rtc_hydrometer.state_id AND selector_hydrometer.cur_user = "current_user"()::text;
