@@ -154,7 +154,6 @@ BEGIN
 
 		-- Update connect propierties
 		IF feature_type_aux ='CONNEC' THEN          
-			raise exception ' v_connect %', v_connect;
 			UPDATE connec SET arc_id=v_arc.arc_id, expl_id=v_arc.expl_id, dma_id=v_arc.dma_id, sector_id=v_arc.sector_id
 			 WHERE connec_id = connect_id_aux;
 
