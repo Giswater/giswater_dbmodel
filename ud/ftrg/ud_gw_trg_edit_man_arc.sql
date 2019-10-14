@@ -347,17 +347,17 @@ This version of Giswater is provided by Giswater Association
 			NEW.link = replace(NEW.link, link_path_aux,'');
 		END IF;
 
-		IF (NEW.y1 <> OLD.y1) OR (NEW.y2 <> OLD.y2) THEN
+		--IF (NEW.y1 <> OLD.y1) OR (NEW.y2 <> OLD.y2) THEN
 			UPDATE arc SET y1=NEW.y1, y2=NEW.y2 WHERE arc_id=NEW.arc_id;
-		END IF;
+		--END IF;
 		
-		IF (NEW.elev1 <> OLD.elev1) OR (NEW.elev2 <> OLD.elev2) THEN
+		--IF (NEW.elev1 <> OLD.elev1) OR (NEW.elev2 <> OLD.elev2) THEN
 			UPDATE arc SET elev1=NEW.elev1, elev2=NEW.elev2 WHERE arc_id=NEW.arc_id;
-		END IF;
+		--END IF;
 
-		IF (NEW.custom_y1 <> OLD.custom_y1) OR (NEW.custom_y2 <> OLD.custom_y2) THEN
+		--IF (NEW.custom_y1 <> OLD.custom_y1) OR (NEW.custom_y2 <> OLD.custom_y2) THEN
 			UPDATE arc SET custom_y1=NEW.custom_y1, custom_y2=NEW.custom_y2 WHERE arc_id=NEW.arc_id;
-		END IF;
+		--END IF;
 
 		UPDATE arc 
 		SET code=NEW.code, arc_type=NEW.arc_type, arccat_id=NEW.arccat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type,
