@@ -51,9 +51,7 @@ INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user
 VALUES (3036, 'Selected state type doesn''t correspond with state','Modify the value of state or state type.', 2, true,'utils')
 ON CONFLICT (id) DO NOTHING;
 
-
-INSERT INTO value_state_type(id,state, name, is_operative, is_doable)
-VALUES (99,2, 'FICTICIOUS',true, false);
+UPDATE value_state_type SET is_doable = False WHERE id = 99;
 
 INSERT INTO value_state_type(id,state, name, is_operative, is_doable)
 VALUES (98,0, 'DONE PLANIFIED',false, false);
