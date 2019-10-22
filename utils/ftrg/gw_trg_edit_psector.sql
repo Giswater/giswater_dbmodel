@@ -14,12 +14,19 @@ DECLARE
 	v_sql varchar;
 	plan_psector_seq int8;
 	om_aux text;
-    rec_type record;
-    v_plan_table text;
+	rec_type record;
+	v_plan_table text;
 	v_plan_table_id text;
-    rec record;
-    v_id text;
-	
+	rec record;
+	v_state_done_planified integer;
+	v_state_done_ficticious integer;
+	v_state_canceled_planified integer;
+	v_state_canceled_ficticious integer;
+	v_plan_statetype_ficticious integer;
+	v_plan_statetype_planned integer;
+	v_current_state_type integer;
+	v_id text;   
+	v_querytext text;
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
@@ -74,14 +81,14 @@ BEGIN
 		INSERT INTO om_psector (psector_id, name, psector_type, result_id, descript, priority, text1, text2, observ, rotation, scale, 
 		sector_id, atlas_id, gexpenses, vat, other, the_geom, expl_id, active)
 		VALUES  (NEW.psector_id, NEW.name, NEW.psector_type, NEW.result_id, NEW.descript, NEW.priority, NEW.text1, NEW.text2, NEW.observ, 
-		NEW.rotation, NEW.scale, NEW.sector_id, NEW.atlas_id, NEW.gexpenses, NEW.vat, NEW.other, NEW.the_geom, NEW.expl_id, NEW.active);
+		NEW.rotation, NEW.scale, NEW.sector_id, NEW.atlas_id, NEW.gexpenses, NEW.vat, NEW.other, NEW.the_geom, NEW.expl_id, NEW.active, NEW.status, NEW.ext_code);
 
 	ELSIF om_aux='plan' THEN
 
 		INSERT INTO plan_psector (psector_id, name, psector_type, descript, priority, text1, text2, observ, rotation, scale, sector_id,
 		 atlas_id, gexpenses, vat, other, the_geom, expl_id, active)
 		VALUES  (NEW.psector_id, NEW.name, NEW.psector_type, NEW.descript, NEW.priority, NEW.text1, NEW.text2, NEW.observ, NEW.rotation, 
-		NEW.scale, NEW.sector_id, NEW.atlas_id, NEW.gexpenses, NEW.vat, NEW.other, NEW.the_geom, NEW.expl_id, NEW.active);
+		NEW.scale, NEW.sector_id, NEW.atlas_id, NEW.gexpenses, NEW.vat, NEW.other, NEW.the_geom, NEW.expl_id, NEW.active, NEW.status, NEW.ext_code);
 	END IF;
 
 		
@@ -89,25 +96,98 @@ BEGIN
 
     ELSIF TG_OP = 'UPDATE' THEN
 
-	IF om_aux='om' THEN
+		IF om_aux='om' THEN
 	               
-		UPDATE om_psector 
-		SET psector_id=NEW.psector_id, name=NEW.name, psector_type=NEW.psector_type, result_id=NEW.result_id, descript=NEW.descript, priority=NEW.priority, 
-		text1=NEW.text1, text2=NEW.text2, observ=NEW.observ, rotation=NEW.rotation, scale=NEW.scale, sector_id=NEW.sector_id, atlas_id=NEW.atlas_id, 
-		gexpenses=NEW.gexpenses, vat=NEW.vat, other=NEW.other, expl_id=NEW.expl_id, active=NEW.active
-		WHERE psector_id=OLD.psector_id;
+			UPDATE om_psector 
+			SET psector_id=NEW.psector_id, name=NEW.name, psector_type=NEW.psector_type, result_id=NEW.result_id, descript=NEW.descript, priority=NEW.priority, 
+			text1=NEW.text1, text2=NEW.text2, observ=NEW.observ, rotation=NEW.rotation, scale=NEW.scale, sector_id=NEW.sector_id, atlas_id=NEW.atlas_id, 
+			gexpenses=NEW.gexpenses, vat=NEW.vat, other=NEW.other, expl_id=NEW.expl_id, active=NEW.active, status=NEW.status, ext_code=NEW.ext_code
+			WHERE psector_id=OLD.psector_id;
 
-	ELSIF om_aux='plan' THEN
+		ELSIF om_aux='plan' THEN
 
-		UPDATE plan_psector 
-		SET psector_id=NEW.psector_id, name=NEW.name, psector_type=NEW.psector_type, descript=NEW.descript, priority=NEW.priority, text1=NEW.text1, 
-		text2=NEW.text2, observ=NEW.observ, rotation=NEW.rotation, scale=NEW.scale, sector_id=NEW.sector_id, atlas_id=NEW.atlas_id, 
-		gexpenses=NEW.gexpenses, vat=NEW.vat, other=NEW.other, expl_id=NEW.expl_id, active=NEW.active
-		WHERE psector_id=OLD.psector_id;
+			UPDATE plan_psector 
+			SET psector_id=NEW.psector_id, name=NEW.name, psector_type=NEW.psector_type, descript=NEW.descript, priority=NEW.priority, text1=NEW.text1, 
+			text2=NEW.text2, observ=NEW.observ, rotation=NEW.rotation, scale=NEW.scale, sector_id=NEW.sector_id, atlas_id=NEW.atlas_id, 
+			gexpenses=NEW.gexpenses, vat=NEW.vat, other=NEW.other, expl_id=NEW.expl_id, active=NEW.active, status=NEW.status, ext_code=NEW.ext_code
+			WHERE psector_id=OLD.psector_id;
+			
+			--if the status of a psector had changed to 3 or 0 proceed with changes of feature states
+		IF (OLD.status != NEW.status) AND (NEW.status = 0 OR NEW.status = 2 OR NEW.status = 3)  THEN
+
+			--get the values of future state_types 
+			SELECT ((value::json)->>'done_planified') INTO v_state_done_planified FROM config_param_system WHERE parameter='plan_psector_statetype';
+			SELECT ((value::json)->>'done_ficticious') INTO v_state_done_ficticious FROM config_param_system WHERE parameter='plan_psector_statetype';
+			SELECT ((value::json)->>'canceled_planified') INTO v_state_canceled_planified FROM config_param_system WHERE parameter='plan_psector_statetype';
+			SELECT ((value::json)->>'canceled_ficticious') INTO v_state_canceled_ficticious FROM config_param_system WHERE parameter='plan_psector_statetype';
+			SELECT value::integer INTO v_plan_statetype_ficticious FROM config_param_system WHERE parameter = 'plan_statetype_ficticius';
+			SELECT value::integer INTO v_plan_statetype_planned FROM config_param_system WHERE parameter = 'plan_statetype_planned';
+
+			--temporary remove topology control
+			UPDATE config_param_system set value = 'false' WHERE parameter='state_topocontrol';
+
+			--loop over network feature types in order to get the data from each plan_psector_x_* table 
+			FOR rec_type IN (SELECT * FROM sys_feature_type WHERE id IN ('NODE', 'ARC')) LOOP
+
+				v_sql = 'SELECT '||rec_type.id||'_id as id FROM plan_psector_x_'||lower(rec_type.id)||' WHERE state = 1 AND psector_id = '||OLD.psector_id||';';
+
+				--loop over each feature in plan_psector_x_* table in order to update state values
+				FOR rec IN EXECUTE v_sql LOOP
+				
+					--get the current state_type of a feature
+					v_querytext = 'SELECT state_type FROM v_edit_'||lower(rec_type.id)||' WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+					EXECUTE v_querytext INTO v_current_state_type;
+
+					--set planned features to obsolete and update state_type depending on the new status and current state_type
+					IF NEW.status = 0 THEN	
+		
+						IF v_current_state_type = v_plan_statetype_ficticious OR v_current_state_type = v_state_canceled_ficticious THEN
+							EXECUTE 'UPDATE v_edit_'||lower(rec_type.id)||' SET state = 0, state_type = '||v_state_done_ficticious||'
+							WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+							
+						ELSE
+							EXECUTE 'UPDATE v_edit_'||lower(rec_type.id)||' SET state = 0, state_type = '||v_state_done_planified||'
+							WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+						END IF;
+						
+					ELSIF NEW.status = 2 THEN
+						IF v_current_state_type = v_state_done_ficticious OR v_current_state_type = v_state_canceled_ficticious THEN
+							EXECUTE 'UPDATE v_edit_'||lower(rec_type.id)||' SET state = 2, state_type = '||v_plan_statetype_ficticious||'
+							WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+							
+						ELSE
+							EXECUTE 'UPDATE v_edit_'||lower(rec_type.id)||' SET state = 2, state_type = '||v_plan_statetype_planned||'
+							WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+							
+						END IF;			
+						
+					ELSIF NEW.status = 3 THEN
+						IF v_current_state_type = v_plan_statetype_ficticious OR v_current_state_type = v_state_done_ficticious THEN
+							EXECUTE 'UPDATE v_edit_'||lower(rec_type.id)||' SET state = 0, state_type = '||v_state_canceled_ficticious||'
+							WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+							
+						ELSE
+							EXECUTE 'UPDATE v_edit_'||lower(rec_type.id)||' SET state = 0, state_type = '||v_state_canceled_planified||'
+							WHERE '||lower(rec_type.id)||'_id = '''||rec.id||''';';
+							
+						END IF;
+					END IF;
+				END LOOP;
+				
+				--reestablish topology control
+				UPDATE config_param_system set value = 'true' WHERE parameter='state_topocontrol';	
+				
+				--show information about performed state update
+				PERFORM audit_function(3034,2446);
+			END LOOP;
+			
+		END IF;
+			
+			
 	END IF;
 
                
-        RETURN NEW;
+    RETURN NEW;
 
     ELSIF TG_OP = 'DELETE' THEN
     
