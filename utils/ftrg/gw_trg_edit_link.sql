@@ -250,7 +250,7 @@ BEGIN
 		INSERT INTO link (link_id, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom)
 		VALUES (NEW.link_id, NEW.feature_type, NEW.feature_id, NEW.expl_id, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom);
 	ELSIF TG_OP = 'UPDATE' THEN 
-		UPDATE link SET userdefined_geom='TRUE', state=NEW.state, exit_id=NEW.exit_id, exit_type=NEW.exit_type, the_geom=NEW.the_geom WHERE link_id=NEW.link_id;
+		UPDATE link SET userdefined_geom='TRUE', the_geom=NEW.the_geom WHERE link_id=NEW.link_id;
 	END IF;
 		
 	-- Update state_type if edit_connect_update_statetype is TRUE
