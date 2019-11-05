@@ -195,5 +195,8 @@ DROP TRIGGER IF EXISTS gw_trg_update_link_arc_id ON "SCHEMA_NAME".connec;
 CREATE TRIGGER gw_trg_update_link_arc_id AFTER UPDATE OF arc_id ON "SCHEMA_NAME".connec
 FOR EACH ROW EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_update_link_arc_id(connec);
 
+DROP TRIGGER IF EXISTS gw_trg_edit_psector ON "SCHEMA_NAME".v_edit_plan_psector;
+CREATE TRIGGER gw_trg_edit_psector  INSTEAD OF INSERT OR UPDATE OR DELETE ON "SCHEMA_NAME".v_edit_plan_psector  
+FOR EACH ROW  EXECUTE PROCEDURE "SCHEMA_NAME".gw_trg_edit_psector('plan');
 
 
