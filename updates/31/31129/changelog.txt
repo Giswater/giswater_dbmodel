@@ -1,3 +1,7 @@
 3.1.129
 *******
 Bug fix on delete man_addfields_value table when feature_id is removed
+
+--------
+WARNING: REVIEW DATA SQL FILES MUST BE EXECUTED (by hand, rows one by one). That files are stored on the same folder of this changelog file
+--------
