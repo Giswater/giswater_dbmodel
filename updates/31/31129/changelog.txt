@@ -1,0 +1,3 @@
+3.1.129
+*******
+Bug fix on delete man_addfields_value table when feature_id is removed
