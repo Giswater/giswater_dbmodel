@@ -19,13 +19,56 @@ DECLARE
 	v_record_link record;
 	v_record_vnode record;
 	v_count integer;
+	v_customfeature text;
+	v_addfields record;
+	v_new_value_param text;
+	v_old_value_param text;
+	v_arg text;
+	v_doublegeometry boolean;
+	v_length float;
+	v_width float;
+	v_rotation float;
+	v_unitsfactor float;
+	v_linelocatepoint float;
+	v_thegeom public.geometry;
+	v_the_geom_pol public.geometry;
+	p21x float; 
+	p02x float;
+	p21y float; 
+	p02y float;
+	p22x float;
+	p22y float;
+	p01x float;
+	p01y float;
+	dx float;
+	dy float;
+    v_x float;
+    v_y float;
+    v_new_pol_id varchar(16);
+    v_srid integer;
+    v_featurecat text;
+    v_psector_vdefault integer;
+	v_arc_id text;
 
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	
+	-- get values
 	promixity_buffer_aux = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
 	IF promixity_buffer_aux IS NULL THEN promixity_buffer_aux=0.5; END IF;
+
+	v_unitsfactor = (SELECT value::float FROM config_param_user WHERE "parameter"='edit_gully_doublegeom' AND cur_user=current_user);
+	IF v_unitsfactor IS NULL THEN
+		v_doublegeometry = FALSE;
+	ELSE 
+		v_doublegeometry = TRUE;
+	END IF;
+
+	v_srid = (SELECT epsg FROM version limit 1);
+	
+	IF v_promixity_buffer IS NULL THEN v_promixity_buffer=0.5; END IF;
+	
 	
 	gully_geometry:= TG_ARGV[0];
     
@@ -195,6 +238,74 @@ BEGIN
 	    IF (SELECT "value" FROM config_param_system WHERE "parameter"='edit_automatic_insert_link')::boolean=TRUE THEN
 	       NEW.link=NEW.gully_id;
 	    END IF;
+		
+		
+		--set rotation field
+		WITH index_query AS(
+		SELECT ST_Distance(the_geom, NEW.the_geom) as distance, the_geom FROM arc WHERE state=1 ORDER BY the_geom <-> NEW.the_geom LIMIT 10)
+		SELECT St_linelocatepoint(the_geom, St_closestpoint(the_geom, NEW.the_geom)), the_geom INTO v_linelocatepoint, v_thegeom FROM index_query ORDER BY distance LIMIT 1;
+		IF v_linelocatepoint < 0.01 THEN
+			v_rotation = st_azimuth (st_startpoint(v_thegeom), st_lineinterpolatepoint(v_thegeom,0.01));
+		ELSIF v_linelocatepoint > 0.99 THEN
+			v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,0.98), st_lineinterpolatepoint(v_thegeom,0.99));
+		ELSE
+			v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,v_linelocatepoint), st_lineinterpolatepoint(v_thegeom,v_linelocatepoint+0.01));
+		END IF;
+
+		NEW.rotation = v_rotation*180/pi();
+		v_rotation = -(v_rotation - pi()/2);
+
+		-- double geometry
+		IF v_doublegeometry AND NEW.gratecat_id IS NOT NULL THEN
+
+			v_length = (SELECT length FROM cat_grate WHERE id=NEW.gratecat_id);
+			v_width = (SELECT width FROM cat_grate WHERE id=NEW.gratecat_id);
+
+
+			IF v_length*v_width IS NULL THEN
+			
+				RAISE EXCEPTION 'Selected gratecat_id has NULL width or length. Check catalog data or your custom config values before continue';
+				
+			ELSE 
+				-- get grate dimensions
+				v_unitsfactor = 0.01*v_unitsfactor ; -- using 0.01 to convert from cms of catalog  to meters of the map
+				v_length = v_length*v_unitsfactor;
+				v_width = v_width*v_unitsfactor;
+
+				-- calculate center coordinates
+				v_x = st_x(NEW.the_geom);
+				v_y = st_y(NEW.the_geom);
+	    
+				-- calculate dx & dy to fix extend from center
+				dx = v_length/2;
+				dy = v_width/2;
+
+				-- calculate the extend polygon
+				p01x = v_x - dx*cos(v_rotation)-dy*sin(v_rotation);
+				p01y = v_y - dx*sin(v_rotation)+dy*cos(v_rotation);
+		
+				p02x = v_x + dx*cos(v_rotation)-dy*sin(v_rotation);
+				p02y = v_y + dx*sin(v_rotation)+dy*cos(v_rotation);
+
+				p21x = v_x - dx*cos(v_rotation)+dy*sin(v_rotation);
+				p21y = v_y - dx*sin(v_rotation)-dy*cos(v_rotation); 
+
+				p22x = v_x + dx*cos(v_rotation)+dy*sin(v_rotation);
+				p22y = v_y + dx*sin(v_rotation)-dy*cos(v_rotation);
+				
+
+				-- generating the geometry
+				EXECUTE 'SELECT ST_Multi(ST_makePolygon(St_SetSrid(ST_GeomFromText(''LINESTRING(' || p21x ||' '|| p21y || ',' ||
+					p22x ||' '|| p22y || ',' || p02x || ' ' || p02y || ','|| p01x ||' '|| p01y || ',' || p21x ||' '|| p21y || ')''),'||v_srid||')))'
+					INTO v_the_geom_pol;
+				
+				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
+				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
+
+				INSERT INTO polygon(sys_type, the_geom,pol_id) VALUES ('GULLY', v_the_geom_pol,v_new_pol_id);
+
+			END IF;
+		END IF;
 	
         -- FEATURE INSERT
 	IF gully_geometry = 'gully' THEN

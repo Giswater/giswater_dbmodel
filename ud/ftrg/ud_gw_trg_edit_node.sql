@@ -321,7 +321,12 @@ BEGIN
     ELSIF TG_OP = 'DELETE' THEN
 	
 		PERFORM gw_fct_check_delete(OLD.node_id, 'NODE');
-		
+
+		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_chamber WHERE node_id=OLD.node_id );
+		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_storage WHERE node_id=OLD.node_id );
+		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_wwtp WHERE node_id=OLD.node_id );
+		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_netgully WHERE node_id=OLD.node_id );
+	
         DELETE FROM node WHERE node_id = OLD.node_id;
 
 		--Delete addfields
