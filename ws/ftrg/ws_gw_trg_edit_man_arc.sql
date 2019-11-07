@@ -285,6 +285,10 @@ BEGIN
 		PERFORM gw_fct_check_delete(OLD.arc_id, 'ARC');
 	 
         DELETE FROM arc WHERE arc_id = OLD.arc_id;
+		
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.arc_id;
+		
         RETURN NULL;
      
      END IF;

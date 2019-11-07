@@ -502,6 +502,9 @@ BEGIN
 			DELETE FROM node WHERE node_id = OLD.node_id;
 			
 		END IF;
+
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.node_id;
 	
 		RETURN NULL;
 	

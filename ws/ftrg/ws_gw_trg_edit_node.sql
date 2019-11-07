@@ -386,6 +386,10 @@ BEGIN
 		PERFORM gw_fct_check_delete(OLD.node_id, 'NODE');
     
         DELETE FROM node WHERE node_id = OLD.node_id;
+		
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.node_id;
+		
         RETURN NULL;
    
     END IF;

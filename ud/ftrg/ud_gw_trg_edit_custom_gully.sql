@@ -339,6 +339,9 @@ BEGIN
         DELETE FROM gully WHERE gully_id = OLD.gully_id;
 
         RETURN NULL;
+		
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.gully_id;
    
     END IF;
 

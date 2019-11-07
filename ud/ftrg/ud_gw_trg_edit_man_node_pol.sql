@@ -148,6 +148,9 @@ BEGIN
 		END IF;
 
 		DELETE FROM polygon WHERE pol_id=OLD.pol_id;
+		
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.node_id;
 				
 		RETURN NULL;
    

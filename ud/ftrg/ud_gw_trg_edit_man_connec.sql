@@ -281,23 +281,26 @@ BEGIN
 
     ELSIF TG_OP = 'DELETE' THEN
 	
-	PERFORM gw_fct_check_delete(OLD.connec_id, 'CONNEC');
+		PERFORM gw_fct_check_delete(OLD.connec_id, 'CONNEC');
 		
         DELETE FROM connec WHERE connec_id = OLD.connec_id;
 
-	-- delete links & vnode's
-	FOR v_record_link IN SELECT * FROM link WHERE feature_type='CONNEC' AND feature_id=OLD.connec_id
-	LOOP
-		-- delete link
-		DELETE FROM link WHERE link_id=v_record_link.link_id;
+		-- delete links & vnode's
+		FOR v_record_link IN SELECT * FROM link WHERE feature_type='CONNEC' AND feature_id=OLD.connec_id
+		LOOP
+			-- delete link
+			DELETE FROM link WHERE link_id=v_record_link.link_id;
 
-		-- delete vnode if no more links are related to vnode
-		SELECT count(exit_id) INTO v_count FROM link WHERE exit_id=v_record_link.exit_id;
-						
-		IF v_count =0 THEN 
-			DELETE FROM vnode WHERE vnode_id=v_record_link.exit_id::integer;
-		END IF;
-	END LOOP;
+			-- delete vnode if no more links are related to vnode
+			SELECT count(exit_id) INTO v_count FROM link WHERE exit_id=v_record_link.exit_id;
+							
+			IF v_count =0 THEN 
+				DELETE FROM vnode WHERE vnode_id=v_record_link.exit_id::integer;
+			END IF;
+		END LOOP;
+	
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id;
 
         RETURN NULL;
    

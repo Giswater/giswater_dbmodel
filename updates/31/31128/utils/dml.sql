@@ -54,13 +54,17 @@ ON CONFLICT (id) DO NOTHING;
 UPDATE value_state_type SET is_doable = False WHERE id = 99;
 
 INSERT INTO value_state_type(id,state, name, is_operative, is_doable)
-VALUES (98,0, 'DONE PLANIFIED',false, false);
+VALUES (98,0, 'DONE PLANIFIED',false, false)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO value_state_type(id,state, name, is_operative, is_doable)
-VALUES (97,0, 'DONE FICTICIOUS',false, false);
+VALUES (97,0, 'DONE FICTICIOUS',false, false)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO value_state_type(id,state, name, is_operative, is_doable)
-VALUES (96,0, 'CANCELED PLANIFIED',false, false);
+VALUES (96,0, 'CANCELED PLANIFIED',false, false)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO value_state_type(id,state, name, is_operative, is_doable)
-VALUES (95,0, 'CANCELED FICTICIOUS',false, false);
+VALUES (95,0, 'CANCELED FICTICIOUS',false, false)
+ON CONFLICT (id) DO NOTHING;

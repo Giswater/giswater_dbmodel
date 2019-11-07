@@ -385,6 +385,9 @@ BEGIN
 				DELETE FROM vnode WHERE vnode_id=v_record_link.exit_id::integer;
 			END IF;
 		END LOOP;
+		
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id;
 
 		RETURN NULL;
 

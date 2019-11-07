@@ -70,6 +70,9 @@ BEGIN
 	
 		UPDATE gully SET pol_id=NULL WHERE gully_id=OLD.gully_id;
 		DELETE FROM polygon WHERE pol_id=OLD.pol_id;
+		
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.gully_id;
 				
 		RETURN NULL;
    
