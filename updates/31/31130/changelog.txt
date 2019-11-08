@@ -1,2 +1,5 @@
 3.1.130
 *******
+--------
+WARNING: REVIEW DATA SQL FILES MUST BE EXECUTED (by hand, rows one by one). That files are stored on the same folder of this changelog file
+--------
