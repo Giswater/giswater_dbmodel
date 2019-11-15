@@ -9,7 +9,8 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 -- config
-INSERT INTO audit_cat_param_user VALUES ('INSERT INTO audit_cat_param_user VALUES ('edit_gully_doublegeom', 'edit', 'If value,  double geometry is enabled when gully is inserted  and is a multiplication factor againts cat_grate values', 'role_edit', NULL, NULL, NULL, NULL, 'float')
-ON CONFLICT (id) DO NOTHING;', 'edit', 'If value,  double geometry is enabled when gully is inserted  and is a multiplication factor againts cat_grate values', 'role_edit', NULL, NULL, NULL, NULL, 'float')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO audit_cat_param_user VALUES ('edit_gully_doublegeom', 'edit',
+ 'If value, double geometry is enabled when gully is inserted  and is a multiplication factor againts cat_grate values',
+ 'role_edit', NULL, NULL, NULL, NULL, 'float') ON CONFLICT (id) DO NOTHING;
+
 
