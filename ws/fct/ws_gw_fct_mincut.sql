@@ -79,7 +79,6 @@ DECLARE
     v_debug		Boolean;
     v_overlap		text;
     v_geometry 		text;
-	v_count 		int2;
 
 BEGIN
     -- Search path
@@ -88,7 +87,7 @@ BEGIN
     SELECT value::boolean INTO v_debug FROM config_param_system WHERE parameter='om_mincut_debug';
 
     IF v_debug THEN
-	RAISE NOTICE '1-Delete previous data from same result_id';
+		RAISE NOTICE '1-Delete previous data from same result_id';
     END IF;
     DELETE FROM "anl_mincut_result_node" where result_id=result_id_arg;
     DELETE FROM "anl_mincut_result_arc" where result_id=result_id_arg;
@@ -98,7 +97,7 @@ BEGIN
     DELETE FROM "anl_mincut_result_valve" where result_id=result_id_arg;
 
     IF v_debug THEN
-	RAISE NOTICE '2-Identification exploitation, macroexploitation and municipality';
+		RAISE NOTICE '2-Identification exploitation, macroexploitation and municipality';
     END IF;
     IF type_element_arg='node' OR type_element_arg='NODE' THEN
 		SELECT expl_id INTO expl_id_arg FROM node WHERE node_id=element_id_arg;
@@ -113,18 +112,25 @@ BEGIN
     UPDATE anl_mincut_result_cat SET muni_id=v_muni_id WHERE id=result_id_arg;
     
     IF v_debug THEN
-	RAISE NOTICE '3-Update exploitation selector (of user) according the macroexploitation system';
+		RAISE NOTICE '3-Update exploitation selector (of user) according the macroexploitation system';
     END IF;    
+    
+	-- set exploitation selector
     INSERT INTO selector_expl (expl_id, cur_user)
     SELECT expl_id, current_user from exploitation 
     where macroexpl_id=macroexpl_id_arg and expl_id not in (select expl_id from selector_expl);
-	
-	-- delete from state selector (0)
-	SELECT count(*) INTO v_count FROM selector_state WHERE cur_user=current_user AND state_id=0;
-	DELETE FROM selector_state WHERE cur_user=current_user AND state_id=0;
 
+    -- save state selector 
+    DELETE FROM temp_table WHERE fprocesscat_id=99 AND user_name=current_user;
+    INSERT INTO temp_table (fprocesscat_id, text_column)  
+    SELECT 99, (array_agg(state_id)) FROM selector_state WHERE cur_user=current_user;
+
+    -- set state selector
+    DELETE FROM selector_state WHERE cur_user=current_user;
+    INSERT INTO selector_state (state_id ,cur_user) VALUES (1, current_user);
+	
     IF v_debug THEN
-	RAISE NOTICE '4-update values of mincut cat table';
+		RAISE NOTICE '4-update values of mincut cat table';
     END IF;
     UPDATE anl_mincut_result_cat SET expl_id=expl_id_arg WHERE id=result_id_arg;
     UPDATE anl_mincut_result_cat SET macroexpl_id=macroexpl_id_arg WHERE id=result_id_arg;
@@ -331,9 +337,9 @@ BEGIN
 	        INTO v_geometry;
 	
 	-- restore state selector
-	IF v_count = 1 THEN
-		INSERT INTO selector_state (cur_user, state_id) VALUES (current_user, 0);
-	END IF;
+	INSERT INTO selector_state (state_id, cur_user)
+	select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=99 and user_name=current_user
+	ON CONFLICT (state_id, cur_user) DO NOTHING;
 
 	-- returning
     	v_return = concat('{"mincutOverlap":"',v_overlap,'", "geometry":"',v_geometry,'"}');
