@@ -66,5 +66,11 @@ update gully set link='https://www.giswater.org';
 
 refresh MATERIALIZED VIEW v_ui_workcat_polygon_aux;
 
+INSERT INTO audit_cat_table VALUES ('ve_visit_gully_clean', 'O&M', 'View for one specific visit class', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
+INSERT INTO audit_cat_table VALUES ('ve_visit_incidence', 'O&M', 'View for one specific visit class', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
+INSERT INTO audit_cat_table VALUES ('v_visit_lot_user', 'O&M', 'View related to users and lots', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
+INSERT INTO audit_cat_table VALUES ('v_lot', 'O&M', 'View to manage lots', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
+
+
 select gw_fct_audit_check_project(1);
 
