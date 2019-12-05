@@ -35,6 +35,8 @@ DECLARE
 	v_elev json;
 	v_ang210 float;
 	v_ang120 float;
+	v_ymax float;
+
 	
 BEGIN
 
@@ -87,7 +89,9 @@ BEGIN
 		END IF;	
 	END IF;
 		
+		
 	v_top:= (SELECT to_json(v_top0::numeric(12,3)::text));
+	v_ymax = (SELECT to_json((v_top0-v_elev0)::numeric(12,3))::text);		
 	v_elev:= (SELECT to_json(v_elev0::numeric(12,3)::text));
 
 --      Control NULL's
@@ -98,6 +102,7 @@ BEGIN
 --    Return
     RETURN ('{"status":"Accepted"' ||
 	', "top_elev":' || v_top ||
+		', "ymax":' || v_ymax ||
         ', "elev":' || v_elev ||
         '}')::json;
 
