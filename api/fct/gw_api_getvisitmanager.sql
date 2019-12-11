@@ -233,9 +233,9 @@ BEGIN
 				EXECUTE 'SELECT user_id, endtime FROM (SELECT * FROM om_visit_lot_x_user WHERE user_id = current_user ORDER BY id DESC) a LIMIT 1' INTO v_record;
 				
 				IF v_record.endtime IS NULL AND v_record.user_id IS NOT NULL THEN
-					v_disable_widget_name = '{data_startbutton}';
+					v_disable_widget_name = '{data_startbutton, data_team_id, data_lot_id}';
 				ELSE
-					v_disable_widget_name = '{data_endbutton, data_updatebutton}';
+					v_disable_widget_name = '{data_endbutton}';
 				END IF;
 
 				SELECT gw_api_get_formfields( 'visitManager', 'visit', 'data', null, null, null, null, 'INSERT', null, v_device) INTO v_fields;
@@ -255,7 +255,7 @@ BEGIN
 					array_index := array_index + 1;
 					v_fieldvalue := (v_values->>(aux_json->>'column_id'));
 					
-					IF (aux_json->>'widgetname') = v_disable_widget_name[1] OR (aux_json->>'widgetname') = v_disable_widget_name[2] THEN
+					IF (aux_json->>'widgetname') = v_disable_widget_name[1] OR (aux_json->>'widgetname') = v_disable_widget_name[2] OR (aux_json->>'widgetname') = v_disable_widget_name[3] THEN
 						v_fields[array_index] := gw_fct_json_object_set_key(v_fields[array_index], 'disabled', True);
 					END IF;
 
