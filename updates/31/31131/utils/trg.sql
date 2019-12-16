@@ -35,3 +35,7 @@ ON om_visit_x_arc FOR EACH ROW EXECUTE PROCEDURE gw_trg_om_visit('arc');
 DROP TRIGGER IF EXISTS gw_trg_om_visit ON om_visit_x_connec;
 CREATE TRIGGER gw_trg_om_visit AFTER INSERT 
 ON om_visit_x_connec FOR EACH ROW EXECUTE PROCEDURE gw_trg_om_visit('connec');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_psector ON v_edit_plan_psector;
+CREATE TRIGGER gw_trg_edit_psector INSTEAD OF INSERT OR UPDATE OR DELETE
+ON v_edit_plan_psector FOR EACH ROW EXECUTE PROCEDURE ws_test.gw_trg_edit_psector('plan');

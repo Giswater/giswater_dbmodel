@@ -196,6 +196,9 @@ CREATE TABLE selector_lot(
   cur_user text,
   CONSTRAINT selector_lot_pkey PRIMARY KEY (id));
   
-ALTER TABLE om_visit ALTER COLUMN publish TYPE BOOLEAN USING publish::boolean
+ALTER TABLE om_visit ALTER COLUMN publish TYPE BOOLEAN USING publish::boolean;
+
+DROP VIEW IF EXISTS v_edit_plan_psector;
+ALTER TABLE plan_psector ALTER COLUMN ext_code TYPE text USING ext_code::text;
 
 
