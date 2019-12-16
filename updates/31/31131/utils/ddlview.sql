@@ -20,11 +20,11 @@ CREATE OR REPLACE VIEW v_ui_om_visit_lot AS
     om_visit_lot.duration,
     om_typevalue.idval as status,
     om_visit_lot.class_id,
-    om_visit_lot.exercise,
+    om_visit_lot.exercice,
     om_visit_lot.serie,
     ext_workorder.wotype_id,
     ext_workorder.wotype_name,
-    om_visit_lot.address,
+    om_visit_lot.adreca,
     om_visit_lot.feature_type
    FROM om_visit_lot
      LEFT JOIN ext_workorder ON ext_workorder.serie::text = om_visit_lot.serie::text

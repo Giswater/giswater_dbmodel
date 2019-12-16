@@ -31,10 +31,10 @@ CREATE TABLE om_visit_lot(
   the_geom geometry(MultiPolygon,SRID_VALUE),
   rotation numeric(8,4),
   class_id character varying(5),
-  exercise integer,
+  exercice integer,
   serie character varying(10),
-  num_value integer,
-  address text,
+  number integer,
+  adreca text,
   CONSTRAINT om_visit_lot_pkey PRIMARY KEY (id));
   
   
@@ -92,6 +92,9 @@ CREATE TABLE om_vehicle_x_parameters(
   load character varying(50),
   cur_user character varying(50) DEFAULT "current_user"(),
   tstamp timestamp without time zone,
+  xcoord double precision,
+  ycoord double precision,
+  compass double precision,
   CONSTRAINT om_vehicle_x_parameters_pkey PRIMARY KEY (id));
   
   
