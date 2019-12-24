@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -56,12 +56,16 @@ BEGIN
 				select the_geom from connec join om_psector_x_connec ON om_psector_x_connec.connec_id=connec.connec_id where psector_id=NEW.psector_id) f;
 
 			ELSIF psector_type_aux='lot' THEN
-				SELECT st_collect(f.the_geom) INTO collect_aux 
-				FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=NEW.lot_id 
-				UNION
-				select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=NEW.lot_id
-				UNION
-				select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=NEW.lot_id) f;
+				SELECT st_multi(the_geom) INTO collect_aux FROM 
+				(WITH polygon AS (SELECT st_collect(f.the_geom) g
+					FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=NEW.lot_id 
+					UNION
+					select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=NEW.lot_id
+					UNION
+					select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=NEW.lot_id) f)
+					SELECT CASE 
+					WHEN st_geometrytype(st_concavehull(g, 0.85)) = 'ST_Polygon'::text THEN st_buffer(st_concavehull(g, 0.85), 3)::geometry(Polygon,epsg_val)
+					ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,25831) END AS the_geom FROM polygon) a;
 
 			END IF;
 
@@ -81,14 +85,18 @@ BEGIN
 				select the_geom from connec join om_psector_x_connec ON om_psector_x_connec.connec_id=connec.connec_id where psector_id=NEW.psector_id) f;
 
 			ELSIF psector_type_aux='lot' THEN
-				SELECT st_collect(f.the_geom) INTO collect_aux 
-				FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=NEW.lot_id 
-				UNION
-				select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=NEW.lot_id
-				UNION
-				select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=NEW.lot_id
-				UNION
-				select the_geom from gully join om_visit_lot_x_gully ON om_visit_lot_x_gully.gully_id=gully.gully_id where lot_id=NEW.lot_id) f;
+				SELECT st_multi(a.the_geom) INTO collect_aux FROM
+					(WITH polygon AS (SELECT st_collect(f.the_geom) g
+					FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=NEW.lot_id 
+					UNION
+					select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=NEW.lot_id
+					UNION
+					select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=NEW.lot_id
+					UNION
+					select the_geom from gully join om_visit_lot_x_gully ON om_visit_lot_x_gully.gully_id=gully.gully_id where lot_id=NEW.lot_id) f)
+					SELECT CASE 
+					WHEN st_geometrytype(st_concavehull(g, 0.85)) = 'ST_Polygon'::text THEN st_buffer(st_concavehull(g, 0.85), 3)::geometry(Polygon,epsg_val)
+					ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,25831) END AS the_geom FROM polygon) a;
 			END IF;
 		END IF;
 		
@@ -162,7 +170,7 @@ BEGIN
 			END IF;
 			
 			-- Update geometry field
-			UPDATE om_visit_lot SET the_geom=polygon_aux WHERE id=NEW.lot_id;
+			UPDATE om_visit_lot SET the_geom=collect_aux WHERE id=NEW.lot_id;
 		
 		END IF;
 
@@ -187,12 +195,16 @@ BEGIN
 				select the_geom from connec join om_psector_x_connec ON om_psector_x_connec.connec_id=connec.connec_id where psector_id=OLD.psector_id) f;
 
 			ELSIF psector_type_aux='lot' THEN
-				SELECT st_collect(f.the_geom) INTO collect_aux 
-				FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=OLD.lot_id 
-				UNION
-				select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=OLD.lot_id
-				UNION
-				select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=OLD.lot_id) f;
+				SELECT st_multi(the_geom) INTO collect_aux FROM
+				(WITH polygon AS (SELECT st_collect(f.the_geom) g
+					FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=OLD.lot_id 
+					UNION
+					select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=OLD.lot_id
+					UNION
+					select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=OLD.lot_id) f)
+					SELECT CASE 
+					WHEN st_geometrytype(st_concavehull(g, 0.85)) = 'ST_Polygon'::text THEN st_buffer(st_concavehull(g, 0.85), 3)::geometry(Polygon,epsg_val)
+					ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,25831) END AS the_geom FROM polygon) a;
 
 			END IF;
 
@@ -212,14 +224,18 @@ BEGIN
 				select the_geom from connec join om_psector_x_connec ON om_psector_x_connec.connec_id=connec.connec_id where psector_id=OLD.psector_id) f;
 
 			ELSIF psector_type_aux='lot' THEN
-				SELECT st_collect(f.the_geom) INTO collect_aux 
-				FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=OLD.lot_id 
-				UNION
-				select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=OLD.lot_id
-				UNION
-				select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=OLD.lot_id
-				UNION
-				select the_geom from gully join om_visit_lot_x_gully ON om_visit_lot_x_gully.gully_id=gully.gully_id where lot_id=OLD.lot_id) f;
+				SELECT st_multi(the_geom) INTO collect_aux FROM
+				(WITH polygon AS (SELECT st_collect(f.the_geom) g
+					FROM ( select the_geom from arc join om_visit_lot_x_arc ON om_visit_lot_x_arc.arc_id=arc.arc_id where lot_id=OLD.lot_id 
+					UNION
+					select the_geom from node join om_visit_lot_x_node ON om_visit_lot_x_node.node_id=node.node_id where lot_id=OLD.lot_id
+					UNION
+					select the_geom from connec join om_visit_lot_x_connec ON om_visit_lot_x_connec.connec_id=connec.connec_id where lot_id=OLD.lot_id
+					UNION
+					select the_geom from gully join om_visit_lot_x_gully ON om_visit_lot_x_gully.gully_id=gully.gully_id where lot_id=OLD.lot_id) f)
+					SELECT CASE 
+					WHEN st_geometrytype(st_concavehull(g, 0.85)) = 'ST_Polygon'::text THEN st_buffer(st_concavehull(g, 0.85), 3)::geometry(Polygon,epsg_val)
+					ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,25831) END AS the_geom FROM polygon) a; 
 			END IF;
 		END IF;
 		
@@ -293,7 +309,7 @@ BEGIN
 			END IF;
 			
 			-- Update geometry field
-			UPDATE om_visit_lot SET the_geom=polygon_aux WHERE id=OLD.lot_id;
+			UPDATE om_visit_lot SET the_geom=collect_aux WHERE id=OLD.lot_id;
 		
 		END IF;
 
