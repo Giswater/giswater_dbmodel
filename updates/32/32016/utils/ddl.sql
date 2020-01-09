@@ -7,8 +7,6 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
-DROP EXTENSION IF EXISTS unaccent;
-CREATE EXTENSION unaccent;
 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"inp_controls_x_arc", "column":"active", "dataType":"boolean"}}$$);
 
@@ -73,6 +71,7 @@ CREATE TABLE ext_workorder(
 	address character varying(50),
 	wotype_id character varying(50),
 	visitclass_id integer,
+    wotype_name character varying(120),
 	cost numeric,
 	ct text
 );

@@ -30,6 +30,8 @@ DECLARE
 	v_new_value_param text;
 	v_old_value_param text;
 	v_featurecat text;
+	v_psector_vdefault integer;
+	v_arc_id text;
 	
 BEGIN
 
@@ -64,50 +66,32 @@ BEGIN
 
         -- connec Catalog ID
         IF (NEW.connecat_id IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_node) = 0) THEN
-				RETURN audit_function(1022,1316);
-			END IF;
-			IF v_customfeature IS NOT NULL THEN
-				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
-			END IF;			
+		IF ((SELECT COUNT(*) FROM cat_node) = 0) THEN
+			RETURN audit_function(1022,1304);
+		END IF;
 
-			IF (NEW.connecat_id IS NULL) THEN			
-				IF v_man_table='man_greentap' THEN
-					NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='greentapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-				ELSIF v_man_table='man_wjoin' THEN
-					NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='wjoincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-				ELSIF v_man_table='man_fountain' OR v_man_table='man_fountain_pol' THEN
-					NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='fountaincat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
-				ELSIF v_man_table='man_tap' THEN
-					NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='tapcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);	
-				ELSIF v_man_table='parent' THEN
-					NEW.connecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-				END IF;
-			END IF;
-				
-			IF (NEW.connecat_id IS NULL) AND v_man_table='parent' THEN
+		IF v_customfeature IS NOT NULL THEN
+			NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
+		ELSE
+			NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+
+			-- get first value (last chance)
+			IF (NEW.connecat_id IS NULL) THEN
 				NEW.connecat_id := (SELECT id FROM cat_connec LIMIT 1);
-			ELSIF (NEW.connecat_id IS NULL) THEN
-				PERFORM audit_function(1086,1316);
-			END IF;				
-
-			IF v_customfeature IS NOT NULL THEN
-				IF (NEW.connecat_id NOT IN (select cat_connec.id FROM cat_connec WHERE connectype_id=v_customfeature)) THEN 
-					PERFORM audit_function(1092,1318);
-				END IF;
 			END IF;
 
-			IF v_man_table!='parent' AND v_customfeature IS NULL THEN
-				IF (NEW.connecat_id NOT IN (select cat_connec.id FROM cat_connec JOIN connec_type ON cat_connec.connectype_id=connec_type.id WHERE connec_type.man_table=v_type_man_table)) THEN 
-					PERFORM audit_function(1088,1316);
-				END IF;
-			END IF;
+		END IF;
+
+		IF (NEW.connecat_id IS NULL) THEN
+			PERFORM audit_function(1086,1304);
+		END IF;				
+
         END IF;
 
         -- Sector ID
         IF (NEW.sector_id IS NULL) THEN
 			IF ((SELECT COUNT(*) FROM sector) = 0) THEN
-                RETURN audit_function(1008,1316);  
+                RETURN audit_function(1008,1304);  
 			END IF;
 				SELECT count(*)into v_count FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001);
 			IF v_count = 1 THEN
@@ -120,14 +104,14 @@ BEGIN
 				NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF;
 			IF (NEW.sector_id IS NULL) THEN
-                RETURN audit_function(1010,1316,NEW.connec_id);          
+                RETURN audit_function(1010,1304,NEW.connec_id);          
             END IF;            
         END IF;
         
 	-- Dma ID
         IF (NEW.dma_id IS NULL) THEN
 			IF ((SELECT COUNT(*) FROM dma) = 0) THEN
-                RETURN audit_function(1012,1316);  
+                RETURN audit_function(1012,1304);  
             END IF;
 				SELECT count(*)into v_count FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001);
 			IF v_count = 1 THEN
@@ -140,7 +124,7 @@ BEGIN
 				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF; 
             IF (NEW.dma_id IS NULL) THEN
-                RETURN audit_function(1014,1316,NEW.connec_id);  
+                RETURN audit_function(1014,1304,NEW.connec_id);  
             END IF;            
         END IF;
 
@@ -181,7 +165,7 @@ BEGIN
 			IF (NEW.expl_id IS NULL) THEN
 				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
 				IF (NEW.expl_id IS NULL) THEN
-					PERFORM audit_function(2012,1316,NEW.connec_id);
+					PERFORM audit_function(2012,1304,NEW.connec_id);
 				END IF;		
 			END IF;
 		END IF;
@@ -192,7 +176,7 @@ BEGIN
 			IF (NEW.muni_id IS NULL) THEN
 				NEW.muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
 				IF (NEW.muni_id IS NULL) THEN
-					PERFORM audit_function(2024,1316,NEW.connec_id);
+					PERFORM audit_function(2024,1304,NEW.connec_id);
 				END IF;	
 			END IF;
 		END IF;
@@ -280,6 +264,13 @@ BEGIN
 			NEW.function_type = (SELECT value FROM config_param_user WHERE parameter = 'connec_function_vdefault' AND cur_user = current_user);
 		END IF;
 
+		--elevation from raster
+		IF (SELECT upper(value) FROM config_param_system WHERE parameter='sys_raster_dem') = 'TRUE' AND (NEW.elevation IS NULL) AND 
+		(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
+			NEW.elevation = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id =
+				(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+		END IF; 	
+
         -- FEATURE INSERT
 		INSERT INTO connec (connec_id, code, elevation, depth,connecat_id,  sector_id, customer_code,  state, state_type, annotation, observ, comment,dma_id, presszonecat_id, soilcat_id, function_type, category_type, fluid_type, location_type, 
 		workcat_id, workcat_id_end, buildercat_id, builtdate, enddate, ownercat_id, streetaxis2_id, postnumber, postnumber2, muni_id, streetaxis_id, postcode, postcomplement, postcomplement2, descript, link, verified, rotation, 
@@ -331,13 +322,27 @@ BEGIN
 	        END IF;
 	    END IF;
 
-		-- Control of automatic insert of link and vnode
-		IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
-		AND cur_user=current_user LIMIT 1) IS TRUE THEN
-			PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
-		END IF;
+		
+		IF NEW.state=1 THEN
+			-- Control of automatic insert of link and vnode
+			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
+			AND cur_user=current_user LIMIT 1) IS TRUE THEN
+				PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
+				SELECT arc_id INTO v_arc_id FROM connec WHERE connec_id=NEW.connec_id;
+			END IF;
 
--- man addfields insert
+		ELSIF NEW.state=2 THEN
+			-- for planned connects always must exits link defined because alternatives will use parameters and rows of that defined link adding only geometry defined on plan_psector
+			PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
+			
+			-- for planned connects always must exits arc_id defined on the default psector because it is impossible to draw a new planned link. Unique option for user is modify the existing automatic link
+			SELECT arc_id INTO v_arc_id FROM connec WHERE connec_id=NEW.connec_id;
+			v_psector_vdefault=(SELECT value::integer FROM config_param_user WHERE config_param_user.parameter::text = 'psector_vdefault'::text AND config_param_user.cur_user::name = "current_user"());
+			INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, doable, arc_id) VALUES (NEW.connec_id, v_psector_vdefault, 1, true, v_arc_id);
+		END IF;
+			
+
+		-- man addfields insert
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM man_addfields_parameter 
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
@@ -359,10 +364,17 @@ BEGIN
 	ELSIF TG_OP = 'UPDATE' THEN
 
 		-- UPDATE geom/dma/sector/expl_id
-		IF (NEW.the_geom IS DISTINCT FROM OLD.the_geom) AND geometrytype(NEW.the_geom)='POINT'  THEN
+		IF st_equals(NEW.the_geom, OLD.the_geom) IS FALSE AND geometrytype(NEW.the_geom)='POINT'  THEN
 			UPDATE connec SET the_geom=NEW.the_geom WHERE connec_id = OLD.connec_id;
+
+			--update elevation from raster
+			IF (SELECT upper(value) FROM config_param_system WHERE parameter='sys_raster_dem') = 'TRUE' AND (NEW.elevation = OLD.elevation) AND 
+			(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
+				NEW.elevation = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id =
+							(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+			END IF;	
 		
-		ELSIF (NEW.the_geom IS DISTINCT FROM OLD.the_geom) AND geometrytype(NEW.the_geom)='MULTIPOLYGON'  THEN
+		ELSIF st_equals( NEW.the_geom, OLD.the_geom) IS FALSE AND geometrytype(NEW.the_geom)='MULTIPOLYGON'  THEN
 			UPDATE polygon SET the_geom=NEW.the_geom WHERE pol_id = OLD.pol_id;
 			NEW.sector_id:= (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);          
 			NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);         
@@ -418,7 +430,7 @@ BEGIN
 		END IF;
 		
 		--check relation state - state_type
-        IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
+	    IF (NEW.state_type != OLD.state_type) AND NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
         	RETURN audit_function(3036,1318,NEW.state::text);
        	END IF;			
        	
@@ -536,6 +548,10 @@ BEGIN
 				DELETE FROM vnode WHERE vnode_id=v_record_link.exit_id::integer;
 			END IF;
 		END LOOP;
+        
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id  and parameter_id in 
+  		(SELECT id FROM man_addfields_parameter WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.connec_type);
 
 		RETURN NULL;
 

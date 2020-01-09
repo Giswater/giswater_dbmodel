@@ -6,8 +6,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2650
 
-
-
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_admin_schema_lastprocess(p_data json)
   RETURNS json AS
 $BODY$
@@ -42,7 +40,9 @@ DECLARE
 	v_tablename record;
 	v_schemaname text;
     v_oldversion text;
-
+	v_is_sample boolean = FALSE;
+	v_sample_exist text = '';
+	
 BEGIN 
 	-- search path
 	SET search_path = "SCHEMA_NAME", public;
@@ -59,7 +59,11 @@ BEGIN
 	v_author := (p_data ->> 'data')::json->> 'author';
 	v_date := (p_data ->> 'data')::json->> 'date';
 	v_superusers := (p_data ->> 'data')::json->> 'superUsers';
-
+	
+	-- Check if exist sample column on version table
+	SELECT column_name INTO v_sample_exist  
+	FROM information_schema.columns 
+	WHERE table_name='version' and column_name='sample';
 
 	-- last proccess
 	IF v_isnew IS TRUE THEN
@@ -69,9 +73,16 @@ BEGIN
 		
 		INSERT INTO config_param_system (parameter, value, data_type, context, descript, project_type, label, isdeprecated) 
 		VALUES ('admin_superusers', v_superusers ,'json','system', 'Basic information about superusers for this schema','utils', 'Schema manager:', false);
-
+		
+		
 		-- inserting version table
-		INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg) VALUES (v_gwversion, upper(v_projecttype), (select version()),(select postgis_version()), v_language, v_epsg);	
+		IF v_sample_exist != 'sample' THEN
+			SELECT sample INTO v_is_sample FROM version ORDER BY id LIMIT 1;
+			INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg, sample) VALUES (v_gwversion, upper(v_projecttype), (select version()),(select postgis_version()), v_language, v_epsg, v_is_sample);
+		ELSE
+			INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg) VALUES (v_gwversion, upper(v_projecttype), (select version()),(select postgis_version()), v_language, v_epsg);
+		END IF;
+		
 		v_message='Project sucessfully created';
 		
 		-- create json info_schema
@@ -86,6 +97,25 @@ BEGIN
 		LOOP
 			EXECUTE 'DROP TABLE IF EXISTS '||v_tablename.table_name;
 		END LOOP;
+		
+		-- drop deprecated columns
+		
+		IF v_projecttype = 'WS' THEN 
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_19;
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_20;
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_21;
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_22;
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_23;
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_24;
+		END IF;
+
+		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _default_value_;
+		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _form_label_;
+		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _widgettype_id_;
+		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _dv_table_;
+		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _dv_key_column_;
+		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _sql_text_;
+		
 		
 		-- inserting on config_param_system table
 		INSERT INTO config_param_system (parameter, value, data_type, context, descript, project_type, label, isdeprecated) 
@@ -120,8 +150,8 @@ BEGIN
 		END IF;
 		-- inserting version table
 		SELECT * INTO v_version FROM version LIMIT 1;	
-		INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg) 
-		VALUES (v_gwversion, v_version.wsoftware, (select version()), (select postgis_version()), v_version.language, v_version.epsg);
+		INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg, sample) 
+		VALUES (v_gwversion, v_version.wsoftware, (select version()), (select postgis_version()), v_version.language, v_version.epsg, v_is_sample);
 
 		-- get return message
 		IF v_priority=0 THEN

@@ -61,7 +61,13 @@ DECLARE
     v_bmapsclient boolean;
     v_array text[];
     v_array_child text[];
-    
+    v_min float;
+    v_max float;
+    v_widgetcontrols json;
+    v_noderecord1 record;
+    v_noderecord2 record;
+    v_input json;
+       
 BEGIN
 
 --   Set search path to local schema
@@ -93,7 +99,7 @@ BEGIN
 
 			widgetdim, datatype , tooltip, placeholder, iseditable, row_number()over(ORDER BY layout_id, layout_order) AS orderby, layout_id, 
 			layout_name as layoutname, layout_order, dv_parent_id, isparent, ismandatory, action_function, dv_querytext, dv_querytext_filterc, 
-			isautoupdate, isnotupdate, dv_orderby_id, dv_isnullvalue, isreload, stylesheet, typeahead FROM config_api_form_fields WHERE formname = $1 AND formtype= $2 
+			isautoupdate, isnotupdate, dv_orderby_id, dv_isnullvalue, isreload, stylesheet, typeahead, widgetcontrols FROM config_api_form_fields WHERE formname = $1 AND formtype= $2 
 			AND isenabled IS TRUE ORDER BY orderby) a'
 				INTO fields_array
 				USING p_formname, p_formtype;
@@ -102,13 +108,14 @@ BEGIN
 		EXECUTE 'SELECT array_agg(row_to_json(b)) FROM (
 			SELECT (row_number()over(ORDER BY 1)) AS layout_order, (row_number()over(ORDER BY 1)) AS orderby,* FROM 
 			(SELECT ''individual'' as widtget_context, concat(unit, ''. '', descript) AS label, identif AS column_id, ''label'' AS widgettype, concat ('||quote_literal(p_tabname)||',''_'',identif) AS widgetname, ''string'' AS datatype, 
-			NULL AS tooltip, NULL AS placeholder, FALSE AS iseditable, orderby as ordby, 1 AS layout_id,  NULL AS dv_parent_id, NULL AS isparent, ismandatory, NULL AS button_function, NULL AS dv_querytext, 
-			NULL AS dv_querytext_filterc, NULL AS action_function, NULL AS isautoupdate, concat (measurement,'' '',unit,'' x '', cost , '' €/'',unit,'' = '', total_cost::numeric(12,2), '' €'') as value, null as stylesheet, null as hidden
+			NULL AS tooltip, NULL AS placeholder, FALSE AS iseditable, orderby as ordby, 1 AS layout_id,  NULL AS dv_parent_id, NULL AS isparent, NULL as ismandatory, NULL AS button_function, NULL AS dv_querytext, 
+			NULL AS dv_querytext_filterc, NULL AS action_function, NULL AS isautoupdate, concat (measurement,'' '',unit,'' x '', cost , '' €/'',unit,'' = '', total_cost::numeric(12,2), '' €'') as value, null as stylesheet,
+			null as widgetcontrols, null as hidden
 			FROM ' ||p_tablename|| ' WHERE ' ||p_idname|| ' = $2
 			UNION
 			SELECT ''resumen'' as widtget_context, label AS form_label, column_id, widgettype, concat ('||quote_literal(p_tabname)||',''_'',column_id) AS widgetname, datatype, 
 			tooltip, placeholder, iseditable, layout_order AS ordby, layout_id,  NULL AS dv_parent_id, NULL AS isparent, ismandatory,  NULL AS widgetfunction, NULL AS dv_querytext, 
-			NULL AS dv_querytext_filterc, NULL AS action_function, NULL AS isautoupdate, null as value, null as stylesheet, hidden
+			NULL AS dv_querytext_filterc, NULL AS action_function, NULL AS isautoupdate, null as value, null as stylesheet, widgetcontrols::text, hidden
 			FROM config_api_form_fields WHERE formname  = ''infoplan'' AND isenabled IS TRUE ORDER BY 1,ordby) a
 			ORDER BY 1) b'
 				INTO fields_array
@@ -132,24 +139,34 @@ BEGIN
 				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'orderById', (aux_json->>'dv_orderby_id'));
 		END IF;
 
+
 		-- Refactor widget
 		IF (aux_json->>'widgettype')='image' THEN
 		      	EXECUTE (aux_json->>'dv_querytext') INTO v_image; 
 			fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'imageVal', COALESCE(v_image, '[]'));
 		END IF;
-
-		-- setting the not updateable fields
-		IF p_tgop ='UPDATE' THEN
-			IF (aux_json->>'isnotupdate')::boolean IS TRUE THEN
-				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'isEditable','False');
-			END IF;		
-		END IF;
-		
+			
 		-- for image widgets
 		IF (aux_json->>'widgettype')='image' THEN
 		      	EXECUTE (aux_json->>'dv_querytext') INTO v_image; 
 			fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'imageVal', COALESCE(v_image, '[]'));
 		END IF;
+
+		--setting widgetcontrols when null (user has not configurated form fields table)
+		IF (aux_json->>'widgetcontrols') IS NULL THEN
+			v_input = '{"client":{"device":3,"infoType":100,"lang":"es"}, "feature":{"tableName":"'||p_tablename||'", "id":"'||p_id||'"}, "data":{"tgOp":"'||p_tgop||'","json":'||aux_json||'}}';		
+			SELECT gw_api_get_widgetcontrols (v_input) INTO v_widgetcontrols;
+			fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'widgetcontrols', COALESCE(v_widgetcontrols, '{}'));
+		END IF;
+
+		IF p_tgop ='UPDATE' THEN
+
+			-- setting the not updateable fields
+			IF (aux_json->>'isnotupdate')::boolean IS TRUE THEN
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'isEditable','False');
+			END IF;		
+		END IF;
+
 	
 		-- looking for parents and for combo not parent
 		IF (aux_json->>'isparent')::boolean IS TRUE OR ((aux_json->>'widgettype') = 'combo' AND (aux_json->>'dv_parent_id') IS NULL) THEN
@@ -208,7 +225,8 @@ BEGIN
 					EXECUTE 'SELECT value::text FROM audit_cat_param_user JOIN config_param_user ON audit_cat_param_user.id=parameter WHERE cur_user=current_user AND feature_field_id='||quote_literal(v_vdefault)
 						INTO field_value_parent;
 				ELSIF p_tgop ='UPDATE' THEN
-					EXECUTE 'SELECT ' || quote_ident(aux_json->>'column_id') || ' FROM ' || quote_ident(p_tablename) || ' WHERE ' || quote_ident(p_idname) || ' = CAST(' || quote_literal(p_id) || ' AS ' || COALESCE(p_columntype, 'character varying') || ')' 
+					EXECUTE 'SELECT ' || quote_ident(aux_json->>'column_id') || ' FROM ' || quote_ident(p_tablename) || ' WHERE ' || quote_ident(p_idname) ||
+					 ' = CAST(' || quote_literal(p_id) || ' AS ' || COALESCE(p_columntype, 'character varying') || ')' 
 						INTO field_value_parent; 
 				END IF;
 

@@ -40,6 +40,7 @@ v_result_id text= 'delete feature';
 v_result_info text;
 v_result text;
 v_connec_id text;
+v_featurecat text;
 
 BEGIN
 
@@ -61,6 +62,9 @@ BEGIN
 	v_feature_id = ((p_data ->>'data')::json->>'feature_id')::text;
 
 
+	EXECUTE 'SELECT '||v_feature_type||'_type FROM v_edit_'||v_feature_type||' WHERE '||v_feature_type||'_id = '''||v_feature_id||''''
+	INTO v_featurecat;
+
 	--check elements related to feature
 	EXECUTE 'DELETE FROM element_x_'||v_feature_type||' where '||v_feature_type||'_id = '''||v_feature_id||''';';
 	EXECUTE 'DELETE FROM om_visit_x_'||v_feature_type||' where '||v_feature_type||'_id = '''||v_feature_id||''';';
@@ -74,7 +78,9 @@ BEGIN
 		--remove scada and link related to node
 		EXECUTE 'DELETE FROM rtc_scada_node where node_id = '''||v_feature_id||''';';
 		EXECUTE 'DELETE FROM v_edit_link WHERE exit_type=''NODE'' and exit_id = '''||v_feature_id||''';';
-		EXECUTE 'UPDATE node SET parent_id=NULL WHERE node_id = '''||v_feature_id||''';';
+		IF v_project_type = 'WS' THEN
+			EXECUTE 'UPDATE node SET parent_id=NULL WHERE node_id = '''||v_feature_id||''';';
+		END IF;
 		
 		INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (52, v_result_id, concat('Remove scada connection -> Done' ));
 		INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (52, v_result_id, concat('Remove link -> Done' ));
@@ -128,7 +134,11 @@ BEGIN
 	  	INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (52, v_result_id, concat('Delete ', v_feature_type,' -> Done' ));
 	  	
 	END IF;
- 
+
+ 	--delete addfields values
+ 	EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id ='''||v_feature_id||'''and parameter_id in (SELECT id FROM man_addfields_parameter 
+ 	WHERE cat_feature_id IS NULL OR cat_feature_id = '''||v_featurecat||''' )';
+
  	UPDATE config_param_user SET value = 'FALSE' WHERE parameter = 'edit_arc_downgrade_force' AND cur_user=current_user;
 
  	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 

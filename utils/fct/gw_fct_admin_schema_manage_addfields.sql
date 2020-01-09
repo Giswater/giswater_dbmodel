@@ -56,7 +56,6 @@ DECLARE
 	v_field_length integer;
 	v_num_decimals integer;
 	v_label text;
-	v_add_widgettype text;
 	v_config_widgettype text;
 	v_param_name text;
 	v_feature_type text;
@@ -103,6 +102,7 @@ DECLARE
 	v_audit_widgettype text;
 	v_active_feature text;
 	v_created_addfields record;
+	v_unaccent_id text;
 BEGIN
 
 	
@@ -152,21 +152,6 @@ BEGIN
 
 
 	--Assign config widget types 
-	IF v_config_widgettype = 'combo' THEN
-		v_add_widgettype = 'QComboBox';
-
-	ELSIF v_config_widgettype = 'check' THEN
-		v_add_widgettype = 'QCheckBox';
-
-	ELSIF v_config_widgettype = 'datepickertime' THEN
-		v_add_widgettype='QDateTimeEdit';
-
-	ELSIF v_config_widgettype = 'textarea' THEN
-		v_add_widgettype = 'QTextEdit';
-	ELSE 
-		v_add_widgettype='QLineEdit';
-	END IF;
-
 	IF v_config_datatype='string' THEN
 		v_add_datatype = 'text';
 	ELSE 
@@ -179,6 +164,12 @@ BEGIN
 		v_audit_datatype=v_config_datatype;
 	END IF; 
 
+	IF v_config_datatype='double' THEN
+		v_audit_datatype=v_config_datatype;
+		v_config_datatype = 'numeric';
+		v_add_datatype = 'numeric';
+	END IF;
+	
 	IF v_config_widgettype='doubleSpinbox' THEN
 		v_audit_widgettype = 'spinbox';
 	ELSE
@@ -188,6 +179,20 @@ BEGIN
 raise notice 'v_multi_create,%',v_multi_create;
 
 PERFORM setval('SCHEMA_NAME.config_api_form_fields_id_seq', (SELECT max(id) FROM config_api_form_fields), true);
+
+--check if the new field doesnt have accents and fix it
+IF v_action='CREATE' THEN
+	v_unaccent_id = array_to_string(ts_lexize('unaccent',v_param_name),',','*');
+
+	IF v_unaccent_id IS NOT NULL THEN
+		v_param_name = v_unaccent_id;
+	END IF;
+
+	IF v_param_name ilike '%-%' OR v_param_name ilike '%.%' THEN
+	 	v_param_name=replace(replace(replace(v_param_name, ' ','_'),'-','_'),'.','_');
+	END IF;
+
+END IF;
 
 IF v_multi_create IS TRUE THEN
 	
@@ -265,9 +270,9 @@ IF v_multi_create IS TRUE THEN
 		END IF;
 		
 		INSERT INTO man_addfields_parameter (param_name, cat_feature_id, is_mandatory, datatype_id, field_length, num_decimals, 
-		form_label, widgettype_id, active, orderby, iseditable)
+		active, orderby, iseditable)
 		VALUES (v_param_name, NULL, v_ismandatory, v_add_datatype, v_field_length, v_num_decimals, 
-		v_label, v_add_widgettype, v_active, v_orderby, v_iseditable);
+		v_active, v_orderby, v_iseditable);
 		
 		SELECT max(layout_order) + 1 INTO v_param_user_id FROM audit_cat_param_user WHERE layout_id=22;
 
@@ -275,16 +280,18 @@ IF v_multi_create IS TRUE THEN
 			v_param_user_id=1;
 		END IF;
 
-		INSERT INTO audit_cat_param_user (id, formname, description, sys_role_id, label,  isenabled, layout_id, layout_order, 
-      	project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated, dv_querytext, dv_querytext_filterc,feature_field_id )
-		VALUES (concat(v_param_name,'_vdefault'),'config', concat('Default value of addfield ',v_param_name), 'role_edit', v_param_name,
-		v_isenabled, 22, v_param_user_id, lower(v_project_type), false, false, v_audit_datatype, v_audit_widgettype, false, false,
-		v_dv_querytext, v_dv_querytext_filterc,v_param_name );
+		IF concat(v_param_name,'_vdefault') NOT IN (SELECT id FROM audit_cat_param_user) THEN
+			INSERT INTO audit_cat_param_user (id, formname, description, sys_role_id, label,  isenabled, layout_id, layout_order, 
+	      	project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated, dv_querytext, dv_querytext_filterc,feature_field_id )
+			VALUES (concat(v_param_name,'_vdefault'),'config', concat('Default value of addfield ',v_param_name), 'role_edit', v_param_name,
+			v_isenabled, 22, v_param_user_id, lower(v_project_type), false, false, v_audit_datatype, v_audit_widgettype, false, false,
+			v_dv_querytext, v_dv_querytext_filterc,v_param_name );
+		
+		END IF;
 
 	ELSIF v_action = 'UPDATE' THEN
 		UPDATE man_addfields_parameter SET  is_mandatory=v_ismandatory, datatype_id=v_add_datatype,
-		field_length=v_field_length, form_label=v_label, widgettype_id=v_add_widgettype,
-		active=v_active, orderby=v_orderby, num_decimals=v_num_decimals, iseditable=v_iseditable 
+		field_length=v_field_length, active=v_active, orderby=v_orderby, num_decimals=v_num_decimals, iseditable=v_iseditable 
 		WHERE param_name=v_param_name and cat_feature_id IS NULL;
 
 		UPDATE audit_cat_param_user SET datatype = v_audit_datatype, widgettype=v_audit_widgettype, dv_querytext = v_dv_querytext,
@@ -455,8 +462,7 @@ IF v_multi_create IS TRUE THEN
 	
 	ELSIF v_action='UPDATE' THEN 
 		UPDATE man_addfields_parameter SET  is_mandatory=v_ismandatory, datatype_id=v_add_datatype,
-		field_length=v_field_length, form_label=v_label, widgettype_id=v_add_widgettype ,
-		active=v_active, orderby=v_orderby, num_decimals=v_num_decimals WHERE param_name=v_param_name;		
+		field_length=v_field_length,active=v_active, orderby=v_orderby, num_decimals=v_num_decimals WHERE param_name=v_param_name;		
 	END IF;
 
 --SIMPLE ADDFIELDS
@@ -509,10 +515,10 @@ ELSE
 
 	--modify the configuration of the parameters and fields in config_api_form_fields
 	IF v_action = 'CREATE' THEN
-		INSERT INTO man_addfields_parameter (param_name, cat_feature_id, is_mandatory, datatype_id, field_length, num_decimals, 
-		form_label, widgettype_id, active, orderby, iseditable)
-		VALUES (v_param_name, v_cat_feature, v_ismandatory, v_add_datatype, v_field_length, v_num_decimals, 
-		v_label, v_add_widgettype, v_active, v_orderby, v_iseditable);
+		INSERT INTO man_addfields_parameter (param_name, cat_feature_id, is_mandatory, datatype_id, num_decimals,
+		active, orderby, iseditable)
+		VALUES (v_param_name, v_cat_feature, v_ismandatory, v_add_datatype, v_num_decimals,
+		v_active, v_orderby, v_iseditable);
 	
 		EXECUTE 'SELECT max(layout_order) + 1 FROM config_api_form_fields WHERE formname='''||v_viewname||'''
 		AND layout_name = ''layout_data_1'';'
@@ -540,14 +546,13 @@ ELSE
 		INSERT INTO audit_cat_param_user (id, formname, description, sys_role_id, label,  isenabled, layout_id, layout_order, 
       	project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated,dv_querytext, dv_querytext_filterc, feature_field_id)
 		VALUES (concat(v_param_name,'_',lower(v_cat_feature),'_vdefault'),'config', 
-		concat('Default value of addfield ',v_param_name, 'for ', v_cat_feature), 
+		concat('Default value of addfield ',v_param_name, ' for ', v_cat_feature), 
 		'role_edit', v_param_name, v_isenabled, 22, v_param_user_id, lower(v_project_type), false, false, v_audit_datatype, 
 		v_audit_widgettype, false, false, v_dv_querytext, v_dv_querytext_filterc, v_param_name);
 
 	ELSIF v_action = 'UPDATE' THEN
 		UPDATE man_addfields_parameter SET  is_mandatory=v_ismandatory, datatype_id=v_add_datatype,
-		field_length=v_field_length, form_label=v_label, widgettype_id=v_add_widgettype ,
-		active=v_active, orderby=v_orderby, num_decimals=v_num_decimals,iseditable=v_iseditable 
+		field_length=v_field_length, active=v_active, orderby=v_orderby, num_decimals=v_num_decimals,iseditable=v_iseditable 
 		WHERE param_name=v_param_name AND cat_feature_id=v_cat_feature;
 		
 		IF (SELECT cat_feature_id FROM man_addfields_parameter WHERE param_name=v_param_name) IS NOT NULL THEN

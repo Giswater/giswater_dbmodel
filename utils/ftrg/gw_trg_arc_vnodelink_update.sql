@@ -21,11 +21,11 @@ BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
-    
-    IF TG_OP='UPDATE' THEN
+    -- only if the geometry has changed (not reversed) because reverse may not affect links....
+    IF st_orderingequals(OLD.the_geom, NEW.the_geom) IS FALSE THEN
 
 		-- Update vnode/link
-			
+
 		-- Redraw the link and vnode
 		FOR connec_id_aux IN SELECT connec_id FROM connec JOIN link ON link.feature_id=connec_id 
 		WHERE link.feature_type='CONNEC' AND exit_type='VNODE' AND arc_id=NEW.arc_id
@@ -37,7 +37,7 @@ BEGIN
 
 		PERFORM gw_fct_connect_to_network(array_connec_agg, 'CONNEC');
 		
-		IF (select wsoftware FROM version LIMIT 1)='ud' THEN 
+		IF (select wsoftware FROM version LIMIT 1)='UD' THEN 
 
 			FOR gully_id_aux IN SELECT gully_id FROM gully JOIN link ON link.feature_id=gully_id 
 			WHERE link.feature_type='GULLY' AND exit_type='VNODE' AND arc_id=NEW.arc_id
@@ -49,10 +49,10 @@ BEGIN
 			PERFORM gw_fct_connect_to_network(array_gully_agg, 'GULLY');
 		
 		END IF;
-
-		RETURN NEW;
-
     END IF;
+
+    RETURN NEW;
+
     
 END; 
 $BODY$

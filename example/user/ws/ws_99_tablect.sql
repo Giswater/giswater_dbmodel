@@ -38,45 +38,46 @@ ALTER TABLE element ALTER COLUMN code SET NOT NULL;
 SELECT gw_fct_admin_schema_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"}}$$);
 
 delete from cat_presszone;
-INSERT INTO cat_presszone VALUES ('1', 'pzone1-1s', 1, NULL, '{1097}');
-INSERT INTO cat_presszone VALUES ('2', 'pzone1-2s', 2, NULL, '{1101}');
-INSERT INTO cat_presszone VALUES ('3', 'pzone1-1d', 1, NULL, '{113766}');
-INSERT INTO cat_presszone VALUES ('4', 'pzone1-2d', 1, NULL, '{1083}');
-INSERT INTO cat_presszone VALUES ('5', 'pzone2-1s', 2, NULL, '{111111}');
-INSERT INTO cat_presszone VALUES ('6', 'pzone2-2d', 2, NULL, '{113952}');
+INSERT INTO cat_presszone VALUES ('1', 'pzone1-1s', 1, NULL, NULL, NULL, '{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO cat_presszone VALUES ('2', 'pzone1-2s', 2, NULL, NULL, NULL, '{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
+INSERT INTO cat_presszone VALUES ('3', 'pzone1-1d', 1, NULL, NULL, NULL, '{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO cat_presszone VALUES ('4', 'pzone1-2d', 1, NULL, NULL, NULL, '{"use":[{"nodeParent":"1083", "toArc":[2095]}], "ignore":[]}');
+INSERT INTO cat_presszone VALUES ('5', 'pzone2-1s', 2, NULL, NULL, NULL, '{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
+INSERT INTO cat_presszone VALUES ('6', 'pzone2-2d', 2, NULL, NULL, NULL, '{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
+
 
 delete from dma;
-INSERT INTO dma VALUES (1, 'dma1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{113766}');
-INSERT INTO dma VALUES (2, 'dma1-2d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{1080}');
-INSERT INTO dma VALUES (3, 'dma2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{113952}');
-INSERT INTO dma VALUES (4, 'source-1', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{1097,1101}');
-INSERT INTO dma VALUES (5, 'source-2', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{111111}');
+INSERT INTO dma VALUES (1, 'dma1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO dma VALUES (2, 'dma1-2d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"1080", "toArc":[2092]}], "ignore":[]}');
+INSERT INTO dma VALUES (3, 'dma2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
+INSERT INTO dma VALUES (4, 'source-1', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"1101", "toArc":[2205]},{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO dma VALUES (5, 'source-2', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
 
 
 delete from dqa;
-INSERT INTO dqa VALUES (1, 'dqa1-1d', 1, NULL, NULL, NULL, NULL, NULL,'{113766}', 'chlorine');
-INSERT INTO dqa VALUES (2, 'dqa2-1d', 2, NULL, NULL, NULL, NULL, NULL,'{113952}', 'chlorine');
-INSERT INTO dqa VALUES (3, 'dqa1-1s', 1, NULL, NULL, NULL, NULL, NULL, '{1097,1101}','chlorine');
-INSERT INTO dqa VALUES (4, 'dqa2-1s', 2, NULL, NULL, NULL, NULL, NULL, '{111111}','chlorine');
+INSERT INTO dqa VALUES (1, 'dqa1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO dqa VALUES (2, 'dqa2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
+INSERT INTO dqa VALUES (3, 'dqa1-1s', 1, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"1101", "toArc":[2205]},{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO dqa VALUES (4, 'dqa2-1s', 2, NULL, NULL, NULL, NULL, NULL, NULL,'chlorine','{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
 
 
 delete from sector;
-INSERT INTO sector VALUES (1, 'sector1-1s', 1, NULL, NULL, NULL, '{1097}', 'source');
-INSERT INTO sector VALUES (2, 'sector1-2s', 1, NULL, NULL, NULL, '{1101}', 'source');
-INSERT INTO sector VALUES (3, 'sector1-1d', 1, NULL, NULL, NULL , '{113766}', 'distribution');
-INSERT INTO sector VALUES (4, 'sector2-1s', 2, NULL, NULL, NULL, '{111111}', 'source');
-INSERT INTO sector VALUES (5, 'sector2-1d', 2, NULL, NULL, NULL , '{113952}', 'distribution');
+INSERT INTO sector VALUES (1, 'sector1-1s', 1, NULL, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO sector VALUES (2, 'sector1-2s', 1, NULL, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
+INSERT INTO sector VALUES (3, 'sector1-1d', 1, NULL, NULL, NULL , NULL, 'distribution','{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO sector VALUES (4, 'sector2-1s', 2, NULL, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
+INSERT INTO sector VALUES (5, 'sector2-1d', 2, NULL, NULL, NULL , NULL, 'distribution','{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
 
 delete from inp_inlet;
-INSERT INTO inp_inlet VALUES ('113766', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL, '113906');
-INSERT INTO inp_inlet VALUES ('113952', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL, '114146');
+INSERT INTO inp_inlet VALUES ('113766', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL);
+INSERT INTO inp_inlet VALUES ('113952', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL);
 
 UPDATE node SET epa_type='INLET' WHERE node_id IN ('113766', '113952');
 
 delete from inp_reservoir;
-INSERT INTO inp_reservoir  VALUES ('111111', NULL, '114025');
-INSERT INTO inp_reservoir  VALUES ('1097', NULL, '2207');
-INSERT INTO inp_reservoir  VALUES ('1101', NULL, '2205');
+INSERT INTO inp_reservoir  VALUES ('111111', NULL);
+INSERT INTO inp_reservoir  VALUES ('1097', NULL);
+INSERT INTO inp_reservoir  VALUES ('1101', NULL);
 
 update arc set sector_id=0, dma_id=0, dqa_id=0, presszonecat_id=0;
 update node set sector_id=0, dma_id=0, dqa_id=0,  presszonecat_id=0;
@@ -107,6 +108,57 @@ SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR
 SELECT gw_fct_grafanalytics_minsector('{"data":{"parameters":{"exploitation":"[1,2]", 
 "updateFeature":"TRUE", "updateMinsectorGeom":"TRUE","concaveHullParam":0.85}}}');
 
+
 -- lastprocess
-UPDATE connec SET pjoint_type='VNODE', pjoint_id='478', label_rotation=24.5, label_x=3
-WHERE connec_id='3014';
+delete from link where link_id=197;
+delete from link where link_id=211;
+
+select gw_fct_connect_to_network((select array_agg(connec_id)from connec where connec_id IN ('3076', '3177')), 'CONNEC');
+
+update connec set pjoint_id = exit_id, pjoint_type='VNODE' FROM link WHERE link.feature_id=connec_id;
+
+UPDATE connec SET label_rotation=24.5, label_x=3 WHERE connec_id='3014';
+
+INSERT INTO inp_selector_sector (sector_id, cur_user)
+SELECT sector_id, current_user FROM sector
+ON CONFLICT (sector_id, cur_user) DO NOTHING;
+
+SELECT gw_fct_pg2epa_main($${
+"client":{"device":3, "infoType":100, "lang":"ES"},
+"data":{"iterative":"off", "resultId":"gw_check_project", "useNetworkGeom":"false"}}$$);
+
+UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'audit_project_user_control';
+
+--deprecated fields
+UPDATE arc SET sys_length=NULL;
+UPDATE sys_fprocess_cat SET fprocess_i18n= NULL;
+UPDATE sector SET nodeparent= NULL;
+UPDATE dma SET nodeparent= NULL;
+UPDATE dqa SET nodeparent= NULL;
+UPDATE cat_presszone SET nodeparent= NULL;
+UPDATE anl_mincut_inlet_x_exploitation SET to_arc= NULL;
+
+
+-- adjustment of ischange
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1006';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1025';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1039';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1040';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1057';
+
+
+UPDATE node SET nodecat_id='REDUC_110-63 PN16' WHERE node_id='1044';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1063';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1067';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1069';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1044';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1063';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1067';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1069';
+UPDATE node SET nodecat_id='REDUC_200-110 PN16' WHERE node_id='113873';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113880';
+UPDATE node SET nodecat_id='REDUC_160-110 PN16' WHERE node_id='113883';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113954';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113955';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113994';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='114016';

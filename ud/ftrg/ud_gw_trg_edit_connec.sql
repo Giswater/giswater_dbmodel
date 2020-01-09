@@ -19,6 +19,8 @@ DECLARE
 	v_old_value_param text;
 	v_customfeature text;
 	v_featurecat text;
+    v_psector_vdefault integer;
+	v_arc_id text;
 
 BEGIN
 
@@ -236,8 +238,15 @@ BEGIN
 		IF NEW.function_type IS NULL THEN
 			NEW.function_type = (SELECT value FROM config_param_user WHERE parameter = 'connec_function_vdefault' AND cur_user = current_user);
 		END IF;
+
+		--elevation from raster
+		IF (SELECT upper(value) FROM config_param_system WHERE parameter='sys_raster_dem') = 'TRUE' AND (NEW.top_elev IS NULL) AND 
+		(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
+			NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id =
+				(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+		END IF; 
 		
-        -- FEATURE INSERT
+		-- FEATURE INSERT
 		INSERT INTO connec (connec_id, code, customer_code, top_elev, y1, y2,connecat_id, connec_type, sector_id, demand, "state",  state_type, connec_depth, connec_length, arc_id, annotation, "observ",
 					"comment",  dma_id, soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, buildercat_id, builtdate, enddate, ownercat_id, muni_id,postcode,
 					streetaxis2_id, streetaxis_id, postnumber, postnumber2, postcomplement, postcomplement2, descript, rotation, link, verified, the_geom,  undelete, featurecat_id,feature_id,  label_x, label_y, label_rotation, accessibility,diagonal, 
@@ -247,14 +256,27 @@ BEGIN
 				NEW.workcat_id, NEW.workcat_id_end, NEW.buildercat_id, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.streetaxis2_id, NEW.streetaxis_id, 
 				NEW.postnumber, NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 				NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.undelete,NEW.featurecat_id,NEW.feature_id, NEW.label_x, NEW.label_y, NEW.label_rotation,
-				NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.private_connecat_id);
-				
-		-- Control of automatic insert of link and vnode
-		IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
-		AND cur_user=current_user LIMIT 1) IS TRUE THEN
+				NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.private_connecat_id);	
+		
+		IF NEW.state=1 THEN
+			-- Control of automatic insert of link and vnode
+			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' 
+			AND cur_user=current_user LIMIT 1) IS TRUE THEN
+				PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
+				SELECT arc_id INTO v_arc_id FROM connec WHERE connec_id=NEW.connec_id;
+			END IF;
+
+		ELSIF NEW.state=2 THEN
+			-- for planned connects always must exits link defined because alternatives will use parameters and rows of that defined link adding only geometry defined on plan_psector
 			PERFORM gw_fct_connect_to_network((select array_agg(NEW.connec_id)), 'CONNEC');
+			
+			-- for planned connects always must exits arc_id defined on the default psector because it is impossible to draw a new planned link. Unique option for user is modify the existing automatic link
+			SELECT arc_id INTO v_arc_id FROM connec WHERE connec_id=NEW.connec_id;
+			v_psector_vdefault=(SELECT value::integer FROM config_param_user WHERE config_param_user.parameter::text = 'psector_vdefault'::text AND config_param_user.cur_user::name = "current_user"());
+			INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, doable, arc_id) VALUES (NEW.connec_id, v_psector_vdefault, 1, true, v_arc_id);
+			
 		END IF;
- 
+		 
 	-- man addfields insert
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM man_addfields_parameter 
@@ -276,10 +298,17 @@ BEGIN
 
     ELSIF TG_OP = 'UPDATE' THEN
 
-       -- UPDATE geom
-        IF (NEW.the_geom IS DISTINCT FROM OLD.the_geom)THEN   
-			UPDATE connec SET the_geom=NEW.the_geom WHERE connec_id = OLD.connec_id;		
-        END IF;
+		-- UPDATE geom
+		IF st_equals( NEW.the_geom, OLD.the_geom) IS FALSE THEN
+			UPDATE connec SET the_geom=NEW.the_geom WHERE connec_id = OLD.connec_id;	
+
+			--update elevation from raster
+			IF (SELECT upper(value) FROM config_param_system WHERE parameter='sys_raster_dem') = 'TRUE' AND (NEW.top_elev = OLD.top_elev) AND 
+			(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
+				NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id =
+							(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+			END IF;	
+		END IF;
 		
 		-- Reconnect arc_id
 		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN  -- case when arc_id comes from connec table
@@ -328,7 +357,7 @@ BEGIN
 		END IF;
 
 		--check relation state - state_type
-	    IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
+	    IF (NEW.state_type != OLD.state_type) AND NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
         	RETURN audit_function(3036,1212,NEW.state::text);
 	   	END IF;		
 
@@ -394,6 +423,10 @@ BEGIN
 		
         DELETE FROM connec WHERE connec_id = OLD.connec_id;
 
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id  and parameter_id in 
+  		(SELECT id FROM man_addfields_parameter WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.connec_type);
+
 	-- delete links & vnode's
 	FOR v_record_link IN SELECT * FROM link WHERE feature_type='CONNEC' AND feature_id=OLD.connec_id
 	LOOP
@@ -407,6 +440,7 @@ BEGIN
 			DELETE FROM vnode WHERE vnode_id=v_record_link.exit_id::integer;
 		END IF;
 	END LOOP;
+
 
         RETURN NULL;
    

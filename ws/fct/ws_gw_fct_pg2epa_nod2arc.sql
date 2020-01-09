@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2epa_nod2arc(result_id_var varch
 AS $BODY$
 
 /*example
-select SCHEMA_NAME.gw_fct_pg2epa ('r1', false, false)
+select SCHEMA_NAME.gw_fct_pg2epa_nod2arc ('testbgeo3', true)
 */
 
 DECLARE
@@ -35,11 +35,17 @@ DECLARE
 	v_arcsearchnodes float;
 	v_status text;
 	v_nodarc_min float;
+	v_count integer = 1;
+	v_buildupmode int2 = 2;
 
 BEGIN
 
 	--  Search path
 	SET search_path = "SCHEMA_NAME", public;
+
+
+	SELECT value INTO v_buildupmode FROM config_param_user WHERE parameter = 'inp_options_buildup_mode' AND cur_user=current_user;
+
 
 	--  Looking for nodarc values
 	SELECT min(st_length(the_geom)) FROM rpt_inp_arc JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_arc.sector_id WHERE result_id=result_id_var
@@ -59,28 +65,61 @@ BEGIN
 	--  Move valves to arc
 	RAISE NOTICE 'Start loop.....';
 
-	IF p_only_mandatory_nodarc THEN
-		v_query_text = 'SELECT rpt_inp_node.node_id FROM rpt_inp_node JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_node.sector_id 
-			JOIN inp_valve ON rpt_inp_node.node_id=inp_valve.node_id WHERE result_id='||quote_literal(result_id_var)||' 
-				UNION 
-			SELECT rpt_inp_node.node_id FROM rpt_inp_node JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_node.sector_id 
-			JOIN inp_pump ON rpt_inp_node.node_id=inp_pump.node_id WHERE result_id='||quote_literal(result_id_var)||'
-				UNION
-			SELECT rpt_inp_node.node_id FROM rpt_inp_node JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_node.sector_id 
-			JOIN inp_shortpipe ON rpt_inp_node.node_id=inp_shortpipe.node_id WHERE result_id='||quote_literal(result_id_var)||' AND to_arc IS NOT NULL';
-	ELSE
-		v_query_text = 	'SELECT rpt_inp_node.node_id FROM rpt_inp_node JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_node.sector_id 
-			JOIN inp_valve ON rpt_inp_node.node_id=inp_valve.node_id WHERE result_id='||quote_literal(result_id_var)||'
-				UNION 
-			SELECT rpt_inp_node.node_id FROM rpt_inp_node JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_node.sector_id 
-			JOIN inp_pump ON rpt_inp_node.node_id=inp_pump.node_id WHERE result_id='||quote_literal(result_id_var)||'
-				UNION
-			SELECT rpt_inp_node.node_id FROM rpt_inp_node JOIN inp_selector_sector ON inp_selector_sector.sector_id=rpt_inp_node.sector_id 
-			JOIN inp_shortpipe ON rpt_inp_node.node_id=inp_shortpipe.node_id WHERE result_id='||quote_literal(result_id_var);
-    END IF;
+	-- taking nod2arcs with less than two arcs
+	DELETE FROM anl_node WHERE fprocesscat_id=67 and cur_user=current_user;
+	INSERT INTO anl_node (fprocesscat_id, node_id, nodecat_id, the_geom, descript)
+	SELECT 67, a.node_id, a.nodecat_id, a.the_geom, 'Node2arc with less than two arcs' FROM (
+		SELECT node_id, nodecat_id, v_edit_node.the_geom FROM v_edit_node JOIN v_edit_arc a1 ON node_id=a1.node_1
+		WHERE v_edit_node.epa_type IN ('SHORTPIPE', 'VALVE', 'PUMP') AND a1.sector_id IN (SELECT sector_id FROM inp_selector_sector WHERE cur_user=current_user)
+			UNION ALL
+		SELECT node_id, nodecat_id, v_edit_node.the_geom FROM v_edit_node JOIN v_edit_arc a1 ON node_id=a1.node_2
+		WHERE v_edit_node.epa_type IN ('SHORTPIPE', 'VALVE', 'PUMP') AND a1.sector_id IN (SELECT sector_id FROM inp_selector_sector WHERE cur_user=current_user))a
+	GROUP by node_id, nodecat_id, the_geom
+	HAVING count(*) < 2;
+
+
+	IF v_buildupmode = 1 THEN
+
+		-- taking nod2arcs with more than two arcs
+		DELETE FROM anl_node WHERE fprocesscat_id=66 and cur_user=current_user;
+		INSERT INTO anl_node (fprocesscat_id, node_id, nodecat_id, the_geom, descript)
+		SELECT 66, a.node_id, a.nodecat_id, a.the_geom, 'Node2arc with more than two arcs' FROM (
+			SELECT node_id, nodecat_id, v_edit_node.the_geom FROM v_edit_node JOIN v_edit_arc a1 ON node_id=a1.node_1
+			WHERE v_edit_node.epa_type IN ('SHORTPIPE', 'VALVE', 'PUMP') AND a1.sector_id IN (SELECT sector_id FROM inp_selector_sector WHERE cur_user=current_user)
+			UNION ALL
+			SELECT node_id, nodecat_id, v_edit_node.the_geom FROM v_edit_node JOIN v_edit_arc a1 ON node_id=a1.node_2
+			WHERE v_edit_node.epa_type IN ('SHORTPIPE', 'VALVE', 'PUMP') AND a1.sector_id IN (SELECT sector_id FROM inp_selector_sector WHERE cur_user=current_user))a
+		GROUP by node_id, nodecat_id, the_geom
+		HAVING count(*) > 2;
+	
+		v_query_text = 'SELECT a.node_id FROM rpt_inp_node a JOIN inp_valve ON a.node_id=inp_valve.node_id WHERE result_id='||quote_literal(result_id_var)||'
+				AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (66,67) and cur_user=current_user) UNION 
+				SELECT a.node_id FROM rpt_inp_node a JOIN inp_pump ON a.node_id=inp_pump.node_id WHERE result_id='||quote_literal(result_id_var)||'
+				AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (66,67) and cur_user=current_user) UNION 
+				SELECT a.node_id FROM rpt_inp_node a JOIN inp_shortpipe ON a.node_id=inp_shortpipe.node_id WHERE result_id='||quote_literal(result_id_var)||
+				' AND to_arc IS NOT NULL AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (66,67) and cur_user=current_user)';
+
+	ELSIF v_buildupmode > 1 AND p_only_mandatory_nodarc THEN
+		v_query_text = 'SELECT a.node_id FROM rpt_inp_node a JOIN inp_valve ON a.node_id=inp_valve.node_id WHERE result_id='||quote_literal(result_id_var)||' 
+				AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (67) and cur_user=current_user) UNION  
+				SELECT a.node_id FROM rpt_inp_node a JOIN inp_pump ON a.node_id=inp_pump.node_id WHERE result_id='||quote_literal(result_id_var)||' 
+				AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (67) and cur_user=current_user) UNION 
+				SELECT a.node_id FROM rpt_inp_node a JOIN inp_shortpipe ON a.node_id=inp_shortpipe.node_id WHERE result_id='||quote_literal(result_id_var)||
+				' AND to_arc IS NOT NULL AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (67) and cur_user=current_user)';
+			
+	ELSIF v_buildupmode > 1 AND p_only_mandatory_nodarc IS FALSE THEN
+		v_query_text = 'SELECT a.node_id FROM rpt_inp_node a JOIN inp_valve ON a.node_id=inp_valve.node_id WHERE result_id ='||quote_literal(result_id_var)||' 
+				 AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (67) and cur_user=current_user) UNION 
+				SELECT a.node_id FROM rpt_inp_node a JOIN inp_pump ON a.node_id=inp_pump.node_id WHERE result_id ='||quote_literal(result_id_var)||' 
+				 AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (67) and cur_user=current_user) UNION 
+				SELECT a.node_id FROM rpt_inp_node a JOIN inp_shortpipe ON a.node_id=inp_shortpipe.node_id WHERE result_id ='||quote_literal(result_id_var)||'
+				 AND a.node_id NOT IN (SELECT node_id FROM anl_node WHERE fprocesscat_id IN (67) and cur_user=current_user)';
+	END IF;
 
     FOR node_id_aux IN EXECUTE v_query_text
     LOOP
+    
+	v_count = v_count + 1;
 	
         -- Get node data
 	SELECT * INTO record_node FROM rpt_inp_node WHERE node_id = node_id_aux AND result_id=result_id_var;
@@ -89,8 +128,9 @@ BEGIN
         SELECT COUNT(*) INTO num_arcs FROM rpt_inp_arc WHERE (node_1 = node_id_aux OR node_2 = node_id_aux) AND result_id=result_id_var;
 
         -- Get arcs
-        SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_1 = node_id_aux;
-        SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_2 = node_id_aux;
+        SELECT * INTO record_arc1 FROM rpt_inp_arc WHERE node_1 = node_id_aux AND result_id=result_id_var;
+        SELECT * INTO record_arc2 FROM rpt_inp_arc WHERE node_2 = node_id_aux AND result_id=result_id_var;
+
 
         -- Just 1 arcs
         IF num_arcs = 1 THEN
@@ -199,8 +239,12 @@ BEGIN
 
                 -- Use arc 1 as reference (TODO: Why?)
                 record_new_arc = record_arc1;
+
+		-- control pipes
+                IF ST_Length(record_arc2.the_geom)/2 < v_nod2arc OR ST_Length(record_arc1.the_geom)/2 <  v_nod2arc THEN
+			RAISE EXCEPTION 'It''s impossible to continue. Nodarc % has close pipes with length:( %, % ) versus nodarc length ( % )', node_id_aux, ST_Length(record_arc2.the_geom), ST_Length(record_arc1.the_geom),v_nod2arc ;
+                END IF;
     
-                -- TODO: Control pipe shorter than 0.5 m!
                 valve_arc_node_1_geom := ST_LineInterpolatePoint(record_arc2.the_geom, 1 - v_nod2arc / ST_Length(record_arc2.the_geom) / 2);
                 valve_arc_node_2_geom := ST_LineInterpolatePoint(record_arc1.the_geom, v_nod2arc / ST_Length(record_arc1.the_geom) / 2);
 

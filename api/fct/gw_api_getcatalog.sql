@@ -18,15 +18,17 @@ SELECT SCHEMA_NAME.gw_api_getcatalog($${
 "data":{"fields":{"matcat_id":"PVC", "pnom":"16", "dnom":"160"}}}$$)
 */
 
+
 DECLARE
 	api_version text;
-	v_schema_name text;
+	v_schemaname text;
 	formTabs text;
 	v_device integer;
 	v_formname varchar;
 	v_tabname varchar;
 	fields_array json[];
 	fields json;   
+	field json;
 	query_result character varying;
 	query_result_ids json;
 	query_result_names json;
@@ -42,10 +44,13 @@ DECLARE
 	v_matcat text;
 	v_feature_type text;
 	v_featurecat_id text;
+	v_project_type text;
 
 BEGIN
 -- 	Set search path to local schema
 	SET search_path = "SCHEMA_NAME", public;
+
+	SELECT wsoftware INTO v_project_type FROM version LIMIT 1;
 
 --  	get api version
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
@@ -65,20 +70,37 @@ BEGIN
 	SELECT gw_api_get_formfields(v_formname, 'catalog', v_tabname, v_feature_type, null, null, null, 'INSERT',v_matcat, v_device)
 		INTO fields_array;
 
+--	Remove selectedId form fields
+	FOREACH field in ARRAY fields_array
+	LOOP
+		fields_array[(field->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(field->>'orderby')::INT], 'selectedId', ''::text);
+	END LOOP;
+	
 	-- Set featuretype_id
-	IF v_formname='upsert_catalog_arc' THEN
-		v_featurecat_id = 'arctype_id';
-	ELSIF v_formname='upsert_catalog_node' THEN
-		v_featurecat_id = 'nodetype_id';
-	ELSIF v_formname='upsert_catalog_connec' THEN
-		v_featurecat_id = 'connectype_id';
+	IF v_project_type = 'WS' THEN
+	
+		IF v_formname='upsert_catalog_arc' THEN
+			v_featurecat_id = 'arctype_id';
+		ELSIF v_formname='upsert_catalog_node' THEN
+			v_featurecat_id = 'nodetype_id';
+		ELSIF v_formname='upsert_catalog_connec' THEN
+			v_featurecat_id = 'connectype_id';
+		END IF;
+		
+	ELSIF v_project_type = 'UD' THEN
+	
+		IF v_formname='upsert_catalog_arc' THEN
+			v_featurecat_id = 'arc_type';
+		ELSIF v_formname='upsert_catalog_node' THEN
+			v_featurecat_id = 'node_type';
+		ELSIF v_formname='upsert_catalog_connec' THEN
+			v_featurecat_id = 'connec_type';
+		END IF;
+		
 	END IF;
-
 	
 --	Setting the catalog 'id' value  (hard coded for catalogs, fixed objective field as id on 4th position
-	IF v_formname='upsert_catalog_arc' OR v_formname='upsert_catalog_node' OR v_formname='upsert_catalog_connec' OR v_formname='upsert_catalog_grate' THEN
-
-
+	IF v_formname='upsert_catalog_arc' OR v_formname='upsert_catalog_node' OR v_formname='upsert_catalog_connec' THEN
 
 		--  get querytext
 		EXECUTE 'SELECT dv_querytext FROM config_api_form_fields WHERE formname = $1 and column_id=''id'''
@@ -91,11 +113,16 @@ BEGIN
 		i=1;
 		IF v_text IS NOT NULL THEN
 			FOREACH text IN ARRAY v_text
-			LOOP			
+			LOOP
+				
 				-- Get field and value from json
 				SELECT v_text [i] into v_json_field;
-				v_field:= (SELECT (v_json_field ->> 'key')) ;
-				v_value:= (SELECT (v_json_field ->> 'value')) ;
+				IF v_json_field ->> 'value' != '' THEN
+					
+					v_field:= (SELECT (v_json_field ->> 'key')) ;
+					v_value:= (SELECT (v_json_field ->> 'value')) ;
+				END IF;
+				
 				i=i+1;
 				
 				-- creating the query_text (it's supossed that with field id there is no creation of query text filter)
@@ -104,9 +131,13 @@ BEGIN
 				END IF;
 				
 			END LOOP;
-			IF (SELECT wsoftware FROM version) = 'WS' THEN
+			
+			IF v_project_type = 'WS' THEN
 				v_query_result := v_query_result || ' AND '|| quote_ident(v_featurecat_id) ||' = '|| quote_literal(v_feature_type) ||'';
+			ELSIF v_project_type = 'UD' THEN
+				v_query_result := v_query_result || ' AND '|| quote_ident(v_featurecat_id) ||' = '|| quote_literal(v_feature_type) ||' OR '|| quote_ident(v_featurecat_id) ||' = null';
 			END IF;
+			
 		END IF;
 		raise notice 'v_query_result %', v_query_result;
 

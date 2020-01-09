@@ -14,7 +14,7 @@ $BODY$
 /*EXAMPLE
 SELECT SCHEMA_NAME.gw_fct_anl_node_orphan($${
 "client":{"device":3, "infoType":100, "lang":"ES"},
-"feature":{"tableName":"v_edit_man_junction", "id":["1004","1005"]},
+"feature":{"tableName":"node"},
 "data":{"selectionMode":"previousSelection",
 	"parameters":{"saveOnDatabase":true}}}$$)
 */
@@ -33,14 +33,18 @@ DECLARE
 	v_array text;
 	v_selectionmode text;
 	v_worklayer text;
-	
+	v_qmlpointpath	text;
+	v_projectype text;
+	v_partialquery text;
+	v_isarcdivide text;
+
 BEGIN
 
 	-- Search path
 	SET search_path = "SCHEMA_NAME", public;
 
 	-- select version
-	SELECT giswater INTO v_version FROM version order by 1 desc limit 1;
+	SELECT giswater, wsoftware INTO v_version, v_projectype FROM version order by 1 desc limit 1;
 
 	-- getting input data 	
 	v_id :=  ((p_data ->>'feature')::json->>'id')::json;
@@ -48,15 +52,26 @@ BEGIN
 	v_worklayer := ((p_data ->>'feature')::json->>'tableName')::text;
 	v_selectionmode :=  ((p_data ->>'data')::json->>'selectionMode')::text;
 	v_saveondatabase :=  (((p_data ->>'data')::json->>'parameters')::json->>'saveOnDatabase')::boolean;
+	v_isarcdivide := (((p_data ->>'data')::json->>'parameters')::json->>'isArcDivide')::text;
+
+	--select default geometry style
+	SELECT  regexp_replace(row(value)::text, '["()"]', '', 'g') INTO v_qmlpointpath FROM config_param_user WHERE parameter='qgis_qml_pointlayer_path' AND cur_user=current_user;
 
 	-- Reset values
 	DELETE FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id=7;
 
-	-- Computing process
+	-- built partial query
+	IF v_projectype = 'WS' THEN
+		v_partialquery = 'JOIN cat_node nc ON nodecat_id=id JOIN node_type nt ON nt.id=nc.nodetype_id';
+	ELSIF v_projectype = 'UD' THEN
+		v_partialquery = 'JOIN node_type ON id = a.node_type';
+	END IF;
 
+	-- Computing process
 	IF v_array != '()' THEN
-		FOR rec_node IN EXECUTE 'SELECT DISTINCT * FROM '||v_worklayer||' a WHERE a.state=1 AND node_id IN '||v_array||' AND 
-		(SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and arc.state=1) = 0' 
+		FOR rec_node IN EXECUTE 'SELECT DISTINCT * FROM '||v_worklayer||' a '||v_partialquery||'  WHERE a.state>0 AND node_id IN '||v_array||' 
+		AND isarcdivide= '||v_isarcdivide||' AND 
+		(SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and arc.state>0) = 0' 
 		LOOP
 			--find the closest arc and the distance between arc and node
 			SELECT ST_Distance(arc.the_geom, rec_node.the_geom) as d, arc.arc_id INTO v_closest_arc_distance, v_closest_arc_id 
@@ -66,8 +81,8 @@ BEGIN
 			VALUES (rec_node.node_id, rec_node.state, rec_node.expl_id, 7, rec_node.the_geom, rec_node.nodecat_id,v_closest_arc_id,v_closest_arc_distance);
 		END LOOP;
 	ELSE
-		FOR rec_node IN EXECUTE 'SELECT DISTINCT * FROM '||v_worklayer||' a WHERE a.state=1 AND 
-		(SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and arc.state=1) = 0' 
+		FOR rec_node IN EXECUTE 'SELECT DISTINCT * FROM '||v_worklayer||' a '||v_partialquery||'  WHERE a.state>0 AND isarcdivide='||v_isarcdivide||' AND 
+		(SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and arc.state>0) = 0' 
 		LOOP
 			--find the closest arc and the distance between arc and node
 			SELECT ST_Distance(arc.the_geom, rec_node.the_geom) as d, arc.arc_id INTO v_closest_arc_distance, v_closest_arc_id 
@@ -89,9 +104,9 @@ BEGIN
 	--points
 	v_result = null;
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id=7) row; 
+	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript, the_geom, fprocesscat_id FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id=7) row; 
 	v_result := COALESCE(v_result, '{}'); 
-	v_result_point = concat ('{"geometryType":"Point", "values":',v_result, '}'); 
+	v_result_point = concat ('{"geometryType":"Point", "qmlPath":"',v_qmlpointpath,'", "values":',v_result, '}'); 
 
 	IF v_saveondatabase IS FALSE THEN 
 		-- delete previous results
@@ -107,7 +122,7 @@ BEGIN
 	v_result_point := COALESCE(v_result_point, '{}'); 
 
 	--  Return
-	RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"This is a test message"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":1, "text":"This is a test message"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 				'"point":'||v_result_point||

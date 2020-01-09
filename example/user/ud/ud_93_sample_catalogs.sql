@@ -20,7 +20,6 @@ INSERT INTO cat_mat_element VALUES ('Iron', 'Iron');
 INSERT INTO cat_mat_element VALUES ('N/I', 'No information');
 
 
-
 INSERT INTO cat_element VALUES ('COVER70', 'COVER', 'FD', '70 cm', 'Cover iron Ø70cm', NULL, NULL, NULL, NULL, NULL, true);
 INSERT INTO cat_element VALUES ('COVER70X70', 'COVER', 'FD', '70x70cm', 'Cover iron 70x70cm', NULL, NULL, NULL, NULL, NULL, true);
 INSERT INTO cat_element VALUES ('STEP200', 'STEP', 'Iron', '20x20X20cm', 'Step iron 20x20cm', NULL, NULL, NULL, NULL, NULL, true);
@@ -36,6 +35,7 @@ INSERT INTO cat_mat_node VALUES ('PVC', 'PVC');
 INSERT INTO cat_mat_node VALUES ('N/I', 'N/I');
 INSERT INTO cat_mat_node VALUES ('FD', 'FD');
 INSERT INTO cat_mat_node VALUES ('Iron', 'Iron');
+INSERT INTO cat_mat_node VALUES ('Virtual', 'Virtual');
 
 
 INSERT INTO cat_mat_grate VALUES ('Brick', 'Brick');
@@ -47,7 +47,6 @@ INSERT INTO cat_mat_grate VALUES ('FD', 'FD');
 INSERT INTO cat_mat_grate VALUES ('Iron', 'Iron');
 
 
-
 INSERT INTO cat_mat_gully VALUES ('N/I', 'N/I');
 INSERT INTO cat_mat_gully VALUES ('FD', 'FD');
 INSERT INTO cat_mat_gully VALUES ('Iron', 'Iron');
@@ -55,23 +54,25 @@ INSERT INTO cat_mat_gully VALUES ('Concret', 'Concret');
 INSERT INTO cat_mat_gully VALUES ('Brick', 'Brick');
 
 
-INSERT INTO cat_arc VALUES ('CON-CC100', 'Concret', 'CIRCULAR', 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.30, 0.7854, 2.20, 0.15, 'm', 'A_CON_DN100', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PVC-CC040', 'PVC', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.52, 0.1257, 1.60, 0.06, 'm', 'A_PVC_DN40', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PVC-CC060', 'PVC', 'CIRCULAR', 0.6000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.78, 0.2827, 1.80, 0.09, 'm', 'A_PVC_DN60', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PVC-CC080', 'PVC', 'CIRCULAR', 0.8000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.04, 0.5027, 2.00, 0.12, 'm', 'A_PVC_DN80', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PVC-CC020', 'PVC', 'CIRCULAR', 0.2000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.26, 0.0314, 1.40, 0.03, 'm', 'A_PVC_DN20', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('CON-CC040', 'Concret', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.52, 0.1257, 1.60, 0.06, 'm', 'A_CON_DN40', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('CON-CC060', 'Concret', 'CIRCULAR', 0.6000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.78, 0.2827, 1.80, 0.09, 'm', 'A_CON_DN60', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('CON-CC080', 'Concret', 'CIRCULAR', 0.8000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.04, 0.5027, 2.00, 0.12, 'm', 'A_CON_DN80', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('CON-EG150', 'Concret', 'EGG', 1.5000, 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.15, 1.5000, 2.70, 0.22, 'm', 'A_CON_O150', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('CON-RC150', 'Concret', 'RECT_CLOSED', 1.5000, 1.5000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.94, 2.2500, 2.70, 0.22, 'm', 'A_CON_R150', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('CON-RC200', 'Concret', 'RECT_CLOSED', 2.0000, 2.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 2.60, 4.0000, 3.20, 0.30, 'm', 'A_CON_R200', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PE-PP020', 'PEAD', 'FORCE_MAIN', 0.1800, 140.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PEAD pump pipe', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.26, 0.0314, 1.40, 0.03, 'm', 'A_PRE_PE_DN20', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PEC-CC040', 'PEC', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PEC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.52, 0.1257, 1.60, 0.08, 'm', 'A_PEC_DN40', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('WEIR_60', 'Virtual', 'VIRTUAL', 0.6000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Weir', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.78, 0.2827, 1.80, 0.09, 'm', 'A_WEIR_60', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PUMP_01', 'Virtual', 'VIRTUAL', 0.1800, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Pump', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.24, 0.0254, 1.38, 0.03, 'm', 'A_PRE_PE_DN20', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('PEC-CC315', 'PEC', 'CIRCULAR', 0.3150, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PEC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.42, 0.0920, 1.50, 0.06, 'm', 'A_PEC_DN315', 'S_REP', 'S_NULL', true);
-INSERT INTO cat_arc VALUES ('VIRTUAL', 'Virtual', 'VIRTUAL', 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Virtual', NULL, NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.0000, 0.00, 0.00, 'm', NULL, NULL, NULL, true);
+INSERT INTO cat_arc VALUES ('CON-CC100', 'Concret', 'CIRCULAR', 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.30, 0.7854, 2.20, 0.15, 'm', 'A_CON_DN100', 'S_REP', 'S_NULL', true, null, null, null, 'CONDUIT');
+INSERT INTO cat_arc VALUES ('SIPHON-CC100', 'Concret', 'CIRCULAR', 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.30, 0.7854, 2.20, 0.15, 'm', 'A_CON_DN100', 'S_REP', 'S_NULL', true, null, null, null,  'SIPHON');
+INSERT INTO cat_arc VALUES ('PVC-CC040', 'PVC', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.52, 0.1257, 1.60, 0.06, 'm', 'A_PVC_DN40', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('PVC-CC060', 'PVC', 'CIRCULAR', 0.6000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.78, 0.2827, 1.80, 0.09, 'm', 'A_PVC_DN60', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('PVC-CC080', 'PVC', 'CIRCULAR', 0.8000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.04, 0.5027, 2.00, 0.12, 'm', 'A_PVC_DN80', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('WACCEL-CC020', 'PVC', 'CIRCULAR', 0.2000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.26, 0.0314, 1.40, 0.03, 'm', 'A_PVC_DN20', 'S_REP', 'S_NULL', true, null, null, null,  'WACCEL');
+INSERT INTO cat_arc VALUES ('PVC-CC020', 'PVC', 'CIRCULAR', 0.2000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PVC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.26, 0.0314, 1.40, 0.03, 'm', 'A_PVC_DN20', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('CON-CC040', 'Concret', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.52, 0.1257, 1.60, 0.06, 'm', 'A_CON_DN40', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('CON-CC060', 'Concret', 'CIRCULAR', 0.6000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.78, 0.2827, 1.80, 0.09, 'm', 'A_CON_DN60', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('CON-CC080', 'Concret', 'CIRCULAR', 0.8000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.04, 0.5027, 2.00, 0.12, 'm', 'A_CON_DN80', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('CON-EG150', 'Concret', 'EGG', 1.5000, 1.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.15, 1.5000, 2.70, 0.22, 'm', 'A_CON_O150', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('CON-RC150', 'Concret', 'RECT_CLOSED', 1.5000, 1.5000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 1.94, 2.2500, 2.70, 0.22, 'm', 'A_CON_R150', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('CON-RC200', 'Concret', 'RECT_CLOSED', 2.0000, 2.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Concret conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 2.60, 4.0000, 3.20, 0.30, 'm', 'A_CON_R200', 'S_REP', 'S_NULL', true, null, null, null,  'SIPHON');
+INSERT INTO cat_arc VALUES ('PE-PP020', 'PEAD', 'FORCE_MAIN', 0.1800, 140.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PEAD pump pipe', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.26, 0.0314, 1.40, 0.03, 'm', 'A_PRE_PE_DN20', 'S_REP', 'S_NULL', true, null, null, null,  'PUMP_PIPE');
+INSERT INTO cat_arc VALUES ('PEC-CC040', 'PEC', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PEC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.52, 0.1257, 1.60, 0.08, 'm', 'A_PEC_DN40', 'S_REP', 'S_NULL', true, null, null, null,  'CONDUIT');
+INSERT INTO cat_arc VALUES ('WEIR_60', 'Virtual', 'VIRTUAL', 0.6000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Weir', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.78, 0.2827, 1.80, 0.09, 'm', 'A_WEIR_60', 'S_REP', 'S_NULL', true, null,  null, null, 'VARC');
+INSERT INTO cat_arc VALUES ('PUMP_01', 'Virtual', 'VIRTUAL', 0.1800, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Pump', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.24, 0.0254, 1.38, 0.03, 'm', 'A_PRE_PE_DN20', 'S_REP', 'S_NULL', true, null,  null, null, 'VARC');
+INSERT INTO cat_arc VALUES ('PEC-CC315', 'PEC', 'CIRCULAR', 0.3150, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'PEC conduit', NULL, NULL, NULL, NULL, 0.10, 0.10, 0.42, 0.0920, 1.50, 0.06, 'm', 'A_PEC_DN315', 'S_REP', 'S_NULL', true, null,  null, null, 'CONDUIT');
+INSERT INTO cat_arc VALUES ('VIRTUAL', 'Virtual', 'VIRTUAL', 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, NULL, 'Virtual', NULL, NULL, NULL, NULL, 0.00, 0.00, 0.00, 0.0000, 0.00, 0.00, 'm', NULL, NULL, NULL, true, null, null, null, 'VARC');
 
 
 INSERT INTO cat_brand VALUES ('brand1');
@@ -89,35 +90,37 @@ INSERT INTO cat_builder VALUES ('builder1');
 INSERT INTO cat_builder VALUES ('builder2');
 INSERT INTO cat_builder VALUES ('builder3');
 
-INSERT INTO cat_connec VALUES ('PVC-CC025_D', 'PVC', 'CIRCULAR', 0.2500, 0.0000, 0.0000, 0.0000, NULL, 'PVC connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_PVC_DN25', 'S_EXC', true);
-INSERT INTO cat_connec VALUES ('CON-CC040_I', 'Concret', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, NULL, 'Concret connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN40', 'S_EXC', true);
-INSERT INTO cat_connec VALUES ('PVC-CC025_T', 'PVC', 'CIRCULAR', 0.2500, 0.0000, 0.0000, 0.0000, NULL, 'PVC connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_PVC_DN25', 'S_EXC', true);
-INSERT INTO cat_connec VALUES ('PVC-CC030_D', 'PVC', 'CIRCULAR', 0.3000, 0.0000, 0.0000, 0.0000, NULL, 'PVC connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_PVC_DN30', 'S_EXC', true);
-INSERT INTO cat_connec VALUES ('CON-CC020_D', 'Concret', 'CIRCULAR', 0.2000, 0.0000, 0.0000, 0.0000, NULL, 'Concret connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN20', 'S_EXC', true);
-INSERT INTO cat_connec VALUES ('CON-CC030_D', 'Concret', 'CIRCULAR', 0.3000, 0.0000, 0.0000, 0.0000, NULL, 'Concret connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN30', 'S_EXC', true);
+
+INSERT INTO cat_connec VALUES ('PVC-CC025_D', 'PVC', 'CIRCULAR', 0.2500, 0.0000, 0.0000, 0.0000, NULL, 'PVC connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_PVC_DN25', 'S_EXC', true, null, 'CONNEC');
+INSERT INTO cat_connec VALUES ('CON-CC040_I', 'Concret', 'CIRCULAR', 0.4000, 0.0000, 0.0000, 0.0000, NULL, 'Concret connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN40', 'S_EXC', true, null, 'CONNEC');
+INSERT INTO cat_connec VALUES ('PVC-CC025_T', 'PVC', 'CIRCULAR', 0.2500, 0.0000, 0.0000, 0.0000, NULL, 'PVC connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_PVC_DN25', 'S_EXC', true, null, 'CONNEC');
+INSERT INTO cat_connec VALUES ('PVC-CC030_D', 'PVC', 'CIRCULAR', 0.3000, 0.0000, 0.0000, 0.0000, NULL, 'PVC connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_PVC_DN30', 'S_EXC', true, null, 'CONNEC');
+INSERT INTO cat_connec VALUES ('CON-CC020_D', 'Concret', 'CIRCULAR', 0.2000, 0.0000, 0.0000, 0.0000, NULL, 'Concret connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN20', 'S_EXC', true, null, 'CONNEC');
+INSERT INTO cat_connec VALUES ('CON-CC030_D', 'Concret', 'CIRCULAR', 0.3000, 0.0000, 0.0000, 0.0000, NULL, 'Concret connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN30', 'S_EXC', true, null, 'CONNEC');
+INSERT INTO cat_connec VALUES ('VIRTUAL', 'Virtual', 'VIRTUAL', 0.3000, 0.0000, 0.0000, 0.0000, NULL, 'Virtual connec', NULL, NULL, NULL, NULL, 'N_CONNECTION', 'A_CON_DN30', 'S_EXC', true, null, 'VCONNEC');
 
 
-INSERT INTO cat_node VALUES ('C_MANHOLE-BR100', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Circular manhole ø100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true);
-INSERT INTO cat_node VALUES ('C_MANHOLE-CON100', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Circular manhole ø100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true);
-INSERT INTO cat_node VALUES ('C_MANHOLE-CON80', 'Concret', NULL, 0.80, 1.00, NULL, NULL, 'Circular manhole ø80cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true);
-INSERT INTO cat_node VALUES ('CHAMBER-01', 'Concret', NULL, 3.00, 2.50, 3.00, NULL, 'Chamber 3x2.5x3m', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_CH300x250-H300', true);
-INSERT INTO cat_node VALUES ('HIGH POINT-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'High point', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true);
-INSERT INTO cat_node VALUES ('JUMP-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Circular jump manhole ø100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_JUMP100', true);
-INSERT INTO cat_node VALUES ('NETGULLY-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Network gully', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true);
-INSERT INTO cat_node VALUES ('R_MANHOLE-BR100', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Rectangular manhole 100x100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ100-H160', true);
-INSERT INTO cat_node VALUES ('R_MANHOLE-CON100', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Rectangular manhole 100x100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ100-H160', true);
-INSERT INTO cat_node VALUES ('R_MANHOLE-CON150', 'Concret', NULL, 1.50, 1.50, NULL, NULL, 'Rectangular manhole 150x150cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ150-H250', true);
-INSERT INTO cat_node VALUES ('R_MANHOLE-CON200', 'Concret', NULL, 2.00, 2.00, NULL, NULL, 'Rectangular manhole 200x200cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ200-H250', true);
-INSERT INTO cat_node VALUES ('SEW_STORAGE-01', 'Concret', NULL, 5.00, 3.50, 4.75, NULL, 'Sewer storage 5x3.5x4.5m', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_STR500x350x475', true);
-INSERT INTO cat_node VALUES ('VALVE-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Network valve', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_VAL_01', true);
-INSERT INTO cat_node VALUES ('WEIR-01', 'Concret', NULL, 1.50, 2.00, NULL, NULL, 'Rectangular weir 150x200cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'A_WEIR_60', true);
-INSERT INTO cat_node VALUES ('NETINIT-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Network init', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true);
-INSERT INTO cat_node VALUES ('NETELEMENT-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Netelement rectangular', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true);
-INSERT INTO cat_node VALUES ('JUNCTION-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Juntion', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true);
-INSERT INTO cat_node VALUES ('OUTFALL-01', 'Concret', NULL, 2.00, 1.00, NULL, NULL, 'Outfall', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true);
-INSERT INTO cat_node VALUES ('NODE-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Virtual node', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true);
-INSERT INTO cat_node VALUES ('VIR_NODE-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Virtual node', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true);
-INSERT INTO cat_node VALUES ('WWTP-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Wastewater treatment plant', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ150-H250', true);
+INSERT INTO cat_node VALUES ('C_MANHOLE-BR100', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Circular manhole ø100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true, null, 'CIRC_MANHOLE');
+INSERT INTO cat_node VALUES ('C_MANHOLE-CON100', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Circular manhole ø100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true, null, 'CIRC_MANHOLE');
+INSERT INTO cat_node VALUES ('C_MANHOLE-CON80', 'Concret', NULL, 0.80, 1.00, NULL, NULL, 'Circular manhole ø80cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true, null, 'CIRC_MANHOLE');
+INSERT INTO cat_node VALUES ('CHAMBER-01', 'Concret', NULL, 3.00, 2.50, 3.00, NULL, 'Chamber 3x2.5x3m', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_CH300x250-H300', true, null, 'CHAMBER');
+INSERT INTO cat_node VALUES ('HIGH POINT-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'High point', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true, null, 'HIGHPOINT');
+INSERT INTO cat_node VALUES ('JUMP-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Circular jump manhole ø100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_JUMP100', true, null, 'JUMP');
+INSERT INTO cat_node VALUES ('NETGULLY-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Network gully', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true, null, 'NETGULLY');
+INSERT INTO cat_node VALUES ('R_MANHOLE-BR100', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Rectangular manhole 100x100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ100-H160', true, null, 'RECT_MANHOLE');
+INSERT INTO cat_node VALUES ('R_MANHOLE-CON100', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Rectangular manhole 100x100cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ100-H160', true, null, 'RECT_MANHOLE');
+INSERT INTO cat_node VALUES ('R_MANHOLE-CON150', 'Concret', NULL, 1.50, 1.50, NULL, NULL, 'Rectangular manhole 150x150cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ150-H250', true, null, 'RECT_MANHOLE');
+INSERT INTO cat_node VALUES ('R_MANHOLE-CON200', 'Concret', NULL, 2.00, 2.00, NULL, NULL, 'Rectangular manhole 200x200cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ200-H250', true, null, 'RECT_MANHOLE');
+INSERT INTO cat_node VALUES ('SEW_STORAGE-01', 'Concret', NULL, 5.00, 3.50, 4.75, NULL, 'Sewer storage 5x3.5x4.5m', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_STR500x350x475', true, null, 'SEWER_STORAGE');
+INSERT INTO cat_node VALUES ('VALVE-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Network valve', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_VAL_01', true, null, 'VALVE');
+INSERT INTO cat_node VALUES ('WEIR-01', 'Concret', NULL, 1.50, 2.00, NULL, NULL, 'Rectangular weir 150x200cm', NULL, NULL, NULL, NULL, 2.00, 'u', 'A_WEIR_60', true, null, 'WEIR');
+INSERT INTO cat_node VALUES ('NETINIT-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Network init', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true, null, 'NETINIT');
+INSERT INTO cat_node VALUES ('NETELEMENT-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Netelement rectangular', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true, null, 'NETELEMENT');
+INSERT INTO cat_node VALUES ('JUNCTION-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Juntion', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true, null, 'JUNCTION');
+INSERT INTO cat_node VALUES ('OUTFALL-01', 'Concret', NULL, 2.00, 1.00, NULL, NULL, 'Outfall', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD100-H160', true, null, 'OUTFALL');
+INSERT INTO cat_node VALUES ('NODE-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Virtual node', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true, null, 'VIRTUAL_NODE');
+INSERT INTO cat_node VALUES ('VIR_NODE-01', 'Brick', NULL, 1.00, 1.00, NULL, NULL, 'Virtual node', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRD80-H160', true, null, 'VIRTUAL_NODE');
+INSERT INTO cat_node VALUES ('WWTP-01', 'Concret', NULL, 1.00, 1.00, NULL, NULL, 'Wastewater treatment plant', NULL, NULL, NULL, NULL, 2.00, 'u', 'N_PRQ150-H250', true, null, 'WWTP');
 
 INSERT INTO cat_owner VALUES ('owner1');
 INSERT INTO cat_owner VALUES ('owner2');
@@ -134,7 +137,7 @@ INSERT INTO cat_work VALUES ('work2');
 INSERT INTO cat_work VALUES ('work3');
 INSERT INTO cat_work VALUES ('work4');
 
-INSERT INTO cat_grate VALUES ('N/I', 'N/I', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0.4000, 0.8000, NULL, NULL, NULL, NULL, NULL, NULL, true, NULL);
+INSERT INTO cat_grate VALUES ('N/I', 'N/I', 0.0, 0.0, NULL, NULL, NULL, NULL, NULL, 0.4000, 0.8000, NULL, NULL, NULL, NULL, NULL, NULL, true, NULL);
 INSERT INTO cat_grate VALUES ('SGRT1', 'FD', 78.0000, 36.4000, 2839.0000, 1214.0000, 6.0000, 1.0000, NULL, 0.5676, 0.7416, NULL, NULL, NULL, NULL, NULL, 'N_SGRT1', true, NULL);
 INSERT INTO cat_grate VALUES ('SGRT2', 'FD', 78.0000, 34.1000, 2659.0000, 873.0000, 1.0000, 21.0000, NULL, 0.6804, 0.7661, NULL, NULL, NULL, NULL, NULL,'N_SGRT2', true, NULL);
 INSERT INTO cat_grate VALUES ('SGRT3', 'FD', 64.0000, 30.0000, 1920.0000, 693.0000, 1.0000, NULL, 12.0000, 0.4958, 0.7124, NULL, NULL, NULL, NULL, NULL,'N_SGRT3', true, NULL);
@@ -197,7 +200,7 @@ UPDATE cat_feature SET shortcut_key=NULL;
 
 UPDATE cat_feature SET shortcut_key='B' WHERE id = 'CHAMBER';
 UPDATE cat_feature SET shortcut_key='E' WHERE id = 'CHANGE';
-UPDATE cat_feature SET shortcut_key='M' WHERE id = 'CIRC-MANHOLE';
+UPDATE cat_feature SET shortcut_key='M' WHERE id = 'CIRC_MANHOLE';
 UPDATE cat_feature SET shortcut_key='Alt+X' WHERE id = 'CONDUIT';
 UPDATE cat_feature SET shortcut_key='Alt+C' WHERE id = 'CONNEC';
 UPDATE cat_feature SET shortcut_key='Alt+M' WHERE id = 'GULLY';
@@ -208,14 +211,14 @@ UPDATE cat_feature SET shortcut_key='A' WHERE id = 'NETELEMENT';
 UPDATE cat_feature SET shortcut_key='Y' WHERE id = 'NETGULLY';
 UPDATE cat_feature SET shortcut_key='I' WHERE id = 'NETINIT';
 UPDATE cat_feature SET shortcut_key='O' WHERE id = 'OUTFALL';
-UPDATE cat_feature SET shortcut_key='G' WHERE id = 'OWERFLOW-STORAGE';
+UPDATE cat_feature SET shortcut_key='G' WHERE id = 'OWERFLOW_STORAGE';
 UPDATE cat_feature SET shortcut_key='Alt+K' WHERE id = 'PGULLY';
-UPDATE cat_feature SET shortcut_key='Alt+U' WHERE id = 'PUMP-PIPE';
-UPDATE cat_feature SET shortcut_key='P' WHERE id = 'PUMP-STATION';
-UPDATE cat_feature SET shortcut_key='R' WHERE id = 'RECT-MANHOLE';
+UPDATE cat_feature SET shortcut_key='Alt+U' WHERE id = 'PUMP_PIPE';
+UPDATE cat_feature SET shortcut_key='P' WHERE id = 'PUMP_STATION';
+UPDATE cat_feature SET shortcut_key='R' WHERE id = 'RECT_MANHOLE';
 UPDATE cat_feature SET shortcut_key='U' WHERE id = 'REGISTER';
 UPDATE cat_feature SET shortcut_key='X' WHERE id = 'SANDBOX';
-UPDATE cat_feature SET shortcut_key='L' WHERE id = 'SEWER-STORAGE';
+UPDATE cat_feature SET shortcut_key='L' WHERE id = 'SEWER_STORAGE';
 UPDATE cat_feature SET shortcut_key='Alt+B' WHERE id = 'SIPHON';
 UPDATE cat_feature SET shortcut_key='V' WHERE id = 'VALVE';
 UPDATE cat_feature SET shortcut_key='Alt+Q' WHERE id = 'VARC';

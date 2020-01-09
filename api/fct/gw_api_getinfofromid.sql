@@ -69,7 +69,7 @@ DECLARE
 	v_tablename character varying;
 	v_tablename_original character varying;
 	v_id character varying;
-	v_inputgeometry geometry;
+	v_inputgeometry public.geometry;
 	v_editable boolean;
 	v_device integer;
 	v_infotype integer;
@@ -123,6 +123,7 @@ DECLARE
 	v_role text;
 	v_parentfields text;
 	v_status text ='Accepted';
+	v_childtype text;
 
 
 BEGIN
@@ -201,7 +202,7 @@ BEGIN
 		INTO v_featuretype
 		USING v_tablename;
 	v_featuretype := LOWER(v_featuretype); 
-	v_featuretype := COALESCE(v_featuretype, '[]'); 
+	v_featuretype := COALESCE(v_featuretype, ''); 
 
 -- Get vdefault values
 	-- Create List
@@ -257,7 +258,8 @@ BEGIN
             AND t.relname = $1
             AND s.nspname = $2
             AND left (pg_catalog.format_type(a.atttypid, a.atttypmod), 8)=''geometry''
-            ORDER BY a.attnum' 
+            ORDER BY a.attnum
+			LIMIT 1'
             INTO v_the_geom
             USING v_tablename, schemas_array[1];
            
@@ -330,7 +332,7 @@ BEGIN
 -------------------------------------
 
 
-        IF v_tablename IN (SELECT layer_id FROM config_api_layer WHERE is_parent IS TRUE) AND v_toolbar !='epa' THEN
+        IF v_tablename IN (SELECT layer_id FROM config_api_layer WHERE is_parent IS TRUE) AND v_toolbar !='epa' AND v_id IS NOT NULL THEN
 
 		parent_child_relation:=true;
 
@@ -375,7 +377,7 @@ BEGIN
 		IF v_tablename IS NULL THEN
 
 
-			v_message  = '{"priority":1, "text":"Epa type is not defined for this feature. Basic values are used"}';
+			v_message  = '{"level":1, "text":"Epa type is not defined for this feature. Basic values are used"}';
 
 			-- check parent_view
 			EXECUTE 'SELECT tableparent_id from config_api_layer WHERE layer_id=$1'
@@ -413,10 +415,20 @@ BEGIN
 		raise notice 'NO parent-child, NO editable NO informable: %' , v_tablename;
         END IF;
 
-
+-- Get child type
+	EXECUTE 'SELECT id FROM cat_feature WHERE child_layer = $1 LIMIT 1'
+		INTO v_childtype
+		USING v_tablename;
+	v_childtype := COALESCE(v_childtype, ''); 
+	
 -- Propierties of info layer's
 ------------------------------
-    IF v_tablename IS NOT NULL THEN 
+    IF v_tablename IS NULL THEN 
+
+	v_message='{"priority":2, "text":"The API is bad configured. Please take a look on table config layers (config_api_tableinfo_x_infotype or config_api_layer)", "results":0}';
+	
+
+    ELSIF v_tablename IS NOT NULL THEN 
 
 	--    Check generic
 	-------------------
@@ -460,7 +472,7 @@ BEGIN
 		
 	-- Feature info
 	v_featureinfo := json_build_object('permissions',v_permissions,'tableName',v_tablename,'idName',v_idname,'id',null,
-					    'featureType',v_featuretype,'tableParent',v_table_parent, 'tableName', v_tablename, 
+					    'featureType',v_featuretype, 'childType', v_childtype, 'tableParent',v_table_parent, 'tableName', v_tablename, 
 					    'geometry', v_geometry, 'zoomCanvasMargin',concat('{"mts":"',v_canvasmargin,'"}')::json, 'vdefaultValues',v_vdefault_array);
      
 	IF v_id IS NULL THEN
@@ -534,7 +546,9 @@ BEGIN
 		EXECUTE 'SELECT gw_api_get_featureinfo($1, $2, $3, $4, $5)'
 		INTO v_fields
 		USING v_table_parent, v_id, v_device, v_infotype, v_configtabledefined;
-
+		IF v_configtabledefined IS FALSE  THEN
+            v_forminfo := json_build_object('formName','F16','template','GENERIC');
+        END IF;
     END IF;
 
     v_tablename:= (to_json(v_tablename));
@@ -549,7 +563,7 @@ BEGIN
 	
 	-- message for null
 	IF v_tablename IS NULL THEN
-		v_message='{"priority":0, "text":"No feature found on that point", "results":0}';
+		v_message='{"level":0, "text":"No feature found", "results":0}';
 	END IF;
 
     

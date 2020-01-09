@@ -6,9 +6,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2570
 
--- Function: SCHEMA_NAME.gw_api_getconfig(json)
-
--- DROP FUNCTION SCHEMA_NAME.gw_api_getconfig(json);
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getconfig(p_data json)
   RETURNS json AS
@@ -320,7 +317,7 @@ BEGIN
 --------------
     SELECT * INTO rec_tab FROM config_api_form_tabs WHERE formname='config' AND tabname='tabAdmin' ;
 
-    -- only form config forme (epaoptions not need admin tab)
+    -- only form config form (epaoptions not need admin tab)
     IF v_formname='config' THEN 
     
 	IF rec_tab.tabname IS NOT NULL AND 'role_admin' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN 

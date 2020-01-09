@@ -6,20 +6,31 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2218
 
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_flow_trace(node_id_arg character varying)  RETURNS smallint AS $BODY$
+DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_flow_trace(character varying);
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_flow_trace(p_node_id character varying)  
+RETURNS smallint AS 
+$BODY$
+
+/*
+example:
+SELECT SCHEMA_NAME.gw_fct_flow_trace ('5100');
+*/
+
+DECLARE 
+
  
 BEGIN
 
     -- Search path
     SET search_path = "SCHEMA_NAME", public;
-
-    -- Reset values
+	
+	    -- Reset values
     DELETE FROM anl_flow_node WHERE cur_user="current_user"() AND context='Flow trace';
     DELETE FROM anl_flow_arc WHERE cur_user="current_user"() AND context='Flow trace' ; 
-    
-    -- Compute the tributary area using DFS
-    PERFORM gw_fct_flow_trace_recursive(node_id_arg);
 
+	-- Compute the tributary area using recursive function
+	PERFORM gw_fct_flow_trace_recursive(p_node_id);
+	
 RETURN 1;
         
 END;

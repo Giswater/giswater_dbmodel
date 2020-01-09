@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 -- FUNCTION CODE: 1124
 
--- DROP FUNCTION "SCHEMA_NAME".gw_trg_edit_man_arc();
+-- DROP FUNCTION "SCHEMA_NAME".gw_trg_edit_sector();
 
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_sector()
   RETURNS trigger AS

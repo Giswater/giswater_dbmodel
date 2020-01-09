@@ -9,14 +9,13 @@ This version of Giswater is provided by Giswater Association
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_get_featureupsert(
     p_table_id character varying,
     p_id character varying,
-    p_reduced_geometry geometry,
+    p_reduced_geometry public.geometry,
     p_device integer,
     p_info_type integer,
     p_tg_op character varying,
     p_configtable boolean)
   RETURNS json AS
 $BODY$
-
 
 /*EXAMPLE
 arc with no nodes
@@ -74,6 +73,7 @@ DECLARE
 	v_catfeature record;
 	v_codeautofill boolean=true;
 	v_values_array json;
+	v_values_array_aux json;
 	v_values_array_json json[];
 	v_record record;
 	v_gislength float;
@@ -91,6 +91,11 @@ DECLARE
 	v_type text;
 	v_active_feature text;
 	v_promixity_buffer double precision;
+	v_sys_raster_dem boolean=false;
+	v_edit_upsert_elevation_from_dem boolean=false;
+	v_noderecord1 record;
+	v_noderecord2 record;
+        v_input json;
 
 BEGIN
 
@@ -137,6 +142,7 @@ BEGIN
 	v_tablename = v_visit_tablename;
 	v_formname = p_table_id;
      END IF;
+
 
 --  get feature propierties
 ---------------------------
@@ -192,6 +198,7 @@ BEGIN
 
 		-- urn_id assingment
 		v_id = (SELECT nextval('urn_id_seq'));
+		p_id = v_id;
 		IF v_catfeature.code_autofill IS TRUE THEN
 			v_code=v_id;
 		END IF;
@@ -227,7 +234,7 @@ BEGIN
 					v_status = false;
 				END IF;
 	
-				--getting gis length
+				--getting 1st approach of gis length
 				v_gislength = (SELECT st_length(p_reduced_geometry))::float;
 				
 			ELSIF upper(v_catfeature.feature_type) ='CONNEC' THEN 
@@ -332,7 +339,7 @@ BEGIN
 				INTO v_pnom, v_dnom, v_matcat_id;
 				
 		ELSIF v_project_type ='UD' THEN 
-			IF v_catfeature.feature_type ='gully' THEN
+			IF (v_catfeature.feature_type) ='GULLY' THEN
 				EXECUTE 'SELECT matcat_id FROM cat_grate WHERE id=$1'
 					USING v_catalog
 					INTO v_matcat_id;
@@ -350,58 +357,50 @@ BEGIN
 			(SELECT * FROM '||p_table_id||' WHERE '||quote_ident(v_idname)||' = CAST($1 AS '||(v_columntype)||'))a'
 			INTO v_values_array
 			USING p_id;
-			RAISE NOTICE 'UPDATE 222 %',v_values_array;
 	END IF;
 
+	-- get full values of nodes from arc
+	SELECT * INTO v_noderecord1 FROM v_edit_node WHERE node_id = v_node1;
+	SELECT * INTO v_noderecord2 FROM v_edit_node WHERE node_id = v_node2;
 	
-	-- setting values
+	-- looping the array setting values and widgetcontrols
 	FOREACH aux_json IN ARRAY v_fields_array 
         LOOP          
 		array_index := array_index + 1;
-		
-		-- setting the values
+
+
 		IF p_tg_op='INSERT' THEN 
-		
-			-- special values
+
+			-- getting values from config_param_user
+			EXECUTE 'SELECT to_json(array_agg(row_to_json(a)))::text 
+				FROM (SELECT feature_field_id as param, value::text AS vdef, feature_dv_parent_value as aux_param, parameter as parameter FROM audit_cat_param_user 
+				JOIN config_param_user ON audit_cat_param_user.id=parameter WHERE cur_user=current_user AND feature_field_id IS NOT NULL)a'
+				INTO v_values_array_aux;
+
+			-- setting special values
 			IF (aux_json->>'column_id') = quote_ident(v_idname) THEN
 				field_value = v_id;
-			ELSIF (aux_json->>'column_id') = concat(lower(v_catfeature.feature_type),'_type')  THEN
 				
+			ELSIF (aux_json->>'column_id') = concat(lower(v_catfeature.feature_type),'_type')  THEN
 				EXECUTE 'SELECT id FROM cat_feature WHERE child_layer = ''' || p_table_id ||''' LIMIT 1' INTO field_value;
 				v_type = field_value;
-				
-			ELSIF (aux_json->>'column_id') = concat(lower(v_catfeature.feature_type),'cat_id') OR (aux_json->>'column_id') = concat(lower(v_catfeature.feature_type),'at_id') THEN
-				IF v_project_type ='UD' THEN
-					EXECUTE 'SELECT id FROM cat_' || v_catfeature.feature_type ||'  LIMIT 1' INTO field_value;
-				ELSE
-					EXECUTE 'SELECT id FROM cat_' || v_catfeature.feature_type ||' WHERE ' || v_catfeature.feature_type || 'type_id = ''' || v_catfeature.system_id || ''' LIMIT 1' INTO field_value;
-				END IF;
+								
 			ELSIF (aux_json->>'column_id') = 'code' THEN
 				field_value = v_code;
+				
 			ELSIF (aux_json->>'column_id') = 'node_1' THEN
 				field_value = v_node1;
+				
 			ELSIF (aux_json->>'column_id') = 'node_2' THEN
 				field_value = v_node2;
+				
 			ELSIF (aux_json->>'column_id') = 'gis_length' THEN
 				field_value = v_gislength;
+				
 			ELSIF  (aux_json->>'column_id')='epa_type' THEN
 				EXECUTE 'SELECT epa_default FROM '||(v_catfeature.feature_type)||'_type WHERE id = $1'
 					INTO field_value
-					USING v_catfeature.system_id;
-
-			-- special values for consistency on depth values for node-arc on ud projects
-			ELSIF (aux_json->>'column_id') = 'y1' THEN
-				v_min = (SELECT geom1 FROM cat_arc WHERE id=(SELECT arccat_id FROM arc WHERE arc_id=p_id));
-				v_max = (SELECT ymax FROM node WHERE node_id=(SELECT node_1 FROM arc WHERE arc_id=p_id));
-				v_widgetcontrols = '{"minValue":'||v_min||', "maxValue":'||v_max||'}';
-			ELSIF (aux_json->>'column_id') = 'y2' THEN
-				v_min = (SELECT geom1 FROM cat_arc WHERE id=(SELECT arccat_id FROM arc WHERE arc_id=p_id));
-				v_max = (SELECT ymax FROM node WHERE node_id=(SELECT node_1 FROM arc WHERE arc_id=p_id));
-				v_widgetcontrols = '{"minValue":'||v_min||', "maxValue":'||v_max||'}';
-			ELSIF (aux_json->>'column_id') = 'ymax' THEN
-				v_min = (SELECT max(y) FROM (SELECT y1 as y FROM arc WHERE node_1=p_id UNION SELECT y2 FROM arc WHERE node_2=p_id)a);
-				v_widgetcontrols = '{"minValue":'||v_min||', "maxValue":999}';
-
+					USING v_catfeature.id;
 					
 			-- mapzones values
 			ELSIF (aux_json->>'column_id') = 'sector_id' THEN
@@ -416,7 +415,11 @@ BEGIN
 				field_value = v_expl_id;
 			ELSIF (aux_json->>'column_id') = 'muni_id' THEN
 				field_value = v_muni_id;
-				
+
+			-- elevation from raster
+			ELSIF ((aux_json->>'column_id') = 'elevation' OR (aux_json->>'column_id') = 'top_elev') AND v_sys_raster_dem AND v_edit_upsert_elevation_from_dem THEN
+				field_value = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id = (SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+							
 			-- catalog values
 			ELSIF (aux_json->>'column_id')='cat_dnom' THEN
 				field_value = v_dnom;
@@ -430,48 +433,59 @@ BEGIN
 				field_value = v_shape;
 			ELSIF (aux_json->>'column_id')='matcat_id' THEN	
 				field_value = v_matcat_id;
-				
-			-- rest of vaules
-			ELSE
+			
+			-- catalog
+			ELSIF (aux_json->>'column_id') = 'arccat_id' OR (aux_json->>'column_id') = 'nodecat_id' OR  (aux_json->>'column_id') = 'connecat_id'  THEN	
+				SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array_aux) AS a 
+					WHERE ((a->>'aux_param') = v_catfeature.system_id OR (a->>'aux_param') IS NULL) AND 
+					((a->>'param') = concat(lower(v_catfeature.feature_type),'cat_id') OR (a->>'param') = concat(lower(v_catfeature.feature_type),'at_id'));
+			-- *_type
+			ELSIF (aux_json->>'column_id') =  'fluid_type' OR  (aux_json->>'column_id') =  'function_type' OR (aux_json->>'column_id') =  'location_type' OR (aux_json->>'column_id') =  'category_type' THEN
+				SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array_aux) AS a 
+					WHERE ((a->>'param') = (aux_json->>'column_id') AND left ((a->>'parameter'),3) = left(lower(v_catfeature.feature_type),3));
+		
+			-- rest (including addfields)
+			ELSE 
 				SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a WHERE (a->>'param') = (aux_json->>'column_id');
-
-				raise notice 'field_value %', field_value;
 			END IF;
+
+			--specific values for ud
+			IF v_project_type = 'UD' THEN
+									
+				IF (aux_json->>'column_id') = 'sys_y1' THEN
+					field_value =v_noderecord1.sys_ymax;
+
+				ELSIF (aux_json->>'column_id') = 'sys_elev1' THEN
+					field_value =v_noderecord1.sys_elev;
 				
+				ELSIF (aux_json->>'column_id') = 'sys_y2' THEN
+					field_value =v_noderecord2.sys_ymax;
+
+				ELSIF (aux_json->>'column_id') = 'sys_elev2' THEN
+					field_value =v_noderecord2.sys_elev;	
+				END IF;
+			END IF;
+
+			-- setting widgetcontrols when null (user has not configurated form fields table).
+			IF (aux_json->>'widgetcontrols') IS NULL THEN
+				v_input = '{"client":{"device":3,"infoType":100,"lang":"es"}, "feature":{"tableName":"'||v_tablename||'", "idName":"'||v_idname||'", "id":"'||p_id||
+					'"}, "data":{"tgOp":"'||p_tg_op||'", "json":'||aux_json||', "node1":"'||v_node1||'", "node2":"'||v_node2||'"}}';
+				SELECT gw_api_get_widgetcontrols (v_input) INTO v_widgetcontrols;
+				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'widgetcontrols', v_widgetcontrols);
+			END IF;
+			
+			
 		ELSIF  p_tg_op ='UPDATE' THEN 
 				
 			field_value := (v_values_array->>(aux_json->>'column_id'));
 		END IF;
 
-		-- setting special characteristics for insert also for update
-		IF p_tg_op='INSERT' OR p_tg_op='UPDATE' THEN 
-
-			-- special values for consistency on depth values for node-arc on ud projects
-			IF (aux_json->>'column_id') = 'y1' THEN
-				v_min = (SELECT geom1 FROM cat_arc WHERE id=(SELECT arccat_id FROM arc WHERE arc_id=p_id));
-				v_max = (SELECT ymax FROM node WHERE node_id=(SELECT node_1 FROM arc WHERE arc_id=p_id));
-				v_widgetcontrols = '{"minValue":'||v_min||', "maxValue":'||v_max||'}';
-				
-			ELSIF (aux_json->>'column_id') = 'y2' THEN
-				v_min = (SELECT geom1 FROM cat_arc WHERE id=(SELECT arccat_id FROM arc WHERE arc_id=p_id));
-				v_max = (SELECT ymax FROM node WHERE node_id=(SELECT node_1 FROM arc WHERE arc_id=p_id));
-				v_widgetcontrols = '{"minValue":'||v_min||', "maxValue":'||v_max||'}';
-				
-			ELSIF (aux_json->>'column_id') = 'ymax' THEN
-				v_min = (SELECT max(y) FROM (SELECT y1 as y FROM arc WHERE node_1=p_id UNION SELECT y2 FROM arc WHERE node_2=p_id)a);
-				v_widgetcontrols = '{"minValue":'||v_min||', "maxValue":999}';
-			END IF;
-
-		END IF;
-		
-		
 		-- setting the array
 		IF (aux_json->>'widgettype')='combo' THEN 
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'selectedId', COALESCE(field_value, ''));
 		ELSE 
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'value', COALESCE(field_value, ''));
-		END IF;
-		
+		END IF;	
 	
         END LOOP;  
   

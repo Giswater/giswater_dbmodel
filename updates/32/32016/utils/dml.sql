@@ -12,7 +12,8 @@ UPDATE audit_cat_table SET isdeprecated=true WHERE id='v_rtc_hydrometer_period';
 UPDATE audit_cat_table SET isdeprecated=true WHERE id='inp_options';
 UPDATE audit_cat_table SET isdeprecated=true WHERE id='v_rtc_dma_parameter_period';
 UPDATE audit_cat_table SET isdeprecated=true WHERE id='v_rtc_dma_hydrometer_period';
-UPDATE audit_cat_table SET isdeprecated=true WHERE id='v_rtc_hydrometer_x_connec';
+--UPDATE commented on 19/10/2019 becasuse it is used on corporate environtment. On 3.3.007 will be created again for those of that was removed
+--UPDATE audit_cat_table SET isdeprecated=true WHERE id='v_rtc_hydrometer_x_connec';
 UPDATE audit_cat_table SET isdeprecated=true WHERE id='config';
 
 
@@ -65,7 +66,8 @@ where id=2118;
 UPDATE audit_cat_function SET isdeprecated=TRUE where id=2688;
 UPDATE audit_cat_function SET isdeprecated=TRUE where id=1108;
 
-INSERT INTO sys_csv2pg_cat VALUES (21, 'Import visit lot', 'Import visit lot', 'The csv file must contains next columns on same position: feature_id, 
+INSERT INTO sys_csv2pg_cat (id, name, name_i18n, csv_structure, sys_role, formname, functionname, isdeprecated, orderby, readheader)
+VALUES (21, 'Import visit lot', 'Import visit lot', 'The csv file must contains next columns on same position: feature_id, 
 feature_type, visitclass_id, lot_id, status (4 is finished), date (AAAA/MM/DD), param1, param2', 'role_om', 'importcsv', 'gw_fct_utils_csv2pg_import_omvisitlot', NULL, NULL, false);
 
 INSERT INTO sys_fprocess_cat VALUES (54, 'Import lot visits', 'om', 'Import lot visits', 'utils');
@@ -148,29 +150,57 @@ VALUES (2754, 'gw_trg_cat_manager', 'utils', 'trigger function', 'Propagate chan
 
 
 INSERT INTO audit_cat_error(id, error_message, log_level, show_user, project_type, isdeprecated)
-VALUES (3024, 'Can''t delete the parameter. There is at least one event related to it', 2, true,'utils',false);
+VALUES (3024, 'Can''t delete the parameter. There is at least one event related to it', 2, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3024;
 
 INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user, project_type, isdeprecated)
 VALUES (3026, 'Can''t delete the class. There is at least one visit related to it','The class will be set to unactive.', 
-1, true,'utils',false);
+1, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3026;
+
 
 INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user, project_type, isdeprecated)
 VALUES (3028, 'Can''t modify typevalue:','It''s impossible to change system values.', 
-2, true,'utils',false);
+2, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3028;
+
 
 INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user, project_type, isdeprecated)
 VALUES (3030, 'Can''t delete typevalue:','It''s being used in a table.', 
-2, true,'utils',false);
+2, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3030;
+
 
 INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user, project_type, isdeprecated)
 VALUES (3032, 'Can''t apply the foreign key','there are values already inserted that are not present in the catalog', 
-2, true,'utils',false);
+2, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3032;
+
 
 INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user, project_type, isdeprecated)
-VALUES (3034, 'Inventory state and state type of planified features has been updated',null, 1, true,'utils',false);
+VALUES (3034, 'Inventory state and state type of planified features has been updated',null, 1, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3034;
+
 
 INSERT INTO audit_cat_error(id, error_message,hint_message, log_level, show_user, project_type, isdeprecated)
-VALUES (3036, 'Selected state type doesn''t correspond with state','Modify the value of state or state type.', 2, true,'utils',false);
+VALUES (3036, 'Selected state type doesn''t correspond with state','Modify the value of state or state type.', 2, true,'utils',false)
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE audit_cat_error SET isdeprecated=FALSE WHERE id=3036;
+
+
 
 INSERT INTO audit_cat_table VALUES ('om_visit_type', 'O&M', 'Catalog of visit types', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE, NULL);
 INSERT INTO audit_cat_table VALUES ('om_visit_class', 'O&M', 'Catalog of visit classes', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE, NULL);
@@ -273,9 +303,16 @@ UPDATE audit_cat_param_user SET formname='dynamic_param' WHERE id='visitclass_vd
 
 UPDATE audit_cat_function SET istoolbox = FALSE WHERE function_name = 'gw_fct_edit_check_data' OR function_name = 'gw_fct_om_check_data';
 
-INSERT INTO config_param_system(parameter, value, data_type, context, descript, label,   project_type, isdeprecated)
+INSERT INTO config_param_system(parameter, value, data_type, context, descript, label, project_type, isdeprecated)
 VALUES ('plan_psector_statetype', '{"done_planified":"98", "done_ficticious":"97", "canceled_planified":"96", "canceled_ficticious":"95"}', 'json', 'plan', 
-'Psector statetype assigned to features after executing or canceling planification', 'Psector state type:', 'utils', false);
+'Psector statetype assigned to features after executing or canceling planification', 'Psector state type:', 'utils', false) 
+-- in case of variable exists
+ON CONFLICT (parameter) DO NOTHING;
+
+-- in case of variable exists (or in case was inserted lines before only redundant update)
+UPDATE config_param_system SET label='Psector state type:',  project_type='utils', isdeprecated=FALSE WHERE parameter='plan_psector_statetype';
+
+
 
 UPDATE audit_cat_param_user SET description='If true, connec''s label and vnode symbol will be rotated using the angle of link. You need to have label symbol configurated with "CASE WHEN label_x = 5 THEN ''    '' ||  "connec_id"  
 ELSE  "connec_id"  || ''    ''  END", label_x as quadrant and label_rotation as rotation', label='Automatic rotation for connec labels and vnodes:' WHERE id='edit_link_connecrotation_update';

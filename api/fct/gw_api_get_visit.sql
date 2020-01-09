@@ -154,6 +154,7 @@ DECLARE
 	v_tab_data boolean;
 	v_offline boolean;
 	v_lot integer;
+	v_userrole text;
 	
 
 BEGIN
@@ -190,6 +191,15 @@ BEGIN
 	v_featuretablename = (((p_data ->>'data')::json->>'relatedFeature')::json->>'tableName');
 	v_tab_data = (((p_data ->>'form')::json->>'tabData')::json->>'active')::text;
 	v_offline = ((p_data ->>'data')::json->>'isOffline')::boolean;
+	
+	--   Get editability of layer
+	EXECUTE 'SELECT r1.rolname as "role"
+		FROM pg_catalog.pg_roles r JOIN pg_catalog.pg_auth_members m
+		ON (m.member = r.oid)
+		JOIN pg_roles r1 ON (m.roleid=r1.oid)                                  
+		WHERE r.rolcanlogin AND r.rolname = ''' || current_user || '''
+		ORDER BY 1;'
+        INTO v_userrole;
 
 	--v_offline = 'true';
 
@@ -211,23 +221,39 @@ BEGIN
 		
 		--new visit
 		IF v_id IS NULL OR (SELECT id FROM om_visit WHERE id=v_id::bigint) IS NULL THEN
+			
+			-- Featuretablename is null when visit is unexpected generic
+			IF v_featuretablename IS NOT NULL AND v_featureid IS NOT NULL THEN
+				EXECUTE ('SELECT sys_type FROM '||v_featuretablename||' LIMIT 1') INTO v_featuretype;
+			END IF;
 
 			-- get vdefault visitclass
 			IF v_offline THEN
-				raise notice '======> %',v_featuretablename;
 				-- getting visit class in function of visit type and tablename (when tablename IS NULL then noinfra)
 				v_visitclass := (SELECT id FROM om_visit_class WHERE visit_type=p_visittype AND tablename = v_featuretablename AND param_options->>'offlineDefault' = 'true' LIMIT 1)::integer;
+				IF v_visitclass IS NULL THEN
+					v_visitclass := (SELECT id FROM om_visit_class WHERE feature_type=upper(v_featuretype) AND visit_type=1 LIMIT 1);
+				END IF;
 			ELSE
 				-- getting visit class in function of visit type and tablename (when tablename IS NULL then noinfra)
 				IF p_visittype=1 THEN
 					v_visitclass := (SELECT value FROM config_param_user WHERE parameter = concat('om_visit_planned_vdef_', v_featuretablename) AND cur_user=current_user)::integer;	
 				ELSIF  p_visittype=2 THEN
-
+					
 					IF v_featuretablename IS NOT NULL THEN
 						v_visitclass := (SELECT value FROM config_param_user WHERE parameter = concat('om_visit_unspected_vdef_', v_featuretablename) AND cur_user=current_user)::integer;	
 					ELSE
 						v_visitclass := (SELECT value FROM config_param_user WHERE parameter = concat('om_visit_noinfra_vdef') AND cur_user=current_user)::integer;
 					END IF;
+				END IF;
+
+				-- Set visitclass for unexpected generic
+				IF v_featuretype IS NULL THEN
+					v_visitclass := (SELECT id FROM om_visit_class WHERE feature_type IS NULL AND visit_type=p_visittype LIMIT 1);
+				END IF;
+
+				IF v_visitclass IS NULL THEN
+					v_visitclass := (SELECT id FROM om_visit_class WHERE feature_type=upper(v_featuretype) AND visit_type=p_visittype LIMIT 1);
 				END IF;
 			END IF;				
 							
@@ -243,12 +269,11 @@ BEGIN
 
 	
 	--  get formname and tablename
-
 	v_formname := (SELECT formname FROM config_api_visit WHERE visitclass_id=v_visitclass);
 	v_tablename := (SELECT tablename FROM config_api_visit WHERE visitclass_id=v_visitclass);
 	v_ismultievent := (SELECT ismultievent FROM om_visit_class WHERE id=v_visitclass);
-
-	-- getting if is new visit
+	
+	-- getting provisional visit id if is new visit
 	IF (SELECT id FROM om_visit WHERE id=v_id::int8) IS NULL OR v_id IS NULL THEN
 
 		v_id := (SELECT max(id)+1 FROM om_visit);
@@ -378,7 +403,7 @@ BEGIN
 	--IF v_offline != 'true' THEN
 	
 	v_filefeature = '{"featureType":"file", "tableName":"om_visit_event_photo", "idName": "id"}';	
-	
+	/*
 	IF v_addfile IS NOT NULL THEN
 
 		RAISE NOTICE '--- ACTION ADD FILE /PHOTO ---';
@@ -415,7 +440,7 @@ BEGIN
 		v_message = (v_deletefile ->>'message')::json;
 		
 	END IF;
-	
+	*/
 	--END IF;
 	--  Create tabs array	
 	v_formtabs := '[';
@@ -530,7 +555,12 @@ BEGIN
 					array_index := array_index + 1;
 
 					v_fieldvalue := (v_values->>(aux_json->>'column_id'));	
-		
+					
+					-- Disable widgets from visit form if user has no permisions
+					IF v_userrole LIKE '%role_basic%' THEN
+						v_fields[array_index] := gw_fct_json_object_set_key(v_fields[array_index], 'disabled', True);
+					END IF;
+					
 					IF (aux_json->>'widgettype')='combo' THEN 
 						v_fields[array_index] := gw_fct_json_object_set_key(v_fields[array_index], 'selectedId', COALESCE(v_fieldvalue, ''));
 
@@ -602,8 +632,9 @@ BEGIN
 		
 		--show tab only if it is not new visit or offline is true
 		
+		IF NOT isnewvisit THEN
 			--filling tab (only if it's active)
-
+			
 			IF v_activefilestab THEN
 
 				-- getting filterfields
@@ -659,9 +690,10 @@ BEGIN
 
 			RAISE NOTICE ' --- BUILDING tabFiles with v_tabaux  ---';
 
-	 		-- setting pageInfo
+			-- setting pageInfo
 			v_tabaux := gw_fct_json_object_set_key(v_tabaux, 'pageInfo', v_pageinfo);
 			v_formtabs := v_formtabs  || ',' || v_tabaux::text;
+		END IF;
 
 	--closing tabs array
 	v_formtabs := (v_formtabs ||']');

@@ -7,7 +7,8 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 1202
 
 
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_arc() RETURNS trigger AS
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_edit_arc()
+  RETURNS trigger AS
 $BODY$
 DECLARE 
 	v_inp_table varchar;
@@ -62,7 +63,8 @@ BEGIN
 
 			IF v_man_table='parent' THEN
 				IF NEW.arc_type IS NULL THEN 
-					NEW.arc_type:=(SELECT "value" FROM config_param_user WHERE "parameter"='arccat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+					NEW.arc_type:=(SELECT "value" FROM config_param_user WHERE "parameter"='arctype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+					
 				END IF;
 				
 			ELSIF (NEW.arc_type IS NULL) AND v_man_table !='parent' THEN
@@ -367,30 +369,31 @@ BEGIN
 			END IF;
 
 			--check relation state - state_type
-	        IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
+			IF (NEW.state_type != OLD.state_type) AND NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
 	        	RETURN audit_function(3036,1212,NEW.state::text);
 	       	END IF;		
 	       					
 			-- The geom
-			IF st_equals(NEW.the_geom, OLD.the_geom) IS FALSE  THEN
+			IF st_orderingequals(NEW.the_geom, OLD.the_geom) IS FALSE  THEN
 				UPDATE arc SET the_geom=NEW.the_geom WHERE arc_id = OLD.arc_id;
 			END IF;
 
 			IF (NEW.epa_type != OLD.epa_type) THEN    
 			 
 				IF (OLD.epa_type = 'CONDUIT') THEN 
-				v_inp_table:= 'inp_conduit';
+					v_inp_table:= 'inp_conduit';
 				ELSIF (OLD.epa_type = 'PUMP') THEN 
-				v_inp_table:= 'inp_pump';
+					v_inp_table:= 'inp_pump';
 				ELSIF (OLD.epa_type = 'ORIFICE') THEN 
-				v_inp_table:= 'inp_orifice';
+					v_inp_table:= 'inp_orifice';
 				ELSIF (OLD.epa_type = 'WEIR') THEN 
-				v_inp_table:= 'inp_weir';
+					v_inp_table:= 'inp_weir';
 				ELSIF (OLD.epa_type = 'OUTLET') THEN 
-				v_inp_table:= 'inp_outlet';
+					v_inp_table:= 'inp_outlet';
 				ELSIF (OLD.epa_type = 'VIRTUAL') THEN 
-				v_inp_table:= 'inp_virtual';
+					v_inp_table:= 'inp_virtual';
 				END IF;
+				
 				IF v_inp_table IS NOT NULL THEN
 					v_sql:= 'DELETE FROM '||v_inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
 					EXECUTE v_sql;
@@ -399,17 +402,17 @@ BEGIN
 				v_inp_table := NULL;
 
 				IF (NEW.epa_type = 'CONDUIT') THEN 
-				v_inp_table:= 'inp_conduit';
+					v_inp_table:= 'inp_conduit';
 				ELSIF (NEW.epa_type = 'PUMP') THEN 
-				v_inp_table:= 'inp_pump';
+					v_inp_table:= 'inp_pump';
 				ELSIF (NEW.epa_type = 'ORIFICE') THEN 
-				v_inp_table:= 'inp_orifice';
+					v_inp_table:= 'inp_orifice';
 				ELSIF (NEW.epa_type = 'WEIR') THEN 
-				v_inp_table:= 'inp_weir';
+					v_inp_table:= 'inp_weir';
 				ELSIF (NEW.epa_type = 'OUTLET') THEN 
-				v_inp_table:= 'inp_outlet';
+					v_inp_table:= 'inp_outlet';
 				ELSIF (NEW.epa_type = 'VIRTUAL') THEN 
-				v_inp_table:= 'inp_virtual';
+					v_inp_table:= 'inp_virtual';
 				END IF;
 				IF v_inp_table IS NOT NULL THEN
 					v_sql:= 'DELETE FROM '||v_inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
@@ -435,33 +438,35 @@ BEGIN
 		IF v_link_path IS NOT NULL THEN
 			NEW.link = replace(NEW.link, v_link_path,'');
 		END IF;
-		
-		
-		-- depth fields
-		IF (NEW.y1 <> OLD.y1) OR (NEW.y2 <> OLD.y2) THEN
-			UPDATE arc SET y1=NEW.y1, y2=NEW.y2 WHERE arc_id=NEW.arc_id;
-		END IF;
-		
-		IF (NEW.elev1 <> OLD.elev1) OR (NEW.elev2 <> OLD.elev2) THEN
-			UPDATE arc SET elev1=NEW.elev1, elev2=NEW.elev2 WHERE arc_id=NEW.arc_id;
+
+		-- Update of topocontrol fields only when one if it has changed in order to prevent to be triggered the topocontrol without changes
+		IF (NEW.y1 != OLD.y1) OR (NEW.y1 IS NULL AND OLD.y1 IS NOT NULL) OR (NEW.y1 IS NOT NULL AND OLD.y1 IS NULL) OR
+		   (NEW.y2 != OLD.y2) OR (NEW.y2 IS NULL AND OLD.y2 IS NOT NULL) OR (NEW.y2 IS NOT NULL AND OLD.y2 IS NULL) OR
+		   (NEW.custom_y1 != OLD.custom_y1) OR (NEW.custom_y1 IS NULL AND OLD.custom_y1 IS NOT NULL) OR (NEW.custom_y1 IS NOT NULL AND OLD.custom_y1 IS NULL) OR
+		   (NEW.custom_y2 != OLD.custom_y2) OR (NEW.custom_y2 IS NULL AND OLD.custom_y2 IS NOT NULL) OR (NEW.custom_y2 IS NOT NULL AND OLD.custom_y2 IS NULL) OR
+		   (NEW.elev1 != OLD.elev1) OR (NEW.elev1 IS NULL AND OLD.elev1 IS NOT NULL) OR (NEW.elev1 IS NOT NULL AND OLD.elev1 IS NULL) OR
+		   (NEW.elev2 != OLD.elev2) OR (NEW.elev2 IS NULL AND OLD.elev2 IS NOT NULL) OR (NEW.elev2 IS NOT NULL AND OLD.elev2 IS NULL) OR
+		   (NEW.custom_elev1 != OLD.custom_elev1) OR (NEW.custom_elev1 IS NULL AND OLD.custom_elev1 IS NOT NULL) OR (NEW.custom_elev1 IS NOT NULL AND OLD.custom_elev1 IS NULL) OR
+		   (NEW.custom_elev2 != OLD.custom_elev2) OR (NEW.custom_elev2 IS NULL AND OLD.custom_elev2 IS NOT NULL) OR (NEW.custom_elev2 IS NOT NULL AND OLD.custom_elev2 IS NULL) THEN  
+			UPDATE arc SET y1=NEW.y1, y2=NEW.y2, custom_y1=NEW.custom_y1, custom_y2=NEW.custom_y2, elev1=NEW.elev1, elev2=NEW.elev2,
+					custom_elev1=NEW.custom_elev1, custom_elev2=NEW.custom_elev2
+					WHERE arc_id=NEW.arc_id;
 		END IF;
 
-		IF (NEW.custom_y1 <> OLD.custom_y1) OR (NEW.custom_y2 <> OLD.custom_y2) THEN
-			UPDATE arc SET custom_y1=NEW.custom_y1, custom_y2=NEW.custom_y2 WHERE arc_id=NEW.arc_id;
-		END IF;		
-
+		
+		-- parent table fields
 		UPDATE arc 
-			SET  y1=NEW.y1, y2=NEW.y2, custom_y1=NEW.custom_y1, custom_y2=NEW.custom_y2, elev1=NEW.elev1, elev2=NEW.elev2, custom_elev1=NEW.custom_elev1, custom_elev2=NEW.custom_elev2 , 
-			arc_type=NEW.arc_type, arccat_id=NEW.arccat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type,
+			SET  arc_type=NEW.arc_type, arccat_id=NEW.arccat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type,
 			annotation= NEW.annotation, "observ"=NEW.observ,"comment"=NEW.comment, inverted_slope=NEW.inverted_slope, custom_length=NEW.custom_length, dma_id=NEW.dma_id, 
-			soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type,location_type=NEW.location_type, workcat_id=NEW.workcat_id, 
-			buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate,ownercat_id=NEW.ownercat_id, 
-			muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id,  postcode=NEW.postcode, streetaxis2_id=NEW.streetaxis2_id, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2,
-			postnumber=NEW.postnumber, postnumber2=NEW.postnumber2,  descript=NEW.descript, link=NEW.link, verified=NEW.verified, the_geom=NEW.the_geom, 
-			undelete=NEW.undelete,label_x=NEW.label_x,label_y=NEW.label_y, label_rotation=NEW.label_rotation,workcat_id_end=NEW.workcat_id_end,
-			code=NEW.code, publish=NEW.publish, inventory=NEW.inventory, enddate=NEW.enddate, uncertain=NEW.uncertain, expl_id=NEW.expl_id, num_value = NEW.num_value,lastupdate=now(), lastupdate_user=current_user
+			soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type,location_type=NEW.location_type, 
+			workcat_id=NEW.workcat_id, buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate,ownercat_id=NEW.ownercat_id, muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id,  
+			postcode=NEW.postcode, streetaxis2_id=NEW.streetaxis2_id, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, postnumber=NEW.postnumber, 
+			postnumber2=NEW.postnumber2,  descript=NEW.descript, link=NEW.link, verified=NEW.verified, the_geom=NEW.the_geom, undelete=NEW.undelete,label_x=NEW.label_x,
+			label_y=NEW.label_y, label_rotation=NEW.label_rotation,workcat_id_end=NEW.workcat_id_end, code=NEW.code, publish=NEW.publish, inventory=NEW.inventory, 
+			enddate=NEW.enddate, uncertain=NEW.uncertain, expl_id=NEW.expl_id, num_value = NEW.num_value,lastupdate=now(), lastupdate_user=current_user
 			WHERE arc_id=OLD.arc_id;	
-		   
+
+		-- child tables fields
 		IF v_man_table='man_conduit' THEN
 								
 			UPDATE man_conduit SET arc_id=NEW.arc_id
@@ -484,7 +489,8 @@ BEGIN
 			WHERE arc_id=OLD.arc_id;
 			
 		END IF;
-			-- man addfields update
+
+		-- custom addfields 
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM man_addfields_parameter 
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
@@ -512,7 +518,7 @@ BEGIN
 				END IF;
 			
 			END LOOP;
-	    END IF;       
+		END IF;       
 			
 		RETURN NEW;
 
@@ -521,6 +527,11 @@ BEGIN
 	 	PERFORM gw_fct_check_delete(OLD.arc_id, 'ARC');
 		 
 		DELETE FROM arc WHERE arc_id = OLD.arc_id;
+
+		--Delete addfields
+  		DELETE FROM man_addfields_value WHERE feature_id = OLD.arc_id  and parameter_id in 
+  		(SELECT id FROM man_addfields_parameter WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.arc_type);
+  		
 		RETURN NULL;
 		 
 	 END IF;
