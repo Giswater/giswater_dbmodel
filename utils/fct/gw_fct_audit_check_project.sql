@@ -217,9 +217,9 @@ BEGIN
 		END IF;
 	END LOOP;
 
-	-- delete mandatory values of config_param_user where feature is deprecated
-	IF v_project_type='WS' THEN
-
+	-- manage mandatory values of config_param_user where feature is deprecated
+	IF 'role_admin' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) AND v_project_type='WS' THEN
+	
 		DELETE FROM audit_cat_param_user WHERE id IN (SELECT audit_cat_param_user.id FROM audit_cat_param_user, node_type 
 		WHERE active=false AND concat(lower(node_type.id),'_vdefault') = audit_cat_param_user.id);
 
@@ -231,7 +231,7 @@ BEGIN
 		
 	END IF;
 
-	-- sincronize config_param_user & audit_cat_param_user
+	-- delete on config_param_user fron updated values on audit_cat_param_user
 	DELETE FROM config_param_user WHERE parameter NOT IN (SELECT id FROM audit_cat_param_user) AND cur_user = current_user;
 
 	--If user has activated full project control, depending on user role - execute corresponding check function
@@ -307,10 +307,10 @@ BEGIN
 
 	-- check qgis project (1)
 	IF v_fprocesscat_id_aux=1 THEN
-
-		SELECT boot_val INTO v_table_host FROM pg_settings WHERE name='listen_addresses';
-		SELECT current_database() INTO v_table_dbname;
-		SELECT current_schema() INTO v_table_schema;
+	
+		-- get values using v_edit_node as 'current'  (in case v_edit_node is wrong all will he wrong)
+		SELECT table_host, table_dbname, table_schema INTO v_table_host, v_table_dbname, v_table_schema 
+		FROM audit_check_project where table_id = 'v_edit_node' and user_name=current_user;
 		
 		--check layers host
 		SELECT count(*), string_agg(table_id,',') INTO v_count, v_layer_list 
