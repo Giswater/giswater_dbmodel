@@ -18,15 +18,15 @@ $BODY$
 -- GET FORMS FOR WORK OFFLINE
 
 -- unexpected first call
-SELECT ud.ud_sample_full.gw_api_get_visit('1', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
+SELECT SCHEMA_NAME.gw_api_get_visit('1', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
 "data":{"isOffline":"true", "relatedFeature":{"type":"node", "tableName":"ve_node"},"fields":{},"pageInfo":null}}$$)
 
 -- planned first call
-SELECT ud.ud_sample_full.gw_api_get_visit('planned', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
+SELECT SCHEMA_NAME.gw_api_get_visit('planned', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
 "data":{"isOffline":"true","relatedFeature":{"type":"node", "tableName":"ve_node},"fields":{},"pageInfo":null}}$$)
 
 -- no infra first call
-SELECT ud.ud_sample_full.gw_api_get_visit('2', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
+SELECT SCHEMA_NAME.gw_api_get_visit('2', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
 "data":{"isOffline":"true","relatedFeature":{"type":""},"fields":{},"pageInfo":null}}$$)
 
 -- modificacions de codi (a totes online i offline)
@@ -48,15 +48,15 @@ SELECT ud.ud_sample_full.gw_api_get_visit('2', $${"client":{"device":3,"infoType
 GET ONLINE FORMS
 
 -- unexpected first call
-SELECT ud.ud_sample_full.gw_api_get_visit('unexpected', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
+SELECT SCHEMA_NAME.gw_api_get_visit('unexpected', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
 "data":{"isOffline":"false", "relatedFeature":{"type":"node", "id":"2074", "tableName":"ve_node"},"fields":{},"pageInfo":null}}$$)
 
 -- planned first call
-SELECT ud.ud_sample_full.gw_api_get_visit('planned', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
+SELECT SCHEMA_NAME.gw_api_get_visit('planned', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
 "data":{"isOffline":"false","relatedFeature":{"type":"node", "id":"2074", "tableName":"ve_node"},"fields":{},"pageInfo":null}}$$)
 
 -- no infra first call
-SELECT ud.ud_sample_full.gw_api_get_visit('unexpected', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
+SELECT SCHEMA_NAME.gw_api_get_visit('unexpected', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
 "data":{"isOffline":"false","relatedFeature":{"type":""},"fields":{},"pageInfo":null}}$$)
 
 	
@@ -152,6 +152,7 @@ DECLARE
 	v_tab_data boolean;
 	v_offline boolean;
 	v_lot integer;
+	v_code text;
 	
 
 BEGIN
@@ -190,7 +191,7 @@ BEGIN
 	v_offline = ((p_data ->>'data')::json->>'isOffline')::boolean;
 
 	--v_offline = 'true';
-
+	
 	-- Check if exists some open visit on related feature with the class configured as vdefault for user  (0 for finished visits and 4 for suspended visit)
 	IF v_featuretype IS NOT NULL AND v_featureid IS NOT NULL THEN
 		EXECUTE ('SELECT v.id FROM om_visit_x_'|| (v_featuretype) ||' a JOIN om_visit v ON v.id=a.visit_id '||
@@ -250,7 +251,7 @@ BEGIN
 			v_visitclass := (SELECT class_id FROM om_visit WHERE id=v_id::bigint);
 		END IF;
 	END IF;
-
+	
 	IF v_visitclass IS NULL THEN
 		v_visitclass := 0;
 	END IF;
@@ -313,6 +314,8 @@ BEGIN
 		v_visitextcode =  (SELECT value FROM config_param_user WHERE parameter = 'visitextcode_vdefault' AND cur_user=current_user)::text;		
 		--visitcat
 		v_visitcat = (SELECT value FROM config_param_user WHERE parameter = 'visitcat_vdefault' AND cur_user=current_user)::integer;
+		--code
+		EXECUTE 'SELECT code FROM '||v_featuretablename||' WHERE ' || (v_featuretype) || '_id = '||v_featureid||'::text' INTO v_code;
 
 		-- lot
 		v_lot = (SELECT lot_id FROM om_visit_lot_x_user WHERE endtime IS NULL AND user_id=current_user);		
@@ -431,6 +434,7 @@ BEGIN
 	
 	--END IF;
 	--  Create tabs array	
+	
 	v_formtabs := '[';
      
 		-- Data tab
@@ -456,6 +460,13 @@ BEGIN
 					IF (aux_json->>'column_id') = 'arc_id' OR (aux_json->>'column_id')='node_id' OR (aux_json->>'column_id')='connec_id' OR (aux_json->>'column_id') ='gully_id' THEN
 						v_fields[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(v_fields[(aux_json->>'orderby')::INT], 'value', v_featureid);
 						RAISE NOTICE ' --- SETTING feature id VALUE % ---',v_featureid ;
+
+					END IF;
+
+					-- setting code value
+					IF (aux_json->>'column_id') = 'code' THEN
+						v_fields[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(v_fields[(aux_json->>'orderby')::INT], 'value', v_code);
+						RAISE NOTICE ' --- SETTING code VALUE % ---',v_code ;
 
 					END IF;
 					
