@@ -4,8 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: xxxx
-
+--FUNCTION CODE: 2640
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getvisitmanager(p_data json)
   RETURNS json AS
@@ -332,6 +331,12 @@ BEGIN
 				-- setting feature
 				p_data := gw_fct_json_object_set_key(p_data, 'feature', v_feature);
 
+				-- setting filterFields
+				v_filterfields := (((p_data->>'data')::json->>'fields')::json)->>'team_id';
+				v_data := (p_data->>'data');
+				v_data := gw_fct_json_object_set_key(v_data, 'filterFields', '{"team_id":'||v_filterfields||'}');
+				p_data := gw_fct_json_object_set_key(p_data, 'data', v_data);
+				
 				--refactor tabNames
 				p_data := replace (p_data::text, 'tabFeature', 'feature');
 				
@@ -538,4 +543,6 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
+
 
