@@ -122,7 +122,7 @@ BEGIN
 
 							-- restore temporary value for config variables
 							UPDATE config SET arc_searchnodes_control=true;
-							UPDATE config_param_system SET value='TRUE' WHERE parameter='edit_enable_arc_nodes_update';
+							UPDATE config_param_system SET value='FALSE' WHERE parameter='edit_enable_arc_nodes_update';
 	
 							--Copy addfields from old arc to new arcs	
 							INSERT INTO man_addfields_value (feature_id, parameter_id, value_param)
