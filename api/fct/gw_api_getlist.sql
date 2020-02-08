@@ -113,6 +113,8 @@ DECLARE
 	v_orderby varchar;
 	v_ordertype varchar;
 	v_limit integer;
+	v_filterlot integer;
+	v_filterteam integer;
 	v_offset integer;
 	v_currentpage integer;
 	v_lastpage integer;
@@ -179,8 +181,10 @@ BEGIN
 	v_filter_feature := (p_data ->> 'data')::json->> 'filterFeatureField';
 	v_startdate = ((p_data ->>'data')::json->>'fields')::json->>'startdate'::text;
 	v_limit = ((p_data ->>'data')::json->>'fields')::json->>'limit'::text;
+	v_filterlot = ((p_data ->>'data')::json->>'fields')::json->>'lot_id'::text;
+	v_filterteam = ((p_data ->>'data')::json->>'fields')::json->>'team_id'::text;
 
-
+	
 	IF v_tabname IS NULL THEN
 		v_tabname = 'data';
 	END IF;
@@ -254,14 +258,14 @@ BEGIN
 			INTO v_the_geom;
 
 		--  get querytext
-		EXECUTE 'SELECT query_text FROM config_api_list WHERE tablename = $1 AND device = $2'
-			INTO v_query_result
+		EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2'
+			INTO v_query_result, v_default
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_api_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE 'SELECT query_text FROM config_api_list WHERE tablename = $1 LIMIT 1'
-				INTO v_query_result
+			EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1'
+				INTO v_query_result, v_default
 				USING v_tablename;
 		END IF;	
 
@@ -304,32 +308,44 @@ BEGIN
 				v_sign = '=';
 			END IF;
 
-			
+		    
 		    -- Get column type
 		    
 		    EXECUTE FORMAT ('SELECT data_type FROM information_schema.columns  WHERE table_schema = $1 AND table_name = %s AND column_name = $2', quote_literal(v_tablename))
 			USING v_schemaname, v_field
 			INTO v_columntype;
-
 			
 			-- creating the query_text
-			IF v_value IS NOT NULL AND v_field != 'limit' THEN
-				IF v_startdate IS NOT NULL THEN
-					v_query_result := v_query_result || ' AND '||v_field||'::'||v_columntype||' '||v_sign||' '||quote_literal(v_startdate) ||'::'||v_columntype;
-				ELSE
-					v_query_result := v_query_result || ' AND '||v_field||'::'||v_columntype||' '||v_sign||' '||quote_literal(v_value) ||'::'||v_columntype;
-				END IF;
-
-			ELSIF v_field='limit' THEN
+			
+			IF v_field='limit' THEN
 				IF v_limit IS NULL THEN
 					v_limit := v_value;
 				END IF;
+			ELSIF v_field='lot_id' THEN
+				IF v_filterlot IS NULL THEN
+					v_filterlot := v_value;
+				END IF;
+				v_query_result := v_query_result || ' AND '||v_field||'::text '||v_sign||' '||quote_literal(v_filterlot) ||'::text';
+			ELSIF v_field='team_id' and ((p_data ->>'feature')::json->>'tableName')::text != 'om_visit' THEN
+				IF v_filterteam IS NULL THEN
+					v_filterteam := v_value;
+				END IF;
+				IF v_filterteam IS NOT NULL THEN
+					v_query_result := v_query_result || ' AND '||v_field||'::text '||v_sign||' '||quote_literal(v_filterteam) ||'::text';
+				END IF;
+			ELSIF v_value IS NOT NULL  THEN
+				IF v_startdate IS NULL THEN
+					v_startdate := v_value;			
+				END IF;
+				v_query_result := v_query_result || ' AND '||v_field||'::'||COALESCE(v_columntype, 'text')||' '||v_sign||' '||quote_literal(v_startdate) ||'::'||COALESCE(v_columntype, 'text');
 			END IF;
 		END LOOP;
+		
 	END IF;
-
+	
 	-- add feature filter
 	SELECT array_agg(row_to_json(a)) into v_text from json_each(v_filter_feature) a;
+	
 	IF v_text IS NOT NULL THEN
 		FOREACH text IN ARRAY v_text
 		LOOP
@@ -342,7 +358,7 @@ BEGIN
 			v_query_result := v_query_result || ' AND '||v_field||'::text = '||quote_literal(v_value) ||'::text';
 		END LOOP;
 	END IF;
-
+	
 	-- add extend filter
 	IF v_the_geom IS NOT NULL AND v_canvasextend IS NOT NULL THEN
 		
@@ -356,9 +372,10 @@ BEGIN
 		v_query_result := v_query_result || ' AND ST_dwithin ( '|| v_tablename || '.' || v_the_geom || ',' || 
 		'ST_MakePolygon(ST_GeomFromText(''LINESTRING ('||v_x1||' '||v_y1||', '||v_x1||' '||v_y2||', '||v_x2||' '||v_y2||', '||v_x2||' '||v_y1||', '||v_x1||' '||v_y1||')'','||v_srid||')),1)';
 	END IF;
-
+	
 	-- add orderby
 	IF v_orderby IS NULL THEN
+
 		v_orderby = v_default->>'orderBy';
 		v_ordertype = v_default->>'orderType';
 	END IF;
@@ -372,14 +389,15 @@ BEGIN
 	IF v_ordertype IS NOT NULL THEN
 		v_query_result := v_query_result ||' '||v_ordertype;
 	END IF;
-		raise notice '%', v_query_result;
 
+	raise notice 'query - %', v_query_result;
 
 	-- add limit
+	
 	IF v_limit IS NULL THEN
 		v_limit = 15;
 	END IF;
-
+	
 	EXECUTE 'SELECT count(*)/'||v_limit||' FROM (' || v_query_result || ') a'
         INTO v_lastpage;
     
@@ -414,6 +432,7 @@ BEGIN
 		INTO v_filter_fields;
 
 		--  setting values of filter fields
+		
 		SELECT array_agg(row_to_json(a)) into v_text from json_each(v_filter_values) a;
 		i=1;
 		IF v_text IS NOT NULL THEN
@@ -432,18 +451,21 @@ BEGIN
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'value', COALESCE(v_startdate));
 					ELSIF (v_filter_fields[i]->>'column_id')='lot_id' AND v_filterlot IS NOT NULL THEN
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'selectedId', v_filterlot::text);
+					ELSIF (v_filter_fields[i]->>'column_id')='team_id' AND v_filterteam IS NOT NULL THEN
+						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'selectedId', v_filterteam::text);	
 					ELSIF (v_filter_fields[i]->>'widgettype')='combo' THEN
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'selectedId', v_value);
 					ELSE
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'value', v_value);
 					END IF;
 				END IF;
-
+				
 				--raise notice 'v_value % v_filter_fields %', v_value, v_filter_fields[i];
-
+				
 				i=i+1;			
-		
+			
 			END LOOP;
+			
 		END IF;
 
 	-- adding the widget of list
@@ -525,6 +547,3 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-
-
-

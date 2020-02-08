@@ -23,6 +23,7 @@ DECLARE
 	v_result text;
 	v_usenetworkgeom boolean;
 	v_dumpsubcatch boolean;
+	v_inpoptions json;
 	
 BEGIN
 
@@ -43,8 +44,12 @@ BEGIN
 	UPDATE inp_conduit SET barrels=(SELECT value FROM config_param_user WHERE parameter='epa_conduit_barrels_vdefault' AND cur_user=current_user)::integer WHERE barrels IS NULL;
 	UPDATE inp_junction SET y0=(SELECT value FROM config_param_user WHERE parameter='epa_junction_y0_vdefault' AND cur_user=current_user)::float WHERE y0 IS NULL;
 	UPDATE raingage SET scf=(SELECT value FROM config_param_user WHERE parameter='epa_rgage_scf_vdefault' AND cur_user=current_user)::float WHERE scf IS NULL;
-		
+
 	-- Upsert on rpt_cat_table
+	v_inpoptions = (SELECT (replace (replace (replace (array_to_json(array_agg(json_build_object((t.parameter),(t.value))))::text,'},{', ' , '),'[',''),']',''))::json 
+			FROM (SELECT parameter, value FROM config_param_user 
+			JOIN audit_cat_param_user a ON a.id=parameter	WHERE cur_user=current_user AND formname='epaoptions')t);
+		
 	DELETE FROM rpt_cat_result WHERE result_id=v_result;
 	INSERT INTO rpt_cat_result (result_id) VALUES (v_result);
 		
@@ -80,7 +85,7 @@ BEGIN
 	PERFORM gw_fct_utils_csv2pg_export_swmm_inp(v_result, null);
 	
 	-- manage return message
-	v_input = concat('{"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"parameters":{"resultId":"',v_result,'","saveOnDatabase":true}}}')::json;
+	v_input = concat('{"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"parameters":{"geometryLog":false, "resultId":"',v_result,'","saveOnDatabase":true}}}')::json;
 	SELECT gw_fct_pg2epa_check_data(v_input) INTO v_return;
 
 	v_return = replace(v_return::text, '"message":{"priority":1, "text":"Data quality analysis done succesfully"}', '"message":{"priority":1, "text":"Inp export done succesfully"}')::json;

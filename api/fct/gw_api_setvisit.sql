@@ -88,7 +88,7 @@ BEGIN
 	
 --  get input values
 	v_client = (p_data ->>'client')::json;
-	--v_id = ((p_data ->>'feature')::json->>'id');
+	v_id = ((p_data ->>'feature')::json->>'id');
 	v_feature = p_data ->>'feature';
 	v_class = ((p_data ->>'data')::json->>'fields')::json->>'class_id';
 	v_visitextcode = ((p_data ->>'data')::json->>'fields')::json->>'ext_code';
@@ -99,15 +99,17 @@ BEGIN
 	v_tablename = ((p_data ->>'feature')::json->>'tableName');
 	v_xcoord = (((p_data ->>'data')::json->>'deviceTrace')::json->>'xcoord')::float;
 	v_ycoord = (((p_data ->>'data')::json->>'deviceTrace')::json->>'ycoord')::float;
-	v_thegeom = st_setsrid(st_makepoint(v_xcoord, v_ycoord),25831);
+	v_thegeom = st_setsrid(st_makepoint(v_xcoord, v_ycoord),SRID_VALUE);
 	v_node_id = ((p_data ->>'data')::json->>'fields')::json->>'node_id';
 	v_addphotos = (p_data ->>'data')::json->>'photos';
 	v_parameter_id = ((p_data ->>'data')::json->>'fields')::json->>'parameter_id';
 
 	
-	-- Get new visit id
-	v_id := (SELECT max(id)+1 FROM om_visit);
-
+	-- Get new visit id if not exist
+	IF v_id IS NULL THEN
+		v_id := (SELECT max(id)+1 FROM om_visit);
+	END IF;
+	
 	IF v_id IS NULL AND (SELECT count(id) FROM om_visit) = 0 THEN
 		v_id=1;
 	END IF;

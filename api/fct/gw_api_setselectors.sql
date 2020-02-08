@@ -2,7 +2,7 @@
 
 -- DROP FUNCTION gw_api_setselectors(json);
 
-CREATE OR REPLACE FUNCTION gw_api_setselectors(p_data json)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_setselectors(p_data json)
   RETURNS json AS
 $BODY$
 
@@ -62,5 +62,3 @@ $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
   
-ALTER FUNCTION SCHEMA_NAME.gw_api_setselectors(json)
-  OWNER TO postgres;

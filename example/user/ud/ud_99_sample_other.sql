@@ -272,9 +272,8 @@ SELECT gw_fct_pg2epa_main($${
 UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'audit_project_user_control';
 
 --deprecated fields
-UPDATE arc SET sys_length=NULL;
-UPDATE node SET sys_elev=NULL;
-UPDATE sys_fprocess_cat SET fprocess_i18n= NULL;
+UPDATE arc SET _sys_length=NULL;
+UPDATE node SET _sys_elev=NULL;
 UPDATE node SET elev = null WHERE top_elev IS NOT NULL AND ymax IS NOT NULL;
 
 UPDATE connec SET customer_code = concat('cc',connec_id);
@@ -282,3 +281,5 @@ UPDATE connec SET customer_code = concat('cc',connec_id);
 UPDATE cat_grate SET cost_ut = 'N_BGRT1' WHERE id='N/I';
 
 UPDATE cat_arc SET cost = 'VIRTUAL_M', m2bottom_cost = 'VIRTUAL_M2', m3protec_cost = 'VIRTUAL_M3' WHERE id = 'VIRTUAL';
+
+UPDATE element SET code = concat ('E',element_id);
