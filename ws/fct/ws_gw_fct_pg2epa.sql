@@ -34,6 +34,7 @@ DECLARE
 	v_buildupmode integer;
 	v_usenetworkgeom boolean;
 	v_skipcheckdata boolean;
+	v_inpoptions json;
 	
 BEGIN
 
@@ -73,9 +74,13 @@ BEGIN
 	-- use previous network geometry
 	IF v_usenetworkgeom IS FALSE THEN
 
+		v_inpoptions = (SELECT (replace (replace (replace (array_to_json(array_agg(json_build_object((t.parameter),(t.value))))::text,'},{', ' , '),'[',''),']',''))::json 
+				FROM (SELECT parameter, value FROM config_param_user 
+				JOIN audit_cat_param_user a ON a.id=parameter	WHERE cur_user=current_user AND formname='epaoptions')t);
+
 		-- Upsert on rpt_cat_table
 		DELETE FROM rpt_cat_result WHERE result_id=v_result;
-		INSERT INTO rpt_cat_result (result_id) VALUES (v_result);
+		INSERT INTO rpt_cat_result (result_id, inpoptions) VALUES (v_result, v_inpoptions);
 
 		v_usenetworkgeom = 'FALSE';
 
@@ -121,6 +126,10 @@ BEGIN
 		DELETE FROM rpt_inp_pattern_value WHERE result_id = v_result;	
 	END IF;
 
+	-- Upsert on node rpt_inp result manager table
+	DELETE FROM inp_selector_result WHERE cur_user=current_user;
+	INSERT INTO inp_selector_result (result_id, cur_user) VALUES (v_result, current_user);
+
 	RAISE NOTICE '7 - update demands & patterns';
 	IF v_usenetworkdemand IS NOT TRUE THEN
 
@@ -134,14 +143,11 @@ BEGIN
 	RAISE NOTICE '7 - Calling for modify the valve status';
 	PERFORM gw_fct_pg2epa_valve_status(v_result);
 	
-	-- Upsert on node rpt_inp result manager table
-	DELETE FROM inp_selector_result WHERE cur_user=current_user;
-	INSERT INTO inp_selector_result (result_id, cur_user) VALUES (v_result, current_user);
 
 	IF v_skipcheckdata IS NOT TRUE THEN
 	
 		RAISE NOTICE '8 - Calling gw_fct_pg2epa_check_data';
-		v_input = concat('{"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"parameters":{"resultId":"',v_result,'", "useNetworkGeom":"',
+		v_input = concat('{"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"parameters":{"geometryLog":false, "resultId":"',v_result,'", "useNetworkGeom":"',
 		v_usenetworkgeom,'"}, "message":"',v_usenetworkgeom,'","saveOnDatabase":true}}')::json;
 	
 		SELECT gw_fct_pg2epa_check_data(v_input) INTO v_return;

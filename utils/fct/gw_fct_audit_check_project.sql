@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 2464
+--FUNCTION CODE: 2794
 
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_audit_check_project(INTEGER);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_audit_check_project(p_data json)
@@ -16,13 +16,13 @@ SELECT SCHEMA_NAME.gw_fct_audit_check_project($${"client":{"device":9, "infoType
 */
 
 DECLARE 
-v_querytext 	text;
-v_sys_rows 	text;
-v_parameter   text;
-v_audit_rows 	integer;
+v_querytext text;
+v_sys_rows text;
+v_parameter text;
+v_audit_rows integer;
 v_compare_sign text;
-v_isenabled 	boolean;
-v_diference 	integer;
+v_isenabled boolean;
+v_diference integer;
 v_error integer;
 v_count integer;
 v_table_host text;
@@ -31,7 +31,7 @@ v_table_schema text;
 v_query_string text;
 v_max_seq_id int8;
 v_project_type text;
-v_psector_vdef text;
+v_psector_vdef integer;
 v_errortext text;
 v_result_id text;
 rec_table record;
@@ -50,15 +50,14 @@ v_result json;
 v_result_info json;
 v_fprocesscat_id_aux integer;
 v_qgis_version text;
-v_qmlpointpath	text = '';
-v_qmllinepath	text = '';
-v_qmlpolpath	text = '';
+v_qmlpointpath text = '';
+v_qmllinepath text = '';
+v_qmlpolpath text = '';
 v_user_control boolean = false;
-v_eparesult text;
-v_planresult text;
+v_layer_log boolean = false;
+v_errcontext text;
 
 BEGIN 
-
 
 	-- search path
 	SET search_path = "SCHEMA_NAME", public;
@@ -75,11 +74,9 @@ BEGIN
 	SELECT value INTO v_qmllinepath FROM config_param_user WHERE parameter='qgis_qml_linelayer_path' AND cur_user=current_user;
 	SELECT value INTO v_qmlpolpath FROM config_param_user WHERE parameter='qgis_qml_pollayer_path' AND cur_user=current_user;
 	SELECT value INTO v_user_control FROM config_param_user where parameter='audit_project_user_control' AND cur_user=current_user;
-	SELECT value INTO v_eparesult FROM config_param_user WHERE parameter='audit_project_epa_result' AND cur_user=current_user;
-	SELECT value INTO v_planresult FROM config_param_user WHERE parameter='audit_project_plan_result' AND cur_user=current_user;
+	SELECT value INTO v_layer_log FROM config_param_user where parameter='audit_project_layer_log' AND cur_user=current_user;
 
 	
-
 	-- init process
 	v_isenabled:=FALSE;
 	v_count=0;
@@ -102,42 +99,17 @@ BEGIN
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, null, 1, 'INFO');
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, null, 1, '-------');
 
-	IF v_user_control is true and 'role_epa' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) then
-	
-		INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, null, 0, concat('NETWORK ANALYTICS WITH EPA RESULT: ', quote_nullable(v_eparesult)));
-		INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, null, 0, '------------------------------------------------------------------------');
-	END IF;
 
 	IF v_qgis_version = v_version THEN
-		v_errortext=concat('INFO: Giswater version: ',v_version,'.');
+		v_errortext=concat('Giswater version: ',v_version,'.');
 		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (101, 1, v_errortext);
+		VALUES (101, 4, v_errortext);
 	ELSE
 		v_errortext=concat('ERROR: Version of plugin is different than the database version. DB: ',v_version,', plugin: ',v_qgis_version,'.');
 		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
 		VALUES (101, 3, v_errortext);
 	END IF;
 	
-
-	--REFRESH MATERIALIZED VIEW v_ui_workcat_polygon_aux;
-
-	-- Force psector vdefault visible to current_user (only to => role_master)
-	SELECT value INTO v_psector_vdef FROM config_param_user WHERE parameter='psector_vdefault' AND cur_user=current_user;
-
-	IF 'role_master' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) and  v_psector_vdef is not null THEN
-	  	IF (SELECT psector_id FROM plan_psector WHERE psector_id=(SELECT value FROM config_param_user WHERE parameter='psector_vdefault' AND cur_user=current_user)::integer) IS NOT NULL THEN
-			DELETE FROM selector_psector WHERE psector_id =(SELECT value FROM config_param_user 
-			WHERE parameter='psector_vdefault' AND cur_user=current_user)::integer AND cur_user=current_user;
-			INSERT INTO selector_psector (psector_id, cur_user) VALUES ((SELECT value FROM config_param_user 
-			WHERE parameter='psector_vdefault' AND cur_user=current_user)::integer, current_user);
-
-			v_errortext=concat('INFO: Psector ',v_psector_vdef,' set as default.');
-
-			INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-			VALUES (101, 1, v_errortext);
-		END IF;
-	END IF;
-
 	-- Reset urn sequence
 	IF v_project_type='WS' THEN
 		SELECT GREATEST (
@@ -157,24 +129,19 @@ BEGIN
 		(SELECT max(pol_id::int8) FROM polygon WHERE pol_id ~ '^\d+$')
 		) INTO v_max_seq_id;
 	END IF;	
+
+	v_errortext=concat('Logged as ', current_user,' on ', now());
+	
+	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+
 	IF v_max_seq_id IS NOT null THEN
 		EXECUTE 'SELECT setval(''SCHEMA_NAME.urn_id_seq'','||v_max_seq_id||', true)';
-
-		v_errortext=concat('INFO: Reset urn id sequence.');
-
-		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (101, 1, v_errortext);
 	END IF;
 	
 	-- Special cases (doc_seq. inp_vertice_seq)
 	SELECT max(id::integer) FROM doc WHERE id ~ '^\d+$' into v_max_seq_id;
 	IF v_max_seq_id IS NOT null THEN
 		EXECUTE 'SELECT setval(''SCHEMA_NAME.doc_seq'','||v_max_seq_id||', true)';
-
-		v_errortext=concat('INFO: Reset doc id sequence.');
-
-		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (101, 1, v_errortext);
 	END IF;
 	
 	IF v_project_type='WS' THEN 
@@ -182,26 +149,19 @@ BEGIN
 	ELSE 
 		PERFORM setval('SCHEMA_NAME.inp_vertice_seq', 1, true);
 	END IF;
-	
-	v_errortext=concat('INFO: Reset vertice id sequence.');
-	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-	VALUES (101, 1, v_errortext);
 
-	--Reset the  rest of sequences
+	--Reset the rest of sequences
 	FOR rec_table IN SELECT * FROM audit_cat_table WHERE sys_sequence IS NOT NULL AND sys_sequence_field IS NOT NULL AND sys_sequence!='urn_id_seq' AND sys_sequence!='doc_seq' AND isdeprecated IS NOT TRUE
 	LOOP 
 		v_query_string:= 'SELECT max('||rec_table.sys_sequence_field||') FROM '||rec_table.id||';' ;
 		EXECUTE v_query_string INTO v_max_seq_id;	
 		IF v_max_seq_id IS NOT NULL AND v_max_seq_id > 0 THEN 
-			EXECUTE 'SELECT setval(''SCHEMA_NAME.'||rec_table.sys_sequence||' '','||v_max_seq_id||', true)';
-
-			
+			EXECUTE 'SELECT setval(''SCHEMA_NAME.'||rec_table.sys_sequence||' '','||v_max_seq_id||', true)';			
 		END IF;
 	END LOOP;
 
-	v_errortext=concat('INFO: Reset other sequences.');
-	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-	VALUES (101, 1, v_errortext);
+	v_errortext=concat('Reset all sequences on project data schema.');
+	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
 
 	-- set mandatory values of config_param_user in case of not exists (for new users or for updates)
 	FOR rec_table IN SELECT * FROM audit_cat_param_user WHERE ismandatory IS TRUE AND sys_role_id IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, 'member'))
@@ -210,10 +170,9 @@ BEGIN
 			INSERT INTO config_param_user (parameter, value, cur_user) 
 			SELECT audit_cat_param_user.id, vdefault, current_user FROM audit_cat_param_user WHERE audit_cat_param_user.id = rec_table.id;	
 
-			v_errortext=concat('INFO: Set value in config param user: ',rec_table.id,'.');
+			v_errortext=concat('Set value for new variable in config param user: ',rec_table.id,'.');
 
-			INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-			VALUES (101, 1, v_errortext);
+			INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
 		END IF;
 	END LOOP;
 
@@ -228,11 +187,56 @@ BEGIN
 
 		DELETE FROM audit_cat_param_user WHERE id IN (SELECT audit_cat_param_user.id FROM audit_cat_param_user, connec_type 
 		WHERE active=false AND concat(lower(connec_type.id),'_vdefault') = audit_cat_param_user.id);
+
+		v_errortext=concat('Checked on audit_cat_param_user table possible deprecated vdefault parameters.');
+		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
 		
 	END IF;
 
 	-- delete on config_param_user fron updated values on audit_cat_param_user
 	DELETE FROM config_param_user WHERE parameter NOT IN (SELECT id FROM audit_cat_param_user) AND cur_user = current_user;
+
+	-- Force exploitation selector in case of null values
+	IF (SELECT count(*) FROM selector_expl WHERE cur_user=current_user) < 1 THEN 
+	  	INSERT INTO selector_expl (expl_id, cur_user) 
+	  	SELECT expl_id, current_user FROM exploitation WHERE active IS NOT FALSE AND expl_id > 0 limit 1;
+		v_errortext=concat('Set visible exploitation for user ',(SELECT expl_id FROM exploitation WHERE active IS NOT FALSE AND expl_id > 0 limit 1));
+		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+	END IF;
+
+	-- Force state selector in case of null values
+	IF (SELECT count(*) FROM selector_state WHERE cur_user=current_user) < 1 THEN 
+	  	INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
+		v_errortext=concat('Set feature state = 1 for user');
+		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+	END IF;
+	
+	-- Force hydrometer selector in case of null values
+	IF (SELECT count(*) FROM selector_hydrometer WHERE cur_user=current_user) < 1 THEN 
+	  	INSERT INTO selector_hydrometer (state_id, cur_user) VALUES (1, current_user);
+		v_errortext=concat('Set hydrometer state = 1 for user');
+		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);	
+	END IF;
+	
+	-- Force psector vdefault visible to current_user (only to => role_master)
+	IF 'role_master' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
+	
+		SELECT value::integer INTO v_psector_vdef FROM config_param_user WHERE parameter='psector_vdefault' AND cur_user=current_user;
+
+		IF v_psector_vdef IS NULL THEN
+			SELECT psector_id INTO v_psector_vdef FROM plan_psector WHERE status=2 LIMIT 1;
+			IF v_psector_vdef IS NULL THEN
+				v_errortext=concat('No current psector have been set. There are not psectors with status=2 on project');
+				INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+			END IF;
+		END IF;
+
+		IF v_psector_vdef IS NOT NULL THEN
+			INSERT INTO selector_psector (psector_id, cur_user) VALUES (v_psector_vdef, current_user) ON CONFLICT (psector_id, cur_user) DO NOTHING;
+			v_errortext=concat('Current psector is ',v_psector_vdef);
+			INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+		END IF;
+	END IF;
 
 	--If user has activated full project control, depending on user role - execute corresponding check function
 	IF v_user_control THEN
@@ -246,45 +250,28 @@ BEGIN
 			SELECT 101, criticity, replace(error_message,':', ' (DB OM):') FROM audit_check_data 
 			WHERE fprocesscat_id=25 AND criticity < 4 AND error_message !='' AND user_name=current_user OFFSET 6 ;
 
+			IF v_project_type = 'WS' THEN
+
+				EXECUTE 'SELECT gw_fct_grafanalytics_check_data($${
+				"client":{"device":3, "infoType":100, "lang":"ES"},
+				"feature":{},"data":{"parameters":{"selectionMode":"wholeSystem", "grafClass":"ALL"}}}$$)';
+				-- insert results 
+				INSERT INTO audit_check_data  (fprocesscat_id, criticity, error_message) 
+				SELECT 101, criticity, replace(error_message,':', ' (DB OM):') FROM audit_check_data 
+				WHERE fprocesscat_id=111 AND criticity < 4 AND error_message !='' AND user_name=current_user OFFSET 6 ;
+			END IF;
 		END IF;
 
 		IF 'role_epa' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
 
-			-- control if result id exists
-			IF (SELECT result_id FROM rpt_cat_result WHERE result_id=v_eparesult) IS NULL THEN
-				INSERT INTO audit_check_data  (fprocesscat_id, criticity, error_message) VALUES
-				(101, 1, 'INFO (DB EPA): Check for EPA result not executed due result_id does not exists. Take a look on config form and update result_id');
-			ELSE
-				EXECUTE 'SELECT gw_fct_pg2epa_check_data($${
-				"client":{"device":3, "infoType":100, "lang":"ES"},
-				"feature":{},"data":{"parameters":{"resultId":"'||v_eparesult||'","saveOnDatabase":true, 
-				"useNetworkGeom":"FALSE", "useNetworkDemand":"FALSE"}}}$$)';
-				-- insert results 
-				INSERT INTO audit_check_data  (fprocesscat_id, criticity, error_message) 
-				SELECT 101, criticity, replace(error_message,':', ' (DB EPA):') FROM audit_check_data 
-				WHERE fprocesscat_id=14 AND criticity < 4 AND error_message !='' AND result_id ='gw_check_project' OFFSET 8;
-			END IF;
+			-- TODO: function to check data without result need to be developed. Unique function gw_fct_epa_check_data to check data must be divided into two functions
 
 		END IF;
 
 		IF 'role_master' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
 
-			-- control if result id exists
-			IF (SELECT result_id FROM rpt_cat_result WHERE result_id=v_planresult) IS NULL THEN	
-				INSERT INTO audit_check_data  (fprocesscat_id, criticity, error_message)  VALUES
-				(101, 1, 'INFO (DB PLAN): Check for PLAN result not executed due result_id does not exists. Take a look on config form and update result_id');
-			ELSE
-		
-				EXECUTE 'SELECT gw_fct_plan_check_data($${
-				"client":{"device":3, "infoType":100, "lang":"ES"},
-				"feature":{},
-				"data":{"parameters":{"resultId":"'||v_planresult||'"},"saveOnDatabase":true}}$$)';
-				-- insert results 
-				INSERT INTO audit_check_data  (fprocesscat_id, criticity, error_message) 
-				SELECT 101, criticity, replace(error_message,':', ' (DB PLAN):') FROM audit_check_data 
-				WHERE fprocesscat_id=15 AND criticity < 4 AND error_message !=''  AND result_id ='gw_check_project' OFFSET 6;
-			END IF;
-				
+			-- TODO: function to check data without result need to be developed. Unique function gw_fct_plan_check_data to check data must be divided into two functions
+			
 		END IF;
 
 		IF 'role_admin' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
@@ -369,7 +356,8 @@ BEGIN
 		END IF;
 
 		-- start process
-		FOR rec_table IN SELECT * FROM audit_cat_table WHERE qgis_role_id IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member'))
+		FOR rec_table IN SELECT * FROM audit_cat_table WHERE qgis_role_id IN 
+		(SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member') AND isdeprecated IS FALSE)
 		LOOP
 		
 			--RAISE NOTICE 'v_count % id % ', v_count, rec_table.id;
@@ -386,20 +374,27 @@ BEGIN
 
 		--list missing layers with criticity 3 and 2
 
-		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,column_name as id,'''||v_srid||''' as srid,
-		''3'' as criticity, qgis_message
-		FROM '||v_schema||'.audit_check_project JOIN information_schema.columns ON table_name = table_id 
+		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,columns.column_name as id,
+		'''||v_srid||''' as srid,b.column_name as field_the_geom,''3'' as criticity, qgis_message
+		FROM '||v_schema||'.audit_check_project 
+		JOIN information_schema.columns ON table_name = table_id 
 		AND columns.table_schema = '''||v_schema||''' and ordinal_position=1 
 		LEFT JOIN '||v_schema||'.audit_cat_table ON audit_cat_table.id=audit_check_project.table_id
-		WHERE criticity=3 and enabled IS NOT TRUE) a'
+		INNER JOIN (SELECT column_name ,table_name FROM information_schema.columns
+		WHERE table_schema = '''||v_schema||''' AND udt_name = ''geometry'')b ON b.table_name=audit_cat_table.id
+   		WHERE criticity=3 and enabled IS NOT TRUE) a'
 		INTO v_result_layers_criticity3;
 
-		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,column_name as id,'''||v_srid||''' as srid,
-		''2'' as criticity, qgis_message
-		FROM '||v_schema||'.audit_check_project JOIN information_schema.columns ON table_name = table_id 
+
+		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,columns.column_name as id,
+		'''||v_srid||''' as srid,b.column_name as field_the_geom,''2'' as criticity, qgis_message
+		FROM '||v_schema||'.audit_check_project 
+		JOIN information_schema.columns ON table_name = table_id 
 		AND columns.table_schema = '''||v_schema||''' and ordinal_position=1 
 		LEFT JOIN '||v_schema||'.audit_cat_table ON audit_cat_table.id=audit_check_project.table_id
-		WHERE criticity=2 and enabled IS NOT TRUE) a'
+		INNER JOIN (SELECT column_name ,table_name FROM information_schema.columns
+		WHERE table_schema = '''||v_schema||''' AND udt_name = ''geometry'')b ON b.table_name=audit_cat_table.id
+   		WHERE criticity=2 and enabled IS NOT TRUE) a'
 		INTO v_result_layers_criticity2;
 
 		v_result_layers_criticity3 := COALESCE(v_result_layers_criticity3, '{}'); 
@@ -407,15 +402,12 @@ BEGIN
 
 		v_missing_layers = v_result_layers_criticity3::jsonb||v_result_layers_criticity2::jsonb;
 
-
 	END IF;
-
 
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, v_result_id, 4, NULL);	
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, v_result_id, 3, NULL);	
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, v_result_id, 2, NULL);	
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, v_result_id, 1, NULL);
-
 
 	-- get results
 	-- info
@@ -424,30 +416,33 @@ BEGIN
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 
-	--points
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (
-	SELECT id, node_id, nodecat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id IN (7,14,64,66,70,71,98) -- epa
-	UNION
-	SELECT id, node_id, nodecat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id IN (4,76,79,80,81,82,87,96,97,102,103)  -- om
-	UNION
-	SELECT id, connec_id, connecat_id, state, expl_id, descript,fprocesscat_id, the_geom FROM anl_connec WHERE cur_user="current_user"() AND fprocesscat_id IN (101,102,104,105,106) -- om
-	) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_point = concat ('{"geometryType":"Point", "qmlPath":"',v_qmlpointpath,'", "values":',v_result, ',"category_field":"descript"}');
+	IF v_layer_log THEN
+	
+		--points
+		v_result = null;
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (
+		SELECT id, node_id, nodecat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id IN (7,14,64,66,70,71,98) -- epa
+		UNION
+		SELECT id, node_id, nodecat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id IN (4,76,79,80,81,82,87,96,97,102,103)  -- om
+		UNION
+		SELECT id, connec_id, connecat_id, state, expl_id, descript,fprocesscat_id, the_geom FROM anl_connec WHERE cur_user="current_user"() AND fprocesscat_id IN (101,102,104,105,106) -- om
+		) row; 
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_point = concat ('{"geometryType":"Point", "qmlPath":"',v_qmlpointpath,'", "values":',v_result, ',"category_field":"descript"}');
 
-	--lines
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (
-	SELECT id, arc_id, arccat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (3, 14, 39)  -- epa
-	UNION
-	SELECT id, arc_id, arccat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (4, 88, 102) -- om 
-	) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"',v_qmllinepath,'", "values":',v_result, ',"category_field":"descript"}');
+		--lines
+		v_result = null;
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (
+		SELECT id, arc_id, arccat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (3, 14, 39)  -- epa
+		UNION
+		SELECT id, arc_id, arccat_id, state, expl_id, descript, fprocesscat_id, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (4, 88, 102) -- om 
+		) row; 
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"',v_qmllinepath,'", "values":',v_result, ',"category_field":"descript"}');
 
+	END IF;
 
 	--    Control null
 	v_version:=COALESCE(v_version,'{}');
@@ -456,7 +451,6 @@ BEGIN
 	v_result_line:=COALESCE(v_result_line,'{}');
 	v_result_polygon:=COALESCE(v_result_polygon,'{}');
 	v_missing_layers:=COALESCE(v_missing_layers,'{}');
-
 
 	--return definition for v_audit_check_result
 	v_return= ('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
@@ -470,6 +464,11 @@ BEGIN
 	--  Return	   
 	RETURN v_return;
 
+--  Exception handling
+    EXCEPTION WHEN OTHERS THEN
+		GET STACKED DIAGNOSTICS v_errcontext = pg_exception_context;  
+		RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_errcontext) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	  
 END;
 
 $BODY$

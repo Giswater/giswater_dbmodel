@@ -25,6 +25,7 @@ DECLARE
 	v_partialquerytext text;
 	v_querytext text;
 	v_table text;
+	v_feature_field_id text;
 
 BEGIN	
 
@@ -37,22 +38,23 @@ BEGIN
 
 	--  Get project type
 	SELECT wsoftware INTO v_projecttype FROM version LIMIT 1;
+	IF (TG_OP = 'INSERT' OR  TG_OP = 'UPDATE') THEN
+		--Controls on update or insert of cat_feature.id check if the new id or child layer has accents, dots or dashes. If so, give an error.
+		v_id = array_to_string(ts_lexize('unaccent',NEW.id),',','*');
+		
+		IF v_id IS NOT NULL OR NEW.id ilike '%.%' OR NEW.id ilike '%-%' THEN
+			PERFORM audit_function(3038,2758,NEW.id);
+		END IF;
 
-	--Controls on update or insert of cat_feature.id check if the new id or child layer has accents, dots or dashes. If so, give an error.
-	v_id = array_to_string(ts_lexize('unaccent',NEW.id),',','*');
-	
-	IF v_id IS NOT NULL OR NEW.id ilike '%.%' OR NEW.id ilike '%-%' THEN
-		PERFORM audit_function(3038,2758,NEW.id);
+		v_id = array_to_string(ts_lexize('unaccent',NEW.child_layer),',','*');
+		
+		IF v_id IS NOT NULL OR NEW.child_layer ilike '%-%' OR NEW.child_layer ilike '%.%' THEN
+		 	PERFORM audit_function(3038,2758,NEW.child_layer);
+		END IF;	
+
+		-- set v_id
+		v_id = (lower(NEW.id));
 	END IF;
-
-	v_id = array_to_string(ts_lexize('unaccent',NEW.child_layer),',','*');
-	
-	IF v_id IS NOT NULL OR NEW.child_layer ilike '%-%' OR NEW.child_layer ilike '%.%' THEN
-	 	PERFORM audit_function(3038,2758,NEW.child_layer);
-	END IF;	
-
-	-- set v_id
-	v_id = (lower(NEW.id));
 
 
 	-- manage audit_cat_param_user parameters
@@ -74,16 +76,26 @@ BEGIN
 		lower(NEW.feature_type),'type_id WHERE ',lower(NEW.feature_type),'_type.id = ',quote_literal(NEW.id));
 				
 		v_table = concat ('cat_',lower(NEW.feature_type));
+		
+		IF v_table = 'cat_node' OR v_table = 'cat_arc' THEN
+			v_feature_field_id = concat (lower(NEW.feature_type), 'cat_id');
+			
+		ELSIF v_table = 'cat_connec' THEN
+			v_feature_field_id = concat (lower(NEW.feature_type), 'at_id');
 
-		IF v_table = 'cat_gully' then v_table ='cat_grate'; end if;
+		ELSIF v_table = 'cat_gully' then 
+			v_table ='cat_grate'; 
+			v_feature_field_id = 'gratecat_id';
+			
+		END IF;
 		
 		v_querytext = concat('SELECT ',v_table,'.id, ', v_table,'.id AS idval FROM ', v_table,' ', v_partialquerytext);
 
 		-- insert parameter
 		INSERT INTO audit_cat_param_user(id, formname, description, sys_role_id, label, isenabled, layout_id, layout_order, 
-		dv_querytext, project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated)
+		dv_querytext, feature_field_id, project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated)
 		VALUES (concat(v_id,'_vdefault'),'config',concat ('Value default for ',v_id,' cat_feature'), 'role_edit', concat ('Default value for ', v_id), true, v_layout ,v_layout_order,
-		v_querytext, lower(v_projecttype),false,false,'text', 'combo',true,false)
+		v_querytext, v_feature_field_id, lower(v_projecttype),false,false,'text', 'combo',true,false)
 		ON CONFLICT (id) DO NOTHING;
 
 		IF TG_OP = 'UPDATE' AND OLD.id != NEW.id THEN
@@ -92,7 +104,12 @@ BEGIN
 	END IF;
 
 	IF TG_OP = 'INSERT' THEN
-
+		--insert definition into config_api_tableinfo_x_infotype if its not present already
+		IF NEW.child_layer NOT IN (SELECT tableinfo_id from config_api_tableinfo_x_infotype)
+		and NEW.child_layer IS NOT NULL THEN
+			INSERT INTO config_api_tableinfo_x_infotype (tableinfo_id,infotype_id,tableinfotype_id)
+			VALUES (NEW.child_layer,100,NEW.child_layer);
+		END IF;
 		RETURN new;
 
 	ELSIF TG_OP = 'UPDATE' THEN
@@ -119,10 +136,11 @@ BEGIN
 					EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(OLD.id)||' ON '||v_viewname||';';		
 
 				END IF;
+
 			END IF;
 
 			--if child layer name has changed, rename it
-			IF NEW.child_layer != OLD.child_layer THEN
+			IF NEW.child_layer != OLD.child_layer  AND NEW.child_layer IS NOT NULL THEN
 
 				--SELECT child_layer INTO v_viewname FROM cat_feature WHERE id = NEW.id;
 
@@ -135,6 +153,13 @@ BEGIN
 					EXECUTE 'CREATE OR REPLACE VIEW '||v_schemaname||'.'||NEW.child_layer||' AS '||v_definition||';';   
 					EXECUTE 'DROP VIEW '||v_schemaname||'.'||OLD.child_layer||';';
 				END IF;
+
+				--rename config_api_form_fields formname
+				UPDATE config_api_form_fields SET formname=NEW.child_layer WHERE formname=OLD.child_layer AND formtype='feature';
+
+				--rename config_api_tableinfo_x_infotype tableinfo_id and tableinfotype_id
+				UPDATE config_api_tableinfo_x_infotype SET tableinfo_id=v_viewname WHERE tableinfo_id=OLD.child_layer;
+				UPDATE config_api_tableinfo_x_infotype SET tableinfotype_id=v_viewname WHERE tableinfotype_id=OLD.child_layer;
 			END IF;
 		
 			--create the trigger
@@ -149,6 +174,9 @@ BEGIN
 	ELSIF TG_OP = 'DELETE' THEN
 
 		-- delete child views
+
+		--delete definition from config_api_tableinfo_x_infotype
+		DELETE FROM config_api_tableinfo_x_infotype where tableinfo_id=OLD.child_layer OR tableinfotype_id=OLD.child_layer;
 
 		-- delete audit_cat_param_user parameters
 		IF v_projecttype='WS' THEN

@@ -15,8 +15,8 @@ $BODY$
 /*
 delete from temp_anlgraf
 TO EXECUTE
-SELECT SCHEMA_NAME.gw_fct_grafanalytics_minsector('{"data":{"parameters":{"exploitation":"[1,2]", "updateFeature":"TRUE", "updateMinsectorGeom":"TRUE","concaveHullParam":0.85}}}');
-SELECT SCHEMA_NAME.gw_fct_grafanalytics_minsector('{"data":{"parameters":{"arc":"2002", "updateFeature":"TRUE", "updateMinsectorGeom":"TRUE","concaveHullParam":0.85}}}')
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_minsector('{"data":{"parameters":{"exploitation":"[1,2]", "usePsectors":TRUE, "updateFeature":"TRUE", "updateMinsectorGeom":"TRUE","concaveHullParam":0.85}}}');
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_minsector('{"data":{"parameters":{"arc":"2002", "usePsectors":TRUE, "updateFeature":"TRUE", "updateMinsectorGeom":"TRUE","concaveHullParam":0.85, "buffer":15}}}')
 
 delete from SCHEMA_NAME.audit_log_data;
 delete from SCHEMA_NAME.temp_anlgraf
@@ -49,18 +49,21 @@ v_result_point		json;
 v_result_line 		json;
 v_result_polygon	json;
 v_result 		text;
-v_count			json;
+v_count			integer;
 v_version		text;
 v_updatemapzgeom 	boolean;
 v_concavehull		float;
 v_srid			integer;
-
-
+v_buffer		float;
+v_input			json;
+v_visible_layer		text;
+v_usepsectors		boolean;
 
 BEGIN
 
     -- Search path
     SET search_path = "SCHEMA_NAME", public;
+
 
 	-- get variables
 	v_arcid = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'arc');
@@ -68,30 +71,69 @@ BEGIN
 	v_expl = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'exploitation');
 	v_updatemapzgeom = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'updateMapZone');
 	v_concavehull = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'concaveHullParam');
+	v_buffer = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'buffer');
+	v_usepsectors = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'usePsectors');
+
 
 	-- select config values
 	SELECT giswater, epsg INTO v_version, v_srid FROM version order by 1 desc limit 1;
+	v_visible_layer = 'v_minsector';
 
 	-- set variables
 	v_fprocesscat_id=34;  
 	v_featuretype='arc';
 
-		-- reset graf & audit_log tables
+	-- data quality analysis
+	v_input = '{"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"parameters":{"selectionMode":"userSelectors"}}}'::json;
+	PERFORM gw_fct_om_check_data(v_input);
+
+	-- check criticity of data in order to continue or not
+	SELECT count(*) INTO v_count FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=25 AND criticity=3;
+	IF v_count > 3 THEN
+	
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (SELECT id, error_message as message FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=25 order by criticity desc, id asc) row;
+
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
+
+		-- Control nulls
+		v_result_info := COALESCE(v_result_info, '{}'); 
+		
+		--  Return
+		RETURN ('{"status":"Accepted", "message":{"priority":3, "text":"Mapzones dynamic analysis canceled. Data is not ready to work with"}, "version":"'||v_version||'"'||
+		',"body":{"form":{}, "data":{ "info":'||v_result_info||'}}}')::json;	
+	END IF;
+ 
+	-- reset graf & audit_log tables
 	DELETE FROM temp_anlgraf;
 	DELETE FROM audit_log_data WHERE fprocesscat_id=v_fprocesscat_id AND user_name=current_user;
 	DELETE FROM anl_node WHERE fprocesscat_id=34 AND cur_user=current_user;
 	DELETE FROM anl_arc WHERE fprocesscat_id=34 AND cur_user=current_user;
 	DELETE FROM audit_check_data WHERE fprocesscat_id=34 AND user_name=current_user;
 
-	
 	-- Starting process
 	INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('MINSECTOR DYNAMIC SECTORITZATION'));
 	INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('---------------------------------------------------'));
+	IF v_usepsectors THEN
+		SELECT count(*) INTO v_count FROM selector_psector WHERE cur_user = current_user;
+		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, 
+		concat('INFO: Plan psector strategy is enabled. The number of psectors used on this analysis is ', v_count));
+	ELSE 
+		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, 
+		concat('INFO: All psectors have been disabled to execute this analysis'));
+	END IF;
+
+	
 		
 	-- reset selectors
 	DELETE FROM selector_state WHERE cur_user=current_user;
 	INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
-	DELETE FROM selector_psector WHERE cur_user=current_user;
+
+	-- use masterplan
+	IF v_usepsectors IS NOT TRUE THEN
+		DELETE FROM selector_psector WHERE cur_user=current_user;
+	END IF;
 
 	-- reset exploitation
 	IF v_expl IS NOT NULL THEN
@@ -190,13 +232,6 @@ BEGIN
 		INSERT INTO minsector (minsector_id, dma_id, dqa_id, presszonecat_id, sector_id, expl_id) 
 		SELECT distinct ON (minsector_id) minsector_id, dma_id, dqa_id, presszonecat_id::integer, sector_id, expl_id FROM arc WHERE minsector_id is not null;
 
-		-- update geometry of minsector table
-		EXECUTE 'UPDATE minsector set the_geom = (a.the_geom) 
-			FROM (with polygon AS (SELECT st_collect (the_geom) as g, minsector_id FROM arc group by minsector_id)
-			SELECT minsector_id, CASE WHEN st_geometrytype(st_concavehull(g, '||v_concavehull||')) = ''ST_Polygon''::text THEN st_buffer(st_concavehull(g, '||v_concavehull||'), 3)::geometry(Polygon,'||v_srid||')
-			ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon, '||v_srid||') END AS the_geom FROM polygon
-			)a WHERE a.minsector_id = minsector.minsector_id';	
-
 		-- update graf on minsector_graf
 		DELETE FROM minsector_graf;
 		INSERT INTO minsector_graf 
@@ -216,6 +251,32 @@ BEGIN
 		VALUES (v_fprocesscat_id, concat('SELECT * FROM anl_node WHERE fprocesscat_id = 34  AND cur_user=current_user;'));
 	
 	END IF;
+
+	-- update geometry of mapzones
+	IF v_updatemapzgeom THEN
+
+			IF v_buffer IS NOT NULL THEN
+
+				v_querytext = '	UPDATE minsector set the_geom = geom FROM
+					(SELECT minsector_id, (st_buffer(st_collect(the_geom),'||v_buffer||')) as geom from arc where minsector_id > 0 group by minsector_id)a 
+					WHERE a.minsector_id = minsector.minsector_id';
+
+			ELSIF v_concavehull IS NOT NULL THEN 
+
+				v_querytext = 'UPDATE minsector set the_geom = (a.the_geom) 
+					FROM (with polygon AS (SELECT st_collect (the_geom) as g, minsector_id FROM arc group by minsector_id)
+					SELECT minsector_id, CASE WHEN st_geometrytype(st_concavehull(g, '||v_concavehull||')) = ''ST_Polygon''::text THEN st_buffer(st_concavehull(g, '||v_concavehull||'), 3)::geometry(Polygon,'||v_srid||')
+					ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon, '||v_srid||') END AS the_geom FROM polygon
+					)a WHERE a.minsector_id = minsector.minsector_id';
+			END IF;
+			
+			EXECUTE v_querytext;	
+
+			-- message
+			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
+			VALUES (v_fprocesscat_id, 2, concat('WARNING: Geometry of minsector ',v_class ,' have been modified by this process'));
+		END IF;
+	
 	
 	-- set selector
 	DELETE FROM selector_audit WHERE cur_user=current_user;
@@ -230,28 +291,22 @@ BEGIN
 	
 	--points
 	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id) row; 
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point", "values":',v_result, '}');
 
 	--lines
 	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id) row; 
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_line = concat ('{"geometryType":"LineString", "values":',v_result, '}');
 
 	--polygons
 	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, pol_id, pol_type, state, expl_id, descript, the_geom FROM anl_polygon WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id) row; 
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_polygon = concat ('{"geometryType":"Polygon", "values":',v_result, '}');
-
 	
 	--    Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 
+	v_visible_layer := COALESCE(v_visible_layer, '{}'); 
 	v_result_point := COALESCE(v_result_point, '{}'); 
 	v_result_line := COALESCE(v_result_line, '{}'); 
 	v_result_polygon := COALESCE(v_result_polygon, '{}');
@@ -261,6 +316,7 @@ BEGIN
     RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
+				'"setVisibleLayers":["'||v_visible_layer||'"],'||
 				'"point":'||v_result_point||','||
 				'"line":'||v_result_line||','||
 				'"polygon":'||v_result_polygon||'}'||

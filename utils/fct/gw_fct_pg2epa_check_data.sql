@@ -85,6 +85,7 @@ v_qmlpointpath		text = '';
 v_qmllinepath		text = '';
 v_qmlpolpath		text = '';
 v_doublen2a		integer;
+v_geometrylog boolean;
 
 BEGIN
 
@@ -97,6 +98,8 @@ BEGIN
 	v_message:= ((p_data ->>'data')::json->>'parameters')::json->>'message'::text;
 	v_usenetworkgeom:= ((p_data ->>'data')::json->>'parameters')::json->>'useNetworkGeom';
 	v_usenetworkdemand:= ((p_data ->>'data')::json->>'parameters')::json->>'useNetworkDemand';
+	v_geometrylog:= ((p_data ->>'data')::json->>'parameters')::json->>'geometryLog';
+	IF v_geometrylog IS NULL THEN v_geometrylog = TRUE; END IF;
 
 	SELECT value INTO v_qmlpointpath FROM config_param_user WHERE parameter='qgis_qml_pointlayer_path' AND cur_user=current_user;
 	SELECT value INTO v_qmllinepath FROM config_param_user WHERE parameter='qgis_qml_linelayer_path' AND cur_user=current_user;
@@ -1121,7 +1124,6 @@ BEGIN
 				END IF;
 
 
-
 			RAISE NOTICE '25 - advanced network mode (vnodes)';
 
 			IF v_networkmode = 3 OR v_networkmode = 4 THEN
@@ -1160,6 +1162,23 @@ BEGIN
 					INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) 
 					VALUES (14, v_result_id, 3, ' Change the pattern method using some of the CONNEC method avaliable or change export network USING some of TRIMED ARCS method avaliable.');
 				END IF;		
+			END IF;
+
+			-- Check for missed features on inp tables
+			v_querytext = '(SELECT arc_id FROM arc WHERE arc_id NOT IN (SELECT arc_id from inp_pipe UNION SELECT arc_id FROM inp_virtualvalve) 
+				AND state > 0 AND epa_type !=''NOT DEFINED'' UNION SELECT node_id FROM node WHERE node_id 
+				NOT IN (select node_id from inp_shortpipe UNION select node_id from inp_valve UNION select node_id from inp_tank 
+				UNION select node_id FROM inp_reservoir UNION select node_id FROM inp_pump UNION SELECT node_id from inp_inlet 
+				UNION SELECT node_id from inp_junction) AND state >0 AND epa_type !=''NOT DEFINED'') a';
+		
+			EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
+		
+			IF v_count > 0 THEN
+				INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
+				VALUES (14, 3, concat('ERROR: There is/are ',v_count,' missed features on inp tables. Please, check your data before continue'));
+			ELSE
+				INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
+				VALUES (14, 1, 'INFO: No features missed on inp_tables found.');
 			END IF;
 			
 		END IF;
@@ -1246,7 +1265,7 @@ BEGIN
 			
 				IF  v_count = 0 THEN
 					INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message)
-					VALUES (14, v_result_id, 2, concat('WARNING: There is not any dma''s defined on the dma-period table (ext_rtc_scada_dma_period). Please check it before continue.'));
+					VALUES (14, v_result_id, 2, concat('WARNING: There aren''t dma''s defined on the dma-period table (ext_rtc_scada_dma_period). Please check it before continue.'));
 					v_countglobal=v_countglobal+1;
 					v_count=0;	
 				
@@ -1455,35 +1474,58 @@ BEGIN
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point", "qmlPath":"',v_qmlpointpath,'", "values":',v_result, '}');
 
-	--lines
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (3, 14, 39)) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"',v_qmllinepath,'", "values":',v_result, '}');
-
-	--polygons
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, pol_id, pol_type, state, expl_id, descript, the_geom FROM anl_polygon WHERE cur_user="current_user"() AND fprocesscat_id=14) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_polygon = concat ('{"geometryType":"Polygon","qmlPath":"',v_qmlpolpath,'", "values":',v_result, '}');
-		
 	--    Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 
-	v_result_point := COALESCE(v_result_point, '{}'); 
-	v_result_line := COALESCE(v_result_line, '{}'); 
-	v_result_polygon := COALESCE(v_result_polygon, '{}'); 
+
+	IF v_geometrylog THEN
 	
---  Return
-    RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
-             ',"body":{"form":{}'||
-		     ',"data":{ "info":'||v_result_info||','||
-				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||','||
-				'"polygon":'||v_result_polygon||'}'||
-		       '}'||
-	    '}')::json;
+		--points
+		v_result = null;
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id IN (7, 14, 64, 66, 70, 71, 98)) row; 
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_point = concat ('{"geometryType":"Point", "qmlPath":"',v_qmlpointpath,'", "values":',v_result, '}');
+
+		--lines
+		v_result = null;
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, the_geom FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (3, 14, 39)) row; 
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"',v_qmllinepath,'", "values":',v_result, '}');
+
+		--polygons
+		v_result = null;
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (SELECT id, pol_id, pol_type, state, expl_id, descript, the_geom FROM anl_polygon WHERE cur_user="current_user"() AND fprocesscat_id=14) row; 
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_polygon = concat ('{"geometryType":"Polygon","qmlPath":"',v_qmlpolpath,'", "values":',v_result, '}');
+
+		--    Control nulls
+		v_result_point := COALESCE(v_result_point, '{}'); 
+		v_result_line := COALESCE(v_result_line, '{}'); 
+		v_result_polygon := COALESCE(v_result_polygon, '{}'); 
+
+		--  Return
+		RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
+			',"body":{"form":{}'||
+				',"data":{ "info":'||v_result_info||','||
+					'"point":'||v_result_point||','||
+					'"line":'||v_result_line||','||
+					'"polygon":'||v_result_polygon||','||
+					'"setVisibleLayers":[] }'||
+				'}'||
+			'}')::json;
+
+	ELSE 
+		--  Return
+		RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
+			',"body":{"form":{}'||
+				',"data":{ "info":'||v_result_info||','||
+					'"setVisibleLayers":[] }'||
+				'}'||
+			'}')::json;
+
+	END IF;
 	
 END;
 $BODY$

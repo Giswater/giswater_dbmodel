@@ -53,7 +53,7 @@ UNION
     'v_edit_connec' as sys_table_id
    FROM v_edit_connec
      JOIN link ON link.feature_id::text = v_edit_connec.connec_id::text AND link.feature_type::text = 'CONNEC'::text
-     JOIN node ON v_edit_connec.pjoint_id::text = node.node_id::text AND v_edit_connec.pjoint_type::text = 'NODE'::text
+     JOIN node ON v_edit_connec.pjoint_id::text = node.node_id::text
      JOIN connec_type ON connec_type.id::text = v_edit_connec.connec_type::text
      LEFT JOIN cat_connec ON v_edit_connec.connecat_id=cat_connec.id
      JOIN value_state ON v_edit_connec.state = value_state.id
@@ -78,7 +78,7 @@ UNION
     'v_edit_gully' as sys_table_id
    FROM v_edit_gully
      JOIN link ON link.feature_id::text = v_edit_gully.gully_id::text AND link.feature_type::text = 'GULLY'::text
-     JOIN node ON v_edit_gully.pjoint_id::text = node.node_id::text AND v_edit_gully.pjoint_type::text = 'NODE'::text
+     JOIN node ON v_edit_gully.pjoint_id::text = node.node_id::text
      JOIN gully_type ON gully_type.id::text = v_edit_gully.gully_type::text
      LEFT JOIN cat_connec ON v_edit_gully.connec_arccat_id = cat_connec.id
      JOIN value_state ON v_edit_gully.state = value_state.id;

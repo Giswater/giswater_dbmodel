@@ -32,6 +32,7 @@ DECLARE
 	v_old_value_param text;
 	v_customfeature text;
 	v_featurecat text;
+	v_auto_pol_id text;
 
 BEGIN
 
@@ -49,7 +50,7 @@ BEGIN
 	--Get data from config table
 	v_promixity_buffer = (SELECT "value" FROM config_param_system WHERE "parameter"='proximity_buffer');
 	v_edit_node_reduction_auto_d1d2 = (SELECT "value" FROM config_param_system WHERE "parameter"='edit_node_reduction_auto_d1d2');
-	SELECT ((value::json)->>'activated') INTO v_insert_double_geom FROM config_param_system WHERE parameter='insert_double_geometry';
+	SELECT ((value::json)->>'activated')::boolean INTO v_insert_double_geom FROM config_param_system WHERE parameter='insert_double_geometry';
 	SELECT ((value::json)->>'value') INTO v_double_geom_buffer FROM config_param_system WHERE parameter='insert_double_geometry';
 
 -- INSERT
@@ -383,7 +384,25 @@ BEGIN
 	            v_sql:= 'INSERT INTO '||v_man_table||' (node_id) VALUES ('||quote_literal(NEW.node_id)||')';
 	            EXECUTE v_sql;
 	        END IF;
+
+	        --insert double geometry
+			IF (v_man_table IN ('man_register', 'man_tank') and (v_insert_double_geom IS TRUE)) THEN
+				
+				v_auto_pol_id:= (SELECT nextval('urn_id_seq'));
+
+				INSERT INTO polygon(pol_id,the_geom) 
+				VALUES (v_auto_pol_id,(SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,v_double_geom_buffer))) 
+				from node where node_id=NEW.node_id));
+				
+				EXECUTE 'UPDATE '||v_man_table||' SET pol_id = '''||v_auto_pol_id||''' WHERE node_id = '''||NEW.node_id||''';';
+			END IF;
 	    END IF;
+
+	--insert tank into anl_mincut_inlet_x_exploitation
+		IF v_man_table='man_tank' THEN
+			INSERT INTO anl_mincut_inlet_x_exploitation(node_id, expl_id)
+			VALUES (NEW.node_id, NEW.expl_id);
+		END IF;
 
 	-- man addfields insert
 		IF v_customfeature IS NOT NULL THEN
@@ -583,6 +602,11 @@ BEGIN
 		ELSIF v_man_table ='man_tank' THEN
 			UPDATE man_tank SET pol_id=NEW.pol_id, vmax=NEW.vmax, vutil=NEW.vutil, area=NEW.area, chlorination=NEW.chlorination, name=NEW.name
 			WHERE node_id=OLD.node_id;
+			
+			--update anl_mincut_inlet_x_exploitation if exploitation changes
+			IF NEW.expl_id != OLD.expl_id THEN
+				UPDATE anl_mincut_inlet_x_exploitation SET expl_id=NEW.expl_id WHERE node_id=NEW.node_id;
+			END IF;
 	
 		ELSIF v_man_table ='man_pump' THEN
 			UPDATE man_pump SET max_flow=NEW.max_flow, min_flow=NEW.min_flow, nom_flow=NEW.nom_flow, "power"=NEW.power, 
@@ -696,8 +720,11 @@ BEGIN
 		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_tank WHERE node_id=OLD.node_id );
 		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_register WHERE node_id=OLD.node_id );
 
-		-- delete from note table
+		-- delete from node table
 		DELETE FROM node WHERE node_id = OLD.node_id;
+
+		--remove node from anl_mincut_inlet_x_exploitation
+		DELETE FROM anl_mincut_inlet_x_exploitation WHERE node_id=OLD.node_id;
 
 		--Delete addfields (after or before deletion of node, doesn't matter)
 		DELETE FROM man_addfields_value WHERE feature_id = OLD.node_id  and parameter_id in 
