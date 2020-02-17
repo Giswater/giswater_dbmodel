@@ -49,10 +49,3 @@ UPDATE node_type SET choose_hemisphere=TRUE WHERE choose_hemisphere IS NULL;
 UPDATE node_type SET isarcdivide=TRUE WHERE isarcdivide IS NULL;
 
 
-UPDATE config_api_form_fields SET dv_isnullvalue=TRUE WHERE column_id='verified' AND formtype='feature';
-UPDATE config_api_form_fields SET dv_isnullvalue=TRUE WHERE column_id='ownercat_id' AND formtype='feature';
-UPDATE config_api_form_fields SET dv_isnullvalue=TRUE WHERE column_id='buildercat_id' AND formtype='feature';
-UPDATE config_api_form_fields SET dv_isnullvalue=TRUE WHERE column_id='streetaxis_id' AND formtype='feature';
-UPDATE config_api_form_fields SET dv_isnullvalue=TRUE WHERE column_id='streetaxis2_id' AND formtype='feature';
-
-
