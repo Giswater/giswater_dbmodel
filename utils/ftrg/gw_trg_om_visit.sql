@@ -56,6 +56,9 @@ BEGIN
 			ELSIF NEW.status=4 AND NEW.lot_id IS NULL THEN
 				UPDATE om_visit SET publish=TRUE WHERE id=NEW.id;
 			END IF;
+            
+            --set visit_type captured from class_id
+			UPDATE om_visit SET visit_type=(SELECT visit_type FROM om_visit_class WHERE id=NEW.class_id) WHERE id=NEW.id;
 
 		ELSIF v_triggerfromtable ='om_visit_x_feature' THEN -- change feature_x_lot status (when function is triggered by om_visit_x_*
 
@@ -85,7 +88,8 @@ BEGIN
 			SELECT * INTO v_visit FROM om_visit WHERE id=NEW.visit_id;
 
 			-- move status of lot element to status=0 (visited)
-			IF v_visit.status=4 THEN
+			IF v_visit.status=4 AND v_visit.visit_type=1 THEN
+			--visit type=1 is planned visit. For unexpected visits planned element keeps planned
 
 				IF v_featuretype ='arc' THEN	
 					v_querytext= 'UPDATE om_visit_lot_x_arc SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND arc_id::text ='||quote_literal(NEW.arc_id);
