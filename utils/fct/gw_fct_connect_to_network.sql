@@ -151,6 +151,8 @@ BEGIN
 		ELSE
 			UPDATE link SET the_geom=v_link.the_geom, exit_type=v_link.exit_type, exit_id=v_exit_id WHERE link_id=v_link.link_id;
 		END IF;
+		
+		SELECT * INTO v_arc FROM v_edit_arc WHERE state=1 AND arc_id = v_connect.arc_id;
 
 		-- Update connect propierties
 		IF feature_type_aux ='CONNEC' THEN          
