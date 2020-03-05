@@ -278,7 +278,10 @@ BEGIN
 			END IF;
 					
 		ELSIF man_table='man_hydrant' THEN
-			INSERT INTO man_hydrant (node_id, fire_code, communication,valve) VALUES (NEW.node_id,NEW.fire_code, NEW.communication,NEW.valve);		
+			INSERT INTO man_hydrant (node_id, fire_code, communication,valve) VALUES (NEW.node_id,NEW.fire_code, NEW.communication,NEW.valve);
+			IF (SELECT "value" FROM config_param_system WHERE "parameter"='use_fire_code_seq')::boolean=TRUE AND NEW.fire_code IS NULL THEN
+				UPDATE man_hydrant SET fire_code=nextval('man_hydrant_fire_code_seq'::regclass) WHERE node_id=NEW.node_id;
+			END IF;		
 		
 		ELSIF man_table='man_junction' THEN
 			INSERT INTO man_junction (node_id) VALUES(NEW.node_id);
