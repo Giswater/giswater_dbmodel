@@ -68,6 +68,8 @@ DECLARE
     v_noderecord2 record;
     v_input json;
     v_featurevalues json;
+    v_clause text;
+    v_device text;
        
 BEGIN
 
@@ -85,29 +87,37 @@ BEGIN
      SELECT wsoftware INTO v_project_type FROM version LIMIT 1;
      SELECT value INTO v_bmapsclient FROM config_param_system WHERE parameter = 'api_bmaps_client';
 
-     raise notice 'p_formname % p_formtype % p_tabname % p_tablename %  p_idname %  p_id % p_columntype %  p_tgop %  p_filterfield % p_device %',
-		p_formname , p_formtype , p_tabname , p_tablename ,  p_idname ,  p_id , p_columntype ,  p_tgop ,  p_filterfield , p_device;
-
 --   setting tabname
      IF p_tabname IS NULL THEN
 	p_tabname = 'tabname';
      END IF;
 
+--   setting v_clause in function of info type
+     IF p_id IS NULL THEN -- used when geinfofromid is called on initproject to shape all widgets on table of attributes (id is null)
+	v_clause = '';
+     ELSE  -- used always for each feature when geinfofromid is called feature by feature
+	v_clause = 'AND hidden IS NOT TRUE';
+     END IF;
+
+--   setting device
+     IF p_device < 9 THEN 
+	v_device = ' widgettype as type, column_id as name, datatype AS "dataType",widgetfunction as "widgetAction", widgetfunction as "updateAction",widgetfunction as "changeAction",
+		     (CASE WHEN layout_id=0 THEN ''header'' WHEN layout_id=9 THEN ''footer'' ELSE ''body'' END) AS "position",
+		     (CASE WHEN iseditable=true THEN false ELSE true END)  AS disabled,';
+     ELSE  
+	v_device = ' ';
+     END IF;
+
 --   Get fields	
 	IF p_formname!='infoplan' THEN 
-		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT label, column_id, concat('||quote_literal(p_tabname)||',''_'',column_id) AS widgetname, widgettype,
 
-			widgettype as type, column_id as name, datatype AS "dataType",widgetfunction as "widgetAction", widgetfunction as "updateAction",widgetfunction as "changeAction", widgetfunction,
-			(CASE WHEN layout_id=0 THEN ''header'' WHEN layout_id=9 THEN ''footer'' ELSE ''body'' END) AS "position",
-			(CASE WHEN iseditable=true THEN false ELSE true END)  AS disabled, hidden,
-
-			widgetdim, datatype , tooltip, placeholder, iseditable, row_number()over(ORDER BY layout_id, layout_order) AS orderby, layout_id, 
+		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT label, column_id, concat('||quote_literal(p_tabname)||',''_'',column_id) AS widgetname, widgetfunction, widgettype,'||v_device||'
+			hidden, widgetdim, datatype , tooltip, placeholder, iseditable, row_number()over(ORDER BY layout_id, layout_order) AS orderby, layout_id, 
 			layout_name as layoutname, layout_order, dv_parent_id, isparent, ismandatory, action_function, dv_querytext, dv_querytext_filterc, 
-			isautoupdate, isnotupdate, dv_orderby_id, dv_isnullvalue, reload_field, stylesheet, typeahead, widgetcontrols, reload_field FROM config_api_form_fields WHERE formname = $1 AND formtype= $2 
-			AND isenabled IS TRUE ORDER BY orderby) a'
+			isautoupdate, isnotupdate, dv_orderby_id, dv_isnullvalue, stylesheet, typeahead, widgetcontrols, reload_field FROM config_api_form_fields 
+			WHERE formname = $1 AND formtype= $2 '||v_clause||' AND isenabled IS TRUE ORDER BY orderby) a'
 				INTO fields_array
 				USING p_formname, p_formtype;
-
 	ELSE
 		EXECUTE 'SELECT array_agg(row_to_json(b)) FROM (
 			SELECT (row_number()over(ORDER BY 1)) AS layout_order, (row_number()over(ORDER BY 1)) AS orderby,* FROM 
@@ -128,6 +138,7 @@ BEGIN
 	
 	fields_array := COALESCE(fields_array, '{}');  
 
+	-- getting values for feature
 	IF (p_tgop ='UPDATE' OR p_tgop = 'SELECT') AND aux_json->>'column_id' IS NOT NULL AND p_tablename IS NOT NULL AND p_idname IS NOT NULL AND p_id IS NOT NULL AND p_columntype IS NOT NULL THEN
 		EXECUTE 'SELECT (row_to_json(a)) FROM ' || quote_ident(p_tablename) || ' WHERE ' || quote_ident(p_idname) || ' = CAST(' || quote_literal(p_id) || ' AS ' || COALESCE(p_columntype, 'character varying') || ')a' 
 		INTO v_featurevalues;
