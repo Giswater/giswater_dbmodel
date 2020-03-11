@@ -144,7 +144,8 @@ BEGIN
 			v_epatable = (SELECT epa_table FROM arc_type JOIN v_edit_arc ON id=arc_type WHERE arc_id=v_arc_id);
 
 			-- building querytext for man_table
-			v_manquerytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','') FROM information_schema.columns WHERE table_name=v_mantable AND table_schema=v_schemaname AND column_name !='arc_id');
+			v_manquerytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','') FROM (SELECT column_name FROM information_schema.columns 
+			WHERE table_name=v_mantable AND table_schema=v_schemaname AND column_name !='arc_id' ORDER BY ordinal_position)a);
 			IF  v_manquerytext IS NULL THEN 
 				v_manquerytext='';
 			END IF;
@@ -152,13 +153,13 @@ BEGIN
 			v_manquerytext2 =  v_manquerytext||' FROM '||v_mantable||' WHERE arc_id= '||v_arc_id||'::text';
 
 			-- building querytext for epa_table
-			v_epaquerytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','') FROM information_schema.columns WHERE table_name=v_epatable AND table_schema=v_schemaname AND column_name !='arc_id');
+			v_epaquerytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','') FROM (SELECT column_name FROM information_schema.columns 
+			WHERE table_name=v_epatable AND table_schema=v_schemaname AND column_name !='arc_id' ORDER BY ordinal_position)a);
 			IF  v_epaquerytext IS NULL THEN 
 				v_epaquerytext='';
 			END IF;
-			v_epaquerytext1 =  'INSERT INTO '||v_epatable||' SELECT ';
-			v_epaquerytext2 =  v_epaquerytext||' FROM '||v_epatable||' WHERE arc_id= '||v_arc_id||'::text';
-
+			
+			
 			-- In function of states and user's variables proceed.....
 			IF (v_state=1 AND v_state_node=1) THEN 
 			
