@@ -159,6 +159,8 @@ BEGIN
 				v_epaquerytext='';
 			END IF;
 			
+			v_epaquerytext1 =  'INSERT INTO '||v_epatable||' SELECT ';
+			v_epaquerytext2 =  v_epaquerytext||' FROM '||v_epatable||' WHERE arc_id= '||v_arc_id||'::text';
 			
 			-- In function of states and user's variables proceed.....
 			IF (v_state=1 AND v_state_node=1) THEN 
