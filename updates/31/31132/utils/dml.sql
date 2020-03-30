@@ -44,9 +44,6 @@ INSERT INTO audit_cat_table VALUES ('v_ext_cat_vehicle', 'O&M', 'Editable view f
 INSERT INTO audit_cat_table VALUES ('v_om_lot_x_user', 'O&M', 'Editable with relations between lots and users', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
 
 
-INSERT INTO audit_cat_function VALUES (2832, 'gw_trg_edit_team_x_vehicle', 'utils', 'function trigger', NULL, NULL, NULL, 'Makes editable v_om_team_x_vehicle', 'role_om', false) 
-ON CONFLICT (id) DO NOTHING;
-
 INSERT INTO audit_cat_function VALUES (2834, 'gw_trg_edit_team_x_user', 'utils', 'function trigger', NULL, NULL, NULL, 'Makes editable v_om_user_x_team', 'role_om', false) 
 ON CONFLICT (id) DO NOTHING;
 
@@ -60,5 +57,8 @@ INSERT INTO audit_cat_function VALUES (2840, 'gw_trg_edit_cat_vehicle', 'utils',
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO audit_cat_function VALUES (2842, 'gw_trg_edit_lot_x_user', 'utils', 'function trigger', NULL, NULL, NULL, 'Makes editable v_om_lot_x_user', 'role_om', false) 
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO audit_cat_function VALUES (2844, 'gw_trg_edit_team_x_vehicle', 'utils', 'function trigger', NULL, NULL, NULL, 'Makes editable v_om_team_x_vehicle', 'role_om', false) 
 ON CONFLICT (id) DO NOTHING;
 
