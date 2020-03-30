@@ -9,3 +9,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 INSERT INTO config_param_system(parameter, value, data_type, context, descript) 
 VALUES ('use_fire_code_seq', 'TRUE', 'boolean', 'System', 'If TRUE, when insert a new hydrant with fire_code=NULL this field will be filled with next val of sequence');
+
+-- 24/11/2019
+INSERT INTO sys_fprocess_cat(id, fprocess_name, context, fprocess_i18n, project_type)
+VALUES (99, 'Mincut process', 'om', 'Mincut process', 'ws');
