@@ -90,6 +90,7 @@ DECLARE
 	v_featuretype text;
 	v_visitclass integer;
 	v_id text;
+	v_id_aux text;
 	v_idname text;
 	v_columntype text;
 	v_device integer;
@@ -153,7 +154,11 @@ DECLARE
 	v_offline boolean;
 	v_lot integer;
 	v_code text;
-	
+	v_check_code text;
+	v_load_visit boolean;
+	v_visit_id integer;
+	text_debug text;
+	v_class_id integer;
 
 BEGIN
 	
@@ -191,6 +196,7 @@ BEGIN
 	v_offline = ((p_data ->>'data')::json->>'isOffline')::boolean;
 
 	--v_offline = 'true';
+	v_id_aux = v_id;
 	
 	-- Check if exists some open visit on related feature with the class configured as vdefault for user  (0 for finished visits and 4 for suspended visit)
 	IF v_featuretype IS NOT NULL AND v_featureid IS NOT NULL THEN
@@ -199,7 +205,7 @@ BEGIN
 			' AND status != 4 AND user_name = current_user ORDER BY startdate DESC LIMIT 1')
 			INTO v_existvisit_id;
 	END IF;
-
+	
 	IF v_existvisit_id IS NOT NULL THEN
 		v_id = v_existvisit_id;
 	END IF;
@@ -207,19 +213,62 @@ BEGIN
 	
 	--  get visitclass
 	IF v_visitclass IS NULL THEN
+
+		IF v_featureid IS NULL THEN
+			v_featureid = v_id;
+		END IF;
+		
+		IF v_featuretype IS NULL AND p_visittype=1 AND v_id_aux IS NULL THEN
+		
+			EXECUTE ('SELECT lower(sys_type) FROM '||v_featuretablename||' LIMIT 1') INTO v_featuretype;
+		END IF;
+
+
+		IF v_offline THEN
+			v_id = NULL;
+		ELSE
+			IF v_featuretype IS NOT NULL AND v_featuretype IS NOT NULL AND v_featureid IS NOT NULL THEN
+				-- Compare current lot_id with old visits for only show existing visits for current lot
+				v_lot = (SELECT lot_id FROM om_visit_lot_x_user WHERE endtime IS NULL AND user_id=current_user);
+
+				-- getting visit class in function of visit type and tablename (when tablename IS NULL then noinfra)
+				v_class_id := (SELECT id FROM om_visit_class WHERE visit_type=p_visittype AND feature_type = upper(v_featuretype) AND param_options->>'offlineDefault' = 'true' LIMIT 1)::integer;
+				
+				IF v_class_id IS NULL THEN
+					v_class_id := (SELECT id FROM om_visit_class WHERE feature_type=upper(v_featuretype) AND visit_type=1 LIMIT 1);
+				END IF;
+				
+				EXECUTE ('SELECT visit_id FROM om_visit_x_'|| (v_featuretype) ||' 
+				JOIN om_visit ON om_visit.id = om_visit_x_'|| (v_featuretype) ||'.visit_id 
+				WHERE ' || (v_featuretype) || '_id = ' || quote_literal(v_featureid) || '::text AND om_visit.lot_id = ' || v_lot || ' AND om_visit.class_id = '|| v_class_id || '
+				ORDER BY om_visit_x_'|| (v_featuretype) ||'.id desc LIMIT 1') INTO v_visit_id;
+				
+			END IF;
+
+			IF v_visit_id IS NOT NULL THEN
+
+				--EXECUTE ('SELECT true FROM om_visit WHERE enddate > now() - ''1 day''::interval AND id = '|| v_visit_id || ' AND lot_id = '|| v_lot ||' AND class_id = ' || v_class_id || ' ORDER BY id desc LIMIT 1') INTO v_load_visit;
+				EXECUTE ('SELECT true FROM om_visit WHERE enddate > now() - ''1 day''::interval AND id = '|| v_visit_id || ' ORDER BY id desc LIMIT 1') INTO v_load_visit;
+			END IF;
+		
+			RAISE NOTICE 'v_load_visit -> %',v_load_visit;
+
+		END IF;
 		
 		--new visit
-		IF v_id IS NULL OR (SELECT id FROM om_visit WHERE id=v_id::bigint) IS NULL THEN
-
+		IF (v_id IS NULL OR (SELECT id FROM om_visit WHERE id=v_id::bigint) IS NULL) AND v_load_visit IS NULL THEN
+			
 			-- Featuretablename is null when visit is unexpected generic
 			IF v_featuretablename IS NOT NULL AND v_featureid IS NOT NULL THEN
 				EXECUTE ('SELECT sys_type FROM '||v_featuretablename||' LIMIT 1') INTO v_featuretype;
 			END IF;
 
 			-- get vdefault visitclass
-			IF v_offline THEN
+			
+			IF v_offline THEN				
 				-- getting visit class in function of visit type and tablename (when tablename IS NULL then noinfra)
-				v_visitclass := (SELECT id FROM om_visit_class WHERE visit_type=p_visittype AND tablename = v_featuretablename AND param_options->>'offlineDefault' = 'true' LIMIT 1)::integer;
+				v_visitclass := (SELECT id FROM om_visit_class WHERE visit_type=p_visittype AND feature_type = upper(v_featuretype) AND param_options->>'offlineDefault' = 'true' LIMIT 1)::integer;
+				
 				IF v_visitclass IS NULL THEN
 					v_visitclass := (SELECT id FROM om_visit_class WHERE feature_type=upper(v_featuretype) AND visit_type=1 LIMIT 1);
 				END IF;
@@ -247,8 +296,13 @@ BEGIN
 			END IF;				
 							
 		-- existing visit
+		ELSIF v_load_visit THEN
+				
+			EXECUTE ('SELECT class_id FROM om_visit WHERE id = '|| v_visit_id || ' ORDER BY id desc LIMIT 1') INTO v_visitclass;
+			v_id = v_visit_id;
+			
 		ELSE 
-			v_visitclass := (SELECT class_id FROM om_visit WHERE id=v_id::bigint);
+			v_visitclass := (SELECT class_id FROM om_visit WHERE id=v_id::bigint);			
 		END IF;
 	END IF;
 	
@@ -263,8 +317,7 @@ BEGIN
 	v_ismultievent := (SELECT ismultievent FROM om_visit_class WHERE id=v_visitclass);
 	
 	-- getting provisional visit id if is new visit
-	IF (SELECT id FROM om_visit WHERE id=v_id::int8) IS NULL OR v_id IS NULL THEN
-
+	IF ((SELECT id FROM om_visit WHERE id=v_id::int8) IS NULL OR v_id IS NULL) AND v_load_visit IS NULL THEN
 		v_id := (SELECT max(id)+1 FROM om_visit);
 
 		IF v_id IS NULL AND (SELECT count(id) FROM om_visit) = 0 THEN
@@ -288,13 +341,12 @@ BEGIN
 
 
 	IF isnewvisit IS FALSE THEN
-		
 		v_extvisitclass := (SELECT class_id FROM om_visit WHERE id=v_id::int8);
 		v_formname := (SELECT formname FROM config_api_visit WHERE visitclass_id=v_visitclass);
 		v_tablename := (SELECT tablename FROM config_api_visit WHERE visitclass_id=v_visitclass);
 		v_ismultievent := (SELECT ismultievent FROM om_visit_class WHERE id=v_visitclass);
 	END IF;
-
+	raise notice '00-> %',v_visitclass;
 	-- get change class
 	IF v_extvisitclass <> v_visitclass THEN
 	
@@ -316,10 +368,11 @@ BEGIN
 		v_visitcat = (SELECT value FROM config_param_user WHERE parameter = 'visitcat_vdefault' AND cur_user=current_user)::integer;
 		--code
 		EXECUTE 'SELECT feature_type FROM om_visit_class WHERE id = '||v_visitclass INTO v_check_code;
-		IF v_check_code IS NOT NULL THEN
+		IF v_check_code IS NOT NULL AND v_featureid IS NOT NULL THEN
 			EXECUTE 'SELECT code FROM '||v_featuretablename||' WHERE ' || (v_featuretype) || '_id = '||v_featureid||'::text' INTO v_code;
 		END IF;
 		
+
 		-- lot
 		v_lot = (SELECT lot_id FROM om_visit_lot_x_user WHERE endtime IS NULL AND user_id=current_user);		
 	
@@ -539,6 +592,9 @@ BEGIN
 					
 				END LOOP;
 			ELSE 
+				IF v_formname IS NULL THEN
+					RAISE EXCEPTION 'Api is bad configured. There is no form related to tablename';
+				END IF;
 				SELECT gw_api_get_formfields( v_formname, 'visit', 'data', v_tablename, null, null, null, 'INSERT', null, v_device) INTO v_fields;
 
 				RAISE NOTICE ' --- GETTING tabData VALUES ON VISIT  ---';
@@ -615,7 +671,7 @@ BEGIN
 
 		IF v_status = 0 or v_offline = 'true' THEN
 			v_tab.tabfunction = '{}';
-			v_tab.tabactions = '{}';
+			--v_tab.tabactions = '{}';
 		END IF;
 
 		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tabText',v_tab.tabtext, 'tabFunction',v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active',v_activedatatab);
@@ -698,8 +754,12 @@ BEGIN
 
 	-- header form
 
-	IF p_visittype = 1 THEN
+	IF p_visittype = 1 AND v_offline THEN
+		v_formheader :=concat('VISIT');	
+	ELSIF p_visittype = 1 THEN
 		v_formheader :=concat('VISIT - ',v_id);	
+	ELSIF p_visittype = 2 AND v_offline THEN
+		v_formheader :=concat('INCIDENCY');	
 	ELSE
 		v_formheader :=concat('INCIDENCY - ',v_id);	
 	END IF;

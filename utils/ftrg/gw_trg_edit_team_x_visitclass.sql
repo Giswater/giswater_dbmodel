@@ -4,40 +4,43 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
--- FUNCTION CODE: 2832
+-- FUNCTION CODE: 2836
 
 
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_edit_team_x_vehicle()
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_edit_team_x_visitclass()
   RETURNS trigger AS
 $BODY$
 DECLARE 
 
 	v_team integer;
-	v_vehicle integer;
+	v_visitclass integer;
 
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
 
+
 	
     IF TG_OP = 'INSERT' THEN
-	
-		v_team = (select id from cat_team where idval=NEW.team);
-		v_vehicle = (select id from ext_cat_vehicle where idval=NEW.vehicle);
+
+    v_team = (select id from cat_team where idval=NEW.team);
+    v_visitclass = (select id from om_visit_class where idval=NEW.visitclass);
+
+    --raise exception 'v_team, v_visitclass, NEW.visitclass % % %', v_team, v_visitclass, NEW.visitclass; 
 	
 			
         -- FEATURE INSERT
         
-        			INSERT INTO om_team_x_vehicle (team_id, vehicle_id)
-				VALUES (v_team, v_vehicle);
+        		INSERT INTO om_team_x_visitclass (team_id, visitclass_id)
+				VALUES (v_team, v_visitclass);
 
 		RETURN NEW;
 		
     ELSIF TG_OP = 'UPDATE' THEN
    	-- FEATURE UPDATE
-			UPDATE om_team_x_vehicle 
-			SET team_id=v_team, vehicle_id=v_vehicle
+			UPDATE om_team_x_visitclass 
+			SET team_id=v_team, visitclass_id=v_visitclass
 			WHERE id=NEW.id;
 		
         RETURN NEW;
@@ -46,7 +49,7 @@ BEGIN
 		
      ELSIF TG_OP = 'DELETE' THEN  
 	 -- FEATURE DELETE
-		DELETE FROM om_team_x_vehicle WHERE id = OLD.id;		
+		DELETE FROM om_team_x_visitclass WHERE id = OLD.id;		
 
 		RETURN NULL;
      
