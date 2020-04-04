@@ -31,6 +31,7 @@ affected_rows numeric;
 cont1 integer default 0;
 v_arctwin integer;
 v_nodetwin integer;
+v_checkvalve record;
 
 BEGIN
 
@@ -132,14 +133,14 @@ BEGIN
 	IF v_mincutstep = 1 THEN 
 		v_querytext = 'UPDATE anl_mincut_result_valve SET proposed=TRUE WHERE proposed IS NULL AND result_id = '||v_mincutid||' AND node_id IN 
 			(SELECT node_1::varchar(16) FROM (
-			select * from temp_anlgraf UNION select id, arc_id, node_2, node_1, water, flag, checkf from temp_anlgraf 
+			select id, arc_id, node_1, node_2, water, flag, checkf from temp_anlgraf UNION select id, arc_id, node_2, node_1, water, flag, checkf from temp_anlgraf 
 			)a group by node_1  having sum(flag) = 5)';
 		EXECUTE v_querytext;
 
 	ELSIF v_mincutstep = 2 THEN 
 		v_querytext = 'UPDATE anl_mincut_result_valve SET proposed=FALSE WHERE proposed IS NULL AND result_id = '||v_mincutid||' AND node_id IN 
 			(SELECT node_1::varchar(16) FROM (
-			select * from temp_anlgraf UNION select id, arc_id, node_2, node_1, water, flag, checkf from temp_anlgraf 
+			select id, arc_id, node_1, node_2, water, flag, checkf from temp_anlgraf UNION select id, arc_id, node_2, node_1, water, flag, checkf from temp_anlgraf 
 			)a group by node_1  having sum(water) > 1 and sum(flag) > 2)';
 		EXECUTE v_querytext;
 	
@@ -147,9 +148,18 @@ BEGIN
 
 	v_querytext = 'UPDATE anl_mincut_result_valve SET proposed=FALSE WHERE proposed IS NULL AND result_id = '||v_mincutid||' AND node_id IN 
 			(SELECT node_1::varchar(16) FROM (
-			select * from temp_anlgraf UNION select id, arc_id, node_2, node_1, water, flag, checkf from temp_anlgraf 
+			select id, arc_id, node_1, node_2, water, flag, checkf from temp_anlgraf UNION select id, arc_id, node_2, node_1, water, flag, checkf from temp_anlgraf 
 			)a group by node_1  having sum(flag) = 6)';
 	EXECUTE v_querytext;
+
+	-- looking for check-valves
+	FOR v_checkvalve IN SELECT anl_mincut_checkvalve.* FROM anl_mincut_result_valve JOIN anl_mincut_checkvalve USING (node_id) WHERE proposed = true and result_id = v_mincutid
+	LOOP
+		IF v_checkvalve.to_arc NOT IN (SELECT arc_id FROM anl_mincut_result_arc WHERE result_id = v_mincutid) THEN -- checkvalve is proposed valve and to_arc is dry
+			-- mincut must continue
+			PERFORM gw_fct_grafanalytics_mincut(concat('{"data":{"arc":"',v_checkvalve.to_arc,'", "step":1, "parameters":{"id":',v_mincutid,'}}}')::json);
+		END IF;
+	END LOOP;
 	
 	-- set proposed = false for broken valves
 	v_querytext = 'UPDATE anl_mincut_result_valve SET proposed=FALSE WHERE broken = TRUE AND result_id = '||v_mincutid;
