@@ -286,7 +286,6 @@ BEGIN
 		
 		-- presszone	 
 		IF v_project_type = 'WS' THEN
-			v_presszone_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='presszone_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			IF v_presszone_id IS NULL THEN
 				SELECT count(*) into count_aux FROM cat_presszone WHERE ST_DWithin(p_reduced_geometry, cat_presszone.the_geom,0.001);
 				IF count_aux = 1 THEN
@@ -299,7 +298,6 @@ BEGIN
 		END IF;
 			
 		-- Sector ID
-		v_sector_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		IF v_sector_id IS NULL THEN
 			SELECT count(*) into count_aux FROM sector WHERE ST_DWithin(p_reduced_geometry, sector.the_geom,0.001);
 			IF count_aux = 1 THEN
@@ -311,7 +309,6 @@ BEGIN
 		END IF;
 	
 		-- Dma ID
-		v_dma_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		IF v_dma_id IS NULL THEN
 			SELECT count(*) into count_aux FROM dma WHERE ST_DWithin(p_reduced_geometry, dma.the_geom,0.001);
 			IF count_aux = 1 THEN
@@ -323,7 +320,6 @@ BEGIN
 		END IF;
 
 		-- Expl ID
-		v_expl_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='exploitaiton_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		IF v_expl_id IS NULL THEN
 			SELECT count(*) into count_aux FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001);
 			IF count_aux = 1 THEN
