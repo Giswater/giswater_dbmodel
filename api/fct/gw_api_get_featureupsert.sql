@@ -249,7 +249,8 @@ BEGIN
 					
 				--Error, no existing nodes
 				ELSIF ((v_noderecord1.node_id IS NULL) OR (v_noderecord2.node_id IS NULL)) AND (v_arc_searchnodes_control IS TRUE) THEN
-					v_message = (SELECT concat('Error[1042]:',error_message, '[node_1]:',v_noderecord1.node_id,'[node_2]:',v_noderecord2.node_id,'. ',hint_message) FROM audit_cat_error WHERE id=1042);
+					v_message = (SELECT concat('Error[1042]:',error_message, '[node_1]:',v_noderecord1.node_id,'[node_2]:',v_noderecord2.node_id,'. ',hint_message) 
+					FROM audit_cat_error WHERE id=1042);
 					v_status = false;
 				END IF;
 	
@@ -282,50 +283,53 @@ BEGIN
 		END IF;
 				
 		-- map zones controls setting values
+		
+		-- presszone	 
 		IF v_project_type = 'WS' THEN
-
-			-- presszone	 
+			v_presszone_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='presszone_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			IF v_presszone_id IS NULL THEN
 				SELECT count(*) into count_aux FROM cat_presszone WHERE ST_DWithin(p_reduced_geometry, cat_presszone.the_geom,0.001);
 				IF count_aux = 1 THEN
 					v_presszone_id := (SELECT id FROM cat_presszone WHERE ST_DWithin(p_reduced_geometry, cat_presszone.the_geom,0.001) LIMIT 1);
-				ELSIF count_aux > 1 THEN
-					v_presszone_id =(SELECT presszonecat_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, v_promixity_buffer) 
+				ELSE
+					v_presszone_id =(SELECT presszonecat_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, 20) 
 					order by ST_Distance (p_reduced_geometry, v_edit_node.the_geom) LIMIT 1);
 				END IF;	
-			END IF;
-
+			END IF;			
 		END IF;
 			
 		-- Sector ID
-		IF v_presszone_id IS NULL THEN
+		v_sector_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		IF v_sector_id IS NULL THEN
 			SELECT count(*) into count_aux FROM sector WHERE ST_DWithin(p_reduced_geometry, sector.the_geom,0.001);
 			IF count_aux = 1 THEN
 				v_sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(p_reduced_geometry, sector.the_geom,0.001) LIMIT 1);
-			ELSIF count_aux > 1 THEN
-				v_sector_id =(SELECT sector_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, v_promixity_buffer) 
+			ELSE
+				v_sector_id =(SELECT sector_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, 20) 
 				order by ST_Distance (p_reduced_geometry, v_edit_node.the_geom) LIMIT 1);
-			END IF;	
+			END IF;
 		END IF;
 	
 		-- Dma ID
+		v_dma_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		IF v_dma_id IS NULL THEN
 			SELECT count(*) into count_aux FROM dma WHERE ST_DWithin(p_reduced_geometry, dma.the_geom,0.001);
 			IF count_aux = 1 THEN
 				v_dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(p_reduced_geometry, dma.the_geom,0.001) LIMIT 1);
-			ELSIF count_aux > 1 THEN
-				v_dma_id =(SELECT dma_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, v_promixity_buffer) 
+			ELSE
+				v_dma_id =(SELECT dma_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, 20) 
 				order by ST_Distance (p_reduced_geometry, v_edit_node.the_geom) LIMIT 1);
 			END IF;	
 		END IF;
 
 		-- Expl ID
+		v_expl_id =  (SELECT "value" FROM config_param_user WHERE "parameter"='exploitaiton_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		IF v_expl_id IS NULL THEN
 			SELECT count(*) into count_aux FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001);
 			IF count_aux = 1 THEN
 				v_expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001) LIMIT 1);
-			ELSIF count_aux > 1 THEN
-				v_expl_id =(SELECT expl_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, v_promixity_buffer) 
+			ELSE
+				v_expl_id =(SELECT expl_id FROM v_edit_node WHERE ST_DWithin(p_reduced_geometry, v_edit_node.the_geom, 20) 
 				order by ST_Distance (p_reduced_geometry, v_edit_node.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -479,7 +483,8 @@ BEGIN
 
 			-- elevation from raster
 			ELSIF ((aux_json->>'column_id') = 'elevation' OR (aux_json->>'column_id') = 'top_elev') AND v_sys_raster_dem AND v_edit_upsert_elevation_from_dem THEN
-				field_value = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id = (SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+				field_value = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id = (SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) 
+				LIMIT 1));
 							
 			-- catalog values
 			ELSIF (aux_json->>'column_id')='cat_dnom' THEN
@@ -502,7 +507,8 @@ BEGIN
 					WHERE (reverse(substring(reverse(a->>'parameter'),10)) = lower(v_catfeature.id)); -- 10 = '_vefault'
 			
 			-- *_type
-			ELSIF (aux_json->>'column_id') =  'fluid_type' OR  (aux_json->>'column_id') =  'function_type' OR (aux_json->>'column_id') =  'location_type' OR (aux_json->>'column_id') =  'category_type' THEN
+			ELSIF (aux_json->>'column_id') =  'fluid_type' OR  (aux_json->>'column_id') =  'function_type' OR 
+			(aux_json->>'column_id') =  'location_type' OR (aux_json->>'column_id') =  'category_type' THEN
 				SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array_aux) AS a 
 					WHERE ((a->>'param') = (aux_json->>'column_id') AND left ((a->>'parameter'),3) = left(lower(v_catfeature.feature_type),3));
 
