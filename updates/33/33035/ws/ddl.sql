@@ -10,7 +10,6 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 --2020/04/04
 
 CREATE TABLE anl_mincut_checkvalve(
-  id serial NOT NULL,
   node_id character varying(16) NOT NULL,
   to_arc character varying(16) NOT NULL,
   CONSTRAINT anl_mincut_checkvalve_pkey PRIMARY KEY (node_id)
