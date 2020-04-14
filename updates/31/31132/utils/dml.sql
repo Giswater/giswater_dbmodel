@@ -62,3 +62,6 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO audit_cat_function VALUES (2844, 'gw_trg_edit_team_x_vehicle', 'utils', 'function trigger', NULL, NULL, NULL, 'Makes editable v_om_team_x_vehicle', 'role_om', false) 
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO audit_cat_function VALUES (2848, 'gw_fct_lot_psector_geom', 'utils', 'function', NULL, NULL, NULL, 'Generate lot geometry', 'role_om', false) 
+ON CONFLICT (id) DO NOTHING;
+
