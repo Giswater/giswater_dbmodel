@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 2848
+--FUNCTION CODE: 2852
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_lot_psector_geom(p_lot_id integer)
   RETURNS integer AS
