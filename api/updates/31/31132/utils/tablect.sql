@@ -9,3 +9,5 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 ALTER TABLE config_api_visit ADD CONSTRAINT config_api_visit_formname_key UNIQUE (formname);
+
+ALTER TABLE om_visit ALTER COLUMN visitcat_id DROP NOT NULL;
