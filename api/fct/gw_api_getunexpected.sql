@@ -6,17 +6,17 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2856
 
-CREATE OR REPLACE FUNCTION SCHEA_NAME.gw_api_getunexpected(p_data json)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getunexpected(p_data json)
   RETURNS json AS
 $BODY$
 /*
 -- unexpected first call
-SELECT ud.gw_api_getunexpected($${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},"data":{"relatedFeature":{"type":"arc", "id":"2074"},"fields":{},"pageInfo":null}}$$)
+SELECT SCHEMA_NAME.gw_api_getunexpected($${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},"data":{"relatedFeature":{"type":"arc", "id":"2074"},"fields":{},"pageInfo":null}}$$)
 */
 
 BEGIN
 
-	RETURN SCHEA_NAME.gw_api_get_visit(2, p_data);	
+	RETURN SCHEMA_NAME.gw_api_get_visit(2, p_data);	
 
 END;
 $BODY$
