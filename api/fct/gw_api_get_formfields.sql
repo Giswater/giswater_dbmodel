@@ -58,6 +58,7 @@ DECLARE
     v_bmapsclient boolean;
     v_array text[];
     v_array_child text[];
+    v_dv_querytext_filterc_child text;
     
 BEGIN
 
@@ -82,6 +83,7 @@ BEGIN
 
 --   Get fields	
 	IF p_formname!='infoplan' THEN 
+	raise notice 'ADF -> %',p_formname;
 		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT label, column_id, concat('||quote_literal(p_tabname)||',''_'',column_id) AS widgetname, widgettype,
 
 			widgettype as type, column_id as name, datatype AS "dataType",widgetfunction as "widgetAction", widgetfunction as "updateAction",widgetfunction as "changeAction", widgetfunction,
@@ -223,12 +225,14 @@ BEGIN
 			
 				FOREACH aux_json_child IN ARRAY fields_array
 				LOOP	
+					
 					IF (aux_json_child->>'dv_parent_id') = (aux_json->>'column_id') THEN
 
 					   IF (aux_json_child->>'widgettype') = 'combo' THEN
+						
 
 						SELECT (json_array_elements(array_to_json(fields_array[(aux_json->> 'orderby')::INT:(aux_json->> 'orderby')::INT])))->>'selectedId' INTO v_selected_id;	
-
+						raise notice 'SELECTED ID -> %',v_selected_id;
 						-- Define the order by column
 						IF (aux_json_child->>'dv_orderby_id')::boolean IS TRUE THEN
 							v_orderby_child='id';
@@ -238,10 +242,11 @@ BEGIN
 								
 						-- Enable null values
 						v_dv_querytext_child=(aux_json_child->>'dv_querytext');
-						
+						v_dv_querytext_filterc_child = aux_json_child->>'dv_querytext_filterc';
 						-- Get combo id's
-						IF (aux_json_child->>'dv_querytext_filterc') IS NOT NULL AND v_selected_id IS NOT NULL THEN		
-							query_text= 'SELECT (array_agg(id)) FROM ('|| quote_ident(v_dv_querytext_child) || ((aux_json_child->>'dv_querytext_filterc'))||' '||quote_literal(v_selected_id)||' ORDER BY idval) a';
+						IF (aux_json_child->>'dv_querytext_filterc') IS NOT NULL AND v_selected_id IS NOT NULL THEN	
+							query_text= 'SELECT (array_agg(id)) FROM ('|| v_dv_querytext_child || v_dv_querytext_filterc_child || v_selected_id ||' ORDER BY idval) a';
+							raise notice 'd1 -> %',query_text;
 							execute query_text INTO v_array_child;									
 						ELSE 	
 							EXECUTE 'SELECT (array_agg(id)) FROM ('||quote_literal((aux_json_child->>'dv_querytext'))||' ORDER BY '||quote_ident(v_orderby_child)||')a' INTO v_array_child;
@@ -258,7 +263,8 @@ BEGIN
 						
 						-- Get combo values
 						IF (aux_json_child->>'dv_querytext_filterc') IS NOT NULL THEN
-							query_text= 'SELECT (array_agg(idval)) FROM ('|| quote_literal(v_dv_querytext_child) ||quote_literal((aux_json_child->>'dv_querytext_filterc'))||' '||quote_literal(quote_literal(v_selected_id))||' ORDER BY idval) a';
+							query_text= 'SELECT (array_agg(idval)) FROM ('|| v_dv_querytext_child ||v_dv_querytext_filterc_child||v_selected_id||' ORDER BY idval) a';
+							raise notice 'd2 -> %',query_text;
 							execute query_text INTO v_array_child;
 						ELSE 	
 							EXECUTE 'SELECT (array_agg(idval)) FROM ('||quote_literal((aux_json_child->>'dv_querytext'))||' ORDER BY '||quote_ident(v_orderby_child)||')a'

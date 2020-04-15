@@ -42,6 +42,7 @@ INSERT INTO audit_cat_table VALUES ('om_team_x_visitclass', 'O&M', 'Relation bet
 INSERT INTO audit_cat_table VALUES ('v_edit_cat_team', 'O&M', 'Editable view for team catalog', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
 INSERT INTO audit_cat_table VALUES ('v_ext_cat_vehicle', 'O&M', 'Editable view for vehicle catalog', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
 INSERT INTO audit_cat_table VALUES ('v_om_lot_x_user', 'O&M', 'Editable with relations between lots and users', 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
+INSERT INTO audit_cat_table VALUES ('v_visit_lot_user', 'O&M', NULL, 'role_om', 0, NULL, NULL, 0, NULL, NULL, NULL, FALSE);
 
 
 INSERT INTO audit_cat_function VALUES (2834, 'gw_trg_edit_team_x_user', 'utils', 'function trigger', NULL, NULL, NULL, 'Makes editable v_om_user_x_team', 'role_om', false) 
@@ -63,5 +64,17 @@ INSERT INTO audit_cat_function VALUES (2844, 'gw_trg_edit_team_x_vehicle', 'util
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO audit_cat_function VALUES (2852, 'gw_fct_lot_psector_geom', 'utils', 'function', NULL, NULL, NULL, 'Generate lot geometry', 'role_om', false) 
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO audit_cat_function VALUES (2856, 'gw_api_getunexpected', 'utils', 'function', NULL, NULL, NULL, 'Get unexpected visit', 'role_om', false) 
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO audit_cat_function VALUES (2858, 'gw_api_get_combochilds', 'utils', 'function', NULL, NULL, NULL, 'Get combo childs', 'role_om', false) 
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO audit_cat_function VALUES (2860, 'gw_api_getselectors', 'utils', 'function', NULL, NULL, NULL, 'Get selectors', 'role_om', false) 
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO audit_cat_function VALUES (2862, 'gw_api_setlot', 'utils', 'function', NULL, NULL, NULL, 'Set lot', 'role_om', false) 
 ON CONFLICT (id) DO NOTHING;
 

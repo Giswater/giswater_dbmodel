@@ -258,14 +258,14 @@ BEGIN
 			INTO v_the_geom;
 
 		--  get querytext
-		EXECUTE 'SELECT query_text FROM config_api_list WHERE tablename = $1 AND device = $2'
-			INTO v_query_result
+		EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2'
+			INTO v_query_result, v_default
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_api_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE 'SELECT query_text FROM config_api_list WHERE tablename = $1 LIMIT 1'
-				INTO v_query_result
+			EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1'
+				INTO v_query_result, v_default
 				USING v_tablename;
 		END IF;	
 
@@ -316,24 +316,19 @@ BEGIN
 			INTO v_columntype;
 			
 			-- creating the query_text
-			
 			IF v_field='limit' THEN
 				IF v_limit IS NULL THEN
 					v_limit := v_value;
 				END IF;
-			ELSIF v_field='lot_id' THEN
-				IF v_filterlot IS NULL THEN
-					v_filterlot := v_value;
-				END IF;
+			ELSIF v_field='team_id' and ((p_data ->>'feature')::json->>'tableName')::text != 'om_visit' THEN
 				
-				v_query_result := v_query_result || ' AND '||v_field||'::text '||v_sign||' '||quote_literal(v_filterlot) ||'::text';
-			ELSIF v_field='team_id' THEN
-			
 				IF v_filterteam IS NULL THEN
 					v_filterteam := v_value;
 				END IF;
 				
-				v_query_result := v_query_result || ' AND '||v_field||'::text '||v_sign||' '||quote_literal(v_filterteam) ||'::text';
+				IF v_filterteam IS NOT NULL THEN
+					v_query_result := v_query_result || ' AND '||v_field||'::text '||v_sign||' '||quote_literal(v_filterteam) ||'::text';
+				END IF;
 			ELSIF v_value IS NOT NULL  THEN
 				IF v_startdate IS NULL THEN
 					v_startdate := v_value;			
@@ -343,7 +338,6 @@ BEGIN
 		END LOOP;
 		
 	END IF;
-	raise notice 'V_QUERY_RESULT -> %',v_query_result;
 	
 	-- add feature filter
 	SELECT array_agg(row_to_json(a)) into v_text from json_each(v_filter_feature) a;
@@ -374,9 +368,18 @@ BEGIN
 		v_query_result := v_query_result || ' AND ST_dwithin ( '|| v_tablename || '.' || v_the_geom || ',' || 
 		'ST_MakePolygon(ST_GeomFromText(''LINESTRING ('||v_x1||' '||v_y1||', '||v_x1||' '||v_y2||', '||v_x2||' '||v_y2||', '||v_x2||' '||v_y1||', '||v_x1||' '||v_y1||')'','||v_srid||')),1)';
 	END IF;
+	IF v_filterteam IS NOT NULL THEN
+		EXECUTE 'SELECT lot_id FROM om_visit_lot_x_user WHERE user_id = current_user AND team_id = ' || v_filterteam || ' AND endtime IS NULL ORDER BY id DESC'
+		INTO v_filterlot;
+	END IF;
 
+	IF v_filterlot IS NOT NULL AND v_tablename = 'om_visit' THEN
+		v_query_result := v_query_result || ' AND (lot_id::text = '||quote_literal(v_filterlot) ||'::text OR (feature_type IS NULL AND o.visit_type = 2))';
+	END IF;
+	
 	-- add orderby
 	IF v_orderby IS NULL THEN
+
 		v_orderby = v_default->>'orderBy';
 		v_ordertype = v_default->>'orderType';
 	END IF;
@@ -390,14 +393,15 @@ BEGIN
 	IF v_ordertype IS NOT NULL THEN
 		v_query_result := v_query_result ||' '||v_ordertype;
 	END IF;
-		raise notice '%', v_query_result;
 
+	raise notice 'query - %', v_query_result;
 
 	-- add limit
+	
 	IF v_limit IS NULL THEN
 		v_limit = 15;
 	END IF;
-
+	
 	EXECUTE 'SELECT count(*)/'||v_limit||' FROM (' || v_query_result || ') a'
         INTO v_lastpage;
     
@@ -428,15 +432,17 @@ BEGIN
 	v_pageinfo := json_build_object('orderBy',v_orderby, 'orderType', v_ordertype, 'currentPage', v_currentpage, 'lastPage', v_lastpage);
 
 	-- getting filter fields
-	SELECT gw_api_get_formfields(v_tablename, 'listHeader', v_tabname, null, null, null, null,'INSERT', null, v_device)
+	SELECT gw_api_get_formfields(v_tablename, 'listHeader', v_tabname, null, null, null, null,'INSERT', v_filterteam::text, v_device)
 		INTO v_filter_fields;
 
 		--  setting values of filter fields
+		
 		SELECT array_agg(row_to_json(a)) into v_text from json_each(v_filter_values) a;
 		i=1;
 		IF v_text IS NOT NULL THEN
 			FOREACH text IN ARRAY v_text
 			LOOP
+				raise notice 'TEXT .> %',text;
 				-- get value
 				SELECT v_text [i] into v_json_field;
 				v_value:= (SELECT (v_json_field ->> 'value')) ;
@@ -450,6 +456,8 @@ BEGIN
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'value', COALESCE(v_startdate));
 					ELSIF (v_filter_fields[i]->>'column_id')='lot_id' AND v_filterlot IS NOT NULL THEN
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'selectedId', v_filterlot::text);
+					ELSIF (v_filter_fields[i]->>'column_id')='team_id' AND v_filterteam IS NOT NULL THEN
+						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'selectedId', v_filterteam::text);	
 					ELSIF (v_filter_fields[i]->>'widgettype')='combo' THEN
 						v_filter_fields[i] := gw_fct_json_object_set_key(v_filter_fields[i], 'selectedId', v_value);
 					ELSE
@@ -462,6 +470,7 @@ BEGIN
 				i=i+1;			
 		
 			END LOOP;
+			
 		END IF;
 
 	-- adding the widget of list
@@ -472,13 +481,15 @@ BEGIN
 		USING v_tablename;
 
 	IF v_listclass IS NULL THEN
-		v_listclass = 'tableView';
+		--v_listclass = 'tableView';
+		v_listclass = 'list';
 	END IF;
 	
 	-- setting new element	
+	
 	IF v_device =9 THEN
 		v_filter_fields[v_i+1] := json_build_object('widgettype',v_listclass,'widgetfunction','gw_api_open_rpt_result','label','','stylesheet','','layout_order',0,'layout_name','rpt_layout1','widgetname','tableview_rpt','datatype','tableView','column_id','fileList','orderby', v_i+3, 'position','body', 'value', v_result_list);
-	ELSE
+	ELSE		
 		v_filter_fields[v_i+1] := json_build_object('type',v_listclass,'dataType','list','name','list','orderby', v_i+3, 'position','body', 'value', v_result_list);
 	END IF;
 
@@ -516,6 +527,7 @@ BEGIN
 -- converting to json
 	v_fields_json = array_to_json (v_filter_fields);
 	v_fields_json_ = array_to_json (v_filter_fields_);
+
 --    Control NULL's
 	v_apiversion := COALESCE(v_apiversion, '{}');
 	v_featuretype := COALESCE(v_featuretype, '');
@@ -523,7 +535,14 @@ BEGIN
 	v_idname := COALESCE(v_idname, '');	
 	v_fields_json := COALESCE(v_fields_json, '{}');
 	v_pageinfo := COALESCE(v_pageinfo, '{}');
-
+raise notice 'AACCBB -> %','{"status":"Accepted", "message":{"priority":1, "text":"This is a test message"}, "apiVersion":'||v_apiversion||
+             ',"body":{"form":{}'||
+		     ',"feature":{"featureType":"' || v_featuretype || '","tableName":"' || v_tablename ||'","idName":"'|| v_idname ||'"}'||
+		     ',"data":{"fields":' || v_fields_json ||
+			     ',"pageInfo":' || v_pageinfo ||
+			     '}'||
+		       '}'||
+	    '}';
 --    Return
     RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"This is a test message"}, "apiVersion":'||v_apiversion||
              ',"body":{"form":{}'||

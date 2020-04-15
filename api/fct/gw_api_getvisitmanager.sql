@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2640
 
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getvisitmanager(p_data json)
+CREATE OR REPLACE FUNCTION gw_api_getvisitmanager(p_data json)
   RETURNS json AS
 $BODY$
 
@@ -117,6 +117,7 @@ DECLARE
 	combo_json json;
 	v_childs_result json;
 	v_current_user text;
+	v_text text[];
 
 
 BEGIN
@@ -391,36 +392,36 @@ BEGIN
 
 			END IF;
 
-				-- setting feature
-				p_data := gw_fct_json_object_set_key(p_data, 'feature', v_feature);
+			-- setting feature
+			p_data := gw_fct_json_object_set_key(p_data, 'feature', v_feature);
 
-				-- refactor fields by filterFields
-				v_filterfields := ((p_data->>'data')::json->>'fields')::json;
-				v_data := (p_data->>'data');
-				v_data := gw_fct_json_object_set_key(v_data, 'filterFields', v_filterfields);
-				
-				-- setting filter fields of feature id
-				IF v_featuretype IS NOT NULL THEN				
-
-					-- setting filterfeaturefields using feature id
-					v_filterfeature = (concat('{"',v_featuretype,'_id":"',v_featureid,'"}'))::json;
-					v_data := gw_fct_json_object_set_key(v_data, 'filterFeatureField', v_filterfeature);
-					p_data := gw_fct_json_object_set_key(p_data, 'data', v_data);
-
-				END IF;
-	
-				--refactor tabNames
-				p_data := replace (p_data::text, 'tabFeature', 'feature');
+			-- refactor fields by filterFields
+			v_filterfields := ((p_data->>'data')::json->>'fields')::json;
+			v_data := (p_data->>'data');
+			v_data := gw_fct_json_object_set_key(v_data, 'filterFields', v_filterfields);
 			
-				RAISE NOTICE '--- CALLING gw_api_getlist - VISITS p_data: % ---', p_data;
-				SELECT gw_api_getlist (p_data) INTO v_fields_json;
-				
+			-- setting filter fields of feature id
+			IF v_featuretype IS NOT NULL THEN				
 
-				-- getting pageinfo and list values
-				v_pageinfo = ((v_fields_json->>'body')::json->>'data')::json->>'pageInfo';
-				v_fields_json = ((v_fields_json->>'body')::json->>'data')::json->>'fields';
-				
-				v_fields_json := COALESCE(v_fields_json, '{}');
+				-- setting filterfeaturefields using feature id
+				v_filterfeature = (concat('{"',v_featuretype,'_id":"',v_featureid,'"}'))::json;
+				v_data := gw_fct_json_object_set_key(v_data, 'filterFeatureField', v_filterfeature);
+				p_data := gw_fct_json_object_set_key(p_data, 'data', v_data);
+
+			END IF;
+
+			--refactor tabNames
+			p_data := replace (p_data::text, 'tabFeature', 'feature');
+			
+			RAISE NOTICE '--- CALLING gw_api_getlist - VISITS p_data: % ---', p_data;
+			SELECT gw_api_getlist (p_data) INTO v_fields_json;
+			
+
+			-- getting pageinfo and list values
+			v_pageinfo = ((v_fields_json->>'body')::json->>'data')::json->>'pageInfo';
+			v_fields_json = ((v_fields_json->>'body')::json->>'data')::json->>'fields';
+			
+			v_fields_json := COALESCE(v_fields_json, '{}');
 		END IF;
 
 		-- building
@@ -455,7 +456,9 @@ BEGIN
 			END IF;
 			
 			-- setting feature
+			v_filterfields := (((p_data->>'data')::json->>'fields')::json)->>'team_id';
 			p_data := gw_fct_json_object_set_key(p_data, 'feature', v_feature);
+			
 
 			-- refactor fields by filterFields
 			v_filterfields := ((p_data->>'data')::json->>'fields')::json;
@@ -477,7 +480,8 @@ BEGIN
 		
 			RAISE NOTICE '--- CALLING gw_api_getlist - VISITS p_data: % ---', p_data;
 			SELECT gw_api_getlist (p_data) INTO v_fields_json;
-
+			array_index = 0;
+			
 			-- getting pageinfo and list values
 			v_pageinfo = ((v_fields_json->>'body')::json->>'data')::json->>'pageInfo';
 			v_fields_json = ((v_fields_json->>'body')::json->>'data')::json->>'fields';
