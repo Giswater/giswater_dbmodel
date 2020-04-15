@@ -299,3 +299,17 @@ CREATE OR REPLACE VIEW v_om_lot_x_user AS
      JOIN cat_team ON om_visit_lot_x_user.team_id = cat_team.id
      LEFT JOIN om_visit_lot ON om_visit_lot.id = om_visit_lot_x_user.lot_id
      LEFT JOIN ext_workorder ON ext_workorder.serie::text = om_visit_lot.serie::text;
+	 
+	 
+CREATE OR REPLACE VIEW v_visit_lot_user AS 
+ SELECT om_visit_lot_x_user.id,
+    om_visit_lot_x_user.user_id,
+    om_visit_lot_x_user.team_id,
+    om_visit_lot_x_user.lot_id,
+    om_visit_lot_x_user.starttime,
+    om_visit_lot_x_user.endtime,
+    now()::date AS date
+   FROM om_visit_lot_x_user
+  WHERE om_visit_lot_x_user.user_id::name = "current_user"()
+  ORDER BY om_visit_lot_x_user.id DESC
+ LIMIT 1;

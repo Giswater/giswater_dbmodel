@@ -207,4 +207,7 @@ CREATE TABLE om_team_x_visitclass(
 
 
 
+ALTER TABLE om_visit_event_photo ADD COLUMN hash text;
+ALTER TABLE om_visit_event_photo ADD COLUMN xcoord double precision;
+ALTER TABLE om_visit_event_photo ADD COLUMN ycoord double precision;
 
