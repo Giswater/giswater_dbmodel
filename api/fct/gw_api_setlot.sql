@@ -57,7 +57,7 @@ BEGIN
 	v_status = ((p_data ->>'data')::json->>'fields')::json->>'status'::text;
 	v_visitclass_id = ((p_data ->>'data')::json->>'fields')::json->>'visitclass_id'::text;
 	v_team = ((p_data ->>'data')::json->>'fields')::json->>'team_id'::text;
-	v_id = (select MAX(id)+1 from om_visit_lot);
+	v_id = (select MAX(id) from om_visit_lot);
 	
 	-- Control NULL's
 	v_tablename := COALESCE(v_tablename, '');
