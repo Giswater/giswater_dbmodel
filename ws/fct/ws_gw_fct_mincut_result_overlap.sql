@@ -88,7 +88,8 @@ BEGIN
 
 			v_querytext:='INSERT INTO anl_mincut_result_arc ( result_id, arc_id, the_geom)
 			             SELECT '||v_conflict_id||', arc_id, the_geom 
-			             FROM anl_mincut_result_arc WHERE result_id='||v_rec.id;    
+			             FROM anl_mincut_result_arc WHERE result_id='||v_rec.id
+			             ||' ON CONFLICT (result_id, arc_id) DO NOTHING';    
 			EXECUTE v_querytext;	
 
 			-- count arc_id afected on the overlaped mincut result
