@@ -100,6 +100,8 @@ BEGIN
 	v_usenetworkdemand:= ((p_data ->>'data')::json->>'parameters')::json->>'useNetworkDemand';
 	v_geometrylog:= ((p_data ->>'data')::json->>'parameters')::json->>'geometryLog';
 	IF v_geometrylog IS NULL THEN v_geometrylog = TRUE; END IF;
+	
+	v_geometrylog =  false ;
 
 	SELECT value INTO v_qmlpointpath FROM config_param_user WHERE parameter='qgis_qml_pointlayer_path' AND cur_user=current_user;
 	SELECT value INTO v_qmllinepath FROM config_param_user WHERE parameter='qgis_qml_linelayer_path' AND cur_user=current_user;
