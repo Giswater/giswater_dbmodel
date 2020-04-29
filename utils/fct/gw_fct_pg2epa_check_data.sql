@@ -1379,9 +1379,9 @@ BEGIN
 						VALUES (14, v_result_id, 3, concat('ERROR: There is/are ',v_count,
 						' not unitary patterns for hydrometer on this exportation.'));
 						INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) 
-						VALUES (14, v_result_id, 2, concat('SELECT * FROM audit_check_data WHERE fprocesscat_id=62 AND cur_user=current_user'));		
+						VALUES (14, v_result_id, 2, concat('SELECT * FROM audit_check_data WHERE fprocesscat_id=62 AND user_name=current_user'));		
 
-						DELETE FROM audit_check_data WHERE fprocesscat_id=62 and cur_user=current_user;				
+						DELETE FROM audit_check_data WHERE fprocesscat_id=62 and user_name=current_user;				
 						INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
 						SELECT 62, v_result_id, pattern_id ,'Patterns used on hydrometer is not unitary WHEN pattern method choosed requires unitary pattern.' 
 						FROM (SELECT pattern_id FROM v_rtc_period_hydrometer JOIN inp_pattern USING (pattern_id) EXCEPT
