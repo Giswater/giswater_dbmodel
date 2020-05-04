@@ -293,7 +293,7 @@ BEGIN
 				NEW.workcat_id, NEW.workcat_id_end, NEW.buildercat_id,NEW.builtdate, NEW.enddate, NEW.ownercat_id,
 				NEW.muni_id, NEW.streetaxis_id, NEW.postcode,NEW.streetaxis2_id,NEW.postnumber,NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 				NEW.descript, NEW.rotation,NEW.link, NEW.verified, NEW.undelete, NEW.label_x,NEW.label_y,NEW.label_rotation,NEW.the_geom,
-				NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.xyz_date, NEW.unconnected, NEW.num_value, now(), current_user, NEW.cat_matcat_id)	
+				NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.xyz_date, NEW.unconnected, NEW.num_value, now(), current_user, NEW.cat_matcat_id);	
 		END IF;
 				
 		IF v_man_table='man_junction' THEN
