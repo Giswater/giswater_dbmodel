@@ -33,8 +33,8 @@ CREATE OR REPLACE VIEW v_node AS
     node_type.type AS sys_type,
     node.nodecat_id,
 	CASE
-		WHEN cat_node.matcat_id IS NULL THEN node.matcat_id
-		ELSE cat_node.matcat_id
+		WHEN node.matcat_id IS NULL THEN cat_node.matcat_id
+		ELSE node.matcat_id
 	END AS cat_matcat_id,
     node.epa_type,
     node.sector_id,
@@ -180,8 +180,8 @@ CREATE OR REPLACE VIEW v_edit_connec AS
     connec_type.type AS sys_type,
     connec.private_connecat_id,
 	CASE
-		WHEN cat_connec.matcat_id IS NULL THEN connec.matcat_id
-		ELSE cat_connec.matcat_id
+		WHEN connec.matcat_id IS NULL THEN cat_connec.matcat_id
+		ELSE connec.matcat_id
 	END AS cat_matcat_id,
     connec.sector_id,
     sector.macrosector_id,
@@ -260,8 +260,8 @@ CREATE OR REPLACE VIEW ve_connec AS
     connec_type.type AS sys_type,
     connec.private_connecat_id,
     CASE
-		WHEN cat_connec.matcat_id IS NULL THEN connec.matcat_id
-		ELSE cat_connec.matcat_id
+		WHEN connec.matcat_id IS NULL THEN cat_connec.matcat_id
+		ELSE connec.matcat_id
 	END AS cat_matcat_id,
     connec.sector_id,
     sector.macrosector_id,
@@ -348,8 +348,8 @@ CREATE OR REPLACE VIEW v_arc AS
     arc.arc_type,
     arc.arccat_id,
 	CASE
-		WHEN cat_arc.matcat_id IS NULL THEN arc.matcat_id::varchar(16)
-		ELSE cat_arc.matcat_id
+		WHEN arc.matcat_id IS NULL THEN cat_arc.matcat_id
+		ELSE arc.matcat_id::varchar(16)
 	END AS matcat_id,
     cat_arc.shape,
     cat_arc.geom1,

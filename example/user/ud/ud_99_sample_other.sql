@@ -285,3 +285,12 @@ UPDATE cat_arc SET cost = 'VIRTUAL_M', m2bottom_cost = 'VIRTUAL_M2', m3protec_co
 UPDATE element SET code = concat ('E',element_id);
 
 UPDATE cat_feature SET id=id;
+
+UPDATE config_api_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_node' 
+WHERE column_id='cat_matcat_id' AND formname LIKE 've_node%';
+
+UPDATE config_api_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_arc' 
+WHERE column_id='cat_matcat_id' AND formname LIKE 've_connec%';
+
+UPDATE config_api_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_arc' 
+WHERE column_id='cat_matcat_id' AND formname LIKE 've_arc%';
