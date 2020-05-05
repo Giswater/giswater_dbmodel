@@ -353,7 +353,7 @@ CREATE OR REPLACE VIEW v_node AS
    FROM node
      JOIN v_state_node ON v_state_node.node_id::text = node.node_id::text
      LEFT JOIN cat_node ON cat_node.id::text = node.nodecat_id::text
-     JOIN node_type ON node_type.id::text = cat_node.node_type::text
+     JOIN node_type ON node_type.id::text = cat_node.nodetype_id::text
      LEFT JOIN dma ON node.dma_id = dma.dma_id
      LEFT JOIN sector ON node.sector_id = sector.sector_id
      LEFT JOIN dqa ON node.dqa_id = dqa.dqa_id;
