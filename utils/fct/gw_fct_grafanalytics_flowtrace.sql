@@ -25,23 +25,23 @@ SELECT * FROM anl_arc WHERE fprocesscat_id=94 AND cur_user=current_user
 */
 
 DECLARE
-affected_rows numeric;
-v_count integer default 0;
-v_nodeid text;
-v_sum integer = 0;
-v_class text;
-v_fprocesscat_id integer;
-v_sign varchar(2);
-v_expl json;	
-v_text text;
-v_querytext text;
-v_result text;
-v_result_info json;
-v_result_line json;
-v_version text;
-v_projectype varchar(2);
-v_srid int4;
-v_error_context text;
+	affected_rows 		numeric;
+	v_count 		integer default 0;
+	v_nodeid 		integer;
+	v_sum 			integer = 0;
+	v_class 		text;
+	v_fprocesscat_id 	integer;
+	v_sign 			varchar(2);
+	v_expl 			json;	
+	v_text 			text;
+	v_querytext 		text;
+	v_result	 	text;
+	v_result_info 		json;
+	v_result_line 		json;
+	v_version		text;
+	v_projectype		varchar(2);
+	v_srid			int4;
+	
 	
 BEGIN
 
@@ -65,7 +65,7 @@ BEGIN
 		v_sign = '>';
 	END IF;
 
-	-- reset graf & audit tables
+	-- reset graf & aSCHEMA_NAMEit_log tables
 	DELETE FROM anl_arc where cur_user=current_user AND fprocesscat_id=v_fprocesscat_id;
 	DELETE FROM audit_check_data WHERE fprocesscat_id=v_fprocesscat_id AND user_name=current_user;
 	DELETE FROM temp_anlgraf;	
@@ -124,20 +124,30 @@ BEGIN
 	-- inundation process
 	LOOP
 		v_count = v_count+1;
-                update temp_anlgraf n set water= 1, flag=n.flag+1 from v_anl_graf a where n.node_1 = a.node_1  and n.arc_id = a.arc_id;
+
+                update temp_anlgraf n
+		set water= 1, flag=n.flag+1
+		from v_anl_graf a
+		where n.node_1 = a.node_1 
+		and n.arc_id = a.arc_id;
+
 
 		GET DIAGNOSTICS affected_rows =row_count;
+
 		exit when affected_rows = 0;
 		EXIT when v_count = 400;
 
 		v_sum = v_sum + affected_rows;
+
 		RAISE NOTICE ' % % %', v_count, affected_rows, v_sum;
+
 	END LOOP;
+
 	
 	-- insert into result table
 	EXECUTE 'INSERT INTO anl_arc (fprocesscat_id, arc_id, the_geom, descript)
 		SELECT DISTINCT ON (a.arc_id) '||v_fprocesscat_id||', a.arc_id, the_geom, '''||v_class||'''	FROM temp_anlgraf a
-		JOIN arc b ON a.arc_id=b.arc_id GROUP BY a.arc_id, the_geom HAVING max(water) '||v_sign||' 0 ';
+		JOIN arc b ON a.arc_id=b.arc_id::integer GROUP BY a.arc_id, the_geom HAVING max(water) '||v_sign||' 0 ';
 
 	-- count arcs
 	EXECUTE 'SELECT count(*) FROM (SELECT DISTINCT ON (arc_id) count(*) FROM temp_anlgraf GROUP BY arc_id HAVING max(water)'||v_sign||' 0 )a'
@@ -156,18 +166,10 @@ BEGIN
 
 	-- arcs
 	v_result = null;
-	SELECT jsonb_agg(features.feature) INTO v_result
-	FROM (
-  	SELECT jsonb_build_object(
-     'type',       'Feature',
-    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-    'properties', to_jsonb(row) - 'the_geom'
-  	) AS feature
-  	FROM (SELECT arc_id, arccat_id, state, expl_id, descript, the_geom FROM v_edit_arc WHERE arc_id IN 
-	(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row) features;
-
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	FROM (SELECT arc_id, arccat_id, state, expl_id, descript, the_geom FROM v_edit_arc WHERE arc_id IN (SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row; 
 	v_result := COALESCE(v_result, '{}'); 
-	v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"", "features":',v_result,'}'); 
+	v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"", "values":',v_result, '}');
 
 
 	-- Control nulls
@@ -181,12 +183,6 @@ BEGIN
 					  '"line":'||v_result_line||','||
 					  '"setVisibleLayers":[]'||
 					  '}}}')::json;
-
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

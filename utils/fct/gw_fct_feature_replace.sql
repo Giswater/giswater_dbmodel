@@ -6,6 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2714
 
+
 --DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_feature_replace(json);
 
 
@@ -23,23 +24,23 @@ SELECT SCHEMA_NAME.gw_fct_feature_replace($${
 $BODY$
 DECLARE
 
-	v_the_geom public.geometry;
-	v_query_string_select text;
-	v_query_string_insert text;
-	v_query_string_update text;
-	v_column varchar;
-	v_value text;
-	v_state integer;
-	v_state_type integer;
-	v_epa_type text;
+	the_geom_aux public.geometry;
+	query_string_select text;
+	query_string_insert text;
+	query_string_update text;
+	column_aux varchar;
+	value_aux text;
+	state_aux integer;
+	state_type_aux integer;
+	epa_type_aux text;
 	rec_arc record;	
 	v_old_featuretype varchar;
 	v_old_featurecat varchar;
-	v_sector_id integer;
-	v_dma_id integer;
-	v_expl_id integer;
-	v_man_table varchar;
-	v_epa_table varchar;
+	sector_id_aux integer;
+	dma_id_aux integer;
+	expl_id_aux integer;
+	man_table_aux varchar;
+	epa_table_aux varchar;
 	v_code_autofill boolean;
 	v_code	int8;
 	v_id int8;
@@ -55,8 +56,8 @@ DECLARE
 	v_cat_column text;
 	v_sql text;
 	v_element_table text;
-	v_verified_id text;
-	v_inventory boolean;
+	verified_id_aux text;
+	inventory_aux boolean;
 	v_connec_proximity_value text;
 	v_connec_proximity_active text;
 	v_result_id text= 'replace feature';
@@ -66,13 +67,6 @@ DECLARE
 	v_result_info text;
 	v_arc_searchnodes_value text;
 	v_arc_searchnodes_active text;
-	v_error_context text;
-	v_audit_result text;
-	v_level integer;
-	v_status text;
-	v_message text;
-	rec_addfields record;
-	v_count integer;
 
 BEGIN
 
@@ -80,13 +74,7 @@ BEGIN
 	SET search_path = 'SCHEMA_NAME', public;
 
 	SELECT wsoftware, giswater  INTO v_project_type, v_version FROM version order by 1 desc limit 1;
-
-    --set current process as users parameter
-    DELETE FROM config_param_user  WHERE  parameter = 'cur_trans' AND cur_user =current_user;
-
-    INSERT INTO config_param_user (value, parameter, cur_user)
-    VALUES (txid_current(),'cur_trans',current_user );
-    
+	
 	SELECT  value::json->>'value' as value INTO v_arc_searchnodes_value FROM config_param_system where parameter = 'arc_searchnodes';
 	SELECT  value::json->>'activated' INTO v_arc_searchnodes_active FROM config_param_system where parameter = 'arc_searchnodes';
 
@@ -142,32 +130,31 @@ BEGIN
 	--capture old feature values for basic attributes
 	IF v_feature_type='node' THEN
 		EXECUTE 'SELECT epa_type FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''' '
-		INTO v_epa_type;
+		INTO epa_type_aux;
 	END IF;
 	
 	EXECUTE 'SELECT sector_id FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_sector_id;
+	INTO sector_id_aux;
 	EXECUTE 'SELECT state_type FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_state_type;
+	INTO state_type_aux;
 	EXECUTE 'SELECT state FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_state;
+	INTO state_aux;
 	EXECUTE 'SELECT dma_id FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_dma_id;
+	INTO dma_id_aux;
 	EXECUTE 'SELECT the_geom FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_the_geom;
+	INTO the_geom_aux;
 	EXECUTE 'SELECT expl_id FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_expl_id;
+	INTO expl_id_aux;
 	EXECUTE 'SELECT verified FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_verified_id;
+	INTO verified_id_aux;
 	EXECUTE 'SELECT inventory FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-	INTO v_inventory;
+	INTO inventory_aux;
 	
 
 
 	-- Control of state(1)
-	IF (v_state=0 OR v_state=2 OR v_state IS NULL) THEN
-		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-        "data":{"error":"1070", "function":"2126","debug_msg":"'||v_state||'"}}$$);' INTO v_audit_result;
+	IF (state_aux=0 OR state_aux=2 OR state_aux IS NULL) THEN
+		PERFORM audit_function(1070,2126,state_aux::text);
 	ELSE
 
 		-- new feature_id
@@ -185,64 +172,48 @@ BEGIN
 		IF v_feature_type='node' THEN
 			IF v_project_type='WS' then
 				INSERT INTO node (node_id, code, nodecat_id, epa_type, sector_id, dma_id, expl_id, state, state_type, the_geom) 
-				VALUES (v_id, v_code, v_old_featurecat, v_epa_type, v_sector_id, v_dma_id, v_expl_id,  
-				0, v_state_type, v_the_geom);
+				VALUES (v_id, v_code, v_old_featurecat, epa_type_aux, sector_id_aux, dma_id_aux, expl_id_aux,  
+				0, state_type_aux, the_geom_aux);
 			ELSE 
 				INSERT INTO node (node_id, code, node_type, nodecat_id, epa_type, sector_id, dma_id, expl_id, state, state_type, the_geom) 
-				VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, v_epa_type, v_sector_id, v_dma_id, v_expl_id, 
-				0, v_state_type, v_the_geom);
+				VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, epa_type_aux, sector_id_aux, dma_id_aux, expl_id_aux, 
+				0, state_type_aux, the_geom_aux);
 			END IF;
-
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-			VALUES (43, v_result_id, concat('Insert new feature into node table.'));
 
 		ELSIF v_feature_type ='connec' THEN
 
 			IF v_project_type='WS' then
 				INSERT INTO connec (connec_id, code, connecat_id, sector_id, dma_id, expl_id, state, 
 				state_type, the_geom, workcat_id, verified, inventory) 
-				VALUES (v_id, v_code, v_old_featurecat, v_sector_id, v_dma_id,v_expl_id, 0, 
-				v_state_type, v_the_geom, v_workcat_id_end, v_verified_id, v_inventory);
+				VALUES (v_id, v_code, v_old_featurecat, sector_id_aux, dma_id_aux,expl_id_aux, 0, 
+				state_type_aux, the_geom_aux, v_workcat_id_end, verified_id_aux, inventory_aux);
 			ELSE 
 				INSERT INTO connec (connec_id, code, connec_type, connecat_id,  sector_id, dma_id, expl_id, state, 
 				state_type, the_geom, workcat_id, verified, inventory) 
-				VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, v_sector_id, v_dma_id, v_expl_id,0, 
-				v_state_type, v_the_geom,v_workcat_id_end, v_verified_id, v_inventory);
+				VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, sector_id_aux, dma_id_aux, expl_id_aux,0, 
+				state_type_aux, the_geom_aux,v_workcat_id_end, verified_id_aux, inventory_aux);
 			END IF;	
-
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-			VALUES (43, v_result_id, concat('Insert new feature into connec table.'));
 
 		ELSIF v_feature_type = 'gully' THEN
 			INSERT INTO gully (gully_id, code, gully_type,gratecat_id, sector_id, dma_id, expl_id, state, state_type, the_geom,workcat_id, verified, inventory) 
-			VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, v_sector_id, v_dma_id,v_expl_id, 0, v_state_type, v_the_geom, v_workcat_id_end, v_verified_id, v_inventory);
-			
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-			VALUES (43, v_result_id, concat('Insert new feature into gully table.'));
+			VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, sector_id_aux, dma_id_aux,expl_id_aux, 0, state_type_aux, the_geom_aux, v_workcat_id_end, verified_id_aux, inventory_aux);
 		END IF;
 
 		-- inserting new feature on table man_table
 		IF v_feature_type='node' or (v_feature_type='connec' AND v_project_type='WS') THEN
 			EXECUTE 'SELECT man_table FROM '||v_feature_type_table||' WHERE id='''||v_old_featuretype||''';'
-			INTO v_man_table;
+			INTO man_table_aux;
 
-			v_query_string_insert='INSERT INTO '||v_man_table||' VALUES ('||v_id||');';
-			execute v_query_string_insert;
-
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-			VALUES (43, v_result_id, concat('Insert new feature id into ',v_man_table,'.'));
+			query_string_insert='INSERT INTO '||man_table_aux||' VALUES ('||v_id||');';
+			execute query_string_insert;
 
 		END IF;
 		
 		-- inserting new feature on table epa_table
 		IF v_feature_type='node' THEN
-			SELECT epa_table INTO v_epa_table FROM node_type WHERE id=v_old_featuretype;		
-			v_query_string_insert='INSERT INTO '||v_epa_table||' VALUES ('||v_id||');';
-			execute v_query_string_insert;
-
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-			VALUES (43, v_result_id, concat('Insert new feature id into ',v_epa_table,'.'));
-
+			SELECT epa_table INTO epa_table_aux FROM node_type WHERE id=v_old_featuretype;		
+			query_string_insert='INSERT INTO '||epa_table_aux||' VALUES ('||v_id||');';
+			execute query_string_insert;
 		END IF;
 		
 		-- updating values on feature parent table from values of old feature
@@ -253,19 +224,17 @@ BEGIN
 							and column_name!=''code'' and column_name!=''epa_type'' and column_name!=''state_type'' and column_name!='''||v_cat_column||'''
 							and column_name!=''sector_id'' and column_name!=''dma_id'' and column_name!=''expl_id'';';
 				
-		FOR v_column IN EXECUTE v_sql
+		FOR column_aux IN EXECUTE v_sql
 		LOOP
-			v_query_string_select= 'SELECT '||v_column||' FROM '||v_feature_type||' where '||v_id_column||'='||quote_literal(v_old_feature_id)||';';
-			IF v_query_string_select IS NOT NULL THEN
-				EXECUTE v_query_string_select INTO v_value;	
+			query_string_select= 'SELECT '||column_aux||' FROM '||v_feature_type||' where '||v_id_column||'='||quote_literal(v_old_feature_id)||';';
+			IF query_string_select IS NOT NULL THEN
+				EXECUTE query_string_select INTO value_aux;	
 			END IF;
 			
-			v_query_string_update= 'UPDATE '||v_feature_type||' set '||v_column||'='||quote_literal(v_value)||' where '||v_id_column||'='||quote_literal(v_id)||';';
-			IF v_query_string_update IS NOT NULL THEN
-				EXECUTE v_query_string_update; 
-	
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Copy value of ',v_column,' from old feature into new one: ',v_value,'.'));
+			query_string_update= 'UPDATE '||v_feature_type||' set '||column_aux||'='||quote_literal(value_aux)||' where '||v_id_column||'='||quote_literal(v_id)||';';
+			IF query_string_update IS NOT NULL THEN
+				EXECUTE query_string_update; 
+				raise notice 'query_string_update--> parent,%',query_string_update;
 			END IF;
 		END LOOP;
 
@@ -274,22 +243,19 @@ BEGIN
 		IF v_feature_type='node' or (v_feature_type='connec' AND v_project_type='WS') THEN
 			v_sql:='select column_name    FROM information_schema.columns 
 								where (table_schema=''SCHEMA_NAME'' and udt_name <> ''inet'' and 
-								table_name='''||v_man_table||''') and column_name!='''||v_id_column||''';';
-			FOR v_column IN EXECUTE v_sql
+								table_name='''||man_table_aux||''') and column_name!='''||v_id_column||''';';
+			FOR column_aux IN EXECUTE v_sql
 			LOOP
-				v_query_string_select= 'SELECT '||v_column||' FROM '||v_man_table||' where '||v_id_column||'='||quote_literal(v_old_feature_id)||';';
-				IF v_query_string_select IS NOT NULL THEN
-					EXECUTE v_query_string_select INTO v_value;	
+				query_string_select= 'SELECT '||column_aux||' FROM '||man_table_aux||' where '||v_id_column||'='||quote_literal(v_old_feature_id)||';';
+				IF query_string_select IS NOT NULL THEN
+					EXECUTE query_string_select INTO value_aux;	
 				END IF;
 				
-				v_query_string_update= 'UPDATE '||v_man_table||' set '||v_column||'='||quote_literal(v_value)||' where node_id='||quote_literal(v_id)||';';
-				IF v_query_string_update IS NOT NULL THEN
-					EXECUTE v_query_string_update; 
-
-					INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-					VALUES (43, v_result_id, concat('Copy value of ',v_column,' from old feature into new one: ',v_value,'.'));
+				query_string_update= 'UPDATE '||man_table_aux||' set '||column_aux||'='||quote_literal(value_aux)||' where node_id='||quote_literal(v_id)||';';
+				IF query_string_update IS NOT NULL THEN
+					EXECUTE query_string_update; 
+					raise notice 'query_string_update --> man_table,%',query_string_update;
 				END IF;
-				
 			END LOOP;
 		END IF;
 		
@@ -297,24 +263,22 @@ BEGIN
 		IF v_feature_type='node' THEN
 			v_sql:='select column_name  FROM information_schema.columns 
 								where (table_schema=''SCHEMA_NAME'' and udt_name <> ''inet'' and 
-								table_name='''||v_epa_table||''') and column_name!='''||v_id_column||''';';
+								table_name='''||epa_table_aux||''') and column_name!='''||v_id_column||''';';
 			
-			FOR v_column IN EXECUTE v_sql LOOP
-				v_query_string_select= 'SELECT '||v_column||' FROM '||v_epa_table||' where node_id='||quote_literal(v_old_feature_id)||';';
-				IF v_query_string_select IS NOT NULL THEN
-					EXECUTE v_query_string_select INTO v_value;	
+			FOR column_aux IN EXECUTE v_sql LOOP
+				query_string_select= 'SELECT '||column_aux||' FROM '||epa_table_aux||' where node_id='||quote_literal(v_old_feature_id)||';';
+				IF query_string_select IS NOT NULL THEN
+					EXECUTE query_string_select INTO value_aux;	
 				END IF;
 				
-				v_query_string_update= 'UPDATE '||v_epa_table||' set '||v_column||'='||quote_literal(v_value)||' where '||v_id_column||'='||quote_literal(v_id)||';';
-				IF v_query_string_update IS NOT NULL THEN
-					EXECUTE v_query_string_update; 
-
-					INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-					VALUES (43, v_result_id, concat('Copy value of ', v_column,' from old feature into new one: ',v_value,'.'));
+				query_string_update= 'UPDATE '||epa_table_aux||' set '||column_aux||'='||quote_literal(value_aux)||' where '||v_id_column||'='||quote_literal(v_id)||';';
+				IF query_string_update IS NOT NULL THEN
+					EXECUTE query_string_update; 
+					raise notice 'query_string_update --> epa,%',query_string_update;
 				END IF;
 			END LOOP;
 		END IF;
-		
+	
 		-- taking values from old feature (from man_addfields table)
 		INSERT INTO man_addfields_value (feature_id, parameter_id, value_param)
 		SELECT 
@@ -323,25 +287,11 @@ BEGIN
 		value_param
 		FROM man_addfields_value WHERE feature_id=v_old_feature_id;
 
-		IF (SELECT count(parameter_id) FROM man_addfields_value WHERE feature_id = v_id::text) > 0THEN
-			FOR rec_addfields IN (SELECT parameter_id, value_param FROM man_addfields_value WHERE feature_id = v_id)
-			LOOP
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Copy value of addfield ',rec_addfields.parameter_id,' old feature into new one: ',rec_addfields.value_param,'.'));
-			END LOOP;
-		END IF;
 
 		--Moving elements from old feature to new feature
 		IF v_keep_elements IS TRUE THEN
 			v_element_table:=concat('element_x_',v_feature_type);
-			EXECUTE 'SELECT count(element_id) FROM '||v_element_table||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
-			INTO v_count;
-			IF v_count > 0 THEN
-				v_element_table:=concat('element_x_',v_feature_type);
-				EXECUTE 'UPDATE '||v_element_table||' SET '||v_id_column||'='''||v_id||''' WHERE '||v_id_column||'='''||v_old_feature_id||''';';	
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Assign ',v_count,' elements to the new feature.'));
-			END IF;	
+			EXECUTE 'UPDATE '||v_element_table||' SET '||v_id_column||'='''||v_id||''' WHERE '||v_id_column||'='''||v_old_feature_id||''';';		
 		END IF;
 	
 	
@@ -350,56 +300,34 @@ BEGIN
 		IF v_feature_type='node' THEN
 			UPDATE config_param_system SET value =concat('{"activated":','false',', "value":',v_arc_searchnodes_value,'}') 
 			WHERE parameter='arc_searchnodes';
-
 		END IF;
 
 			FOR rec_arc IN SELECT arc_id FROM arc WHERE node_1=v_old_feature_id
 			LOOP
 				UPDATE arc SET node_1=v_id where arc_id=rec_arc.arc_id;
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Reconnect arc ',rec_arc.arc_id,'.'));
 			END LOOP;
 		
 			FOR rec_arc IN SELECT arc_id FROM arc WHERE node_2=v_old_feature_id
 			LOOP
 				UPDATE arc SET node_2=v_id where arc_id=rec_arc.arc_id;
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Reconnect arc ',rec_arc.arc_id,'.'));
 			END LOOP;
 		END IF;
 		
 		-- upgrading and downgrading features
-		v_state_type = (SELECT id FROM value_state_type WHERE state=0 LIMIT 1);
+		state_type_aux = (SELECT id FROM value_state_type WHERE state=0 LIMIT 1);
 		
-		EXECUTE 'UPDATE '||v_feature_type||' SET state=0, workcat_id_end='''||v_workcat_id_end||''', enddate='''||v_enddate||''', state_type='||v_state_type||'
+		EXECUTE 'UPDATE '||v_feature_type||' SET state=0, workcat_id_end='''||v_workcat_id_end||''', enddate='''||v_enddate||''', state_type='||state_type_aux||'
 		WHERE '||v_id_column||'='''||v_old_feature_id||''';';
 
-		INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-		VALUES (43, v_result_id, concat('Downgrade old feature, set state: 0, workcat_id_end:  ',v_workcat_id_end,', v_enddate: ',v_enddate,'.'));
-
-		IF v_id IS NOT NULL THEN
-			EXECUTE 'UPDATE '||v_feature_type||' SET state=1, workcat_id='''||v_workcat_id_end||''', builtdate='''||v_enddate||''', enddate=NULL WHERE '||v_id_column||'='''||v_id||''';';
-			INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-			VALUES (43, v_result_id, concat('Update new feature, set state: 1, workcat_id:  ',v_workcat_id_end,', builtdate: ',v_enddate,'.'));
-		END IF;
+		
+		EXECUTE 'UPDATE '||v_feature_type||' SET state=1, workcat_id='''||v_workcat_id_end||''', builtdate='''||v_enddate||''', enddate=NULL WHERE '||v_id_column||'='''||v_id||''';';
 		
 		--reconect existing link to the new feature
 		IF v_feature_type='connec' OR v_feature_type='gully' THEN
-			SELECT count(link_id) INTO v_count FROM link WHERE (eature_id = v_old_feature_id and feature_type = upper(v_feature_type) and state=1) OR
-			(exit_id = v_old_feature_id and exit_type = upper(v_feature_type) and state=1);
-			IF v_count > 0 THEN
-				UPDATE link SET feature_id = v_id WHERE feature_id = v_old_feature_id and feature_type = upper(v_feature_type) and state=1;
-				UPDATE link SET exit_id = v_id WHERE exit_id = v_old_feature_id and exit_type = upper(v_feature_type) and state=1;
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Reconnect ',v_count,' links.'));
-			END IF;
+			UPDATE link SET feature_id = v_id WHERE feature_id = v_old_feature_id and feature_type = upper(v_feature_type) and state=1;
+			UPDATE link SET exit_id = v_id WHERE exit_id = v_old_feature_id and exit_type = upper(v_feature_type) and state=1;
 		ELSIF v_feature_type='node' THEN
-			SELECT count(link_id) INTO v_count FROM link WHERE exit_id = v_old_feature_id and exit_type = upper(v_feature_type) and state=1;
-			IF v_count > 0 THEN
-				UPDATE link SET exit_id = v_id WHERE exit_id = v_old_feature_id and exit_type = upper(v_feature_type) and state=1;
-				INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) 
-				VALUES (43, v_result_id, concat('Reconnect ',v_count,' links.'));
-			END IF;
+			UPDATE link SET exit_id = v_id WHERE exit_id = v_old_feature_id and exit_type = upper(v_feature_type) and state=1;
 		END IF;
 
 		-- enable config parameter arc_searchnodes AND connec proximity
@@ -409,22 +337,22 @@ BEGIN
 			WHERE parameter='connec_proximity';
 		END IF;
 
+
+	-- manage log (fprocesscat 43)
+	INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (43, v_result_id, concat('Insert new feature into parent table -> Done'));
+	INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (43, v_result_id, concat('Copy parent, man_table and epa information -> Done'));
+	INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (43, v_result_id, concat('Manage feature addfields -> Done'));
+	IF v_keep_elements IS TRUE THEN
+		INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (43, v_result_id, concat('Assign elements to the new feature -> Done'));
+	END IF;
+	IF v_feature_type = 'node' THEN
+		INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (43, v_result_id, concat('Reconnect arcs -> Done'));
+	END IF;
+	INSERT INTO audit_check_data (fprocesscat_id, result_id, error_message) VALUES (43, v_result_id, concat('Process finished'));
+
 -- get log (fprocesscat 43)
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
 	FROM (SELECT id, error_message AS message FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=43) row; 
-
-	IF v_audit_result is null THEN
-        v_status = 'Accepted';
-        v_level = 3;
-        v_message = 'Replace feature done successfully';
-    ELSE
-
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
-
-    END IF;
-
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 			
@@ -434,15 +362,15 @@ BEGIN
 	
  
 	-- Return
-	RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"priority":0, "text":"Process executed"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||'}}'||
 	    '}')::json;
 	    
 	--    Exception handling
-    EXCEPTION WHEN OTHERS THEN
-		GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;  
-		RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_error_context) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	--EXCEPTION WHEN OTHERS THEN 
+	--RETURN ('{"status":"Failed","message":{"priority":2, "text":' || to_json(SQLERRM) || '}, "version":"'|| v_version ||'","SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

@@ -175,7 +175,7 @@ BEGIN
 	END IF;
 
 		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (106, 2, 'Topocontrol is deactivated.');
+		VALUES (106, 2, 'Topoccontrol is deactivated.');
 	
 		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
 		VALUES (106, 1, concat('INFO: Features inserted with state: ',v_state,' and state type: ',v_state_type,'.'));	
@@ -202,9 +202,9 @@ BEGIN
 
 	--geometry
 
-	v_result_line = '{"geometryType":"", "features":[]}';
-	v_result_polygon = '{"geometryType":"", "features":[]}';
-	v_result_point = '{"geometryType":"", "features":[]}';
+	v_result_line = '{"geometryType":"", "values":[]}';
+	v_result_polygon = '{"geometryType":"", "values":[]}';
+	v_result_point = '{"geometryType":"", "values":[]}';
 
 --  Return
     RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Insert import dxf done succesfully"}, "version":"'||v_version||'"'||

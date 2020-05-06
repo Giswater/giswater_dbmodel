@@ -51,32 +51,28 @@ BEGIN
         -- Sector ID
         IF (NEW.sector_id IS NULL) THEN
             IF ((SELECT COUNT(*) FROM sector) = 0) THEN
-                EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			 "data":{"error":"1008", "function":"1116","debug_msg":null}}$$);';
+                RETURN audit_function(1008,1116); 
             END IF;
 			NEW.sector_id := (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
 			IF (NEW.sector_id IS NULL) THEN
 				NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"());
 			END IF;
             IF (NEW.sector_id IS NULL) THEN
-                EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			 "data":{"error":"1010", "function":"1116","debug_msg":"'||NEW.link_id::text||'"}}$$);';
+                RETURN audit_function(1010,1116,NEW.link_id::text); 
             END IF;
         END IF;
         
         -- Dma ID
         IF (NEW.dma_id IS NULL) THEN
             IF ((SELECT COUNT(*) FROM dma) = 0) THEN
-                EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			 "data":{"error":"1012", "function":"1116","debug_msg":null}}$$);';
+                RETURN audit_function(1012,1116); 
             END IF;
 			NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
 			IF (NEW.dma_id IS NULL) THEN
 				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"());
 			END IF; 
             IF (NEW.dma_id IS NULL) THEN
-                EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			 "data":{"error":"1014", "function":"1116","debug_msg":"'||NEW.link_id::text||'"}}$$);';
+                RETURN audit_function(1014,1116,NEW.link_id::text); 
             END IF;
         END IF;
 
@@ -94,8 +90,7 @@ BEGIN
 			IF (NEW.expl_id IS NULL) THEN
 				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
 				IF (NEW.expl_id IS NULL) THEN
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       				"data":{"error":"2012", "function":"1116","debug_msg":"'||NEW.link_id::text||'"}}$$);';
+					PERFORM audit_function(2012,1116,NEW.link_id::text);
 				END IF;		
 			END IF;
 		END IF;	
@@ -127,8 +122,7 @@ BEGIN
 			END IF;
 			
 			IF v_connect IS NULL THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"3070", "function":"1116","debug_msg":null}}$$);';
+				RAISE EXCEPTION 'Link needs one connec/gully feature as start point. Geometry have been checked and there is no connec/gully feature as start/end point';
 			END IF;		
 		END IF;
 
@@ -144,8 +138,7 @@ BEGIN
 		-- for ws projects control of link related to nodarc
 		IF v_projectype = 'WS' AND v_node IS NOT NULL THEN
 			IF v_node.node_id IN (SELECT node_id FROM inp_valve UNION SELECT node_id FROM inp_pump) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"3072", "function":"1116","debug_msg":null}}$$);';
+				RAISE EXCEPTION 'It is not possible to connect link closer than 0.25 meters from nod2arc features in order to prevent conflits if this node may be a nod2arc. Please check it before continue';
 			END IF;
 		END IF;
 		
@@ -180,8 +173,7 @@ BEGIN
 
 		-- feature control
 		IF NEW.feature_type IS NULL THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       		"data":{"error":"3074", "function":"1116","debug_msg":null}}$$);';
+			RAISE EXCEPTION 'It is mandatory to connect as init point one connec or gully with link';
 		END IF;	
 
 		-- end control
@@ -206,6 +198,8 @@ BEGIN
 				v_end_point = v_vnode.the_geom;
 				v_node_id = v_vnode.vnode_id;
 			END IF;
+
+			--raise exception 'vnode %', v_node_id;
 		
 			-- update connec
 			UPDATE connec SET arc_id=v_arc.arc_id, expl_id=v_arc.expl_id, featurecat_id=v_arc.arc_type, feature_id=v_arc.arc_id, dma_id=v_arc.dma_id, 
@@ -306,8 +300,7 @@ BEGIN
 		
 		-- control of null exit_type
 		IF NEW.exit_type IS NULL THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       		"data":{"error":"2015", "function":"1116","debug_msg":null}}$$);';
+			PERFORM audit_function(2015,1116);
 		END IF;
 		
 		-- upsert link
@@ -322,25 +315,20 @@ BEGIN
 		-- exception control. It's no possible to create another link when already exists for the connect
 		IF (SELECT feature_id FROM link WHERE feature_id=NEW.feature_id) IS NOT NULL THEN
 			IF NEW.feature_type = 'CONNEC' THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"3076", "function":"1116","debug_msg":"'||NEW.feature_id||'"}}$$);';
+				RAISE EXCEPTION 'It is not possible to create the link. On inventory mode only one link it is enabled for each connec. On planning mode it is possible to create more than one links, one for each alternative, but it is mandatory to use the psector form and relate the connec using the arc_id field. After that you will can customize the link''s geometry. connec_id: %' ,NEW.feature_id;
 			ELSIF NEW.feature_type = 'GULLY' THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"3078", "function":"1116","debug_msg":"'||NEW.feature_id||'"}}$$);';
+				RAISE EXCEPTION 'It is not possible to create the link. On inventory mode only one link it is enabled for each gully. On planning mode it is possible to create more than one links, one for each alternative, but it is mandatory to use the psector form and relate the connec using the arc_id field. After that you will can customize the link''s geometry. gully_id: %' ,NEW.feature_id;
 			END IF;		
 		END IF;
 
 		-- state control
 		IF v_connect.state=1 AND v_end_state=2 THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       		"data":{"error":"3080", "function":"1116","debug_msg":"'||NEW.feature_id||'"}}$$);';
+			RAISE EXCEPTION 'It''s not possible to relate one connect with state=2 over feature with state=1';
 		END IF;
 		
 
-		INSERT INTO link (link_id, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, 
-		state, the_geom, vnode_topelev)
-		VALUES (NEW.link_id, NEW.feature_type, NEW.feature_id, NEW.expl_id, NEW.exit_id, NEW.exit_type, TRUE,
-		NEW.state, NEW.the_geom, NEW.vnode_topelev );
+		INSERT INTO link (link_id, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom)
+		VALUES (NEW.link_id, NEW.feature_type, NEW.feature_id, NEW.expl_id, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom);
 		
 		RETURN NEW;
 		
@@ -349,8 +337,7 @@ BEGIN
 		IF NEW.ispsectorgeom IS FALSE THEN -- if geometry comes from link table
 
 			IF st_equals (OLD.the_geom, NEW.the_geom) IS FALSE THEN
-				UPDATE link SET userdefined_geom='TRUE', exit_id = NEW.exit_id , exit_type = NEW.exit_type, 
-				the_geom=NEW.the_geom, vnode_topelev = NEW.vnode_topelev WHERE link_id=NEW.link_id;
+				UPDATE link SET userdefined_geom='TRUE', exit_id = NEW.exit_id , exit_type = NEW.exit_type, the_geom=NEW.the_geom WHERE link_id=NEW.link_id;
 				UPDATE vnode SET the_geom=St_endpoint(NEW.the_geom) WHERE vnode_id=NEW.exit_id::integer;
 			END IF;
 						
@@ -358,8 +345,7 @@ BEGIN
 
 			-- control endfeature (only VNODE it is possible)
 			IF NEW.exit_type!='VNODE' THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"3082", "function":"1116","debug_msg":"'||NEW.feature_id||'"}}$$);';
+				RAISE EXCEPTION 'On planning mode working with alternatives, it''s not possible to relate connect over other connects or nodes. Only arcs are avaliable';
 			END IF;
 			
 			-- if geometry have changed by user 

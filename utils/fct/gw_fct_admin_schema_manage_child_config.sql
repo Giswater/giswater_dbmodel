@@ -36,14 +36,11 @@ v_datatype text;
 v_widgettype text;
 
 BEGIN
-
-	-- dissable temporary trigger to manage control_config
-	UPDATE config_param_user SET value=FALSE WHERE cur_user = current_user AND parameter  = 'config_control';
 	
-	-- search path
+		-- search path
 	SET search_path = "SCHEMA_NAME", public;
 
-	-- get input parameters
+		-- get input parameters
 	v_schemaname = 'SCHEMA_NAME';
 
 	SELECT wsoftware, giswater  INTO v_project_type, v_version FROM version order by 1 desc limit 1;
@@ -56,7 +53,7 @@ BEGIN
 	v_feature_system_id  = (SELECT lower(system_id) FROM cat_feature where id=v_cat_feature);
 
 	IF v_view_name NOT IN (SELECT tableinfo_id FROM config_api_tableinfo_x_infotype) THEN
-		INSERT INTO audit_cat_table(id, context, descript, sys_role_id, sys_criticity, qgis_role_id, qgis_criticity, isdeprecated)
+		INSERT INTO audit_cat_table(id, context, description, sys_role_id, sys_criticity, qgis_role_id, qgis_criticity, isdeprecated)
 	    VALUES (v_view_name, 'Editable view', concat('Custom editable view for ',v_cat_feature), 'role_edit', 0, null,0,false);
 
 	    PERFORM SCHEMA_NAME.gw_fct_admin_role_permissions();
@@ -81,6 +78,7 @@ BEGIN
 
 	PERFORM setval('SCHEMA_NAME.config_api_form_fields_id_seq', (SELECT max(id) FROM config_api_form_fields), true);
 	
+
 	--insert configuration copied from the parent view config
 	FOR rec IN (SELECT * FROM config_api_form_fields WHERE formname=concat('ve_',v_feature_type))
 	LOOP
@@ -105,7 +103,7 @@ BEGIN
 	FOR rec IN  EXECUTE v_man_fields LOOP
 
 		--capture max layout_id for the view
-		EXECUTE 'SELECT max(layout_order::integer) + 1 FROM config_api_form_fields WHERE formname = '''||v_view_name||''' AND  layoutname=''lyt_data_1'';'
+		EXECUTE 'SELECT max(layout_order::integer) + 1 FROM config_api_form_fields WHERE formname = '''||v_view_name||''' AND  layout_name=''layout_data_1'';'
 		INTO v_orderby;
 
 		--transform data and widget types
@@ -130,11 +128,18 @@ BEGIN
 		END IF;
 
 		--insert into config_api_form_fields
-		INSERT INTO config_api_form_fields (formname,formtype,column_id,datatype,widgettype, layoutname, layout_order, 
-			label, ismandatory, isparent, iseditable, isautoupdate) 
-		VALUES (v_view_name,'feature', rec.column_name, v_datatype, v_widgettype, 'lyt_data_1',v_orderby, 
-			rec.column_name, false, false,true,false);
-
+		IF v_datatype='double' THEN
+			INSERT INTO config_api_form_fields (formname,formtype,column_id,datatype,widgettype, layout_id, layout_name,layout_order, 
+				isenabled, label, ismandatory,isparent,
+			iseditable,isautoupdate,field_length,num_decimals) 
+			VALUES (v_view_name,'feature',rec.column_name, v_datatype,v_widgettype,1,'layout_data_1',v_orderby, 
+				true,rec.column_name, false, false,true,false,rec.numeric_precision, rec.numeric_scale);
+		ELSE
+			INSERT INTO config_api_form_fields (formname,formtype,column_id,datatype,widgettype, layout_id, layout_name,layout_order, 
+				isenabled, label, ismandatory,isparent,iseditable,isautoupdate) 
+			VALUES (v_view_name,'feature',rec.column_name, v_datatype,v_widgettype,1,'layout_data_1',v_orderby, 
+				true,rec.column_name, false, false,true,false);
+		END IF;
 	END LOOP;
 
 	--select all already created addfields
@@ -143,7 +148,7 @@ BEGIN
 	--insert configuration for the addfields of the feature type
 	FOR rec IN EXECUTE v_man_addfields LOOP
 		--capture max layout_id for the view
-		EXECUTE 'SELECT max(layout_order::integer) + 1 FROM config_api_form_fields WHERE formname = '''||v_view_name||''' AND  layoutname=''lyt_data_1'';'
+		EXECUTE 'SELECT max(layout_order::integer) + 1 FROM config_api_form_fields WHERE formname = '''||v_view_name||''' AND  layout_name=''layout_data_1'';'
 		INTO v_orderby;
 		
 		--transform data and widget types
@@ -153,24 +158,28 @@ BEGIN
 			v_datatype=rec.datatype_id;
 		END IF;
 
-		IF  rec.datatype_id = 'boolean' THEN
+		IF rec.datatype_id = 'character varying' OR rec.datatype_id = 'integer' OR rec.datatype_id = 'numeric' THEN
+			v_widgettype='text';
+		ELSIF rec.datatype_id = 'boolean' THEN
 			v_widgettype='check';
 		ELSIF rec.datatype_id = 'date' THEN
 			v_widgettype='datepickertime';
-		ELSE 
-			v_widgettype='text';
 		END IF;
 		
 		--insert into config_api_form_fields
-		INSERT INTO config_api_form_fields (formname,formtype,column_id,datatype,widgettype, layoutname,layout_order, 
-			label, ismandatory,isparent,iseditable,isautoupdate) 
-		VALUES (v_view_name,'feature',rec.param_name, v_datatype,v_widgettype, 'lyt_data_1',v_orderby,
-			rec.param_name, rec.is_mandatory, false,rec.iseditable,false);
-				
+		IF v_datatype='double' THEN
+			INSERT INTO config_api_form_fields (formname,formtype,column_id,datatype,widgettype, layout_id, layout_name,layout_order, isenabled, 
+				label, ismandatory,isparent,iseditable,isautoupdate,field_length,num_decimals) 
+			VALUES (v_view_name,'feature',rec.param_name, v_datatype,v_widgettype,1,'layout_data_1',v_orderby, true,
+				rec.param_name, rec.is_mandatory, false,rec.iseditable,false,rec.field_length, rec.num_decimals);
+		ELSE
+			INSERT INTO config_api_form_fields (formname,formtype,column_id,datatype,widgettype, layout_id, layout_name,layout_order, isenabled, 
+				label, ismandatory,isparent,iseditable,isautoupdate) 
+			VALUES (v_view_name,'feature',rec.param_name, v_datatype,v_widgettype,1,'layout_data_1',v_orderby, true,
+				rec.param_name, rec.is_mandatory, false,rec.iseditable,false);
+		END IF;
+		
 	END LOOP;
-
-	-- enable trigger to manage control_config
-	UPDATE config_param_user SET value=TRUE WHERE cur_user = current_user AND parameter  = 'config_control';
 	
 END;
 $BODY$

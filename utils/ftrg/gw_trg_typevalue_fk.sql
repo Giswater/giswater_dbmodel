@@ -53,8 +53,7 @@ BEGIN
 				IF  v_new_field = ANY(v_list) OR v_new_field IS NULL  THEN
 					CONTINUE;
 				ELSE 
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-					"data":{"error":"3022", "function":"2744","debug_msg":"'||concat(rec.typevalue_table,', ',rec.target_field)||'"}}$$);';	
+					PERFORM audit_function(3022,2744,concat(rec.typevalue_table,', ',rec.target_field));
 
 				END IF;
 				

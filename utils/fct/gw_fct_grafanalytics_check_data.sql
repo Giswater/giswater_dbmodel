@@ -23,27 +23,26 @@ SELECT SCHEMA_NAME.gw_fct_grafanalytics_check_data($${
 
 
 DECLARE
-v_project_type text;
-v_count	integer;
-v_saveondatabase boolean;
-v_result text;
-v_version text;
-v_result_info json;
-v_result_point json;
-v_result_line json;
-v_result_polygon json;
-v_querytext text;
-v_result_id text;
-v_features text;
-v_edit text;
-v_config_param text;
-v_sector boolean;
-v_presszone boolean;
-v_dma boolean;
-v_dqa boolean;
-v_minsector boolean;
-v_grafclass text;
-v_error_context text;
+v_project_type 		text;
+v_count				integer;
+v_saveondatabase 	boolean;
+v_result 			text;
+v_version			text;
+v_result_info 		json;
+v_result_point		json;
+v_result_line 		json;
+v_result_polygon	json;
+v_querytext			text;
+v_result_id 		text;
+v_features 			text;
+v_edit				text;
+v_config_param 		text;
+v_sector			boolean;
+v_presszone			boolean;
+v_dma				boolean;
+v_dqa				boolean;
+v_minsector			boolean;
+v_grafclass			text;
 
 BEGIN
 
@@ -96,9 +95,9 @@ BEGIN
 	
 	-- Check if there are nodes type 'ischange=1 or 2 (true or maybe)' without changing catalog of acs (108)
 	v_querytext = '(SELECT n.node_id, count(*), nodecat_id, the_geom FROM 
-			(SELECT node_1 as node_id, arccat_id FROM v_edit_arc WHERE node_1 IN (SELECT node_id FROM vu_node JOIN cat_node ON id=nodecat_id WHERE ischange=1)
+			(SELECT node_1 as node_id, arccat_id FROM '||v_edit||'arc WHERE node_1 IN (SELECT node_id FROM vu_node JOIN cat_node ON id=nodecat_id WHERE ischange=1)
 			  UNION
-			 SELECT node_2, arccat_id FROM v_edit_arc WHERE node_2 IN (SELECT node_id FROM vu_node JOIN cat_node ON id=nodecat_id WHERE ischange=1)
+			 SELECT node_2, arccat_id FROM '||v_edit||'arc WHERE node_2 IN (SELECT node_id FROM vu_node JOIN cat_node ON id=nodecat_id WHERE ischange=1)
 			GROUP BY 1,2) a	JOIN node n USING (node_id) GROUP BY 1,3,4 HAVING count(*) <> 2)';
 
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext,' b') INTO v_count;
@@ -106,11 +105,9 @@ BEGIN
 	IF v_count > 0 THEN
 		EXECUTE concat ('INSERT INTO anl_node (fprocesscat_id, node_id, nodecat_id, descript, the_geom) 
 			SELECT 108, node_id, nodecat_id, ''Node with ischange=1 without any variation of arcs in terms of diameter, pn or material'', the_geom FROM (', v_querytext,') b');
-		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (111, 2, concat('WARNING: There is/are ',v_count,' nodes with ischange on 1 (true) without any variation of arcs in terms of diameter, pn or material. Please, check your data before continue.'));
 
 		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (111, 2, concat('SELECT * FROM anl_node WHERE fprocescat_id = 108 AND cur_user = current_user.'));
+		VALUES (111, 2, concat('WARNING: There is/are ',v_count,' nodes with ischange on 1 (true) without any variation of arcs in terms of diameter, pn or material. Please, check your data before continue.'));
 
 	-- is defined as warning because error (3) will break topologic issues of mapzones
 	ELSE
@@ -132,8 +129,6 @@ BEGIN
 		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
 		VALUES (111, 2, concat('WARNING: There is/are ',v_count,' nodes where arc catalog changes without nodecat with ischange on 0 or 2 (false or maybe). Please, check your data before continue.'));
 			-- is defined as warning because error (3) will break topologic issues of mapzones
-		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (111, 2, concat('SELECT * FROM anl_node WHERE fprocescat_id = 109 AND cur_user = current_user.'));
 	ELSE
 		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
 		VALUES (111, 1, 'INFO: No nodes without ''ischange'' where arc changes have been found');
@@ -339,23 +334,14 @@ BEGIN
 	
 	--points
 	v_result = null;
-	SELECT jsonb_agg(features.feature) INTO v_result
-	FROM (
-  	SELECT jsonb_build_object(
-     'type',       'Feature',
-    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-    'properties', to_jsonb(row) - 'the_geom'
-  	) AS feature
-  	FROM (SELECT id, node_id as feature_id, nodecat_id as feature_catalog, state, expl_id, descript,fprocesscat_id, the_geom 
-  	FROM  anl_node WHERE cur_user="current_user"() AND fprocesscat_id IN (76,79,80,81,82,108,109)) row) features;
-
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	FROM (SELECT id, node_id as feature_id, nodecat_id as feature_catalog, state, expl_id, descript,fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() 
+	AND fprocesscat_id IN (76,79,80,81,82,108,109)) row;  
 	v_result := COALESCE(v_result, '{}'); 
-
-
 	IF v_result = '{}' THEN 
 		v_result_point = '{"geometryType":"", "values":[]}';
 	ELSE 
-		v_result_point = concat ('{"geometryType":"Point", "features":',v_result, '}');
+		v_result_point = concat ('{"geometryType":"Point", "values":',v_result, '}');
 	END IF;
 	
 	--    Control nulls
@@ -364,7 +350,7 @@ BEGIN
 	v_result_line := COALESCE(v_result_line, '{}'); 
 	v_result_polygon := COALESCE(v_result_polygon, '{}'); 
 	
-	-- Return
+--  Return
     RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
@@ -374,13 +360,7 @@ BEGIN
 				'"polygon":'||v_result_polygon||'}'||
 		       '}'||
 	    '}')::json;
-
-	-- Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
-   
+	
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

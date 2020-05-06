@@ -26,62 +26,50 @@ BEGIN
 	v_mincutresult :=(SELECT value::integer from config_param_user where cur_user=current_user AND parameter ='inp_options_valve_mode_mincut_result') ;
 
 	-- update inp_valves (allways the same)
-	UPDATE temp_arc SET status=inp_valve.status FROM inp_valve WHERE temp_arc.arc_id=concat(inp_valve.node_id,'_n2a');
+	UPDATE rpt_inp_arc SET status=inp_valve.status FROM inp_valve WHERE rpt_inp_arc.arc_id=concat(inp_valve.node_id,'_n2a') AND result_id=result_id_var;
 
 	-- update shut-off valves
 	IF v_networkmode = 1 OR v_networkmode = 3 THEN -- Because shut-off valves are not exported as a shortpipe, pipes closer shut-off valves will be setted
 
 		IF v_valvemode = 3 THEN	--mincut results
-			UPDATE temp_arc SET status='CLOSED' 
-				FROM (SELECT arc_id FROM temp_arc join anl_mincut_result_valve ON node_id=node_1 AND result_id=v_mincutresult AND (proposed IS TRUE OR closed IS TRUE)
+			UPDATE rpt_inp_arc SET status='CLOSED' 
+				FROM (SELECT arc_id FROM rpt_inp_arc join anl_mincut_result_valve ON node_id=node_1 AND result_id=v_mincutresult AND (proposed IS TRUE OR closed IS TRUE)
 					UNION
-					SELECT arc_id FROM temp_arc join anl_mincut_result_valve ON node_id=node_2 AND result_id=v_mincutresult AND (proposed IS TRUE OR closed IS TRUE)
+					SELECT arc_id FROM rpt_inp_arc join anl_mincut_result_valve ON node_id=node_2 AND result_id=v_mincutresult AND (proposed IS TRUE OR closed IS TRUE)
 					) a 
-				WHERE a.arc_id=temp_arc.arc_id;
+				WHERE a.arc_id=rpt_inp_arc.arc_id AND result_id=result_id_var;
 
 		ELSIF v_valvemode = 2 THEN -- inventory
-			UPDATE temp_arc SET status='CLOSED' 
-				FROM (SELECT temp_arc.arc_id FROM temp_arc JOIN man_valve ON node_id=node_1 where closed is true
+			UPDATE rpt_inp_arc SET status='CLOSED' 
+				FROM (SELECT rpt_inp_arc.arc_id FROM rpt_inp_arc JOIN v_edit_man_valve ON node_id=node_1 where closed is true
 					UNION
-				    SELECT temp_arc.arc_id from temp_arc join man_valve ON node_id=node_2  where closed is true) a 
-				WHERE a.arc_id=temp_arc.arc_id;
+				    SELECT rpt_inp_arc.arc_id from rpt_inp_arc join v_edit_man_valve ON node_id=node_2  where closed is true) a 
+				WHERE a.arc_id=rpt_inp_arc.arc_id AND result_id=result_id_var;		
 
 		ELSIF v_valvemode = 1 THEN -- epa tables
-			UPDATE temp_arc SET status=a.status 
-				FROM (SELECT temp_arc.arc_id, CASE WHEN inp_shortpipe.status IS NULL THEN 'OPEN' ELSE inp_shortpipe.status END AS status FROM temp_arc join inp_shortpipe ON node_id=node_1
+			UPDATE rpt_inp_arc SET status=a.status 
+				FROM (SELECT rpt_inp_arc.arc_id, CASE WHEN inp_shortpipe.status IS NULL THEN 'OPEN' ELSE inp_shortpipe.status END AS status FROM rpt_inp_arc join inp_shortpipe ON node_id=node_1
 					UNION
-					SELECT temp_arc.arc_id,  CASE WHEN inp_shortpipe.status IS NULL THEN 'OPEN' ELSE inp_shortpipe.status END AS status from temp_arc join inp_shortpipe ON node_id=node_2) a 
-				WHERE a.arc_id=temp_arc.arc_id;
+					SELECT rpt_inp_arc.arc_id,  CASE WHEN inp_shortpipe.status IS NULL THEN 'OPEN' ELSE inp_shortpipe.status END AS status from rpt_inp_arc join inp_shortpipe ON node_id=node_2) a 
+				WHERE a.arc_id=rpt_inp_arc.arc_id AND result_id=result_id_var;			
 		END IF;
 	
 	ELSIF v_networkmode = 2 OR v_networkmode = 4 THEN -- Because shut-off valves are exported as nodarcs, directly we can set the status of shut-off valves
 				
 		IF v_valvemode = 3 THEN --mincut results
-			UPDATE temp_arc a SET status='CLOSED'
-			FROM man_valve v
-				WHERE a.arc_id=concat(v.node_id,'_n2a') AND closed=true;
-
-			UPDATE temp_arc a SET status='OPEN'
-			FROM man_valve v
-				WHERE a.arc_id=concat(v.node_id,'_n2a') AND closed=false;
-		
-			UPDATE temp_arc a SET status='CLOSED' 
+			UPDATE rpt_inp_arc a SET status='CLOSED' 
 			FROM anl_mincut_result_valve v
-			WHERE a.arc_id=concat(v.node_id,'_n2a') AND v.result_id = v_mincutresult AND (proposed IS TRUE OR closed IS TRUE);
+			WHERE a.arc_id=concat(v.node_id,'_n2a') AND v.result_id = v_mincutresult AND (proposed IS TRUE OR closed IS TRUE) AND a.result_id=result_id_var;
 			
 		ELSIF v_valvemode = 2 THEN -- inventory
-			UPDATE temp_arc a SET status='CLOSED'
-			FROM man_valve v
-				WHERE a.arc_id=concat(v.node_id,'_n2a') AND closed=true;
-
-			UPDATE temp_arc a SET status='OPEN'
-			FROM man_valve v
-				WHERE a.arc_id=concat(v.node_id,'_n2a') AND closed=false;
+			UPDATE rpt_inp_arc a SET status='CLOSED'
+			FROM v_edit_man_valve v
+				WHERE a.arc_id=concat(v.node_id,'_n2a') AND a.result_id=result_id_var AND closed=true;
 		
 		ELSIF v_valvemode = 1 THEN -- epa tables
-			UPDATE temp_arc a SET status=p.status 
+			UPDATE rpt_inp_arc a SET status=p.status 
 			FROM inp_shortpipe p
-				WHERE a.arc_id=concat(p.node_id,'_n2a');
+				WHERE a.arc_id=concat(p.node_id,'_n2a') AND a.result_id=result_id_var;
 		
 		END IF;
 	
@@ -89,12 +77,8 @@ BEGIN
     
     -- Reset demands if node is into mincut affectation
     IF v_valvemode = 3 THEN
-		UPDATE temp_node SET demand=0 WHERE temp_node.node_id IN (SELECT node_id FROM anl_mincut_result_node WHERE result_id=v_mincutresult) ;
+		UPDATE rpt_inp_node SET demand=0 WHERE rpt_inp_node.node_id IN (SELECT node_id FROM anl_mincut_result_node WHERE result_id=v_mincutresult) AND result_id=result_id_var;
     END IF; 
-
-    -- all that not are closed are open
-    UPDATE temp_arc SET status='OPEN' WHERE status IS NULL;
-
 
     RETURN 1;
 		

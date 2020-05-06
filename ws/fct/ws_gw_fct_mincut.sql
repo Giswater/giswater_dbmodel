@@ -36,7 +36,7 @@ v_length double precision;
 v_numconnecs integer;
 v_numhydrometer integer;
 v_debug Boolean;
-v_overlap text;  -- not used variable. Pending to refactor
+v_overlap text;
 v_geometry text;
 v_data json;
 v_volume float;
@@ -46,18 +46,6 @@ v_mincutversion integer;
 v_mincutdetails	text;
 v_output json;
 
-v_result text;
-v_result_info text;
-v_result_point text;
-v_result_line text;
-v_result_polygon text;
-v_error_context text;
-v_audit_result text;
-v_level integer;
-v_status text;
-v_message text;
-v_version text;
-
 BEGIN
     -- Search path
     SET search_path = SCHEMA_NAME, public;
@@ -65,15 +53,6 @@ BEGIN
     SELECT value::boolean INTO v_debug FROM config_param_system WHERE parameter='om_mincut_debug';
     SELECT value::int2 INTO v_mincutversion FROM config_param_system WHERE parameter='om_mincut_version';
 
-    -- Get project version
-	SELECT giswater INTO  v_version FROM version LIMIT 1;
-
-    --set current process as users parameter
-    DELETE FROM config_param_user  WHERE  parameter = 'cur_trans' AND cur_user =current_user;
-
-    INSERT INTO config_param_user (value, parameter, cur_user)
-    VALUES (txid_current(),'cur_trans',current_user );
-    
     IF v_debug THEN
 	RAISE NOTICE '1-Delete previous data from same result_id';
     END IF;
@@ -143,8 +122,7 @@ BEGIN
     IF type_element_arg = 'arc' OR type_element_arg='ARC' THEN
 	
 		IF (SELECT state FROM arc WHERE (arc_id = element_id_arg))=0 THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-        	"data":{"error":"3002", "function":"2304","debug_msg":"'||element_id_arg::text||'"}}$$);' INTO v_audit_result;
+			PERFORM audit_function(3002,2304,element_id_arg);
 		END IF;
 		
         -- Check an existing arc
@@ -174,8 +152,7 @@ BEGIN
 			SELECT node_1, node_2 INTO node_1_aux, node_2_aux FROM v_edit_arc WHERE arc_id = element_id_arg;
 
 			IF node_1_aux IS NULL OR node_2_aux IS NULL THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-        	"data":{"error":"3006", "function":"2304","debug_msg":"'||element_id_arg::text||'"}}$$);' INTO v_audit_result;
+				PERFORM audit_function(3006,2304);
 			END IF;
     
 
@@ -231,13 +208,11 @@ BEGIN
 		
 		-- The arc_id was not found
 		ELSE 
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-        	"data":{"error":"1082", "function":"2304","debug_msg":"'||element_id_arg::text||'"}}$$);' INTO v_audit_result;
+			PERFORM audit_function(1082,2304,element_id_arg);
 		END IF;
 
     ELSE
-    	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-        "data":{"error":"3092", "function":"2304","debug_msg":null}}$$);' INTO v_audit_result;
+		RAISE EXCEPTION 'Only arc is avaliable to execute a mincut';
     END IF;
 
 	IF v_debug THEN	RAISE NOTICE '7-Compute flow trace on network';	END IF;	
@@ -326,43 +301,12 @@ BEGIN
 	ON CONFLICT (state_id, cur_user) DO NOTHING;
 
 	-- returning
-	IF v_audit_result is null THEN
-        v_status = 'Accepted';
-        v_level = 3;
-        v_message = 'Arc divide done successfully';
-        v_return = concat('{"mincutOverlap":"',v_overlap,'", "geometry":"',v_geometry,'",', v_mincutdetails, '}');
-    ELSE
-
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
-
-    v_result := COALESCE(v_result, '{}'); 
-	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
-	v_result_point:=COALESCE(v_result_point,'{}');
-	v_result_line:=COALESCE(v_result_line,'{}');
-	v_result_polygon:=COALESCE(v_result_polygon,'{}');
-
-     v_return = ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
-             ',"body":{"form":{}'||
-		     ',"data":{ "info":'||v_result_info||','||
-		     	'"setVisibleLayers":["v_anl_mincut_init_point", "v_anl_mincut_result_arc", "v_anl_mincut_result_node", "v_anl_mincut_result_valve", "v_anl_mincut_result_connec"]'||','||
-				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||','||
-				'"polygon":'||v_result_polygon||'}'||
-		       '}'||
-	    '}')::json;
-    END IF;
+	v_return = concat('{"mincutOverlap":"',v_overlap,'", "geometry":"',v_geometry,'",', v_mincutdetails, '}');
 
 	IF v_debug THEN RAISE NOTICE 'End of process ';	END IF;
 	
 	RETURN v_return;
 
-	EXCEPTION WHEN OTHERS THEN
-	 GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	 RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
- 
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

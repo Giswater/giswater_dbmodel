@@ -98,10 +98,14 @@ BEGIN
 
 	-- Get all parameters from audit_cat param_user
 	EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (
-		SELECT label, audit_cat_param_user.id as widgetname, value , datatype, widgettype, layout_order, layoutname, 
+		SELECT label, audit_cat_param_user.id as widgetname, value , datatype, widgettype, layout_id, layout_order, layoutname, 
 		(CASE WHEN iseditable IS NULL OR iseditable IS TRUE THEN ''True'' ELSE ''False'' END) AS iseditable,
-		row_number()over(ORDER BY layoutname, layout_order) AS orderby, isparent, sys_role_id, project_type, widgetcontrols,
-		(CASE WHEN value IS NOT NULL AND value != ''false'' THEN ''True'' ELSE ''False'' END) AS checked, placeholder, descript AS tooltip, 
+		row_number()over(ORDER BY layout_id, layout_order) AS orderby, isparent, sys_role_id,project_type, ismandatory, reg_exp,
+		(CASE WHEN value IS NOT NULL AND value != ''false'' THEN ''True'' ELSE ''False'' END) AS checked,
+		(CASE WHEN (widgetcontrols->>''minValue'') IS NOT NULL THEN widgetcontrols->>''minValue'' ELSE NULL END) AS minvalue,
+		(CASE WHEN (widgetcontrols->>''maxValue'') IS NOT NULL THEN widgetcontrols->>''maxValue'' ELSE NULL END) AS maxvalue,
+		placeholder,
+		description AS tooltip, editability,
 		dv_parent_id, dv_querytext, dv_querytext_filterc, dv_orderby_id, dv_isnullvalue	
 		FROM audit_cat_param_user LEFT JOIN (SELECT * FROM config_param_user WHERE cur_user=current_user) a ON a.parameter=audit_cat_param_user.id 
 		WHERE sys_role_id IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member''))	
@@ -116,7 +120,19 @@ BEGIN
 
 	FOREACH aux_json IN ARRAY fields_array
 	LOOP
-		
+		-- setting the typeahead widgets
+		IF (aux_json->>'typeahead') IS NOT NULL THEN
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'fieldToSearch', COALESCE(((aux_json->>'typeahead')::json->>'fieldToSearch'), ''));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'threshold', ((aux_json->>'typeahead')::json->>'threshold'));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'noresultsMsg', ((aux_json->>'typeahead')::json->>'noresultsMsg'));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'loadingMsg', ((aux_json->>'typeahead')::json->>'loadingMsg'));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'queryText', COALESCE((aux_json->>'dv_querytext'), ''));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'queryTextFilter', COALESCE((aux_json->>'dv_querytext_filterc'), ''));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'parentId', COALESCE((aux_json->>'dv_parent_id'), ''));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'isNullValue', (aux_json->>'dv_isnullvalue'));
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'orderById', (aux_json->>'dv_orderby_id'));
+		END IF;
+
 		-- Refactor widget
 		IF (aux_json->>'widgettype')='image' THEN
 		      	EXECUTE (aux_json->>'dv_querytext') INTO v_image; 
@@ -178,6 +194,20 @@ BEGIN
 
 			END IF;
 
+			/*
+
+			IF field_value_parent IS NULL THEN
+				IF p_filterfield is not null THEN
+					fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'selectedId', p_filterfield);
+				ELSE
+					fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'selectedId', v_combo_id->0);
+				END IF;
+			ELSE
+				fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json->>'orderby')::INT], 'selectedId', field_value_parent);
+			END IF;
+
+			*/
+
 			-- looking for childs 
 			IF (aux_json->>'isparent')::boolean IS TRUE THEN
 			
@@ -197,8 +227,10 @@ BEGIN
 							END IF;	
 
 							-- set false the editability
-							v_editability = replace (((aux_json_child->>'widgetcontrols')::json->>'enableWhenParent'), '[', '{');
+							v_editability = replace (((aux_json_child->>'editability')::json->>'trueWhenParentIn'), '[', '{');
 							v_editability = replace (v_editability, ']', '}');
+
+							raise notice 'parent % v_selected_id % v_editability %', (aux_json->>'widgetname'), v_selected_id, v_editability;
 
 							IF v_selected_id::text != ANY (v_editability::text[]) THEN
 								fields_array[(aux_json_child->>'orderby')::INT] := gw_fct_json_object_set_key(fields_array[(aux_json_child->>'orderby')::INT], 'iseditable', false);
@@ -258,7 +290,7 @@ BEGIN
 		
 		--removing the not used fields
 		fields_array[(aux_json->>'orderby')::INT] := gw_fct_json_object_delete_keys(fields_array[(aux_json->>'orderby')::INT],
-		'dv_querytext', 'dv_orderby_id', 'dv_isnullvalue', 'dv_parent_id', 'dv_querytext_filterc', 'sys_role_id', 'project_type');
+		'dv_querytext', 'dv_orderby_id', 'dv_isnullvalue', 'dv_parent_id', 'dv_querytext_filterc', 'typeahead');
 	
 	END LOOP;
 	 
@@ -269,8 +301,7 @@ BEGIN
         -- Add tab name to json
         tabUser := ('{"fields":' || fields || '}')::json;
         tabUser := gw_fct_json_object_set_key(tabUser, 'tabName', 'tabUser'::TEXT);
-        tabUser := gw_fct_json_object_set_key(tabUser, 'tabLabel', rec_tab.label);
-        tabUser := gw_fct_json_object_set_key(tabUser, 'tooltip', rec_tab.label);
+        tabUser := gw_fct_json_object_set_key(tabUser, 'tabLabel', rec_tab.tablabel);
         tabUser := gw_fct_json_object_set_key(tabUser, 'active', v_active::TEXT);
 
         -- Create tabs array
@@ -293,7 +324,7 @@ BEGIN
 
 		-- Get fields for admin enabled
 		EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (SELECT label, parameter AS widgetname, parameter as widgetname, concat(''admin_'',parameter), value, 
-			widgettype, datatype, layoutname, layout_order, row_number() over (order by layoutname, layout_order) as orderby, descript as tooltip, 
+			widgettype, datatype, layout_id, layout_order, row_number() over (order by layout_id, layout_order) as orderby, descript as tooltip, 
 			(CASE WHEN iseditable IS NULL OR iseditable IS TRUE THEN ''True'' ELSE ''False'' END) AS iseditable,
 			placeholder
 			FROM config_param_system WHERE isenabled=TRUE AND (project_type =''utils'' or project_type='||quote_literal(lower(v_project_type))||') ORDER BY orderby) a'
@@ -302,7 +333,7 @@ BEGIN
 	ELSE 
 		-- Get fields for admin disabled (only to show)
 		EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (SELECT label, parameter AS widgetname, parameter as widgetname, concat(''admin_'',parameter), value, 
-			widgettype, datatype, layoutname, layout_order, row_number() over (order by layoutname, layout_order) as orderby, tooltip, FALSE AS iseditable,
+			widgettype, datatype, layout_id, layout_order, row_number() over (order by layout_id, layout_order) as orderby, tooltip, FALSE AS iseditable,
 			placeholder
 			FROM config_param_system WHERE isenabled=TRUE AND (project_type =''utils'' or project_type='||quote_literal(lower(v_project_type))||') ORDER BY orderby) a'
 			INTO fields_array;
@@ -315,10 +346,8 @@ BEGIN
         -- Add tab name to json
         v_tabadmin := ('{"fields":' || fields || '}')::json;
         v_tabadmin := gw_fct_json_object_set_key(v_tabadmin, 'tabName', 'tabAdmin'::TEXT);
-        v_tabadmin := gw_fct_json_object_set_key(v_tabadmin, 'tabLabel', rec_tab.label);
-        v_tabadmin := gw_fct_json_object_set_key(v_tabadmin, 'tooltip', rec_tab.tooltip);
+        v_tabadmin := gw_fct_json_object_set_key(v_tabadmin, 'tabLabel', rec_tab.tablabel);
 
-		
         v_formtabs := v_formtabs ||','|| v_tabadmin::text;
         
     END IF;
@@ -327,10 +356,10 @@ BEGIN
     v_formtabs := v_formtabs ||']';
 
 --  Construction of groupbox - formlayouts
-    EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (SELECT layoutname AS "layout", label FROM config_api_form_groupbox WHERE formname=$1 AND layoutname IN 
-			(SELECT layoutname FROM audit_cat_param_user WHERE sys_role_id IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member''))	
-			UNION SELECT layoutname FROM config_param_system WHERE ''role_admin'' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member'')))
-		ORDER BY layoutname) a'
+    EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (SELECT layout_id AS "layout", label FROM config_api_form_groupbox WHERE formname=$1 AND layout_id IN 
+			(SELECT layout_id FROM audit_cat_param_user WHERE sys_role_id IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member''))	
+			UNION SELECT layout_id FROM config_param_system WHERE ''role_admin'' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member'')))
+		ORDER BY layout_id) a'
 		INTO v_formgroupbox
 		USING v_formname;
 

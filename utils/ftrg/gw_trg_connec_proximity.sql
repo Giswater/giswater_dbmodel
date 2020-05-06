@@ -6,14 +6,12 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 1106
 
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_connec_proximity() 
-RETURNS trigger AS 
-$BODY$
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_connec_proximity() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE 
-    v_numConnecs numeric;
+    numConnecs numeric;
     v_connec_proximity double precision;
     v_connec_proximity_control boolean;
-    
+
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
@@ -25,25 +23,21 @@ BEGIN
 
     IF TG_OP = 'INSERT' THEN
         -- Existing connecs  
-        v_numConnecs:= (SELECT COUNT(*) FROM connec WHERE connec.the_geom && ST_Expand(NEW.the_geom, v_connec_proximity));
+        numConnecs:= (SELECT COUNT(*) FROM connec WHERE connec.the_geom && ST_Expand(NEW.the_geom, v_connec_proximity));
 
     ELSIF TG_OP = 'UPDATE' THEN
         -- Existing connecs  
-       v_numConnecs := (SELECT COUNT(*) FROM connec WHERE ST_DWithin(NEW.the_geom, connec.the_geom, v_connec_proximity) AND connec.connec_id != NEW.connec_id);
+       numConnecs := (SELECT COUNT(*) FROM connec WHERE ST_DWithin(NEW.the_geom, connec.the_geom, v_connec_proximity) AND connec.connec_id != NEW.connec_id);
     END IF;
 
     -- If there is an existing connec closer than 'rec.connec_tolerance' meters --> error
-    IF (v_numConnecs > 0) AND (v_connec_proximity_control IS TRUE) THEN
-
-       EXECUTE 'EXECUTE gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-        "data":{"error":"1044", "function":"1106","debug_msg":"'||NEW.connec_id||'"}}$$);';
-
+    IF (numConnecs > 0) AND (v_connec_proximity_control IS TRUE) THEN
+        PERFORM audit_function (1044,1106, NEW.connec_id);
+        RETURN NULL;
     END IF;
 
     RETURN NEW;
+    
+END; 
+$$;
 
-     
-END;
-$BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;

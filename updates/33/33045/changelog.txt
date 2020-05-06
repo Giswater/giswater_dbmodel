@@ -1,3 +1,0 @@
-3.3.045
-*************
-- Enhance performance of go2epa

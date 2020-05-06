@@ -11,40 +11,27 @@ CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_pg2epa_fill_data(result_id_var v
 DECLARE
    
 v_rainfall text;
-v_isoperative boolean;
-v_statetype text;
 
 BEGIN
 
-    --  Search path
+--  Search path
     SET search_path = "SCHEMA_NAME", public;
 
-   -- Delete previous results on temp_node & arc tables
-   DELETE FROM temp_node;
-   DELETE FROM temp_arc;
+-- Delete previous results on rpt_inp_node & arc tables
+   DELETE FROM rpt_inp_node WHERE result_id=result_id_var;
+   DELETE FROM rpt_inp_arc WHERE result_id=result_id_var;
    
-   -- set all timeseries of raingage using user's value
+-- set all timeseries of raingage using user's value
    v_rainfall:= (SELECT value FROM config_param_user WHERE parameter='inp_options_setallraingages' AND cur_user=current_user);
-
-	v_isoperative = (SELECT value::json->>'onlyIsOperative' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
-
 	
 	IF v_rainfall IS NOT NULL THEN
 		UPDATE raingage SET timser_id=v_rainfall, rgage_type='TIMESERIES' WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user=current_user);
 	END IF;
 
-	--Use state_type only is operative true or not
-	IF v_isoperative THEN
-		v_statetype = ' AND value_state_type.is_operative = TRUE ';
-	ELSE
-		v_statetype = ' AND (value_state_type.is_operative = TRUE OR value_state_type.is_operative = FALSE)';
-	END IF;
-
-	-- to do: implement isoperative strategy
    
-	-- Insert on node rpt_inp table
-	-- the strategy of selector_sector is not used for nodes. The reason is to enable the posibility to export the sector=-1. In addition using this it's impossible to export orphan nodes
-	INSERT INTO temp_node (result_id, node_id, top_elev, ymax, elev, node_type, nodecat_id, epa_type, sector_id, state, state_type, annotation, expl_id, y0, ysur, apond, the_geom)
+-- Insert on node rpt_inp table
+-- the strategy of selector_sector is not used for nodes. The reason is to enable the posibility to export the sector=-1. In addition using this it's impossible to export orphan nodes
+	INSERT INTO rpt_inp_node (result_id, node_id, top_elev, ymax, elev, node_type, nodecat_id, epa_type, sector_id, state, state_type, annotation, expl_id, y0, ysur, apond, the_geom)
 	SELECT 
 	result_id_var,
 	node.node_id, sys_top_elev, sys_ymax, v_edit_node.sys_elev, node.node_type, node.nodecat_id, node.epa_type, node.sector_id, node.state, 
@@ -85,41 +72,33 @@ BEGIN
 	-- node onfly transformation of junctions to outfalls (when outfallparam is fill and junction is node sink)
 	PERFORM gw_fct_anl_node_sink($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{"tableName":"v_edit_inp_junction"},"data":{"parameters":{"saveOnDatabase":true}}}$$);
 
-	UPDATE temp_node SET epa_type='OUTFALL' FROM anl_node a JOIN inp_junction USING (node_id) 
+	UPDATE rpt_inp_node SET epa_type='OUTFALL' FROM anl_node a JOIN inp_junction USING (node_id) 
 	WHERE outfallparam IS NOT NULL AND fprocesscat_id=13 AND cur_user=current_user
-	AND temp_node.node_id=a.node_id;
+	AND rpt_inp_node.node_id=a.node_id AND rpt_inp_node.result_id=result_id_var;
 
-	-- todo: UPDATE childparam for inp_outfall, inp_storage inp_divider, inp_junction
-
-         -- Insert on arc rpt_inp table
-	INSERT INTO temp_arc (result_id, arc_id, node_1, node_2, elevmax1, elevmax2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, length, n, expl_id, the_geom, q0, qmax, barrels, slope)
+-- Insert on arc rpt_inp table
+	INSERT INTO rpt_inp_arc (result_id, arc_id, node_1, node_2, elevmax1, elevmax2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, length, n, expl_id, the_geom)
 	SELECT
 	result_id_var,
-	a.arc_id, node_1, node_2, a.sys_elev1, a.sys_elev2, a.arc_type, arccat_id, epa_type, a.sector_id, a.state, 
-	a.state_type, a.annotation, 
+	v_arc_x_node.arc_id, node_1, node_2, v_arc_x_node.sys_elev1, v_arc_x_node.sys_elev2, v_arc_x_node.arc_type, arccat_id, epa_type, v_arc_x_node.sector_id, v_arc_x_node.state, 
+	v_arc_x_node.state_type, v_arc_x_node.annotation, 
 	CASE
 		WHEN custom_length IS NOT NULL THEN custom_length
-		ELSE st_length2d(a.the_geom)
+		ELSE st_length2d(v_arc_x_node.the_geom)
 	END AS length,
 	CASE
 		WHEN custom_n IS NOT NULL THEN custom_n
 		ELSE n
 	END AS n,
-	a.expl_id, 
-	a.the_geom,
-	q0,
-	qmax,
-	barrels,
-	slope
-	FROM inp_selector_sector, v_arc a
+	v_arc_x_node.expl_id, 
+	v_arc_x_node.the_geom
+	FROM inp_selector_sector, v_arc_x_node
 		LEFT JOIN value_state_type ON id=state_type
-		LEFT JOIN cat_arc ON a.arccat_id = cat_arc.id
+		LEFT JOIN cat_arc ON v_arc_x_node.arccat_id = cat_arc.id
 		LEFT JOIN cat_mat_arc ON cat_arc.matcat_id = cat_mat_arc.id
-		LEFT JOIN inp_conduit ON a.arc_id = inp_conduit.arc_id
-		WHERE (is_operative IS TRUE)
-		AND a.sector_id=inp_selector_sector.sector_id AND inp_selector_sector.cur_user=current_user;
-
-	-- todo: UPDATE childparam for inp_weir, inp_orifice, inp_outlet, inp_pump, inp_conduit
+		LEFT JOIN inp_conduit ON v_arc_x_node.arc_id = inp_conduit.arc_id
+		WHERE ((is_operative IS TRUE) OR (is_operative IS NULL))
+		AND v_arc_x_node.sector_id=inp_selector_sector.sector_id AND inp_selector_sector.cur_user=current_user;
 
     RETURN 1;
 		

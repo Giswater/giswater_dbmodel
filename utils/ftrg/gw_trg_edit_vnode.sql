@@ -26,20 +26,17 @@ BEGIN
 
 	-- Insert
 	IF TG_OP = 'INSERT' THEN
-		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       	"data":{"error":"3084", "function":"1126","debug_msg":null}}$$);';
+		RAISE EXCEPTION 'It is not enabled to insert vnodes. if you are looking for join links you can use vconnec to join it. You can create this vconnec feature and simbolyze it as vnodes. Using vconnec as vnodes you will have all features in terms of propagation of arc_id';
 		RETURN NEW;
 
 	-- Update
 	ELSIF TG_OP = 'UPDATE' THEN
-		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       	"data":{"error":"3086", "function":"1126","debug_msg":null}}$$);';
+		RAISE EXCEPTION 'It is not enabled to update vnodes. if you are looking for update endpoint of links use the link''s layer to do it';
 		RETURN NEW;
 		
 	-- Delete
 	ELSIF TG_OP = 'DELETE' THEN
-		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       	"data":{"error":"3088", "function":"1126","debug_msg":null}}$$);';
+		RAISE EXCEPTION 'It is not enabled to delete vnodes. Vnode will be automaticly deleted when any link connected to vnode exists';
 		RETURN NULL;
    
 	END IF;

@@ -108,13 +108,12 @@ BEGIN
 		v_value := (SELECT (v_jsonfield ->> 'value')) ; -- getting v_value in order to prevent null values
 	
 		IF v_value !='null' OR v_value !='NULL' OR v_value IS NOT NULL THEN 
-			IF v_tablename = 'om_visit' AND v_field = 'visit_id' THEN
-				v_field := 'id';
-			ELSIF v_field = 'sys_pol_id' THEN
-				v_field := 'pol_id';
-			END IF;
+			
 			--building the query text
 			IF i=1 OR v_first IS FALSE THEN
+				IF v_tablename = 'om_visit' AND v_field = 'visit_id' THEN
+					v_field := 'id';
+				END IF;
 				v_querytext := concat (v_querytext, v_field);
 				v_first = TRUE;
 			ELSIF i>1 THEN
@@ -138,10 +137,8 @@ BEGIN
 		v_value := (SELECT (v_jsonfield ->> 'value')) ;
 
 		IF v_tablename = 'om_visit' AND v_field = 'visit_id' THEN
-				v_field := 'id';
-			ELSIF v_field = 'sys_pol_id' THEN
-				v_field := 'pol_id';
-			END IF;
+			v_field := 'id';
+		END IF;
 				
 		-- Get column type
 		EXECUTE 'SELECT data_type FROM information_schema.columns  WHERE table_schema = $1 AND table_name = ' || quote_literal(v_tablename) || ' AND column_name = $2'
@@ -177,11 +174,9 @@ BEGIN
 	END LOOP;
 
 	-- query text, final step
-	IF v_tablename = 'om_visit' AND v_field = 'visit_id' THEN
-				v_field := 'id';
-			ELSIF v_field = 'sys_pol_id' THEN
-				v_field := 'pol_id';
-			END IF;
+	IF v_tablename = 'om_visit' AND v_idname = 'visit_id' THEN
+		v_idname := 'id';
+	END IF;
 	v_querytext := concat ((v_querytext),' ) RETURNING ',quote_ident(v_idname));
 
 	RAISE NOTICE '--- Insert new file with query:: % ---', v_querytext;

@@ -120,7 +120,7 @@ Generate one form for layer and one form for visitclass=incident
 		-----------
 		RAISE NOTICE ' --- GETTING tabData DEFAULT VALUES ON NEW VISIT ---';
 
-		SELECT gw_api_get_formfields( v_formname, 'visit', 'data', null, null, null, null, 'INSERT', null, v_device, null) INTO v_fields;
+		SELECT gw_api_get_formfields( v_formname, 'visit', 'data', null, null, null, null, 'INSERT', null, v_device) INTO v_fields;
 		v_fields_json = array_to_json (v_fields);
 		v_fields_json := COALESCE(v_fields_json, '{}');	
 
@@ -130,7 +130,7 @@ Generate one form for layer and one form for visitclass=incident
 			SELECT * INTO v_tab FROM config_api_form_tabs WHERE formname='visit' AND tabname='tabData' LIMIT 1;
 		END IF;
 
-		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tooltip',v_tab.tooltip, 
+		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tabText',v_tab.tabtext, 
 			'tabFunction', v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active',true);
 		v_tabaux := gw_fct_json_object_set_key(v_tabaux, 'fields', v_fields_json);
 		v_formtabs := v_formtabs || v_tabaux::text;
@@ -172,7 +172,7 @@ Generate one form for layer and one form for visitclass=incident
 			SELECT * INTO v_tab FROM config_api_form_tabs WHERE formname='visit' AND tabname='tabFiles' LIMIT 1;
 		END IF;
 		
-		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tooltip',v_tab.tooltip, 
+		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tabText',v_tab.tabtext, 
 		'tabFunction', v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active', true);	
 		v_tabaux := gw_fct_json_object_set_key(v_tabaux, 'fields', v_fields_json);
 

@@ -31,8 +31,8 @@ BEGIN
 		NEW.startdate = left (date_trunc('second', now())::text, 19);
 	END IF;
 
-	INSERT INTO om_visit(id, visitcat_id, ext_code, startdate, webclient_id, expl_id, the_geom, descript, is_done, class_id, lot_id, status) 
-            VALUES (NEW.visit_id, NEW.visitcat_id, NEW.ext_code, NEW.startdate::timestamp, NEW.webclient_id, NEW.expl_id, NEW.the_geom, NEW.descript, NEW.is_done, NEW.class_id, NEW.lot_id, NEW.status);
+	INSERT INTO om_visit(id, visitcat_id, ext_code, startdate, webclient_id, expl_id, the_geom, descript, is_done, class_id, suspendendcat_id, lot_id, status) 
+            VALUES (NEW.visit_id, NEW.visitcat_id, NEW.ext_code, NEW.startdate::timestamp, NEW.webclient_id, NEW.expl_id, NEW.the_geom, NEW.descript, NEW.is_done, NEW.class_id, NEW.suspendendcat_id, NEW.lot_id, NEW.status);
 
 
             -- event table
@@ -52,8 +52,6 @@ BEGIN
 
         ELSIF visit_table = 'gully' THEN
             INSERT INTO  om_visit_x_gully (visit_id,gully_id) VALUES (NEW.visit_id, NEW.gully_id);
-        ELSIF visit_table = 'polygon' THEN
-            INSERT INTO  om_visit_x_pol (visit_id,pol_id) VALUES (NEW.visit_id, NEW.pol_id);
         END IF;
 
         RETURN NEW;
@@ -62,7 +60,7 @@ BEGIN
 	    -- visit table
             UPDATE om_visit SET id=NEW.visit_id, visitcat_id=NEW.visitcat_id, ext_code=NEW.ext_code, startdate=NEW.startdate::timestamp, enddate=null,
             webclient_id=NEW.webclient_id, expl_id=NEW.expl_id, the_geom=NEW.the_geom, descript=NEW.descript, is_done=NEW.is_done, class_id=NEW.class_id,
-            lot_id=NEW.lot_id, status=NEW.status WHERE id=NEW.visit_id;
+            suspendendcat_id=NEW.suspendendcat_id, lot_id=NEW.lot_id, status=NEW.status WHERE id=NEW.visit_id;
 
             -- event table           
   	    -- Delete parameters in case of inconsistency againts visitclass and events (due class of visit have been changed)
@@ -77,8 +75,7 @@ BEGIN
     ELSIF TG_OP = 'DELETE' THEN
             DELETE FROM om_visit CASCADE WHERE id = OLD.visit_id ;
 
-    --PERFORM gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"error":"XXX", "function":"XXX","debug_msg":null, "variables":null}}$$) 
-
+    --  PERFORM audit_function(3); 
         RETURN NULL;
     
     END IF;

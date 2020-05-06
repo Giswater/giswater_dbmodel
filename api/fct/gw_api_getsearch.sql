@@ -20,36 +20,37 @@ SELECT SCHEMA_NAME.gw_api_getsearch($${
 
 DECLARE
 
-formNetwork json;
-formHydro json;
-formWorkcat json;    
-editCode json;
-editCode1 json;
-editCode2 json;
-comboType json;
-comboType1 json;
-comboType2 json;
-comboType3 json;
-v_form text;
-combo_json json;
-fieldsJson json;
-formSearch json;
-formPsector json;
-api_version json;
-formAddress json;
-formVisit json;
-rec_tab record;
-v_firsttab boolean := FALSE;
-v_active boolean;
-rec_fields record;
-v_character_number json;
+--    Variables
+    formNetwork json;
+    formHydro json;
+    formWorkcat json;    
+    editCode json;
+    editCode1 json;
+    editCode2 json;
+    comboType json;
+    comboType1 json;
+    comboType2 json;
+    comboType3 json;
+    v_form text;
+    combo_json json;
+    fieldsJson json;
+    formSearch json;
+    formPsector json;
+    api_version json;
+    formAddress json;
+    formVisit json;
+    rec_tab record;
+    v_firsttab boolean := FALSE;
+    v_active boolean;
+    rec_fields record;
+    v_character_number json;
 
---Address
-v_search_vdef text;
-v_search_muni_table text;
-v_search_muni_id_field text;
-v_search_muni_search_field text;
-v_search_muni_geom_field text; 
+    --Address
+    v_search_vdef text;
+    v_search_muni_table text;
+    v_search_muni_id_field text;
+    v_search_muni_search_field text;
+    v_search_muni_geom_field text; 
 
 BEGIN
 
@@ -75,12 +76,10 @@ BEGIN
         -- Init combo json
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='net_type';
 
-        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id, 'widgetname', concat('network_',rec_fields.column_id),
-        'widgettype','combo','datatype','string','placeholder','','disabled',false);
+        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id, 'widgetname', concat('network_',rec_fields.column_id),'widgettype','combo','datatype','string','placeholder','','disabled',false);
         
         -- Get Ids for type combo
-        SELECT array_to_json(array_agg(id)) INTO combo_json FROM (SELECT ((value)::json->'sys_table_id') AS id FROM config_param_system WHERE parameter
-        IN ('api_search_node','api_search_node','api_search_arc','api_search_connec','api_search_network_null','api_search_element', 'api_search_gully')  ORDER BY ((value)::json->>'orderby'))a;
+        SELECT array_to_json(array_agg(id)) INTO combo_json FROM (SELECT ((value)::json->'sys_table_id') AS id FROM config_param_system WHERE context='api_search_network' ORDER BY ((value)::json->>'orderby'))a;
         comboType := gw_fct_json_object_set_key(comboType, 'comboIds', combo_json);
 
         -- Add default
@@ -91,11 +90,10 @@ BEGIN
         END IF;
     
         -- Get Names for type combo
-        SELECT array_to_json(array_agg(id)) INTO combo_json FROM (SELECT ((value)::json->'alias') AS id FROM config_param_system WHERE parameter
-        IN ('api_search_node','api_search_node','api_search_arc','api_search_connec','api_search_network_null','api_search_element', 'api_search_gully') ORDER BY ((value)::json->>'orderby'))a;    
+        SELECT array_to_json(array_agg(id))  INTO combo_json FROM (SELECT ((value)::json->'alias') AS id FROM config_param_system WHERE context='api_search_network' ORDER BY ((value)::json->>'orderby'))a;    
         comboType := gw_fct_json_object_set_key(comboType, 'comboNames', combo_json);
 
-
+       
         -- Add edit box to introduce search text
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='net_code';
         editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id, 'widgetname', concat('network_',rec_fields.column_id),'widgettype','typeahead','datatype',
@@ -107,9 +105,9 @@ BEGIN
         
         -- Create network tab form
         IF v_firsttab THEN
-	    formNetwork := json_build_object('tabName','network','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active' , v_active);
+	    formNetwork := json_build_object('tabName','network','tabtext',rec_tab.tabtext, 'active' , v_active);
         ELSE
-            formNetwork := json_build_object('tabName','network','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active' , true);
+            formNetwork := json_build_object('tabName','network','tabtext',rec_tab.tabtext, 'active' , true);
         formNetwork := gw_fct_json_object_set_key(formNetwork, 'fields', fieldsJson);
 	END IF;
         -- Create tabs array
@@ -128,8 +126,7 @@ BEGIN
         -- Create search field
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='generic_search';
         editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('network_',rec_fields.column_id),'widgettype','typeahead', 'searchService', 
-        (SELECT value FROM config_param_system WHERE parameter='api_search_service' LIMIT 1),'datatype','string','placeholder','','disabled',false,'noresultsMsg',
-        'No results','loadingMsg','Searching...');
+        (SELECT value FROM config_param_system WHERE parameter='api_search_service' LIMIT 1),'datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
         
         fieldsJson := '[' ||  editCode || ']';
         fieldsJson := COALESCE(fieldsJson, '[]');
@@ -137,11 +134,11 @@ BEGIN
         -- Create search tab form
 	
         IF v_firsttab THEN 
-            formSearch := json_build_object('tabName','search','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', v_active );
+            formSearch := json_build_object('tabName','search','tabtext',rec_tab.tabtext, 'active', v_active );
             formSearch := gw_fct_json_object_set_key(formSearch, 'fields', fieldsJson);
             v_form := v_form || ',' || formSearch::text;
         ELSE 
-            formSearch := json_build_object('tabName','search','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', true );
+            formSearch := json_build_object('tabName','search','tabtext',rec_tab.tabtext, 'active', true );
             formSearch := gw_fct_json_object_set_key(formSearch, 'fields', fieldsJson);
             v_form := v_form || formSearch::text;
         END IF;
@@ -168,12 +165,10 @@ BEGIN
         
         -- Init combo json
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='add_muni';
-        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('address_',rec_fields.column_id),
-        'widgettype','combo','datatype','string','placeholder','','disabled',false);
+        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('address_',rec_fields.column_id),'widgettype','combo','datatype','string','placeholder','','disabled',false);
 
         -- Get Ids for type combo
-        EXECUTE 'SELECT array_to_json(array_agg(id)) FROM (SELECT '||quote_ident(v_search_muni_id_field)||' AS id FROM '||quote_ident(v_search_muni_table) ||
-        ' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
+        EXECUTE 'SELECT array_to_json(array_agg(id)) FROM (SELECT '||quote_ident(v_search_muni_id_field)||' AS id FROM '||quote_ident(v_search_muni_table) ||' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
         comboType := gw_fct_json_object_set_key(comboType, 'comboIds', combo_json);
 
         -- Add default
@@ -184,27 +179,23 @@ BEGIN
         END IF;
 
         -- Get name for type combo
-        EXECUTE 'SELECT array_to_json(array_agg(idval)) FROM (SELECT '||quote_ident(v_search_muni_search_field)||' AS idval FROM '||quote_ident(v_search_muni_table) ||
-        ' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
+        EXECUTE 'SELECT array_to_json(array_agg(idval)) FROM (SELECT '||quote_ident(v_search_muni_search_field)||' AS idval FROM '||quote_ident(v_search_muni_table) ||' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
         comboType := gw_fct_json_object_set_key(comboType, 'comboNames', combo_json);
 
 
         -- Get geom for combo
-        EXECUTE 'SELECT array_to_json(array_agg(st_astext(st_envelope(geom)))) FROM (SELECT '||quote_ident(v_search_muni_geom_field)||' AS geom FROM '||
-        quote_ident(v_search_muni_table) ||' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
+        EXECUTE 'SELECT array_to_json(array_agg(st_astext(st_envelope(geom)))) FROM (SELECT '||quote_ident(v_search_muni_geom_field)||' AS geom FROM '||quote_ident(v_search_muni_table) ||' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
         comboType := gw_fct_json_object_set_key(comboType, 'comboGeometry', combo_json);
 
 
         -- Create street search field
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='add_street';
-        editCode1 := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('address_',rec_fields.column_id),
-        'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
+        editCode1 := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('address_',rec_fields.column_id),'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
                 
 
         -- Create postnumber search field
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='add_postnumber';
-        editCode2 := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('address_',rec_fields.column_id),
-        'widgettype','typeahead','threshold', 
+        editCode2 := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('address_',rec_fields.column_id),'widgettype','typeahead','threshold', 
         (SELECT value::integer FROM config_param_system WHERE parameter='api_search_minimsearch' LIMIT 1),
         'datatype','integer','placeholder','','disabled',true,'noresultsMsg','No results','loadingMsg','Searching...');
 
@@ -215,12 +206,12 @@ BEGIN
         
         -- Create tabs array
         IF v_firsttab THEN 
-            formAddress := json_build_object('tabName','address','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', v_active );
+            formAddress := json_build_object('tabName','address','tabtext',rec_tab.tabtext, 'active', v_active );
             formAddress := gw_fct_json_object_set_key(formAddress, 'fields', fieldsJson);
 
             v_form := v_form || ',' || formAddress::text;
         ELSE 
-            formAddress := json_build_object('tabName','address','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', true );
+            formAddress := json_build_object('tabName','address','tabtext',rec_tab.tabtext, 'active', true );
             formAddress := gw_fct_json_object_set_key(formAddress, 'fields', fieldsJson);
 
             v_form := v_form || formAddress::text;
@@ -239,8 +230,7 @@ BEGIN
 
         -- Init combo json
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='hydro_expl';
-        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('hydro_',rec_fields.column_id),
-        'widgettype','combo','datatype','string','placeholder','','disabled',false);
+        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('hydro_',rec_fields.column_id),'widgettype','combo','datatype','string','placeholder','','disabled',false);
 
         -- Get exploitation vdefault
         SELECT value::integer INTO v_search_vdef FROM config_param_user WHERE parameter='search_exploitation_vdefault' AND cur_user=current_user 
@@ -273,8 +263,7 @@ BEGIN
     
         -- Add edit box to introduce search text
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='hydro_search';
-        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('hydro_',rec_fields.column_id),
-        'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
+        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('hydro_',rec_fields.column_id),'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
     
         -- Create array with hydro fields
         fieldsJson := '[' || comboType || ',' || editCode || ']';
@@ -282,11 +271,11 @@ BEGIN
         
         -- Create tabs array
         IF v_firsttab THEN 
-            formHydro := json_build_object('tabName','hydro','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', v_active );
+            formHydro := json_build_object('tabName','hydro','tabtext',rec_tab.tabtext, 'active', v_active );
             formHydro := gw_fct_json_object_set_key(formHydro, 'fields', fieldsJson);
             v_form := v_form || ',' || formHydro::text;
         ELSE 
-            formHydro := json_build_object('tabName','hydro','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', true );
+            formHydro := json_build_object('tabName','hydro','tabtext',rec_tab.tabtext, 'active', true );
             formHydro := gw_fct_json_object_set_key(formHydro, 'fields', fieldsJson);
             v_form := v_form || formHydro::text;
         END IF;
@@ -304,8 +293,7 @@ BEGIN
 
         -- Add edit box to introduce search text
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='workcat_search';
-        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('workcat_',rec_fields.column_id),
-        'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
+        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('workcat_',rec_fields.column_id),'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
 
         -- Create array with workcat fields
         fieldsJson := '[' || editCode || ']';
@@ -313,11 +301,11 @@ BEGIN
 
         -- Create tabs array
         IF v_firsttab THEN 
-            formWorkcat := json_build_object('tabName','workcat','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', v_active );
+            formWorkcat := json_build_object('tabName','workcat','tabtext',rec_tab.tabtext, 'active', v_active );
             formWorkcat := gw_fct_json_object_set_key(formWorkcat, 'fields', fieldsJson);
             v_form := v_form || ',' || formWorkcat::text;
         ELSE 
-            formWorkcat := json_build_object('tabName','workcat','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', true );
+            formWorkcat := json_build_object('tabName','workcat','tabtext',rec_tab.tabtext, 'active', true );
             formWorkcat := gw_fct_json_object_set_key(formWorkcat, 'fields', fieldsJson);
             v_form := v_form || formWorkcat::text;
         END IF;
@@ -336,8 +324,7 @@ BEGIN
 
         -- Init combo json
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='psector_expl';
-        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('psector_',rec_fields.column_id),
-        'widgettype','combo','datatype','string','placeholder','','disabled',false);
+        comboType := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('psector_',rec_fields.column_id),'widgettype','combo','datatype','string','placeholder','','disabled',false);
 
         -- Get exploitation vdefault
         SELECT value::integer INTO v_search_vdef FROM config_param_user WHERE parameter='search_exploitation_vdefault' AND cur_user=current_user 
@@ -369,8 +356,7 @@ BEGIN
     
         -- Add edit box to introduce search text
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='psector_search';
-        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('psector_',rec_fields.column_id),
-        'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
+        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('psector_',rec_fields.column_id),'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
     
         -- Create array with hydro fields
         fieldsJson := '[' || comboType || ',' || editCode || ']';
@@ -378,11 +364,11 @@ BEGIN
    
         -- Create tabs array
         IF v_firsttab THEN 
-            formPsector := json_build_object('tabName','psector','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', v_active );
+            formPsector := json_build_object('tabName','psector','tabtext',rec_tab.tabtext, 'active', v_active );
             formPsector := gw_fct_json_object_set_key(formPsector, 'fields', fieldsJson);
             v_form := v_form || ',' || formPsector::text;
         ELSE 
-            formPsector := json_build_object('tabName','psector','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', true );
+            formPsector := json_build_object('tabName','psector','tabtext',rec_tab.tabtext, 'active', true );
             formPsector := gw_fct_json_object_set_key(formPsector, 'fields', fieldsJson);
             v_form := v_form || formPsector::text;
         END IF;
@@ -397,8 +383,7 @@ BEGIN
 
         -- Add edit box to introduce search text
         SELECT * INTO rec_fields FROM config_api_form_fields WHERE formname='search' AND column_id='visit_search';
-        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('visit_',rec_fields.column_id),
-        'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
+        editCode := json_build_object('label',rec_fields.label,'column_id', rec_fields.column_id,'widgetname', concat('visit_',rec_fields.column_id),'widgettype','typeahead','datatype','string','placeholder','','disabled',false,'noresultsMsg','No results','loadingMsg','Searching...');
 
         -- Create array with workcat fields
         fieldsJson := '[' || editCode || ']';
@@ -407,11 +392,11 @@ BEGIN
 
         -- Create tabs array
         IF v_firsttab THEN 
-            formVisit := json_build_object('tabName','visit','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', v_active );
+            formVisit := json_build_object('tabName','visit','tabtext',rec_tab.tabtext, 'active', v_active );
             formVisit := gw_fct_json_object_set_key(formVisit, 'fields', fieldsJson);
             v_form := v_form || ',' || formVisit::text;
         ELSE 
-            formVisit := json_build_object('tabName','visit','tabLabel',rec_tab.label, 'tooltip', rec_tab.tooltip,'active', true );
+            formVisit := json_build_object('tabName','visit','tabtext',rec_tab.tabtext, 'active', true );
             formVisit := gw_fct_json_object_set_key(formVisit, 'fields', fieldsJson);
             v_form := v_form || formVisit::text;
         END IF;

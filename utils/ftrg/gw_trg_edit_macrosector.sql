@@ -26,13 +26,11 @@ BEGIN
 	        -- Sector ID
         IF (NEW.sector_id IS NULL) THEN
             IF ((SELECT COUNT(*) FROM sector) = 0) THEN
-                EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"1008", "function":"1246","debug_msg":null}}$$);';
+                RETURN audit_function(1008,1246);  
             END IF;
             NEW.sector_id:= (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
-            IF (NEW.sector_id IS NULL) THEN   
-                EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"1010", "function":"1246","debug_msg":null}}$$);';      
+            IF (NEW.sector_id IS NULL) THEN
+                RETURN audit_function(1010,1246);          
             END IF;            
         END IF;
 		*/

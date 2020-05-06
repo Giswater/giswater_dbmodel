@@ -19,7 +19,7 @@ DECLARE
 	v_definition text;
 	v_id text;
 	v_sql text;
-	v_layout text;
+	v_layout integer;
 	v_projecttype text;
 	v_layout_order integer;
 	v_partialquerytext text;
@@ -28,13 +28,12 @@ DECLARE
 	v_feature_field_id text;
 	v_feature record;
 	v_query text;
-	v_arc_epa text;
 
 BEGIN	
 
 	
 	-- search path
-	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
+	SET search_path = "SCHEMA_NAME", public;
 
 	-- get input parameters
 	v_schemaname = 'SCHEMA_NAME';
@@ -46,15 +45,13 @@ BEGIN
 		v_id = array_to_string(ts_lexize('unaccent',NEW.id),',','*');
 		
 		IF v_id IS NOT NULL OR NEW.id ilike '%.%' OR NEW.id ilike '%-%' THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"3038", "function":"2758","debug_msg":"'||NEW.id||'"}}$$);';
+			PERFORM audit_function(3038,2758,NEW.id);
 		END IF;
 
 		v_id = array_to_string(ts_lexize('unaccent',NEW.child_layer),',','*');
 		
 		IF v_id IS NOT NULL OR NEW.child_layer ilike '%-%' OR NEW.child_layer ilike '%.%' THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"3038", "function":"2758","debug_msg":"'||NEW.child_layer||'"}}$$);';
+		 	PERFORM audit_function(3038,2758,NEW.child_layer);
 		END IF;	
 
 		-- set v_id
@@ -65,11 +62,17 @@ BEGIN
 	-- manage audit_cat_param_user parameters
 	IF (TG_OP = 'INSERT' OR  TG_OP = 'UPDATE') THEN
 
-		-- set layoutname
-		v_layout = concat('lyt_', lower(NEW.feature_type),'_vdef');
-		
-		-- set layout_order
-		SELECT max(layout_order)+1 INTO v_layout_order FROM audit_cat_param_user WHERE formname='config' and layoutname=v_layout;
+		-- get layout_id
+		IF NEW.feature_type='NODE' THEN
+			v_layout = 9;
+		ELSIF  NEW.feature_type='ARC' THEN
+			v_layout = 10;
+		ELSIF NEW.feature_type='CONNEC' THEN
+			v_layout = 12;
+		END IF;
+
+		-- get layout_order
+		SELECT max(layout_order)+1 INTO v_layout_order FROM audit_cat_param_user WHERE formname='config' and layout_id=v_layout;
 
 		IF v_projecttype = 'WS' THEN
 			v_partialquerytext =  concat('JOIN ',lower(NEW.feature_type),'_type ON ',lower(NEW.feature_type),'_type.id = ',
@@ -93,44 +96,44 @@ BEGIN
 			v_feature_field_id = 'gratecat_id';
 			
 		END IF;
-	
+		
 		v_querytext = concat('SELECT ',v_table,'.id, ', v_table,'.id AS idval FROM ', v_table,' ', v_partialquerytext);
 
 		-- insert parameter
-		IF TG_OP = 'UPDATE' THEN
-			DELETE FROM audit_cat_param_user WHERE id = concat(lower(OLD.id),'_vdefault');        
-		END IF;
+        IF TG_OP = 'UPDATE' THEN
+            DELETE FROM audit_cat_param_user WHERE id = concat(lower(OLD.id),'_vdefault');
+        END IF;
 
-		INSERT INTO audit_cat_param_user(id, formname, descript, sys_role_id, label, isenabled, layoutname, layout_order, 
-		dv_querytext, feature_field_id, project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated, iseditable)
+		INSERT INTO audit_cat_param_user(id, formname, description, sys_role_id, label, isenabled, layout_id, layout_order, 
+		dv_querytext, feature_field_id, project_type, isparent, isautoupdate, datatype, widgettype, ismandatory, isdeprecated)
 		VALUES (concat(v_id,'_vdefault'),'config',concat ('Value default catalog for ',v_id,' cat_feature'), 'role_edit', concat ('Default catalog for ', v_id), true, v_layout ,v_layout_order,
-		v_querytext, v_feature_field_id, lower(v_projecttype),false,false,'text', 'combo', true, false, true)
-		ON CONFLICT (id) DO NOTHING;
+		v_querytext, v_feature_field_id, lower(v_projecttype),false,false,'text', 'combo',true,false);
+
+
 	END IF;
 
 	IF TG_OP = 'INSERT' THEN
 	
-		EXECUTE 'SELECT lower(id) as id, concat(''man_'',lower(id)) as man_table, epa_default, 
-		CASE WHEN epa_default IS NOT NULL THEN concat(''inp_'',lower(epa_default)) END AS epa_table 
-		FROM sys_feature_cat WHERE id='''||NEW.system_id||''';'
+		-- insert into *_type tables new register from cat_feature
+		EXECUTE 'SELECT * FROM '||concat(lower(NEW.feature_type),'_type')||' WHERE type = '''||NEW.system_id||''' LIMIT 1'
 		INTO v_feature;
-
+	
 		IF lower(NEW.feature_type)='arc' THEN
 			EXECUTE 'INSERT INTO arc_type (id, type, epa_default, man_table, epa_table, active, code_autofill) 
-			VALUES ('''||NEW.id||''', '''||NEW.system_id||''', '''||v_feature.epa_default||''', '''||v_feature.man_table||''', 
-			'''||v_feature.epa_table||''', TRUE, TRUE)';
+			VALUES ('''||NEW.id||''', '''||NEW.system_id||''', '''||v_feature.epa_default||''', '''||v_feature.man_table||''', '''||v_feature.epa_table||''', TRUE, '''||v_feature.code_autofill||''')';
 		ELSIF lower(NEW.feature_type)='node' THEN
-			EXECUTE 'INSERT INTO node_type (id, type, epa_default, man_table, epa_table, active, code_autofill, choose_hemisphere, isarcdivide, num_arcs) 
-			VALUES ('''||NEW.id||''', '''||NEW.system_id||''', '''||v_feature.epa_default||''', '''||v_feature.man_table||''', 
-			'''||v_feature.epa_table||''', TRUE, TRUE, TRUE, TRUE, 2)';
+			EXECUTE 'INSERT INTO node_type (id, type, epa_default, man_table, epa_table, active, code_autofill, choose_hemisphere, isarcdivide) 
+			VALUES ('''||NEW.id||''', '''||NEW.system_id||''', '''||v_feature.epa_default||''', '''||v_feature.man_table||''', '''||v_feature.epa_table||''', TRUE, '''||v_feature.code_autofill||''', '''||v_feature.choose_hemisphere||''', '''||v_feature.isarcdivide||''')';
 		ELSE
-			EXECUTE 'INSERT INTO ' || concat(lower(NEW.feature_type),'_type')||' (id, type, man_table, active, code_autofill) VALUES ('''||NEW.id||''', '''
-			||NEW.system_id||''', '''||v_feature.man_table||''', TRUE, TRUE)';
+			EXECUTE 'INSERT INTO ' || concat(lower(NEW.feature_type),'_type')||' (id, type, man_table, active, code_autofill) VALUES ('''||NEW.id||''', '''||NEW.system_id||''', '''||v_feature.man_table||''', TRUE, '''||v_feature.code_autofill||''')';
 		END IF;
+
 		--create child view
 		v_query='{"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{"catFeature":"'||NEW.id||'"}, "data":{"filterFields":{}, "pageInfo":{}, "multi_create":"False" }}';
 		PERFORM gw_fct_admin_manage_child_views(v_query::json);
-			
+		
+
+		
 		--insert definition into config_api_tableinfo_x_infotype if its not present already
 		IF NEW.child_layer NOT IN (SELECT tableinfo_id from config_api_tableinfo_x_infotype)
 		and NEW.child_layer IS NOT NULL THEN

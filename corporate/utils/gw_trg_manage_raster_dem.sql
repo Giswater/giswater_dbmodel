@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 2864
+--FUNCTION CODE: xxxx
 
 CREATE OR REPLACE FUNCTION "utils".gw_trg_manage_raster_dem()  RETURNS trigger AS
 $BODY$
@@ -21,9 +21,8 @@ BEGIN
 		INSERT INTO cat_raster (id, raster_type, tstamp, insert_user) VALUES (NEW.rastercat_id, 'DEM', now(), current_user)
 		ON CONFLICT (id) DO NOTHING;
 
-		UPDATE raster_dem SET envelope  =  (
-					SELECT ST_MakeEnvelope(ST_UpperLeftX(NEW.rast), ST_UpperLeftY(NEW.rast),ST_UpperLeftX(NEW.rast) + ST_ScaleX(NEW.rast)*ST_width(NEW.rast),
-					ST_UpperLeftY(NEW.rast) + ST_ScaleY(NEW.rast)*ST_height(NEW.rast), SRID_VALUE) WHERE id = NEW.id);
+		NEW.envelope  =  ST_MakeEnvelope(ST_UpperLeftX(NEW.rast), ST_UpperLeftY(NEW.rast),ST_UpperLeftX(NEW.rast) + ST_ScaleX(NEW.rast)*ST_width(NEW.rast), ST_UpperLeftY(NEW.rast) + ST_ScaleY(NEW.rast)*ST_height(NEW.rast), SRID_VALUE);
+		
 		RETURN NEW;
 				
     ELSIF TG_OP = 'DELETE' THEN  

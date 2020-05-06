@@ -14,7 +14,7 @@ CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_om_visit()
 $BODY$
 DECLARE 
 
-		v_om_visit_id_seq int8;
+		om_visit_id_seq int8;
 
 
 BEGIN
@@ -31,24 +31,22 @@ BEGIN
 	--Exploitation ID
 		IF (NEW.expl_id IS NULL) THEN
 				IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       				"data":{"error":"1110", "function":"1118","debug_msg":null}}$$);';
+					RETURN audit_function(1110,1118);
 				END IF;
 				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
 				IF (NEW.expl_id IS NULL) THEN
 					NEW.expl_id := (SELECT "value" FROM config_param_user WHERE "parameter"='exploitation_vdefault' AND "cur_user"="current_user"());
 				END IF;
 				IF (NEW.expl_id IS NULL) THEN
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       				"data":{"error":"2012", "function":"1118","debug_msg":"'||NEW.id||'"}}$$);';
+					RETURN audit_function(2012,1118,NEW.id);  
 				END IF;            
 			END IF;
 					
 	-- FEATURE INSERT      
 	
 			IF (NEW.id IS NULL) THEN
-			SELECT max(id::integer) INTO v_om_visit_id_seq FROM om_visit;
-			PERFORM setval('om_visit_id_seq',v_om_visit_id_seq,true);
+			SELECT max(id::integer) INTO om_visit_id_seq FROM om_visit;
+			PERFORM setval('om_visit_id_seq',om_visit_id_seq,true);
 			NEW.id:= (SELECT nextval('om_visit_id_seq'));
 			END IF;
 			

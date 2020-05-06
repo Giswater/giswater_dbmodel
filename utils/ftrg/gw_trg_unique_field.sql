@@ -21,8 +21,7 @@ BEGIN
     IF table_name = 'connec' AND NEW.state = 1 THEN 
    
 	   IF (SELECT count(connec_id) FROM connec WHERE state=1 AND customer_code=NEW.customer_code) > 1 THEN
-	       EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-          "data":{"error":"3018", "function":"2702","debug_msg":null}}$$);';
+	       PERFORM audit_function(3018,2702);
 	   END IF;
 	   
     END IF;

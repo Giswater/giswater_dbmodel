@@ -47,3 +47,5 @@ UPDATE node_type SET active=TRUE WHERE active IS NULL;
 UPDATE node_type SET code_autofill=TRUE WHERE code_autofill IS NULL;
 UPDATE node_type SET choose_hemisphere=TRUE WHERE choose_hemisphere IS NULL;
 UPDATE node_type SET isarcdivide=TRUE WHERE isarcdivide IS NULL;
+
+

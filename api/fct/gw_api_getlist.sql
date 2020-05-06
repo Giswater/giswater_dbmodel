@@ -146,7 +146,6 @@ DECLARE
 	v_startdate text;
 	v_columntype text;
 
-	v_listtype text;
 BEGIN
 
 -- Set search path to local schema
@@ -184,7 +183,6 @@ BEGIN
 	v_limit = ((p_data ->>'data')::json->>'fields')::json->>'limit'::text;
 	v_filterlot = ((p_data ->>'data')::json->>'fields')::json->>'lot_id'::text;
 	v_filterteam = ((p_data ->>'data')::json->>'fields')::json->>'team_id'::text;
-	v_offset := ((p_data ->> 'data')::json->> 'pageInfo')::json->>'offset';
 
 	
 	IF v_tabname IS NULL THEN
@@ -260,14 +258,14 @@ BEGIN
 			INTO v_the_geom;
 
 		--  get querytext
-		EXECUTE 'SELECT query_text, listtype FROM config_api_list WHERE tablename = $1 AND device = $2'
-			INTO v_query_result, v_listtype
+		EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2'
+			INTO v_query_result, v_default
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_api_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE 'SELECT query_text, listtype FROM config_api_list WHERE tablename = $1 LIMIT 1'
-				INTO v_query_result, v_listtype
+			EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1'
+				INTO v_query_result, v_default
 				USING v_tablename;
 		END IF;	
 
@@ -278,14 +276,14 @@ BEGIN
 
 	ELSE
 		--  get querytext
-		EXECUTE 'SELECT query_text, vdefault, listtype FROM config_api_list WHERE tablename = $1 AND device = $2'
-			INTO v_query_result, v_default, v_listtype
+		EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2'
+			INTO v_query_result, v_default
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_api_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE 'SELECT query_text, vdefault, listtype FROM config_api_list WHERE tablename = $1 LIMIT 1'
-				INTO v_query_result, v_default, v_listtype
+			EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1'
+				INTO v_query_result, v_default
 				USING v_tablename;
 		END IF;	
 	END IF;
@@ -306,10 +304,7 @@ BEGIN
 	
 			-- Getting the sign of the filter
 			SELECT listfilterparam->>'sign' INTO v_sign FROM config_api_form_fields WHERE formname=v_tablename  AND column_id=v_field;
-
-			IF v_listtype = 'attributeTable' THEN
-				v_sign = 'LIKE';
-			ELSIF v_sign IS NULL THEN
+			IF v_sign IS NULL THEN
 				v_sign = '=';
 			END IF;
 
@@ -416,9 +411,7 @@ BEGIN
 	END IF;
 
 	-- add offset
-	IF v_offset IS NULL THEN
-		v_offset := (v_currentpage-1)*v_limit;
-	END IF;
+	v_offset := (v_currentpage-1)*v_limit;
 	IF v_offset IS NOT NULL THEN
 		v_query_result := v_query_result || ' OFFSET '|| v_offset;
 	END IF;
@@ -435,7 +428,7 @@ BEGIN
 	v_pageinfo := json_build_object('orderBy',v_orderby, 'orderType', v_ordertype, 'currentPage', v_currentpage, 'lastPage', v_lastpage);
 
 	-- getting filter fields
-	SELECT gw_api_get_formfields(v_tablename, 'listHeader', v_tabname, null, null, null, null,'INSERT', null, v_device, null)
+	SELECT gw_api_get_formfields(v_tablename, 'listHeader', v_tabname, null, null, null, null,'INSERT', null, v_device)
 		INTO v_filter_fields;
 
 		--  setting values of filter fields
@@ -494,7 +487,7 @@ BEGIN
 	END IF;
 
 	-- getting footer buttons
-	SELECT gw_api_get_formfields(v_tablename, 'listFooter', v_tabname, null, null, null, null,'INSERT', null, v_device, null)
+	SELECT gw_api_get_formfields(v_tablename, 'listFooter', v_tabname, null, null, null, null,'INSERT', null, v_device)
 		INTO v_footer_fields;
 
 	FOREACH aux_json IN ARRAY v_footer_fields
@@ -506,7 +499,7 @@ BEGIN
 
 
 	raise notice 'v_tablename -->> %',v_tablename;
-   	SELECT gw_api_get_formfields(v_tablename, 'listfilter', v_tabname, null, null, null, null,'INSERT', null, v_device, null)
+   	SELECT gw_api_get_formfields(v_tablename, 'listfilter', v_tabname, null, null, null, null,'INSERT', null, v_device)
 		INTO v_filter_fields_;
 		
 		

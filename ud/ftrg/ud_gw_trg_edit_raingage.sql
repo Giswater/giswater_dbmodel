@@ -10,6 +10,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_edit_raingage()
   RETURNS trigger AS
 $BODY$
 DECLARE 
+	expl_id_int integer;
 
 BEGIN
 
@@ -24,8 +25,7 @@ BEGIN
 			IF (NEW.expl_id IS NULL) THEN
 				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
 				IF (NEW.expl_id IS NULL) THEN
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-      		 		"data":{"error":"2012", "function":"1216","debug_msg":"'||NEW.rg_id||'"}}$$);';
+					PERFORM audit_function(2012,1216,NEW.rg_id);
 				END IF;		
 			END IF;
 		END IF;	
@@ -35,7 +35,7 @@ BEGIN
 		INSERT INTO raingage (rg_id, form_type, intvl, scf, rgage_type, timser_id, fname, sta, units, the_geom, expl_id) 
 		VALUES (NEW.rg_id, NEW.form_type, NEW.intvl, NEW.scf, NEW.rgage_type, NEW.timser_id, NEW.fname, NEW.sta, NEW.units, NEW.the_geom, NEW.expl_id);
 		
-			
+		
         RETURN NEW;
 
 

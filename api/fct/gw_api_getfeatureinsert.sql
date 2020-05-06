@@ -56,7 +56,8 @@ BEGIN
 	END IF;
 	
 	-- Call gw_api_getinfofromid
-	RETURN gw_api_getinfofromid(concat('{"client":',(p_data->>'client'),',"form":{"editable":"True"},"feature":{"tableName":"',v_tablename,'","inputGeometry":"',v_input_geometry,'"},"data":{}}')::json);
+	RETURN gw_api_getinfofromid(concat('{"client":',(p_data->>'client'),',"form":{"editable":"True"},"feature":{"tableName":"'
+			,v_tablename,'","inputGeometry":"',v_input_geometry,'"},"data":{}}')::json);
 
 --    Exception handling
  --   EXCEPTION WHEN OTHERS THEN 

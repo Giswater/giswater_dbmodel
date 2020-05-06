@@ -7,7 +7,9 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
+UPDATE inp_shortpipe SET to_arc='2092' WHERE node_id='1080';
 UPDATE inp_shortpipe SET to_arc=null WHERE node_id='114254';
+
 
 INSERT INTO cat_users VALUES ('user1','user1');
 INSERT INTO cat_users VALUES ('user2','user2');
@@ -44,9 +46,7 @@ INSERT INTO doc VALUES ('Demo document 1', 'OTHER', 'https://github.com/Giswater
 INSERT INTO doc VALUES ('Demo document 3', 'OTHER', 'https://github.com/Giswater/giswater/blob/master-2.1/legal/Licensing.txt', NULL, '2018-03-14 17:09:59.762257', current_user, '2018-03-14 17:09:59.762257');
 INSERT INTO doc VALUES ('Demo document 2', 'OTHER', 'https://github.com/Giswater/giswater/blob/master-2.1/legal/Readme.txt', NULL, '2018-03-14 17:09:19.852804', current_user, '2018-03-14 17:09:19.852804');
 
-SELECT gw_fct_connect_to_network($${"client":{"device":3, "infoType":100,"lang":"ES"},"feature":{"id":
-"SELECT array_to_json(array_agg(connec_id::text)) FROM v_edit_connec WHERE connec_id IS NOT NULL AND state=1"},
-"data":{"feature_type":"CONNEC"}}$$);
+select gw_fct_connect_to_network((select array_agg(connec_id)from connec ), 'CONNEC');
 
 -- for connec 3014 that stays outside the selectors and doesn't connect to network with fct
 INSERT INTO vnode VALUES ((SELECT nextval('vnode_vnode_id_seq')), 'AUTO', NULL, 3, 2, 1, 1, '0101000020E7640000198F5EB77093194113A8AB6482755141');
@@ -83,6 +83,9 @@ INSERT INTO anl_mincut_selector_valve VALUES('GEN_PURP_VALVE');
 INSERT INTO anl_mincut_selector_valve VALUES('THROTTLE_VALVE');
 
 
+refresh MATERIALIZED VIEW v_ui_workcat_polygon_aux;
+
+
 update ext_rtc_hydrometer SET state_id=1;
 
 INSERT INTO selector_hydrometer (state_id, cur_user) VALUES (1, 'postgres');
@@ -93,6 +96,9 @@ where ext_rtc_hydrometer.id = a.hydrometer_id;
 
 
 SELECT gw_fct_audit_check_project($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"0", "fprocesscat_id":1}}$$)::text;
+
+SELECT 	gw_fct_admin_manage_child_views($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{"catFeature":"PIPE"},
+ "data":{"filterFields":{}, "pageInfo":{}, "multi_create":"TRUE" }}$$);
 
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OUTFALL_VALVE"},
@@ -216,7 +222,7 @@ INSERT INTO typevalue_fk(typevalue_table, typevalue_name, target_table, target_f
 SELECT 'edit_typevalue','pressmeter_param_1','man_addfields_value','value_param',id FROM man_addfields_parameter WHERE param_name='pressmeter_param_1';
 
 -- rotate vnodes and connec labels
-INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_link_connecrotation_update', TRUE, current_user) ON CONFLICT (parameter, cur_user) DO NOTHING;
+INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_link_connecrotation_update', TRUE, current_user);
 UPDATE link SET the_geom=the_geom;
 
 
@@ -237,336 +243,3 @@ UPDATE node SET enddate = '2017-12-06' WHERE node_id='18';
 UPDATE arc SET enddate = '2017-12-06' WHERE arc_id='113913';
 
 UPDATE cat_arc SET cost = 'VIRTUAL_M', m2bottom_cost = 'VIRTUAL_M2', m3protec_cost = 'VIRTUAL_M3' WHERE id = 'VIRTUAL';
-
-UPDATE connec SET the_geom  = '0101000020E764000044D7D93156941941F95742A672755141' 
-WHERE connec_id ='3024';
-
-UPDATE inp_valve SET diameter = 100;
-
---move closed and broken to the top of lyt_data_2
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=0 WHERE column_id = 'closed' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=1 WHERE column_id = 'broken' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=2 WHERE column_id = 'arc_id' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=3 WHERE column_id = 'parent_id' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=4 WHERE column_id = 'soilcat_id' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=5 WHERE column_id = 'fluid_type' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=6 WHERE column_id = 'function_type' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=7 WHERE column_id = 'category_type' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=8 WHERE column_id = 'location_type' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=9 WHERE column_id = 'annotation' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=10 WHERE column_id = 'observ' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=11 WHERE column_id = 'descript' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=12 WHERE column_id = 'comment' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=13 WHERE column_id = 'num_value' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=14 WHERE column_id = 'svg' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=15 WHERE column_id = 'rotation' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=16 WHERE column_id = 'hemisphere' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=17 WHERE column_id = 'label' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=18 WHERE column_id = 'label_y' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=19 WHERE column_id = 'label_x' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=20 WHERE column_id = 'label_rotation' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=21 WHERE column_id = 'publish' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=22 WHERE column_id = 'undelete' AND formname like '%_valve';
-UPDATE config_api_form_fields SET layoutname='lyt_data_2', layout_order=23 WHERE column_id = 'inventory' AND formname like '%_valve';
-
-UPDATE ext_streetaxis SET muni_id = 2 WHERE expl_id  = 2;
-
--- hidden
-UPDATE config_api_form_fields SET hidden = true WHERE column_id 
-IN ('undelete', 'publish', 'buildercat_id', 'comment', 'num_value', 'svg', 'macrodqa_id', 'macrosector_id',
-'macroexpl_id', 'custom_length', 'staticpressure1', 'staticpressure2', 'pipe_param_1');
-
-UPDATE config_api_form_fields SET hidden = true WHERE column_id IN ('label_x', 'label_y') AND formname LIKE 've_arc%';
-
-
--- reorder sample
-UPDATE config_api_form_fields SET layout_order =90, layoutname = 'lyt_data_1' WHERE column_id ='link';
-UPDATE config_api_form_fields SET layout_order =2 , layoutname ='lyt_bot_2' WHERE column_id ='verified';
-UPDATE config_api_form_fields SET layout_order =1 , layoutname ='lyt_bot_2' WHERE column_id ='sector_id';
-UPDATE config_api_form_fields SET layout_order =4 , layoutname ='lyt_bot_1' , label = 'Dqa' WHERE column_id ='dqa_id';
-UPDATE config_api_form_fields SET layout_order =70 , layoutname ='lyt_data_1' WHERE column_id ='macrosector_id';
-UPDATE config_api_form_fields SET stylesheet ='{"label":"color:red; font-weight:bold"}' WHERE column_id IN ('expl_id', 'sector_id');
-
-
-
--- drop constraints
-SELECT gw_fct_admin_schema_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"}}$$);
-
-delete from cat_presszone;
-INSERT INTO cat_presszone VALUES ('1', 'pzone1-1s', 1, NULL, NULL,  '{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
-INSERT INTO cat_presszone VALUES ('2', 'pzone1-2s', 2, NULL, NULL, '{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
-INSERT INTO cat_presszone VALUES ('3', 'pzone1-1d', 1, NULL, NULL, '{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
-INSERT INTO cat_presszone VALUES ('4', 'pzone1-2d', 1, NULL, NULL, '{"use":[{"nodeParent":"1083", "toArc":[2095]}], "ignore":[]}');
-INSERT INTO cat_presszone VALUES ('5', 'pzone2-1s', 2, NULL, NULL, '{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
-INSERT INTO cat_presszone VALUES ('6', 'pzone2-2d', 2,  NULL, NULL, '{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
-
-
-delete from dma;
-INSERT INTO dma VALUES (1, 'dma1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
-INSERT INTO dma VALUES (2, 'dma1-2d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'dma02_estimated', NULL,'{"use":[{"nodeParent":"1080", "toArc":[2092]}], "ignore":[]}');
-INSERT INTO dma VALUES (3, 'dma2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'dma03_estimated', NULL,'{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
-INSERT INTO dma VALUES (4, 'source-1', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"1101", "toArc":[2205]},{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
-INSERT INTO dma VALUES (5, 'source-2', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
-
-
-delete from dqa;
-INSERT INTO dqa VALUES (1, 'dqa1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
-INSERT INTO dqa VALUES (2, 'dqa2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
-INSERT INTO dqa VALUES (3, 'dqa1-1s', 1, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"1101", "toArc":[2205]},{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
-INSERT INTO dqa VALUES (4, 'dqa2-1s', 2, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
-
-
-delete from sector;
-INSERT INTO sector VALUES (1, 'sector1-1s', 1, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
-INSERT INTO sector VALUES (2, 'sector1-2s', 1, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
-INSERT INTO sector VALUES (3, 'sector1-1d', 1, NULL, NULL, NULL , 'distribution','{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
-INSERT INTO sector VALUES (4, 'sector2-1s', 2, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
-INSERT INTO sector VALUES (5, 'sector2-1d', 2, NULL, NULL, NULL , 'distribution','{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
-
-delete from inp_inlet;
-INSERT INTO inp_inlet VALUES ('113766', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL);
-INSERT INTO inp_inlet VALUES ('113952', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL);
-
-UPDATE node SET epa_type='INLET' WHERE node_id IN ('113766', '113952');
-
-delete from inp_reservoir;
-INSERT INTO inp_reservoir  VALUES ('111111', NULL);
-INSERT INTO inp_reservoir  VALUES ('1097', NULL);
-INSERT INTO inp_reservoir  VALUES ('1101', NULL);
-
-update arc set sector_id=0, dma_id=0, dqa_id=0, presszonecat_id=0;
-update node set sector_id=0, dma_id=0, dqa_id=0,  presszonecat_id=0;
-update connec set sector_id=0, dma_id=0, dqa_id=0, presszonecat_id=0;
-
-INSERT INTO dma VALUES (0, 'Undefined', 0);
-INSERT INTO dqa VALUES (0, 'Undefined', 0);
-INSERT INTO sector VALUES (0, 'Undefined', 0);
-INSERT INTO cat_presszone VALUES (0, 'Undefined',0);
-
--- add constraints
-SELECT gw_fct_admin_schema_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"ADD"}}$$);
-
-
--- dynamic sectorization
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR", "exploitation": "[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"1","geomParamUpdate":0.85}}}');
-
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DQA", "exploitation": "[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"2","geomParamUpdate":30}}}');
-
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE","exploitation":"[1,2]",
-"updateFeature":"TRUE","updateMapZone":"2","geomParamUpdate":20}}}');
-
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation": "[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"2","geomParamUpdate":15}}}');
-
-SELECT gw_fct_grafanalytics_minsector('{"data":{"parameters":{"exploitation":"[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"2","geomParamUpdate":10}}}');
-
-
-
--- lastprocess
-delete from link where link_id=197;
-delete from link where link_id=211;
-
---select gw_fct_connect_to_network((select array_agg(connec_id)from connec where connec_id IN ('3076', '3177')), 'CONNEC');
-
-update connec set pjoint_id = exit_id, pjoint_type='VNODE' FROM link WHERE link.feature_id=connec_id;
-
-UPDATE connec SET label_rotation=24.5, label_x=3 WHERE connec_id='3014';
-
-INSERT INTO inp_selector_sector (sector_id, cur_user)
-SELECT sector_id, current_user FROM sector
-ON CONFLICT (sector_id, cur_user) DO NOTHING;
-
-SELECT gw_fct_pg2epa_main($${
-"client":{"device":3, "infoType":100, "lang":"ES"},
-"data":{"iterative":"off", "resultId":"gw_check_project", "useNetworkGeom":"false"}}$$);
-
-UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'audit_project_user_control';
-
---deprecated fields
-UPDATE arc SET _sys_length=NULL;
-UPDATE anl_mincut_inlet_x_exploitation SET _to_arc= NULL;
-
-
--- adjustment of ischange
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1006';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1025';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1039';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1040';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1057';
-
-
-UPDATE node SET nodecat_id='TDN63-63 PN16' WHERE node_id='1044';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1063';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1067';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1069';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1044';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1063';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1067';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1069';
-UPDATE node SET nodecat_id='REDUC_200-110 PN16' WHERE node_id='113873';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113880';
-UPDATE node SET nodecat_id='REDUC_160-110 PN16' WHERE node_id='113883';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113954';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113955';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113994';
-UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='114016';
-
-UPDATE man_valve SET closed = TRUE WHERE node_id = '1115';
-UPDATE man_valve SET broken = TRUE WHERE node_id IN ('1112', '1093');
-
-UPDATE config_param_system SET value = '{"SECTOR":true, "DMA":true, "PRESSZONE":true, "DQA":true, "MINSECTOR":true}'
-WHERE parameter = 'om_dynamicmapzones_status';
-
-UPDATE element SET code = concat ('E',element_id);
-
-UPDATE anl_mincut_inlet_x_exploitation SET config = '{"inletArc":["113907", "113905"]}'
-WHERE node_id = '113766';
-
-UPDATE anl_mincut_inlet_x_exploitation SET config = '{"inletArc":["114145"]}'
-WHERE node_id = '113952';
-
-UPDATE config_api_form_fields SET label = 'Presszone' WHERE column_id = 'presszonecat_id';
-
-update config_api_form_fields SET layout_order = 3 where column_id='state' and formname like '%ve_connec_%';
-update config_api_form_fields SET layout_order = 4 where column_id='state_type' and formname like '%ve_connec_%';
-
-UPDATE node_type set isprofilesurface = true;
-
---refactor of forms
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 11 where column_id ='pjoint_id';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 12 where column_id ='pjoint_type';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 13 where column_id ='descript';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 14 where column_id = 'annotation';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 15 where column_id = 'observ';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 16 where column_id = 'lastupdate';
-UPDATE config_api_form_fields SET layoutname ='lyt_data_3' , layout_order = 17 where column_id = 'lastupdate_user';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_3', layout_order = 18 where column_id ='link';
-
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'macrodma_id';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'inventory';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'feature_id';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'featurecat_id';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'connec_length';
-
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'depth' AND formname LIKE '%_connec_%';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'function_type' AND formname LIKE '%_connec_%';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'descript' AND formname LIKE '%_connec_%';
-UPDATE config_api_form_fields SET  hidden = true where column_id = 'annotation' AND formname LIKE '%_connec_%';
-
-UPDATE config_api_form_fields SET layoutname = 'lyt_bot_1' where column_id ='state';
-UPDATE config_api_form_fields SET layoutname = 'lyt_bot_1' where column_id ='state_type';
-UPDATE config_api_form_fields SET layoutname = 'lyt_bot_1' where column_id ='sector_id';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_1',layout_order = 997 where column_id ='hemisphere';
-UPDATE config_api_form_fields SET layout_order = 2 where column_id ='dma_id';
-
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_2', layout_order = 30 where column_id ='verified';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_2', layout_order = 31 where column_id ='presszonecat_id';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_2', layout_order = 32 where column_id ='dqa_id';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_2', layout_order = 33 where column_id ='expl_id';
-UPDATE config_api_form_fields SET layoutname = 'lyt_data_1', layout_order = 998 where column_id ='parent_id';
-
-
--- refactor of type's
-UPDATE man_type_fluid SET fluid_type = replace (fluid_type, 'Standard', 'St.');
-UPDATE man_type_category SET category_type = replace (category_type, 'Standard', 'St.');
-UPDATE man_type_location SET location_type = replace (location_type, 'Standard', 'St.');
-UPDATE man_type_function SET function_type = replace (function_type, 'Standard', 'St.');
-
-update config_api_form_fields SET widgettype = 'text' WHERE column_id  = 'macrosector_id' AND dv_querytext = null AND placeholder  ='Ex.macrosector_id';
-
-UPDATE v_edit_node SET nodecat_id = 'CHK-VALVE100-PN16' WHERE node_id = '1092';
-
-INSERT INTO anl_mincut_checkvalve (node_id, to_arc) VALUES ('1092', '2104');
-
-UPDATE inp_connec SET demand  = 0.01;
-
---add tooltips for specific fields
-UPDATE config_api_form_fields SET tooltip = 'broken - Para establecer si la válvula esta rota o no' WHERE column_id = 'broken' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'buried - Para establecer si la válvula esta enterrada o no' WHERE column_id = 'buried' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'cat_valve2 - Catálogo para una segunda válvula en el mismo elemento' WHERE column_id = 'cat_valve2' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'closed - Para establecer si la válvula se encuentra cerrada o no' WHERE column_id = 'closed' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'depth_valveshaft - Profundidad del eje de la válvula' WHERE column_id = 'depth_valveshaft' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'drive_type - Tipo de conducción para desague' WHERE column_id = 'drive_type' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'exit_code - Identificador del elemento dónde desagua' WHERE column_id = 'exit_code' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'exit_type - Tipo de salida para desague' WHERE column_id = 'exit_type' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'irrigation_indicator - Para establecer si tiene indicador de riego o no' WHERE column_id = 'irrigation_indicator' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'lin_meters - Longitud del desague en metros' WHERE column_id = 'lin_meters' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'pression_entry - Pressión de entrada (habitualmente en  kg/cm2)' WHERE column_id = 'pression_entry' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'pression_exit - Pressión de salida (habitualmente en  kg/cm2)' WHERE column_id = 'pression_exit' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'regulator_location - Localización concreta de la válvula de regulación' WHERE column_id = 'regulator_location' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'regulator_observ - Observaciones asociadas a la válvula de regulación' WHERE column_id = 'regulator_observ' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'regulator_situation - Calle dónde de situa la válvula de regulación' WHERE column_id = 'regulator_situation' AND tooltip IS NULL;
-UPDATE config_api_form_fields SET tooltip = 'arq_patrimony - Para establecer si la fuente es patrimonio arquitectónico o no' WHERE column_id = 'arq_patrimony' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'chlorinator - Para establecer si tiene clorador o no' WHERE column_id = 'chlorinator' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'container_number - Número de contenedores de agua de la fuente' WHERE column_id = 'container_number' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'linked_connec - Identificador de la acometida asociada' WHERE column_id = 'linked_connec' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'power - Potencia total' WHERE column_id = 'power' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'pump_number - Número de bombas' WHERE column_id = 'pump_number' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'regulation_tank - Para establecer la existencia o no de un depósito de regulación' WHERE column_id = 'regulation_tank' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'vmax - Volumen máximo' WHERE column_id = 'vmax' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'vtotal - Volumen total' WHERE column_id = 'vtotal' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'communication - Para establecer si se ha comunicado la información del hidrante' WHERE column_id = 'communication' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'fire_code - Código para bomberos' WHERE column_id = 'fire_code' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'valve - Válvula vinculada con el hidrante' WHERE column_id = 'valve' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'serial_number - Número de serie del elemento' WHERE column_id = 'serial_number' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'lab_code - Código para laboratorio' WHERE column_id = 'lab_code' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'elev_height - Altura de la bomba' WHERE column_id = 'elev_height' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'max_flow - Flujo máximo' WHERE column_id = 'max_flow' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'min_flow - Flujo mínimo' WHERE column_id = 'min_flow' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'nom_flow - Flujo óptimo' WHERE column_id = 'nom_flow' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'pressure - Pressión' WHERE column_id = 'pressure' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'diam1 - Diámetro inicial' WHERE column_id = 'diam1' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'diam2 - Diámetro final' WHERE column_id = 'diam2' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'area - Área del depósito en m2' WHERE column_id = 'area' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'chlorination - Para establecer si tiene clorador o no' WHERE column_id = 'chlorination' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'vutil - Volumen útil' WHERE column_id = 'vutil' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'cat_valve - Catálogo de la válvula asociada' WHERE column_id = 'cat_valve' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'com_state - Para establecer si se ha comunicado o no si el agua es potable' WHERE column_id = 'com_state' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'drain_diam - Diámetro del tubo de drenaje' WHERE column_id = 'drain_diam' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'drain_distance - Distancia del desague' WHERE column_id = 'drain_distance' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'drain_exit - Tipo de salida del desague' WHERE column_id = 'drain_exit' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'drain_gully - Identificador de la reja de desague' WHERE column_id = 'drain_gully' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'customer_code - Código comercial' WHERE column_id = 'customer_code' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'top_floor - Número máximo de plantas del edificio a abastecer' WHERE column_id = 'top_floor' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'pol_id - Identificador del polígono relacionado' WHERE column_id = 'pol_id' AND tooltip IS NULL AND formtype='feature';
-UPDATE config_api_form_fields SET tooltip = 'name - Nombre específico del elemento' WHERE column_id = 'name' AND tooltip IS NULL AND formtype='feature';
-
-
-UPDATE ext_rtc_dma_period SET minc = null, maxc = null, pattern_volume = 32;
-UPDATE v_edit_node SET epa_type = 'NOT DEFINED' WHERE node_id = '1007';
-
--- reconnect connecs
-DELETE FROM selector_psector;
-
--- deprecated on psector 1 and 2
-SELECT gw_fct_connect_to_network($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{"id":"[3104, 3103, 3076, 3177]"}, "data":{"filterFields":{}, "pageInfo":{}, "feature_type":"CONNEC"}}$$);
-
-
--- update demands and patterns for connec
-UPDATE inp_connec SET pattern_id = 'pattern_01', demand = demand*0.5 FROM (SELECT * FROM connec LIMIT 100 OFFSET 0) a WHERE a.connec_id = inp_connec.connec_id;
-UPDATE inp_connec SET pattern_id = 'pattern_02', demand = demand*0.3 FROM (SELECT * FROM connec LIMIT 100 OFFSET 100) a WHERE a.connec_id = inp_connec.connec_id;
-UPDATE inp_connec SET pattern_id = 'pattern_03', demand = demand*0.25 FROM (SELECT * FROM connec LIMIT 100 OFFSET 200) a WHERE a.connec_id = inp_connec.connec_id;
-UPDATE inp_connec SET pattern_id = 'pattern_01', demand = demand*0.5 FROM (SELECT * FROM connec LIMIT 300 OFFSET 300) a WHERE a.connec_id = inp_connec.connec_id;
-
-
-UPDATE v_edit_arc SET arccat_id = 'VIRTUAL' WHERE arc_type = 'VARC';
-
-UPDATE inp_cat_mat_roughness set roughness  = 0.003;
-UPDATE cat_arc SET dint = null, dext = null, dnom = null, descript = 'Virtual arc' WHERE arctype_id = 'VARC';
-DELETE FROM cat_arc  WHERE arctype_id = 'VARC' AND id !='VIRTUAL';
-
-
-UPDATE config_api_form_fields SET dv_querytext_filterc  = ' AND id ' 
-WHERE formname IN ('upsert_catalog_node', 'upsert_catalog_arc', 'upsert_catalog_connec') AND column_id ='matcat_id';
-
-UPDATE inp_junction SET demand = 0 WHERE demand = 16.000000;
-UPDATE inp_junction SET demand = 0 , pattern_id  = 'pattern_02' WHERE pattern_id = 'pattern_hydrant';
-
-UPDATE config_param_system SET value='TRUE' WHERE parameter='sys_raster_dem';
-INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_upser_elevation_from_dem', 'true', current_user)
-ON CONFLICT (parameter, cur_user) DO NOTHING;
-
-UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'qgis_form_docker' AND cur_user = current_user;

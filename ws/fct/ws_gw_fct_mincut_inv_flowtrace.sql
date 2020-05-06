@@ -190,6 +190,7 @@ BEGIN
 					-- call graf analytics function
 					v_data = concat ('{"data":{"grafClass":"MINCUT", "arc":', element_id_arg ,', "step":2, "parameters":{"id":', result_id_arg ,'}}}');
 
+					--RAISE exception 'v_data %', v_data;
 					PERFORM gw_fct_grafanalytics_mincut(v_data);		
 				END IF;
 			ELSE 

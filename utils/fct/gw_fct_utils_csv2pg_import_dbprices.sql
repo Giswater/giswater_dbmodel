@@ -25,12 +25,7 @@ DECLARE
 	v_project_type text;
 	v_version text;
 	v_count integer;
-	v_label text;
-	v_error_context text;
-	v_level integer;
-	v_status text;
-	v_message text;
-	v_audit_result text;
+	label_aux text;
 
 BEGIN
 
@@ -40,13 +35,7 @@ BEGIN
 	-- get system parameters
 	SELECT wsoftware, giswater  INTO v_project_type, v_version FROM version order by 1 desc limit 1;
 
-    --set current process as users parameter
-    DELETE FROM config_param_user  WHERE  parameter = 'cur_trans' AND cur_user =current_user;
-
-    INSERT INTO config_param_user (value, parameter, cur_user)
-    VALUES (txid_current(),'cur_trans',current_user );
-    
-   	v_label = ((p_data ->>'data')::json->>'importParam')::text;
+   	label_aux = ((p_data ->>'data')::json->>'importParam')::text;
    	
 	-- manage log (fprocesscat = 42)
 	DELETE FROM audit_check_data WHERE fprocesscat_id=42 AND user_name=current_user;
@@ -65,8 +54,7 @@ BEGIN
 		SELECT csv1 INTO v_units FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
 
 		IF v_units IS NULL THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"2086", "function":"2440","debug_msg":null}}$$);'INTO v_audit_result;
+			RETURN audit_function(2086,2440);
 		END IF;
 	
 		-- control of price units (csv2)
@@ -74,44 +62,41 @@ BEGIN
 		AND csv2 IS NOT NULL AND csv2 NOT IN (SELECT id FROM price_value_unit);
 
 		IF v_units IS NOT NULL THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"2088", "function":"2440","debug_msg":"'||v_units||'"}}$$);'INTO v_audit_result;
+			RETURN audit_function(2088,2440,(v_units)::text);
 		END IF;
 
 		-- control of price descript (csv3)
 		SELECT csv3 INTO v_units FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
 
 		IF v_units IS NULL THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"2090", "function":"2440","debug_msg":null}}$$);'INTO v_audit_result;
+			RETURN audit_function(2090,2440);
 		END IF;
 
 		-- control of null prices(csv5)
 		SELECT csv5 INTO v_units FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
 
 		IF v_units IS NULL THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"2092", "function":"2440","debug_msg":null}}$$);'INTO v_audit_result;
+			RETURN audit_function(2092,2440);
 		END IF;
 	
 		-- Insert into audit table
 		INSERT INTO audit_price_simple (id, pricecat_id, unit, descript, text, price, cur_user)
-		SELECT csv1, v_label, csv2, csv3, csv4, csv5::numeric(12,4), current_user
+		SELECT csv1, label_aux, csv2, csv3, csv4, csv5::numeric(12,4), current_user
 		FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;
 				
 		-- Insert into price_cat_simple table
-		IF v_label NOT IN (SELECT id FROM price_cat_simple) THEN
-			INSERT INTO price_cat_simple (id) VALUES (v_label);
+		IF label_aux NOT IN (SELECT id FROM price_cat_simple) THEN
+			INSERT INTO price_cat_simple (id) VALUES (label_aux);
 		END IF;
 
 		-- Insert into price_compost table
 		INSERT INTO price_compost (id, pricecat_id, unit, descript, text, price)
-		SELECT csv1, v_label, csv2, csv3, csv4, csv5::numeric(12,4)
+		SELECT csv1, label_aux, csv2, csv3, csv4, csv5::numeric(12,4)
 		FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1
 		ON CONFLICT (id) DO NOTHING;
 	
 		-- update if price exists
-		UPDATE price_simple SET pricecat_id=v_label, price=csv5::numeric(12,4) FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1 AND price_simple.id=csv1;
+		UPDATE price_simple SET pricecat_id=label_aux, price=csv5::numeric(12,4) FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1 AND price_simple.id=csv1;
 			
 		-- Delete values on temporal table
 		DELETE FROM temp_csv2pg WHERE user_name=current_user AND csv2pgcat_id=1;	
@@ -127,20 +112,6 @@ BEGIN
 	-- get log (fprocesscat 42)
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
 	FROM (SELECT id, error_message AS message FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=42) row; 
-
-	IF v_audit_result is null THEN
-        v_status = 'Accepted';
-        v_level = 3;
-        v_message = 'Process done successfully';
-    ELSE
-
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
-
-    END IF;
-
-
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 				
@@ -149,16 +120,15 @@ BEGIN
 	v_result_info := COALESCE(v_result_info, '{}'); 
 	
 	-- Return
-	RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"priority":0, "text":"Process executed"}, "version":"'||v_version||'"'||
             ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||'}}'||
 	    '}')::json;
 	    
-	EXCEPTION WHEN OTHERS THEN
-	 GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	 RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
- 
+	--    Exception handling
+	--EXCEPTION WHEN OTHERS THEN 
+	--RETURN ('{"status":"Failed","message":{"priority":2, "text":' || to_json(SQLERRM) || '}, "version":"'|| v_version ||'","SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	
 	
 END;
 $BODY$

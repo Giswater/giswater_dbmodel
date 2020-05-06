@@ -71,18 +71,16 @@ BEGIN
 		--untill 3.2.004 is not possible
 		--PERFORM gw_fct_admin_schema_dropdeprecated_rel();	
 		
-		INSERT INTO config_param_system (parameter, value, datatype, context, descript, project_type, label, isdeprecated) 
+		INSERT INTO config_param_system (parameter, value, data_type, context, descript, project_type, label, isdeprecated) 
 		VALUES ('admin_superusers', v_superusers ,'json','system', 'Basic information about superusers for this schema','utils', 'Schema manager:', false);
 		
 		
 		-- inserting version table
 		IF v_sample_exist != 'sample' THEN
 			SELECT sample INTO v_is_sample FROM version ORDER BY id LIMIT 1;
-			INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg, sample) VALUES (v_gwversion, upper(v_projecttype), (select version()),
-			(select postgis_version()), v_language, v_epsg, v_is_sample);
+			INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg, sample) VALUES (v_gwversion, upper(v_projecttype), (select version()),(select postgis_version()), v_language, v_epsg, v_is_sample);
 		ELSE
-			INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg) VALUES (v_gwversion, upper(v_projecttype), (select version()),
-			(select postgis_version()), v_language, v_epsg);
+			INSERT INTO version (giswater, wsoftware, postgres, postgis, language, epsg) VALUES (v_gwversion, upper(v_projecttype), (select version()),(select postgis_version()), v_language, v_epsg);
 		END IF;
 		
 		v_message='Project sucessfully created';
@@ -97,77 +95,18 @@ BEGIN
 		-- drop deprecated tables
 		FOR v_tablename IN SELECT table_name FROM information_schema.tables WHERE table_schema=v_schemaname and substring(table_name,1 , 1) = '_' 
 		LOOP
-			EXECUTE 'DROP TABLE IF EXISTS '||v_tablename.table_name||' CASCADE';
+			EXECUTE 'DROP TABLE IF EXISTS '||v_tablename.table_name;
 		END LOOP;
 		
-		-- drop deprecated variables
-		DELETE FROM config_param_system WHERE isdeprecated = 'true';
-		DELETE FROM audit_cat_param_user WHERE isdeprecated is true;
-		
-		-- drop deprecated views
-		IF v_projecttype = 'WS' THEN 
-			DROP VIEW IF EXISTS v_edit_man_varc;
-			DROP VIEW IF EXISTS v_edit_man_pipe;
-			DROP VIEW IF EXISTS v_edit_man_expansiontank;
-			DROP VIEW IF EXISTS v_edit_man_filter;
-			DROP VIEW IF EXISTS v_edit_man_flexunion;
-			DROP VIEW IF EXISTS v_edit_man_hydrant;
-			DROP VIEW IF EXISTS v_edit_man_junction;
-			DROP VIEW IF EXISTS v_edit_man_meter;
-			DROP VIEW IF EXISTS v_edit_man_netelement;
-			DROP VIEW IF EXISTS v_edit_man_netsamplepoint;
-			DROP VIEW IF EXISTS v_edit_man_netwjoin;
-			DROP VIEW IF EXISTS v_edit_man_pump;
-			DROP VIEW IF EXISTS v_edit_man_reduction;
-			DROP VIEW IF EXISTS v_edit_man_register;
-			DROP VIEW IF EXISTS v_edit_man_source;
-			DROP VIEW IF EXISTS v_edit_man_tank;
-			DROP VIEW IF EXISTS v_edit_man_valve;
-			DROP VIEW IF EXISTS v_edit_man_waterwell;
-			DROP VIEW IF EXISTS v_edit_man_manhole;
-			DROP VIEW IF EXISTS v_edit_man_wtp;
-			DROP VIEW IF EXISTS v_edit_man_fountain;
-			DROP VIEW IF EXISTS v_edit_man_tap;
-			DROP VIEW IF EXISTS v_edit_man_greentap;
-			DROP VIEW IF EXISTS v_edit_man_wjoin;
-			DROP VIEW IF EXISTS v_edit_man_fountain_pol;
-			DROP VIEW IF EXISTS v_edit_man_register_pol;
-			DROP VIEW IF EXISTS v_edit_man_tank_pol;					
-		
-		ELSIF v_projecttype = 'UD' THEN
-		
-			DROP VIEW IF EXISTS v_edit_man_chamber;
-			DROP VIEW IF EXISTS v_edit_man_chamber_pol;
-			DROP VIEW IF EXISTS v_edit_man_conduit;
-			DROP VIEW IF EXISTS v_edit_man_connec;
-			DROP VIEW IF EXISTS v_edit_man_gully;
-			DROP VIEW IF EXISTS v_edit_man_gully_pol;
-			DROP VIEW IF EXISTS v_edit_man_junction;
-			DROP VIEW IF EXISTS v_edit_man_manhole;
-			DROP VIEW IF EXISTS v_edit_man_netgully;
-			DROP VIEW IF EXISTS v_edit_man_netgully_pol;
-			DROP VIEW IF EXISTS v_edit_man_netinit;
-			DROP VIEW IF EXISTS v_edit_man_outfall;
-			DROP VIEW IF EXISTS v_edit_man_siphon;
-			DROP VIEW IF EXISTS v_edit_man_storage;
-			DROP VIEW IF EXISTS v_edit_man_storage_pol;
-			DROP VIEW IF EXISTS v_edit_man_valve;
-			DROP VIEW IF EXISTS v_edit_man_varc;
-			DROP VIEW IF EXISTS v_edit_man_waccel;
-			DROP VIEW IF EXISTS v_edit_man_wjump;
-			DROP VIEW IF EXISTS v_edit_man_wwtp;
-			DROP VIEW IF EXISTS v_edit_man_wwtp_pol;
-		
-		END IF;
-		
 		-- drop deprecated columns
+		
 		IF v_projecttype = 'WS' THEN 
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_19;
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_20;
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_21;
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_22;
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_23;
-			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_24;		
+			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_24;
 		END IF;
 
 		ALTER TABLE man_addfields_parameter DROP COLUMN if exists _default_value_;
@@ -179,7 +118,7 @@ BEGIN
 		
 		
 		-- inserting on config_param_system table
-		INSERT INTO config_param_system (parameter, value, datatype, context, descript, project_type, label, isdeprecated) 
+		INSERT INTO config_param_system (parameter, value, data_type, context, descript, project_type, label, isdeprecated) 
 		VALUES ('schema_manager', v_schema_info,'json','system', 'Basic information about schema','utils', 'Schema manager:', false);
 
 		-- fk from utils schema
@@ -188,19 +127,7 @@ BEGIN
 		-- generate child views 
 		PERFORM gw_fct_admin_manage_child_views($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{},
 		"data":{"filterFields":{}, "pageInfo":{}, "multi_create":true}}$$)::text;
-		
-		--change widgettype for matcat_id when new empty data project (UD)
-		IF v_projecttype = 'UD' THEN 
-			UPDATE config_api_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_node' 
-			WHERE column_id='matcat_id' AND formname LIKE 've_node%';
-
-			UPDATE config_api_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_arc' 
-			WHERE column_id='matcat_id' AND formname LIKE 've_connec%';
-
-			UPDATE config_api_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_arc' 
-			WHERE column_id='matcat_id' AND formname LIKE 've_arc%';
-		END IF;
-		
+	
 	ELSIF v_isnew IS FALSE THEN
 		
         v_oldversion = (SELECT giswater FROM version ORDER BY id DESC LIMIT 1);

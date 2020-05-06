@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 2828
+--FUNCTION CODE: XXXX
 
 
 --DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_get_visit(text, p_data json);
@@ -223,6 +223,11 @@ BEGIN
 		
 		--new visit
 		IF v_id IS NULL OR (SELECT id FROM om_visit WHERE id=v_id::bigint) IS NULL THEN
+			
+			-- Featuretablename is null when visit is unexpected generic
+			IF v_featuretablename IS NOT NULL AND v_featureid IS NOT NULL THEN
+				EXECUTE ('SELECT sys_type FROM '||v_featuretablename||' LIMIT 1') INTO v_featuretype;
+			END IF;
 
 			-- get vdefault visitclass
 			IF v_offline THEN
@@ -234,11 +239,7 @@ BEGIN
 			ELSE
 				-- getting visit class in function of visit type and tablename (when tablename IS NULL then noinfra)
 				IF p_visittype=1 THEN
-					IF v_lot IS NOT NULL THEN
-						v_visitclass := (SELECT visitclass_id FROM om_visit_lot WHERE id=v_lot)::integer;
-					ELSIF v_visitclass IS NULL THEN
-						v_visitclass := (SELECT value FROM config_param_user WHERE parameter = concat('om_visit_planned_vdef_', v_featuretablename) AND cur_user=current_user)::integer;	
-					END IF;	
+					v_visitclass := (SELECT value FROM config_param_user WHERE parameter = concat('om_visit_planned_vdef_', v_featuretablename) AND cur_user=current_user)::integer;	
 				ELSIF  p_visittype=2 THEN
 					
 					IF v_featuretablename IS NOT NULL THEN
@@ -471,8 +472,7 @@ BEGIN
 				FOREACH aux_json IN ARRAY v_fields
 				LOOP					
 					-- setting feature id value
-					IF (aux_json->>'column_id') = 'arc_id' OR (aux_json->>'column_id')='node_id' OR (aux_json->>'column_id')='connec_id' OR (aux_json->>'column_id') ='gully_id' 
-					OR (aux_json->>'column_id') ='pol_id' OR (aux_json->>'column_id') ='sys_pol_id' THEN
+					IF (aux_json->>'column_id') = 'arc_id' OR (aux_json->>'column_id')='node_id' OR (aux_json->>'column_id')='connec_id' OR (aux_json->>'column_id') ='gully_id' THEN
 						v_fields[(aux_json->>'orderby')::INT] := gw_fct_json_object_set_key(v_fields[(aux_json->>'orderby')::INT], 'value', v_featureid);
 						RAISE NOTICE ' --- SETTING feature id VALUE % ---',v_featureid ;
 
@@ -635,7 +635,7 @@ BEGIN
 			v_tab.tabactions = '{}';
 		END IF;
 
-		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.label, 'tooltip',v_tab.tooltip, 'tabFunction',v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active',v_activedatatab);
+		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tabText',v_tab.tabtext, 'tabFunction',v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active',v_activedatatab);
 		v_tabaux := gw_fct_json_object_set_key(v_tabaux, 'fields', v_fields_json);
 		v_formtabs := v_formtabs || v_tabaux::text;
 
@@ -699,7 +699,7 @@ BEGIN
 				v_tab.tabactions = '{}';
 			END IF;
 
-			v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.label, 'tooltip',v_tab.tooltip, 'tabFunction', v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active', v_activefilestab);
+			v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tabText',v_tab.tabtext, 'tabFunction', v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active', v_activefilestab);
 			v_tabaux := gw_fct_json_object_set_key(v_tabaux, 'fields', v_fields_json);
 
 

@@ -24,25 +24,20 @@ SELECT gw_fct_om_check_data($${
 
 
 DECLARE
-v_project_type text;
-v_count integer;
-v_saveondatabase boolean;
-v_result text;
-v_version text;
-v_result_info json;
-v_result_point json;
-v_result_line json;
-v_result_polygon json;
-v_querytext	text;
-v_result_id text;
-v_features text;
-v_edit text;
-v_config_param text;
-v_error_context text;
-v_feature_id text;
-v_arc_array text[];
-rec_arc text;
-v_node_1 text;
+v_project_type 		text;
+v_count			integer;
+v_saveondatabase 	boolean;
+v_result 		text;
+v_version		text;
+v_result_info 		json;
+v_result_point		json;
+v_result_line 		json;
+v_result_polygon	json;
+v_querytext		text;
+v_result_id 		text;
+v_features 		text;
+v_edit			text;
+v_config_param 		text;
 
 BEGIN
 
@@ -140,22 +135,6 @@ BEGIN
 		VALUES (25, 1, 'INFO: No arcs with state=1 using nodes with state=0 found.');
 	END IF;
 
-	-- check conduits (UD) with negative slope and inverted slope is not checked
-	IF v_project_type  ='UD' THEN
-		v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom FROM '||v_edit||'arc a WHERE sys_slope < 0 AND inverted_slope IS FALSE)';
-		
-		EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
-		IF v_count > 0 THEN
-			INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-			VALUES (25, 3, concat('ERROR: There is/are ',v_count,' arcs with inverted slope false and slope negative values. Please, check your data before continue'));
-			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-			VALUES (25, 3, concat('SELECT * FROM arc WHERE state > 0 AND sys_slope < 0 AND inverted_slope IS FALSE'));
-		ELSE
-			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-			VALUES (25, 1, 'INFO: No arcs with state=1 using nodes with state=0 found.');
-		END IF;	
-	END IF;
-
 	-- Chec state 1 arcs with state 2 nodes (97)
 	v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom FROM '||v_edit||'arc a JOIN '||v_edit||'node n ON node_1=node_id WHERE a.state =1 AND n.state=2 UNION
 			SELECT a.arc_id, arccat_id, a.the_geom FROM '||v_edit||'arc a JOIN '||v_edit||'node n ON node_2=node_id WHERE a.state =1 AND n.state=2) a';
@@ -173,28 +152,7 @@ BEGIN
 		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
 		VALUES (25, 1, 'INFO: No arcs with state=1 using nodes with state=0 found.');
 	END IF;	
-
-	-- Check all state=2 are involved in at least in one psector
-	v_querytext = 'SELECT a.arc_id FROM '||v_edit||'arc a RIGHT JOIN plan_psector_x_arc USING (arc_id) WHERE a.state = 2 AND a.arc_id IS NULL
-			UNION
-			SELECT a.node_id FROM '||v_edit||'node a RIGHT JOIN plan_psector_x_node USING (node_id) WHERE a.state = 2 AND a.node_id IS NULL
-			UNION
-			SELECT a.connec_id FROM '||v_edit||'connec a RIGHT JOIN plan_psector_x_connec USING (connec_id) WHERE a.state = 2 AND a.connec_id IS NULL';
-
-	IF v_project_type = 'UD' THEN
-		v_querytext = concat (v_querytext, ' UNION SELECT a.gully_id FROM '||v_edit||'gully a RIGHT JOIN plan_psector_x_gully USING (gully_id) WHERE a.state = 2 AND a.gully_id IS NULL');
-	END IF;
-		
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 	
-	IF v_count > 0 THEN
-		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-		VALUES (25, 3, concat('ERROR: There is/are ',v_count,' features with state=2 without psector assigned. Please, check your data before continue'));
-	ELSE
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 1, 'INFO: No features with state=2 without psector assigned.');
-	END IF;
-
 
 	-- Check state_type nulls (arc, node)
 	v_querytext = '(SELECT arc_id, arccat_id, the_geom FROM '||v_edit||'arc WHERE state > 0 AND state_type IS NULL 
@@ -244,54 +202,6 @@ BEGIN
 		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
 		VALUES (25, 1, 'INFO: No arcs with state > 0 AND state_type.is_operative on FALSE found.');
 	END IF;
-
-	--check if all tanks are defined in anl_mincut_inlet_x_exploitation  (fprocesscat = 77)
-	IF v_project_type = 'WS' THEN
-		v_querytext = 'SELECT node_id, nodecat_id, the_geom FROM '||v_edit||'node 
-		JOIN cat_node ON nodecat_id=cat_node.id
-		JOIN cat_feature ON cat_node.nodetype_id = cat_feature.id
-		JOIN value_state_type ON state_type = value_state_type.id
-		WHERE value_state_type.is_operative IS TRUE AND system_id = ''TANK'' and node_id NOT IN (SELECT node_id FROM anl_mincut_inlet_x_exploitation)';
-		
-		EXECUTE concat('SELECT count(*) FROM (',v_querytext,') a ') INTO v_count;
-		EXECUTE concat('SELECT string_agg(a.node_id::text,'','') FROM (',v_querytext,') a ') INTO v_feature_id;
-
-		IF v_count > 0 THEN
-			EXECUTE concat ('INSERT INTO anl_node (fprocesscat_id, node_id, nodecat_id, descript, the_geom) 
-			SELECT 77, node_id, nodecat_id, ''Tanks not defined in anl_mincut_inlet_x_exploitation'', the_geom FROM (', v_querytext,')a');
-			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-			VALUES (25, 2, concat('WARNING: There is/are ',v_count,' tanks which are not defined on anl_mincut_inlet_x_exploitation. Node_id: ',v_feature_id,'. Please, check your data before continue'));
-		ELSE
-			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-			VALUES (25, 1, 'INFO: All tanks are defined in anl_mincut_inlet_x_exploitation.');
-		END IF;
-	END IF;
-
-	--check if drawn arc direction is the same as defined node_1, node_2
-	v_querytext = 'SELECT array_agg(arc_id)  FROM '||v_edit||'arc';
-
-	EXECUTE v_querytext INTO v_arc_array;
-
-	FOREACH rec_arc IN ARRAY(v_arc_array)
-	LOOP
-		
-		EXECUTE 'SELECT node_1 FROM '||v_edit||'arc WHERE arc_id = '||quote_literal(rec_arc)||';'
-		INTO v_node_1;
-
-		EXECUTE 'SELECT node_id FROM '||v_edit||'arc, '||v_edit||'node
-		WHERE st_dwithin(St_StartPoint('||v_edit||'arc.the_geom), '||v_edit||'node.the_geom, 0.1) 
-		AND '||v_edit||'arc.arc_id = '||quote_literal(rec_arc)||' AND '||v_edit||'node.state = 1;'
-		INTO v_feature_id;
-
-		IF v_node_1 != v_feature_id THEN
-			EXECUTE concat ('INSERT INTO anl_arc (fprocesscat_id, arc_id, arccat_id, descript, the_geom) 
-			SELECT 123, arc_id, arccat_id, ''Drawing direction different than definition of node_1, node_2'', the_geom 
-			FROM '||v_edit||'arc WHERE arc_id = '||quote_literal(rec_arc)||';');
-
-			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-			VALUES (25, 2, concat('WARNING: Drawing direction of arc ',rec_arc,' is different than definition of node_1, node_2. Please, check your data before continue.'));
-		END IF;
-	END LOOP;
 
 
 	-- Check nulls customer code for connecs (110)
@@ -588,34 +498,6 @@ BEGIN
 		END IF;
 	END IF;
 
-	-- links without feature_id
-	v_querytext = 'SELECT link_id, the_geom FROM link where feature_id is null and state > 0';
-
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-
-	IF v_count > 0 THEN
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 3, concat('ERROR: There is/are ',v_count,' links with state > 0 without feature_id.'));
-	ELSE
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 1, 'INFO: All links state > 0 have feature_id.');
-	END IF;
-
-	-- links without exit_id
-	v_querytext = 'SELECT link_id, the_geom FROM link where exit_id is null and state > 0';
-
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-
-	IF v_count > 0 THEN
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 3, concat('ERROR: There is/are ',v_count,' links with state > 0 without exit_id. To repair it you can query:'));
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 3, 'UPDATE link SET exit_id = a.vnode_id FROM (SELECT link_id, vnode_id FROM link, vnode WHERE st_dwithin(st_endpoint(link.the_geom), vnode.the_geom, 0.01) AND exit_id IS NULL)a WHERE link.link_id = a.link_id');
-	ELSE
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 1, 'INFO: All links state > 0 have exit_id.');
-	END IF;
-
 	--Chained connecs/gullies which has different arc_id than the final connec/gully.
 	IF v_project_type = 'WS' THEN 
 		v_querytext = 'with c as (
@@ -735,22 +617,6 @@ BEGIN
 		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
 		VALUES (25, 1, 'INFO: No features with end date earlier than built date');
 	END IF;
-
-	--Automatic links with more than 100 mts (longitude out-of-range)
-	EXECUTE 'SELECT count(*) FROM v_edit_link where userdefined_geom  = false AND st_length(the_geom) > 100'
-	INTO v_count;
-
-	IF v_count > 0 THEN
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 2, concat('WARNING: There is/are ',v_count,' automatic links with longitude out-of-range found.'));
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 2, concat('QUERY: SELECT count(*) FROM v_edit_link where userdefined_geom  = false AND st_length(the_geom) > 100'));
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 2, concat('HINT: If link is ok, change userdefined_geom from false to true. Does not make sense automatic link with this longitude.'));
-	ELSE
-		INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-		VALUES (25, 1, 'INFO: No automatic links with out-of-range Longitude found.');
-	END IF;
 		
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (25, v_result_id, 4, '');	
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (25, v_result_id, 3, '');	
@@ -768,47 +634,32 @@ BEGIN
 	--points
 	v_result = null;
 
-	SELECT jsonb_agg(features.feature) INTO v_result
-	FROM (
-  	SELECT jsonb_build_object(
-     'type',       'Feature',
-    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-    'properties', to_jsonb(row) - 'the_geom'
-  	) AS feature
-  	FROM (SELECT id, node_id as feature_id, nodecat_id as feature_catalog, state, expl_id, descript,fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() 
-	AND fprocesscat_id IN (4,77,87,96,87,102,103)
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	FROM (SELECT id, node_id as feature_id, nodecat_id as feature_catalog, state, expl_id, descript,fprocesscat_id, the_geom FROM anl_node WHERE cur_user="current_user"() 
+	AND fprocesscat_id IN (4,87,96,87,102,103)
 	UNION
 	SELECT id, connec_id, connecat_id, state, expl_id, descript,fprocesscat_id, the_geom FROM anl_connec WHERE cur_user="current_user"() 
-	AND fprocesscat_id IN (101,102,104,105,106)) row) features;
+	AND fprocesscat_id IN (101,102,104,105,106)) row;  
 
 	v_result := COALESCE(v_result, '{}'); 
-
+	
 	IF v_result = '{}' THEN 
-		v_result_point = '{"geometryType":"", "features":[]}';
+		v_result_point = '{"geometryType":"", "values":[]}';
 	ELSE 
-		v_result_point = concat ('{"geometryType":"Point", "features":',v_result, '}');
+		v_result_point = concat ('{"geometryType":"Point", "values":',v_result, '}');
 	END IF;
 
 	--lines
 	v_result = null;
-	SELECT jsonb_agg(features.feature) INTO v_result
-	FROM (
-  	SELECT jsonb_build_object(
-     'type',       'Feature',
-    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-    'properties', to_jsonb(row) - 'the_geom'
-  	) AS feature
-  	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, fprocesscat_id, the_geom
-  	FROM  anl_arc WHERE cur_user="current_user"() AND fprocesscat_id IN (4, 88, 102, 123)) row) features;
-
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, the_geom FROM anl_arc WHERE cur_user="current_user"() 
+	AND (fprocesscat_id=4 OR fprocesscat_id=88 OR fprocesscat_id=102)) row; 
 	v_result := COALESCE(v_result, '{}'); 
-	v_result_line = concat ('{"geometryType":"LineString", "features":',v_result,'}'); 
-
 
 	IF v_result = '{}' THEN 
-		v_result_line = '{"geometryType":"", "features":[]}';
+		v_result_line = '{"geometryType":"", "values":[]}';
 	ELSE 
-		v_result_line = concat ('{"geometryType":"LineString", "features":',v_result, '}');
+		v_result_line = concat ('{"geometryType":"LineString", "values":',v_result, '}');
 	END IF;
 
 	--polygons
@@ -830,13 +681,7 @@ BEGIN
 				'"setVisibleLayers":[] }'||
 		       '}'||
 	    '}')::json;
-
---  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
-
+	
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

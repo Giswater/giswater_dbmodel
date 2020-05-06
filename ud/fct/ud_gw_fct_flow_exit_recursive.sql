@@ -7,19 +7,9 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 2216
 
 
-DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_flow_exit_recursive(character varying);
-CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_flow_exit_recursive(p_data json)  
-RETURNS json AS $BODY$
+CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_flow_exit_recursive(node_id_arg character varying)  RETURNS void AS $BODY$
 DECLARE
-    v_exists_id character varying;
-    v_node_id text;
-    v_node_json json;
-    v_audit_result text;
-    v_error_context text;
-    v_level integer;
-    v_status text;
-    v_message text;
-    v_version text;
+    exists_id character varying;
     rec_table record;
 
 BEGIN
@@ -27,56 +17,31 @@ BEGIN
     -- Search path
     SET search_path = "SCHEMA_NAME", public;
     
-    -- select version
-    SELECT giswater INTO v_version FROM version order by 1 desc limit 1;
-    
-    v_node_json = ((p_data ->>'feature')::json->>'id'::text);
-    v_node_id = (SELECT json_array_elements_text(v_node_json)); 
-
     -- Check if the node is already computed
-    SELECT node_id INTO v_exists_id FROM anl_node WHERE node_id = v_node_id AND cur_user="current_user"() AND fprocesscat_id=121;
+    SELECT node_id INTO exists_id FROM anl_flow_node WHERE node_id = node_id_arg AND cur_user="current_user"() AND context='Flow exit';
 
     -- Compute proceed
     IF NOT FOUND THEN
 
         -- Update value
-        INSERT INTO anl_node (node_id, expl_id, fprocesscat_id, the_geom) 
-        SELECT node_id, expl_id, 121, the_geom FROM v_edit_node WHERE node_id = v_node_id;
+        INSERT INTO anl_flow_node (node_id, expl_id, context, the_geom) VALUES
+        (node_id_arg, (SELECT expl_id FROM v_edit_node WHERE node_id = node_id_arg), 'Flow exit', (SELECT the_geom FROM v_edit_node WHERE node_id = node_id_arg));
         
         -- Loop for all the upstream nodes
-        FOR rec_table IN SELECT arc_id, arc_type, node_2, the_geom, expl_id FROM v_edit_arc WHERE node_1 = v_node_id
+        FOR rec_table IN SELECT arc_id, arc_type, node_2, the_geom, expl_id FROM v_edit_arc WHERE node_1 = node_id_arg
         LOOP
-            -- Insert into tables
-            INSERT INTO anl_arc (arc_id, arccat_id, expl_id, fprocesscat_id, the_geom) VALUES
-            (rec_table.arc_id, rec_table.arc_type, rec_table.expl_id, 121, rec_table.the_geom);
 
-           -- Call recursive function weighting with the pipe capacity
-           EXECUTE 'SELECT gw_fct_flow_exit_recursive($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{"id":["'||rec_table.node_2||'"]},"data":{}}$$);';
- 
+            -- Insert into tables
+            INSERT INTO anl_flow_arc (arc_id, arc_type, expl_id, context, the_geom) VALUES
+            (rec_table.arc_id, rec_table.arc_type, rec_table.expl_id, 'Flow exit', rec_table.the_geom);
+
+            -- Call recursive function weighting with the pipe capacity
+            PERFORM gw_fct_flow_exit_recursive(rec_table.node_2);
+
         END LOOP;
 
     END IF;
-
-    IF v_audit_result is null THEN
-        v_status = 'Accepted';
-        v_level = 3;
-        v_message = 'Arc fusion done successfully';
-    ELSE
-
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
-
-    END IF;
-
---  Return
-    RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"}')::json;
-
-    EXCEPTION WHEN OTHERS THEN
-     GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-     RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
-        
+    RETURN;
         
 END;
 $BODY$

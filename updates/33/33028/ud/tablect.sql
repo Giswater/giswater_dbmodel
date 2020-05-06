@@ -10,3 +10,4 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 --17/02/2020
 ALTER TABLE gully_type ALTER COLUMN active SET NOT NULL;
 ALTER TABLE gully_type ALTER COLUMN code_autofill SET NOT NULL;
+

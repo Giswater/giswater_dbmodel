@@ -17,28 +17,21 @@ $BODY$
 SELECT gw_fct_pg2epa_inlet_flowtrace('testbgeo11')
 
 --RESULTS
-SELECT arc_id FROM anl_arc WHERE fprocesscat_id=39 AND cur_user=current_user
-SELECT node_id FROM anl_node WHERE fprocesscat_id=39 AND cur_user=current_user
+SELECT * FROM anl_arc WHERE fprocesscat_id=39 AND cur_user=current_user
 SELECT * FROM anl_mincut_arc_x_node  where user_name=current_user;
 */
 
 
 DECLARE
-v_affectedrows numeric;
-v_cont integer default 0;
-v_buildupmode int2;
-
+affected_rows numeric;
+cont1 integer default 0;
 BEGIN
 
-	-- Search path
-	SET search_path = "SCHEMA_NAME", public;
-
-	-- get user values
-	v_buildupmode = (SELECT value FROM config_param_user WHERE parameter='inp_options_buildup_mode' AND cur_user=current_user);
+    -- Search path
+    SET search_path = "SCHEMA_NAME", public;
 
 	delete FROM anl_mincut_arc_x_node where user_name=current_user;
 	delete FROM anl_arc where cur_user=current_user AND fprocesscat_id=39;
-	delete FROM anl_node where cur_user=current_user AND fprocesscat_id=39;
 
 
 	-- fill the graf table
@@ -50,29 +43,21 @@ BEGIN
 	select  arc.arc_id, case when node_2 is null then '00000' else node_2 end, current_user, null, case when node_1 is null then '00000' else node_1 end, null, 0, 0
 	from rpt_inp_arc arc
 	WHERE arc.result_id=p_result_id
-	) ON CONFLICT (arc_id, node_id, user_name) DO NOTHING;
+	);
 	
-	-- Delete from the graf table all that rows that only exists one time (it means that arc don't have the correct topology)
+	-- Delete from the graf table all that roSCHEMA_NAME that only exists one time (it means that arc don't have the correct topology)
 	DELETE FROM anl_mincut_arc_x_node WHERE user_name=current_user AND arc_id IN 
 	(SELECT a.arc_id FROM (SELECT count(*) AS count, arc_id FROM anl_mincut_arc_x_node GROUP BY 2 HAVING count(*)=1 ORDER BY 2)a);
 
 	-- init inlets
-	IF v_buildupmode = 1 THEN
-		UPDATE anl_mincut_arc_x_node
-			SET flag1=1, water=1 
-			WHERE node_id IN (SELECT node_id FROM rpt_inp_node WHERE (epa_type='RESERVOIR' OR epa_type='INLET' OR epa_type='TANK') and result_id=p_result_id)
-			AND anl_mincut_arc_x_node.user_name=current_user; 
+	UPDATE anl_mincut_arc_x_node
+		SET flag1=1, water=1 
+		WHERE node_id IN (SELECT node_id FROM rpt_inp_node WHERE (epa_type='RESERVOIR' OR epa_type='INLET') and result_id=p_result_id)
+		AND anl_mincut_arc_x_node.user_name=current_user; 
 
-	ELSIF v_buildupmode = 2 THEN 
-		UPDATE anl_mincut_arc_x_node
-			SET flag1=1, water=1 
-			WHERE node_id IN (SELECT node_id FROM rpt_inp_node WHERE (epa_type='RESERVOIR' OR epa_type='INLET') and result_id=p_result_id)
-			AND anl_mincut_arc_x_node.user_name=current_user; 
-	END IF;
-		
 	-- inundation process
 	LOOP
-	v_cont = v_cont+1;
+	cont1 = cont1+1;
 
 		update anl_mincut_arc_x_node n
 		set water= 1, flag1=n.flag1+1
@@ -80,10 +65,10 @@ BEGIN
 		where n.node_id = a.node_id and
 		n.arc_id = a.arc_id;
 
-		GET DIAGNOSTICS v_affectedrows =row_count;
+		GET DIAGNOSTICS affected_rows =row_count;
 
-		exit when v_affectedrows = 0;
-		EXIT when v_cont = 200;
+		exit when affected_rows = 0;
+		EXIT when cont1 = 200;
 
 	END LOOP;
 
@@ -91,19 +76,19 @@ BEGIN
 	INSERT INTO anl_arc (fprocesscat_id, result_id, arc_id, the_geom, descript)
 	SELECT DISTINCT ON (a.arc_id) 39, p_result_id, a.arc_id, the_geom, 'Arc disconnected from any reservoir'  
 		FROM anl_mincut_arc_x_node a
-		JOIN rpt_inp_arc b ON a.arc_id=b.arc_id
+		JOIN arc b ON a.arc_id=b.arc_id
 		GROUP BY a.arc_id, user_name, the_geom
 		having max(water) = 0 and user_name=current_user;
 		
-	-- insert into result table the dry nodes (as they are extremal nodes from disconnected arcs, all it's ok
+
+	-- insert into result table the dry arcs (water=0)
 	INSERT INTO anl_node (fprocesscat_id, result_id, node_id, the_geom, descript)
-	SELECT 39, p_result_id, rpt_inp_arc.node_1, n.the_geom, 'Node disconnected from any reservoir' FROM rpt_inp_arc JOIN anl_arc USING (arc_id) 
-		JOIN rpt_inp_node n ON rpt_inp_arc.node_1=node_id WHERE fprocesscat_id=39 AND n.result_id = p_result_id AND cur_user=current_user UNION
-		SELECT 39, p_result_id, rpt_inp_arc.node_2, n.the_geom, 'Node disconnected from any reservoir' FROM rpt_inp_arc JOIN anl_arc USING (arc_id) 
-		JOIN rpt_inp_node n ON rpt_inp_arc.node_2=node_id WHERE fprocesscat_id=39 AND n.result_id = p_result_id AND cur_user=current_user;
+	SELECT 39, p_result_id, node_1, n.the_geom, 'Node disconnected from any reservoir' FROM arc JOIN anl_arc USING (arc_id) 
+	JOIN node n ON node_1=node_id WHERE fprocesscat_id=39 AND result_id = p_result_id AND cur_user=current_user UNION
+	SELECT 39, p_result_id, node_2, n.the_geom, 'Node disconnected from any reservoir' FROM arc JOIN anl_arc USING (arc_id) 
+	JOIN node n ON node_2=node_id WHERE fprocesscat_id=39 AND result_id = p_result_id AND cur_user=current_user;
 
-RETURN v_cont;
-
+RETURN cont1;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

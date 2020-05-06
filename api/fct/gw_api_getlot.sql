@@ -81,7 +81,7 @@ BEGIN
        
 		-- Data tab
 		-----------
-		SELECT gw_api_get_formfields( 'lot', 'lot', 'data', null, null, null, null, 'INSERT', null, v_device, null) INTO v_fields;
+		SELECT gw_api_get_formfields( 'lot', 'lot', 'data', null, null, null, null, 'INSERT', null, v_device) INTO v_fields;
 		raise notice '-> %', v_idname;
 		-- getting values from feature
 		IF v_id IS NOT NULL THEN
@@ -146,7 +146,7 @@ BEGIN
 		IF v_tab IS NULL THEN 
 			SELECT * INTO v_tab FROM config_api_form_tabs WHERE formname='lot' AND tabname='tabData' LIMIT 1;			
 		END IF;
-		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.label, 'tooltip',v_tab.tooltip, 
+		v_tabaux := json_build_object('tabName',v_tab.tabname,'tabLabel',v_tab.tablabel, 'tabText',v_tab.tabtext, 
 		'tabFunction', v_tab.tabfunction::json, 'tabActions', v_tab.tabactions::json, 'active',v_activedatatab);
 
 		v_tabaux := gw_fct_json_object_set_key(v_tabaux, 'fields', v_fields_json);

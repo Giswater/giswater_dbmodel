@@ -12,6 +12,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_edit_psector()
 $BODY$
 DECLARE 
 	v_sql varchar;
+	plan_psector_seq int8;
 	om_aux text;
 	rec_type record;
 	v_plan_table text;
@@ -172,9 +173,7 @@ BEGIN
 				--reestablish topology control
 				UPDATE config_param_system set value = 'true' WHERE parameter='state_topocontrol';	
 				--show information about performed state update
-
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-       			"data":{"error":"3034", "function":"2446","debug_msg":null}}$$);';
+				PERFORM audit_function(3034,2446);
 			END LOOP;
 			
 		END IF;

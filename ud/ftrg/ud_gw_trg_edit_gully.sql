@@ -10,46 +10,44 @@ This version of Giswater is provided by Giswater Association
 
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_gully()  RETURNS trigger AS $BODY$
 DECLARE 
-v_sql varchar;
-v_count integer;
-v_promixity_buffer double precision;
-v_code_autofill_bool boolean;
-v_link_path varchar;
-v_record_link record;
-v_record_vnode record;
-v_customfeature text;
-v_addfields record;
-v_new_value_param text;
-v_old_value_param text;
-v_arg text;
-v_doublegeometry boolean;
-v_length float;
-v_width float;
-v_rotation float;
-v_unitsfactor float;
-v_linelocatepoint float;
-v_thegeom public.geometry;
-v_the_geom_pol public.geometry;
-p21x float; 
-p02x float;
-p21y float; 
-p02y float;
-p22x float;
-p22y float;
-p01x float;
-p01y float;
-dx float;
-dy float;
-v_x float;
-v_y float;
-v_new_pol_id varchar(16);
-v_codeautofill boolean;
-v_srid integer;
-v_featurecat text;
-v_psector_vdefault integer;
-v_arc_id text;
-v_streetaxis text;
-v_streetaxis2 text;
+    v_sql varchar;
+	v_count integer;
+	v_promixity_buffer double precision;
+	v_code_autofill_bool boolean;
+	v_link_path varchar;
+	v_record_link record;
+	v_record_vnode record;
+	v_customfeature text;
+	v_addfields record;
+	v_new_value_param text;
+	v_old_value_param text;
+	v_arg text;
+	v_doublegeometry boolean;
+	v_length float;
+	v_width float;
+	v_rotation float;
+	v_unitsfactor float;
+	v_linelocatepoint float;
+	v_thegeom public.geometry;
+	v_the_geom_pol public.geometry;
+	p21x float; 
+	p02x float;
+	p21y float; 
+	p02y float;
+	p22x float;
+	p22y float;
+	p01x float;
+	p01y float;
+	dx float;
+	dy float;
+    v_x float;
+    v_y float;
+    v_new_pol_id varchar(16);
+    v_codeautofill boolean;
+    v_srid integer;
+    v_featurecat text;
+    v_psector_vdefault integer;
+	v_arc_id text;
     
 BEGIN
 
@@ -73,12 +71,7 @@ BEGIN
 	v_srid = (SELECT epsg FROM version limit 1);
 	
 	IF v_promixity_buffer IS NULL THEN v_promixity_buffer=0.5; END IF;
-
-	-- transforming streetaxis name into id
-	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-		v_streetaxis = (SELECT id FROM ext_streetaxis WHERE muni_id = NEW.muni_id AND name = NEW.streetname LIMIT 1);
-		v_streetaxis2 = (SELECT id FROM ext_streetaxis WHERE muni_id = NEW.muni_id AND name = NEW.streetname2 LIMIT 1);
-	END IF;;
+	
 	
 	-- Control insertions ID
 	IF TG_OP = 'INSERT' THEN
@@ -117,140 +110,47 @@ BEGIN
 		IF (NEW.connec_arccat_id IS NULL) THEN
 			NEW.connec_arccat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='connecarccat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		END IF;
-		
-		
-		-- Exploitation
-		IF (NEW.expl_id IS NULL) THEN
-			
-			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-		       	"data":{"error":"1110", "function":"1206","debug_msg":null}}$$);';
-			END IF;
-			
-			-- getting value default
-			IF (NEW.expl_id IS NULL) THEN
-				NEW.expl_id := (SELECT "value" FROM config_param_user WHERE "parameter"='exploitation_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			END IF;
-			
-			-- getting value from geometry of mapzone
-			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
-				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
-				ELSE
-					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
-				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.expl_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-				"data":{"error":"2012", "function":"1206","debug_msg":"'||NEW.gully_id::text||'"}}$$);';
-			END IF;            
-		END IF;
-		
-		
+
 		-- Sector ID
 		IF (NEW.sector_id IS NULL) THEN
-			
-			-- control error without any mapzones defined on the table of mapzone
 			IF ((SELECT COUNT(*) FROM sector) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-		       	"data":{"error":"1008", "function":"1206","debug_msg":null}}$$);';
+				RETURN audit_function(1008,1206);  
 			END IF;
-			
-			-- getting value default
+				SELECT count(*)into v_count FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001);
+			IF v_count = 1 THEN
+				NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
+			ELSIF v_count > 1 THEN
+				NEW.sector_id =(SELECT sector_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, v_promixity_buffer) 
+				order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
+			END IF;	
 			IF (NEW.sector_id IS NULL) THEN
 				NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF;
-			
-			-- getting value from geometry of mapzone
 			IF (NEW.sector_id IS NULL) THEN
-				SELECT count(*)into v_count FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001);
-				IF v_count = 1 THEN
-					NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
-				ELSE
-					NEW.sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
-				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.sector_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-				"data":{"error":"1010", "function":"1206","debug_msg":"'||NEW.gully_id::text||'"}}$$);';
+				RETURN audit_function(1010,1206,NEW.gully_id);          
 			END IF;            
 		END IF;
-		
-		
+        
 		-- Dma ID
 		IF (NEW.dma_id IS NULL) THEN
-			
-			-- control error without any mapzones defined on the table of mapzone
 			IF ((SELECT COUNT(*) FROM dma) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-		       	"data":{"error":"1012", "function":"1206","debug_msg":null}}$$);';
+				RETURN audit_function(1012,1206);  
 			END IF;
-			
-			-- getting value default
+			SELECT count(*)into v_count FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001);
+			IF v_count = 1 THEN
+				NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
+			ELSIF v_count > 1 THEN
+				NEW.dma_id =(SELECT dma_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, v_promixity_buffer) 
+				order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
+			END IF;
 			IF (NEW.dma_id IS NULL) THEN
 				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			END IF;
-			
-			-- getting value from geometry of mapzone
+			END IF; 
 			IF (NEW.dma_id IS NULL) THEN
-				SELECT count(*)into v_count FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001);
-				IF v_count = 1 THEN
-					NEW.dma_id = (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
-				ELSE
-					NEW.dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
-				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.dma_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-				"data":{"error":"1014", "function":"1206","debug_msg":"'||NEW.gully_id::text||'"}}$$);';
+				RETURN audit_function(1014,1206,NEW.gully_id);  
 			END IF;            
 		END IF;
-		
-		
-		-- Municipality 
-		IF (NEW.muni_id IS NULL) THEN
-			
-			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM ext_municipality) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-		       	"data":{"error":"3110", "function":"1206","debug_msg":null}}$$);';
-			END IF;
-			
-			-- getting value default
-			IF (NEW.muni_id IS NULL) THEN
-				NEW.muni_id := (SELECT "value" FROM config_param_user WHERE "parameter"='municipality_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			END IF;
-			
-			-- getting value from geometry of mapzone
-			IF (NEW.muni_id IS NULL) THEN
-				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
-				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
-				ELSE
-					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
-				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.muni_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-				"data":{"error":"2024", "function":"1206","debug_msg":"'||NEW.gully_id::text||'"}}$$);';
-			END IF;            
-		END IF;
-		
-		
+
 		-- Verified
 		IF (NEW.verified IS NULL) THEN
 			NEW.verified := (SELECT "value" FROM config_param_user WHERE "parameter"='verified_vdefault' AND "cur_user"="current_user"() LIMIT 1);
@@ -268,8 +168,7 @@ BEGIN
 
 		--check relation state - state_type
 	    IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-	      	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"3036", "function":"1206","debug_msg":"'||NEW.state::text||'"}}$$);'; 
+	      	RETURN audit_function(3036,1206,NEW.state::text);
 	   	END IF;		
 
 		-- Workcat_id
@@ -302,7 +201,29 @@ BEGIN
 
 		--Uncertain
 		NEW.uncertain := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_uncertain_sysvdefault');		
+        		
+		-- Exploitation
+		IF (NEW.expl_id IS NULL) THEN
+			NEW.expl_id := (SELECT "value" FROM config_param_user WHERE "parameter"='exploitation_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.expl_id IS NULL) THEN
+				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+				IF (NEW.expl_id IS NULL) THEN
+					PERFORM audit_function(2012,1206,NEW.gully_id);
+				END IF;		
+			END IF;
+		END IF;	
 
+		-- Municipality 
+		IF (NEW.muni_id IS NULL) THEN
+			NEW.muni_id := (SELECT "value" FROM config_param_user WHERE "parameter"='municipality_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.muni_id IS NULL) THEN
+				NEW.muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+				IF (NEW.muni_id IS NULL) THEN
+					PERFORM audit_function(2024,1206,NEW.gully_id);
+				END IF;	
+			END IF;
+		END IF;
+			
 		--Units
 		IF (NEW.units IS NULL) THEN
 			NEW.units :='1';
@@ -360,8 +281,8 @@ BEGIN
 		-- elevation from raster
 		IF (SELECT upper(value) FROM config_param_system WHERE parameter='sys_raster_dem') = 'TRUE' AND (NEW.top_elev IS NULL) AND 
 		(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
-			NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM v_ext_raster_dem WHERE id =
-				(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+			NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id =
+				(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
 		END IF;  		
 
 		--set rotation field
@@ -387,8 +308,8 @@ BEGIN
 
 
 			IF v_length*v_width IS NULL THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-				"data":{"error":"3062", "function":"1206","debug_msg":"'||NEW.gratecat_id::text||'"}}$$);'; 
+			
+				RAISE EXCEPTION 'Selected gratecat_id has NULL width or length. Check catalog data or your custom config values before continue';
 				
 			ELSIF v_length*v_width != 0 THEN
  
@@ -432,15 +353,15 @@ BEGIN
 			END IF;
 		END IF;
 
-		-- FEATURE INSERT
+        -- FEATURE INSERT
 		INSERT INTO gully (gully_id, code, top_elev, "ymax",sandbox, matcat_id, gully_type, gratecat_id, units, groove, connec_arccat_id, connec_length, connec_depth, siphon, arc_id, pol_id, sector_id,
 			"state",state_type, annotation, "observ", "comment", dma_id, soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, buildercat_id,
 			builtdate, enddate, ownercat_id, muni_id, postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, rotation, link,verified, the_geom, 
-			undelete,featurecat_id, feature_id,label_x, label_y,label_rotation, expl_id, publish, inventory,uncertain, num_value)
+            undelete,featurecat_id, feature_id,label_x, label_y,label_rotation, expl_id, publish, inventory,uncertain, num_value)
 		VALUES (NEW.gully_id, NEW.code, NEW.top_elev, NEW."ymax",NEW.sandbox, NEW.matcat_id, NEW.gully_type, NEW.gratecat_id, NEW.units, NEW.groove, NEW.connec_arccat_id, NEW.connec_length, NEW.connec_depth, 
 			NEW.siphon, NEW.arc_id, v_new_pol_id, NEW.sector_id, NEW."state", NEW.state_type, NEW.annotation, NEW."observ", NEW."comment", NEW.dma_id, NEW.soilcat_id, NEW.function_type, NEW.category_type, 
-			NEW.fluid_type, NEW.location_type, NEW.workcat_id, NEW.workcat_id_end, NEW.buildercat_id, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.muni_id, NEW.postcode, v_streetaxis, 
-			NEW.postnumber, NEW.postcomplement, v_streetaxis2, NEW.postnumber2, NEW.postcomplement2, NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.undelete, 
+			NEW.fluid_type, NEW.location_type, NEW.workcat_id, NEW.workcat_id_end, NEW.buildercat_id, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.streetaxis_id, 
+			NEW.postnumber, NEW.postcomplement, NEW.streetaxis2_id, NEW.postnumber2, NEW.postcomplement2, NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.undelete, 
 			NEW.featurecat_id, NEW.feature_id,NEW.label_x, NEW.label_y, NEW.label_rotation,  NEW.expl_id , NEW.publish, NEW.inventory,  NEW.uncertain, NEW.num_value);
 
 
@@ -448,17 +369,14 @@ BEGIN
 			-- Control of automatic insert of link and vnode
 			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_gully_force_automatic_connect2network' 
 			AND cur_user=current_user LIMIT 1) IS TRUE THEN
-
-				EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":3, "infoType":100, "lang":"ES"},
-				"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"GULLY"}}$$)';
-
+				PERFORM gw_fct_connect_to_network((select array_agg(NEW.gully_id)), 'GULLY');
 				SELECT arc_id INTO v_arc_id FROM gully WHERE gully_id=NEW.gully_id;
 			END IF;
 
 		ELSIF NEW.state=2 THEN
 			-- for planned connects always must exits link defined because alternatives will use parameters and rows of that defined link adding only geometry defined on plan_psector
-			EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":3, "infoType":100, "lang":"ES"},
-			"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"GULLY"}}$$)';			
+			PERFORM gw_fct_connect_to_network((select array_agg(NEW.gully_id)), 'GULLY');
+			
 			-- for planned connects always must exits arc_id defined on the default psector because it is impossible to draw a new planned link. Unique option for user is modify the existing automatic link
 			SELECT arc_id INTO v_arc_id FROM gully WHERE gully_id=NEW.gully_id;
 			v_psector_vdefault=(SELECT value::integer FROM config_param_user WHERE config_param_user.parameter::text = 'psector_vdefault'::text AND config_param_user.cur_user::name = "current_user"());
@@ -493,14 +411,9 @@ BEGIN
 			--update elevation from raster
 			IF (SELECT upper(value) FROM config_param_system WHERE parameter='sys_raster_dem') = 'TRUE' AND (NEW.top_elev = OLD.top_elev) AND 
 			(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
-				NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM v_ext_raster_dem WHERE id =
-							(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+				NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id =
+							(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
 			END IF;
-		
-			--update associated geometry of element (if exists)
-			UPDATE element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
-			AND element_id IN (SELECT element_id FROM element_x_gully WHERE gully_id = NEW.gully_id);
-			
 		END IF;	
 		
 		-- Reconnect arc_id
@@ -508,13 +421,9 @@ BEGIN
 			UPDATE gully SET arc_id=NEW.arc_id where gully_id=NEW.gully_id;
 			IF (SELECT link_id FROM link WHERE feature_id=NEW.gully_id AND feature_type='GULLY' LIMIT 1) IS NOT NULL THEN
 				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.gully_id AND exit_type='VNODE' LIMIT 1)::int8;
-
-				EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":3, "infoType":100, "lang":"ES"},
-				"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"GULLY"}}$$)';	
-
+				PERFORM gw_fct_connect_to_network((select array_agg(NEW.gully_id)), 'GULLY');
 			ELSIF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' AND cur_user=current_user LIMIT 1) IS TRUE THEN
-				EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":3, "infoType":100, "lang":"ES"},
-				"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"GULLY"}}$$)';	
+				PERFORM gw_fct_connect_to_network((select array_agg(NEW.gully_id)), 'GULLY');
 			END IF;
 		ELSIF (OLD.arc_id != (SELECT arc_id FROM gully WHERE gully_id=NEW.gully_id)) THEN -- case when arc_id comes from plan psector tables
 			UPDATE plan_psector_x_gully SET arc_id= NEW.arc_id WHERE gully_id=NEW.gully_id AND arc_id = OLD.arc_id;		
@@ -527,8 +436,7 @@ BEGIN
 				IF NEW.state_type IS NULL THEN
 				NEW.state_type=(SELECT id from value_state_type WHERE state=0 LIMIT 1);
 					IF NEW.state_type IS NULL THEN
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-					"data":{"error":"2110", "function":"1206","debug_msg":null}}$$);'; 
+					RETURN audit_function(2110,1206);
 					END IF;
 				END IF;
 			END IF;
@@ -556,8 +464,7 @@ BEGIN
 
 		--check relation state - state_type
 	    IF (NEW.state_type != OLD.state_type) AND NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-	      	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-			"data":{"error":"3036", "function":"1206","debug_msg":"'||NEW.state::text||'"}}$$);'; 
+	      	RETURN audit_function(3036,1206,NEW.state::text);
 	    END IF;		
 
 		-- rotation
@@ -571,7 +478,7 @@ BEGIN
 			NEW.link = replace(NEW.link, v_link_path,'');
 		END IF;
 
-        --set rotation field
+--set rotation field
 		WITH index_query AS(
 		SELECT ST_Distance(the_geom, NEW.the_geom) as distance, the_geom FROM arc WHERE state=1 ORDER BY the_geom <-> NEW.the_geom LIMIT 10)
 		SELECT St_linelocatepoint(the_geom, St_closestpoint(the_geom, NEW.the_geom)), the_geom INTO v_linelocatepoint, v_thegeom FROM index_query ORDER BY distance LIMIT 1;
@@ -594,9 +501,8 @@ BEGIN
 			v_width = (SELECT width FROM cat_grate WHERE id=NEW.gratecat_id);
 
 				IF v_length*v_width IS NULL THEN
-	
-					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-					"data":{"error":"3062", "function":"1206","debug_msg":"'||NEW.gratecat_id::text||'"}}$$);'; 
+			
+					RAISE EXCEPTION 'Selected gratecat_id has NULL width or length. Check catalog data or your custom config values before continue';
 				
 				ELSIF v_length*v_width != 0 THEN
 
@@ -652,9 +558,9 @@ BEGIN
 		connec_arccat_id=NEW.connec_arccat_id, connec_length=NEW.connec_length, connec_depth=NEW.connec_depth, siphon=NEW.siphon, sector_id=NEW.sector_id, "state"=NEW."state",  state_type=NEW.state_type, 
 		annotation=NEW.annotation, "observ"=NEW."observ", "comment"=NEW."comment", dma_id=NEW.dma_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, 
 		fluid_type=NEW.fluid_type, location_type=NEW.location_type, workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end,buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate, enddate=NEW.enddate,
-		ownercat_id=NEW.ownercat_id, postcode=NEW.postcode, streetaxis2_id=v_streetaxis2, postnumber2=NEW.postnumber2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, 
+		ownercat_id=NEW.ownercat_id, postcode=NEW.postcode, streetaxis2_id=NEW.streetaxis2_id, postnumber2=NEW.postnumber2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, 
 		descript=NEW.descript, rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, undelete=NEW.undelete,featurecat_id=NEW.featurecat_id, feature_id=NEW.feature_id, 
-		label_x=NEW.label_x, label_y=NEW.label_y,label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, muni_id=NEW.muni_id, streetaxis_id=v_streetaxis, 
+		label_x=NEW.label_x, label_y=NEW.label_y,label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, 
 		postnumber=NEW.postnumber,  expl_id=NEW.expl_id, uncertain=NEW.uncertain, num_value=NEW.num_value, lastupdate=now(), lastupdate_user=current_user
 		WHERE gully_id = OLD.gully_id;
 
@@ -694,8 +600,8 @@ BEGIN
 
     ELSIF TG_OP = 'DELETE' THEN
 	
-		EXECUTE 'SELECT gw_fct_check_delete($${"client":{"device":3, "infoType":100, "lang":"ES"},
-		"feature":{"id":"'||OLD.gully_id||'","featureType":"GULLY"}, "data":{}}$$)';
+	PERFORM gw_fct_check_delete(OLD.gully_id, 'GULLY');
+
 	-- delete from polygon table (before the deletion of gully)
 	DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM gully WHERE gully_id=OLD.gully_id);
 	
