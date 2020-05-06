@@ -71,12 +71,16 @@ DECLARE
 	v_addphotos_array json[];
 	v_list_photos text[];
 	v_event_id bigint;
+	v_projecttype text;
 	
 
 BEGIN
 
 -- Set search path to local schema
 	SET search_path = "SCHEMA_NAME", public;
+
+-- get projecttype
+	v_projecttype=(SELECT wsoftware FROM version LIMIT 1);
 
 --  get api version
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
@@ -102,7 +106,20 @@ BEGIN
 	v_node_id = ((p_data ->>'data')::json->>'fields')::json->>'node_id';
 	v_addphotos = (p_data ->>'data')::json->>'photos';
 
-	
+
+	-- setting sequences of related visit tables
+	PERFORM setval('"SCHEMA_NAME".om_visit_event_id_seq', (SELECT max(id) FROM om_visit_event), true);
+	PERFORM setval('"SCHEMA_NAME".om_visit_x_arc_id_seq', (SELECT max(id) FROM om_visit_x_arc), true);
+	PERFORM setval('"SCHEMA_NAME".om_visit_x_node_id_seq', (SELECT max(id) FROM om_visit_x_node), true);
+	PERFORM setval('"SCHEMA_NAME".om_visit_x_connec_id_seq', (SELECT max(id) FROM om_visit_x_connec), true);
+
+	IF v_projecttype ='UD' THEN
+		PERFORM setval('"SCHEMA_NAME".om_visit_x_gully_id_seq', (SELECT max(id) FROM om_visit_x_gully), true);
+	END IF;
+
+	PERFORM setval('"SCHEMA_NAME".doc_x_visit_id_seq', (SELECT max(id) FROM doc_x_visit), true);
+
+
 	-- Get new visit id if not exist
 	raise notice 'FIRST ID     -> %',v_id;
 	IF v_id IS NULL THEN
