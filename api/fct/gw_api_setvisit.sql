@@ -71,7 +71,6 @@ DECLARE
 	v_addphotos_array json[];
 	v_list_photos text[];
 	v_event_id bigint;
-	v_projecttype text;
 	
 
 BEGIN
@@ -79,8 +78,6 @@ BEGIN
 -- Set search path to local schema
 	SET search_path = "SCHEMA_NAME", public;
 
--- get projecttype
-	v_projecttype=(SELECT wsoftware FROM version LIMIT 1);
 
 --  get api version
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
@@ -113,7 +110,7 @@ BEGIN
 	PERFORM setval('"SCHEMA_NAME".om_visit_x_node_id_seq', (SELECT max(id) FROM om_visit_x_node), true);
 	PERFORM setval('"SCHEMA_NAME".om_visit_x_connec_id_seq', (SELECT max(id) FROM om_visit_x_connec), true);
 
-	IF v_projecttype ='UD' THEN
+	IF v_version ='UD' THEN
 		PERFORM setval('"SCHEMA_NAME".om_visit_x_gully_id_seq', (SELECT max(id) FROM om_visit_x_gully), true);
 	END IF;
 
@@ -121,7 +118,7 @@ BEGIN
 
 
 	-- Get new visit id if not exist
-	raise notice 'FIRST ID     -> %',v_id;
+	RAISE notice 'FIRST ID     -> %',v_id;
 	IF v_id IS NULL THEN
 		v_id := (SELECT max(id)+1 FROM om_visit);
 		--v_id := (SELECT max(id) FROM om_visit);
@@ -158,17 +155,15 @@ BEGIN
 	END IF;
 
 	--upsert visit
-	raise notice 'ID -1  -> %',v_id-1;
-	raise notice 'ID     -> %',v_id;
 	IF (SELECT id FROM om_visit WHERE id=v_id) IS NULL THEN
 
 		-- setting the insert
 		v_id = (SELECT nextval('SCHEMA_NAME.om_visit_id_seq'::regclass));
 		v_feature = gw_fct_json_object_set_key (v_feature, 'id', v_id);
 		v_outputparameter = gw_fct_json_object_set_key (v_outputparameter, 'feature', v_feature);
-		raise notice 'A1';
+
 		SELECT gw_api_setinsert (v_outputparameter) INTO v_insertresult;
-		raise notice 'A2';
+
 		-- getting new id
 		IF (((v_insertresult->>'body')::json->>'feature')::json->>'id')::integer IS NOT NULL THEN
 		
