@@ -609,3 +609,59 @@ CREATE TRIGGER gw_trg_edit_review_audit_gully
   FOR EACH ROW
   EXECUTE PROCEDURE gw_trg_edit_review_audit_gully();
 
+  
+-- REVIEW CONNEC
+CREATE OR REPLACE VIEW v_edit_review_connec AS 
+ SELECT review_connec.connec_id,
+    review_connec.y1,
+    review_connec.y2,
+    review_connec.connec_type,
+    review_connec.matcat_id,
+    review_connec.annotation,
+    review_connec.observ,
+    review_connec.expl_id,
+    review_connec.the_geom,
+    review_connec.field_checked,
+    review_connec.is_validated
+   FROM review_connec,
+    selector_expl
+  WHERE selector_expl.cur_user = "current_user"()::text AND review_connec.expl_id = selector_expl.expl_id;
+
+CREATE TRIGGER gw_trg_edit_review_connec
+  INSTEAD OF INSERT OR UPDATE
+  ON v_edit_review_connec
+  FOR EACH ROW
+  EXECUTE PROCEDURE gw_trg_edit_review_connec();
+
+
+CREATE OR REPLACE VIEW v_edit_review_audit_connec AS 
+ SELECT review_audit_connec.id,
+    review_audit_connec.connec_id,
+    review_audit_connec.old_y1,
+    review_audit_connec.new_y1,
+    review_audit_connec.old_y2,
+    review_audit_connec.new_y2,
+    review_audit_connec.old_connec_type,
+    review_audit_connec.new_connec_type,
+    review_audit_connec.old_matcat_id,
+    review_audit_connec.new_matcat_id,
+    review_audit_connec.old_connecat_id,
+    review_audit_connec.new_connecat_id,
+    review_audit_connec.annotation,
+    review_audit_connec.observ,
+    review_audit_connec.expl_id,
+    review_audit_connec.the_geom,
+    review_audit_connec.review_status_id,
+    review_audit_connec.field_date,
+    review_audit_connec.field_user,
+    review_audit_connec.is_validated
+   FROM review_audit_connec,
+    selector_expl
+  WHERE selector_expl.cur_user = "current_user"()::text AND review_audit_connec.expl_id = selector_expl.expl_id AND review_audit_connec.review_status_id <> 0;
+
+CREATE TRIGGER gw_trg_edit_review_audit_connec
+  INSTEAD OF UPDATE
+  ON v_edit_review_audit_connec
+  FOR EACH ROW
+  EXECUTE PROCEDURE gw_trg_edit_review_audit_connec();
+
