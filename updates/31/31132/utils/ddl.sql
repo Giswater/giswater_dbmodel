@@ -146,7 +146,8 @@ CREATE TABLE om_visit_class(
   sys_role_id character varying(30),
   visit_type integer,
   param_options json,
-  tablename character varying(30)
+  tablename character varying(30),
+  ui_tablename character varying(30)
   CONSTRAINT om_visit_class_pkey PRIMARY KEY (id));
   
   
