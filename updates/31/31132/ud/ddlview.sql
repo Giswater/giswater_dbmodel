@@ -65,3 +65,18 @@ CREATE OR REPLACE VIEW v_ui_om_visit_x_gully AS
      LEFT JOIN ( SELECT DISTINCT doc_x_visit.visit_id
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit_x_gully.gully_id;
+  
+  
+CREATE OR REPLACE VIEW v_ui_om_visitman_x_gully AS 
+ SELECT DISTINCT ON (v_ui_om_visit_x_gully.visit_id) v_ui_om_visit_x_gully.visit_id,
+    v_ui_om_visit_x_gully.ext_code,
+    om_visit_cat.name AS visitcat_name,
+    v_ui_om_visit_x_gully.gully_id,
+    date_trunc('second'::text, v_ui_om_visit_x_gully.visit_start) AS visit_start,
+    date_trunc('second'::text, v_ui_om_visit_x_gully.visit_end) AS visit_end,
+    v_ui_om_visit_x_gully.user_name,
+    v_ui_om_visit_x_gully.is_done,
+    v_ui_om_visit_x_gully.feature_type,
+    v_ui_om_visit_x_gully.form_type
+   FROM v_ui_om_visit_x_gully
+     LEFT JOIN om_visit_cat ON om_visit_cat.id = v_ui_om_visit_x_gully.visitcat_id;
