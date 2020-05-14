@@ -150,6 +150,10 @@ BEGIN
 		PERFORM setval('SCHEMA_NAME.inp_vertice_seq', 1, true);
 	END IF;
 
+	IF v_project_type='UD' AND (SELECT hydrology_id FROM inp_selector_hydrology WHERE cur_user = current_user) IS NULL THEN
+		INSERT INTO inp_selector_hydrology (hydrology_id, cur_user) VALUES (1, current_user);
+	END IF;
+
 	--Reset the rest of sequences
 	FOR rec_table IN SELECT * FROM audit_cat_table WHERE sys_sequence IS NOT NULL AND sys_sequence_field IS NOT NULL AND sys_sequence!='urn_id_seq' AND sys_sequence!='doc_seq' AND isdeprecated IS NOT TRUE
 	LOOP 
