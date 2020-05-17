@@ -56,6 +56,8 @@ v_qmlpolpath text = '';
 v_user_control boolean = false;
 v_layer_log boolean = false;
 v_errcontext text;
+v_qgis_init_guide_map boolean;
+
 
 BEGIN 
 
@@ -75,6 +77,7 @@ BEGIN
 	SELECT value INTO v_qmlpolpath FROM config_param_user WHERE parameter='qgis_qml_pollayer_path' AND cur_user=current_user;
 	SELECT value INTO v_user_control FROM config_param_user where parameter='audit_project_user_control' AND cur_user=current_user;
 	SELECT value INTO v_layer_log FROM config_param_user where parameter='audit_project_layer_log' AND cur_user=current_user;
+	SELECT value INTO v_qgis_init_guide_map FROM config_param_user where parameter='qgis_init_guide_map' AND cur_user=current_user;
 
 	
 	-- init process
@@ -150,8 +153,10 @@ BEGIN
 		PERFORM setval('SCHEMA_NAME.inp_vertice_seq', 1, true);
 	END IF;
 
-	IF v_project_type='UD' AND (SELECT hydrology_id FROM inp_selector_hydrology WHERE cur_user = current_user) IS NULL THEN
-		INSERT INTO inp_selector_hydrology (hydrology_id, cur_user) VALUES (1, current_user);
+	IF v_project_type='UD' THEN
+		IF (SELECT hydrology_id FROM inp_selector_hydrology WHERE cur_user = current_user) IS NULL THEN
+			INSERT INTO inp_selector_hydrology (hydrology_id, cur_user) VALUES (1, current_user);
+		END IF;
 	END IF;
 
 	--Reset the rest of sequences
@@ -166,6 +171,12 @@ BEGIN
 
 	v_errortext=concat('Reset all sequences on project data schema.');
 	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+
+	-- set all exploitations when v_qgis_init_guide_map is true
+	IF v_qgis_init_guide_map THEN
+		INSERT INTO selector_expl (expl_id, cur_user) SELECT expl_id, current_user FROM exploitation
+		ON CONFLICT (expl_id, cur_user) DO NOTHING;
+	END IF;			
 
 	-- set mandatory values of config_param_user in case of not exists (for new users or for updates)
 	FOR rec_table IN SELECT * FROM audit_cat_param_user WHERE ismandatory IS TRUE AND sys_role_id IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, 'member'))
@@ -464,7 +475,7 @@ BEGIN
 					'"line":'||v_result_line||','||
 					'"polygon":'||v_result_polygon||','||
 					'"missingLayers":'||v_missing_layers||'}'||
-			      '}}')::json;
+				', "actions":{"hideForm":"true", "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
 	--  Return	   
 	RETURN v_return;
 
