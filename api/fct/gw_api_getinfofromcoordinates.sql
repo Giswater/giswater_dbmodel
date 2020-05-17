@@ -6,20 +6,24 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2580
 
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getinfofromcoordinates(p_data json)
+CREATE OR REPLACE FUNCTION ws_sample.gw_api_getinfofromcoordinates(p_data json)
   RETURNS json AS
 $BODY$
 
 /*EXAMPLE:
-SELECT SCHEMA_NAME.gw_api_getinfofromcoordinates($${
+SELECT ws_sample.gw_api_getinfofromcoordinates($${
 		"client":{"device":9, "infoType":100, "lang":"ES"},
 		"form":{},
 		"feature":{},
 		"data":{"activeLayer":"ve_node",
 			"visibleLayer":["ve_node","ve_arc"],
+			"addSchema":"ud",
+			"infoType":"full"
+			"projecRole":"role_admin"
 			"toolBar":"basic",
 			"coordinates":{"epsg":25831, "xcoord":419204.96, "ycoord":4576509.27, "zoomRatio":1000}}}$$)
-SELECT SCHEMA_NAME.gw_api_getinfofromcoordinates($${
+
+SELECT ws_sample.gw_api_getinfofromcoordinates($${
 		"client":{"device":9, "infoType":100, "lang":"ES"},
 		"form":{},
 		"feature":{},
@@ -27,43 +31,44 @@ SELECT SCHEMA_NAME.gw_api_getinfofromcoordinates($${
 			"visibleLayer":["ve_node","ve_arc"],
 			"toolBar":"epa",
 			"coordinates":{"epsg":25831, "xcoord":419204.96, "ycoord":4576509.27, "zoomRatio":1000}}}$$)
-
 */
 
 DECLARE
 
 --    Variables
-    v_xcoord double precision;
-    v_ycoord double precision;
-    v_epsg integer;
-    v_activelayer text;
-    v_visiblelayer text;
-    v_zoomratio double precision; 
-    v_device integer;  
-    v_point geometry;
-    v_sensibility float;
-    v_sensibility_f float;
-    v_id varchar;
-    v_layer record;
-    v_sql text;
-    v_sql2 text;
-    v_iseditable text;
-    v_return json;
-    v_idname text;
-    schemas_array text[];
-    v_count int2=0;
-    v_geometrytype text;
-    api_version text;
-    v_the_geom text;
-    v_config_layer text;
-    v_toolbar text;
-    v_role text;
+v_xcoord double precision;
+v_ycoord double precision;
+v_epsg integer;
+v_activelayer text;
+v_visiblelayer text;
+v_zoomratio double precision; 
+v_device integer;  
+v_point geometry;
+v_sensibility float;
+v_sensibility_f float;
+v_id varchar;
+v_layer record;
+v_sql text;
+v_sql2 text;
+v_iseditable text;
+v_return json;
+v_idname text;
+v_schemaname text;
+v_count int2=0;
+v_geometrytype text;
+api_version text;
+v_the_geom text;
+v_config_layer text;
+v_toolbar text;
+v_role text;
+v_addschema text;  
+v_flag boolean = false;
 
 BEGIN
 
 --  Set search path to local schema
-    SET search_path = "SCHEMA_NAME", public;
-    schemas_array := current_schemas(FALSE);
+    SET search_path = "ws_sample", public;
+    v_schemaname := 'ws_sample';
 
 --  get api version
     EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
@@ -77,6 +82,7 @@ BEGIN
 	v_zoomratio := ((p_data ->> 'data')::json->> 'coordinates')::json->>'zoomRatio';
 	v_toolbar := ((p_data ->> 'data')::json->> 'toolBar');
 	v_role = (p_data ->> 'data')::json->> 'rolePermissions';
+	v_addschema = (p_data ->> 'data')::json->> 'addSchema';
 
 
 	v_activelayer := (p_data ->> 'data')::json->> 'activeLayer';
@@ -122,6 +128,7 @@ BEGIN
               SELECT DISTINCT ON (layer_id) layer_id, orderby+100, add_param->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' JOIN cat_feature ON parent_layer=layer_id 
               WHERE child_layer = any('||quote_literal(v_visiblelayer)||'::text[]) ORDER BY orderby';
 
+
     FOR v_layer IN EXECUTE v_sql     
     LOOP
 
@@ -140,7 +147,7 @@ BEGIN
 		    AND s.nspname = $2
 		    ORDER BY a.attnum LIMIT 1'
 		    INTO v_idname
-		    USING v_layer.layer_id, schemas_array[1];
+		    USING v_layer.layer_id, v_schemaname;
 
         END IF;
 
@@ -155,7 +162,7 @@ BEGIN
                 AND left (pg_catalog.format_type(a.atttypid, a.atttypmod), 8)=''geometry''
                 ORDER BY a.attnum' 
 	        INTO v_the_geom
-	        USING v_layer.layer_id, schemas_array[1];
+	        USING v_layer.layer_id, v_schemaname;
 	        
 
         IF v_layer.geomtype = 'polygon' THEN
@@ -176,14 +183,26 @@ BEGIN
         
 
         IF v_id IS NOT NULL THEN 
-            exit;
+		v_flag = true;
+		exit;           
         ELSE 
            -- RAISE NOTICE 'Searching for layer....loop number: % layer: % ,idname: %, id: %', v_count, v_layer, v_idname, v_id;    
         END IF;
 
     END LOOP;
 
-  --  RAISE NOTICE 'Found (loop number: %):  Layer: % ,idname: %, id: %', v_count, v_layer, v_idname, v_id;
+	RAISE NOTICE 'Found (loop number: %):  Layer: % ,idname: %, id: %', v_count, v_layer, v_idname, v_id;
+
+	-- looking for additional schema 
+	IF v_addschema IS NOT NULL AND v_addschema != v_schemaname AND v_flag IS FALSE THEN
+		
+		EXECUTE 'SET search_path = '||v_addschema||', public';
+		SELECT gw_api_getinfofromcoordinates(p_data) INTO v_return;
+		SET search_path = 'ws_sample', public;
+		RAISE NOTICE 'returned';
+		RETURN v_return;
+	END IF;
+	
     
 --    Control NULL's
     IF v_id IS NULL THEN
