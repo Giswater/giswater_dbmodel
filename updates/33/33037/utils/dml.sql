@@ -8,7 +8,7 @@ This version of Giswater is provided by Giswater Association
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 --2020/05/09
-UPDATE ws.audit_cat_table SET sys_role_id = 'role_master' WHERE id = 'config_api_form_fields';
+UPDATE audit_cat_table SET sys_role_id = 'role_master' WHERE id = 'config_api_form_fields';
 
 
 --2020/05/14
