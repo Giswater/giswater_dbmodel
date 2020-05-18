@@ -79,38 +79,44 @@ BEGIN
 
        raise notice 'Configuration fields are defined on config_api_layer_field, calling gw_api_get_formfields with formname: % tablename: % id %', p_table_id, p_table_id, p_id;
 
-    SELECT formtype INTO v_formtype FROM config_api_form_fields WHERE formname = p_table_id;
+	SELECT formtype INTO v_formtype FROM config_api_form_fields WHERE formname = p_table_id;
 
        	-- Call the function of feature fields generation      	
 	SELECT gw_api_get_formfields( p_table_id, v_formtype, 'data', p_table_id, null, p_id, null, 'SELECT',null, p_device) INTO fields_array;
 	
     ELSE
 
-       raise notice 'Configuration fields are NOT defined on config_api_layer_field. System values will be used';
-        
-	-- Get fields
-	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM 
-		(SELECT a.attname as label, a.attname as column_id, concat('||quote_literal(v_tabname)||',''_'',a.attname) AS widgetname,
-		(case when a.atttypid=16 then ''check'' else ''text'' end ) as widgettype, 
-		(case when a.atttypid=16 then ''boolean'' else ''string'' end ) as "datatype", 
-		''::TEXT AS tooltip, ''::TEXT as placeholder, false AS iseditable, false as isclickable,
-		row_number()over() AS orderby, null as stylesheet, null as widgetcontrols, null as layout_name,
-		3 AS layout_id, 
-		row_number()over() AS layout_order, 
-		FALSE AS dv_parent_id, FALSE AS isparent, FALSE AS button_function, ''::TEXT AS dv_querytext, ''::TEXT AS dv_querytext_filterc, FALSE AS action_function, FALSE AS isautoupdate
-		FROM pg_attribute a
-		JOIN pg_class t on a.attrelid = t.oid
-		JOIN pg_namespace s on t.relnamespace = s.oid
-		WHERE a.attnum > 0 
-		AND NOT a.attisdropped
-		AND t.relname = $1 
-		AND s.nspname = $2
-		AND a.attname !=''the_geom''
-		AND a.attname !=''geom''
-		ORDER BY a.attnum) a'
-			INTO fields_array
-			USING p_table_id, schemas_array[1]; 
-   END IF;
+	raise notice 'Configuration fields are NOT defined on config_api_layer_field. System values will be used';
+	
+	IF p_id IS NULL THEN
+
+		RETURN '{}';
+	ELSE 
+			       
+		-- Get fields
+		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM 
+			(SELECT a.attname as label, a.attname as column_id, concat('||quote_literal(v_tabname)||',''_'',a.attname) AS widgetname,
+			(case when a.atttypid=16 then ''check'' else ''text'' end ) as widgettype, 
+			(case when a.atttypid=16 then ''boolean'' else ''string'' end ) as "datatype", 
+			''::TEXT AS tooltip, ''::TEXT as placeholder, false AS iseditable, false as isclickable,
+			row_number()over() AS orderby, null as stylesheet, null as widgetcontrols, null as layout_name,
+			3 AS layout_id, 
+			row_number()over() AS layout_order, 
+			FALSE AS dv_parent_id, FALSE AS isparent, FALSE AS button_function, ''::TEXT AS dv_querytext, ''::TEXT AS dv_querytext_filterc, FALSE AS action_function, FALSE AS isautoupdate
+			FROM pg_attribute a
+			JOIN pg_class t on a.attrelid = t.oid
+			JOIN pg_namespace s on t.relnamespace = s.oid
+			WHERE a.attnum > 0 
+			AND NOT a.attisdropped
+			AND t.relname = $1 
+			AND s.nspname = $2
+			AND a.attname !=''the_geom''
+			AND a.attname !=''geom''
+			ORDER BY a.attnum) a'
+				INTO fields_array
+				USING p_table_id, schemas_array[1]; 
+		END IF;
+	END IF;
 
 --    Get id column
     EXECUTE 'SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = $1::regclass AND i.indisprimary'
