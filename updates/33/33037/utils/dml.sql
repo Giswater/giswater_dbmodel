@@ -23,3 +23,9 @@ VALUES ('qgis_init_guide_map','config','If true, qgis starts with all extension 
 'QGIS init guide map', NULL, NULL, true, 8, 20, 'utils', false, NULL, NULL, NULL, 
 false, 'boolean', 'check', true, NULL, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, false)
 ON conflict (id) DO NOTHING;
+
+
+--18/05/2020
+INSERT INTO audit_cat_function(id, function_name, project_type, function_type, descript, sys_role_id, isdeprecated, istoolbox, isparametric)
+VALUES (2870, 'gw_api_setselectors', 'utils', 'function', 'Function to set selector of d', 'role_basic',FALSE, FALSE,FALSE)
+ON CONFLICT (id) DO NOTHING;

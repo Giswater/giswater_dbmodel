@@ -6,12 +6,12 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2580
 
-CREATE OR REPLACE FUNCTION ws_sample.gw_api_getinfofromcoordinates(p_data json)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getinfofromcoordinates(p_data json)
   RETURNS json AS
 $BODY$
 
 /*EXAMPLE:
-SELECT ws_sample.gw_api_getinfofromcoordinates($${
+SELECT SCHEMA_NAME.gw_api_getinfofromcoordinates($${
 		"client":{"device":9, "infoType":100, "lang":"ES"},
 		"form":{},
 		"feature":{},
@@ -23,7 +23,7 @@ SELECT ws_sample.gw_api_getinfofromcoordinates($${
 			"toolBar":"basic",
 			"coordinates":{"epsg":25831, "xcoord":419204.96, "ycoord":4576509.27, "zoomRatio":1000}}}$$)
 
-SELECT ws_sample.gw_api_getinfofromcoordinates($${
+SELECT SCHEMA_NAME.gw_api_getinfofromcoordinates($${
 		"client":{"device":9, "infoType":100, "lang":"ES"},
 		"form":{},
 		"feature":{},
@@ -67,8 +67,8 @@ v_flag boolean = false;
 BEGIN
 
 --  Set search path to local schema
-    SET search_path = "ws_sample", public;
-    v_schemaname := 'ws_sample';
+    SET search_path = "SCHEMA_NAME", public;
+    v_schemaname := 'SCHEMA_NAME';
 
 --  get api version
     EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
@@ -198,7 +198,7 @@ BEGIN
 		
 		EXECUTE 'SET search_path = '||v_addschema||', public';
 		SELECT gw_api_getinfofromcoordinates(p_data) INTO v_return;
-		SET search_path = 'ws_sample', public;
+		SET search_path = 'SCHEMA_NAME', public;
 		RAISE NOTICE 'returned';
 		RETURN v_return;
 	END IF;
