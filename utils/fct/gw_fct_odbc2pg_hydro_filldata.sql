@@ -22,8 +22,8 @@ SELECT SCHEMA_NAME.gw_fct_odbc2pg_hydro_filldata($${
 
 
 DECLARE
-v_expl nteger;
-v_period ext;
+v_expl integer;
+v_period text;
 v_year integer;
 v_project_type text;
 v_version text;
