@@ -84,6 +84,10 @@ BEGIN
 	v_role = (p_data ->> 'data')::json->> 'rolePermissions';
 	v_addschema = (p_data ->> 'data')::json->> 'addSchema';
 
+	-- control strage null
+	IF lower(v_addschema) = 'none' THEN 
+		v_addschema = null;
+	END IF;
 
 	v_activelayer := (p_data ->> 'data')::json->> 'activeLayer';
 	v_visiblelayer := (p_data ->> 'data')::json->> 'visibleLayer';
@@ -178,9 +182,7 @@ BEGIN
 		    ORDER BY  ST_Distance('||v_layer.layer_id||'.'||v_the_geom||', $1) asc LIMIT 1'
                     INTO v_id
                     USING v_point, v_sensibility;
-        END IF;
-
-        
+        END IF;      
 
         IF v_id IS NOT NULL THEN 
 		v_flag = true;
