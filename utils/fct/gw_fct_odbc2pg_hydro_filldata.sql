@@ -22,17 +22,18 @@ SELECT SCHEMA_NAME.gw_fct_odbc2pg_hydro_filldata($${
 
 
 DECLARE
-	v_expl			integer;
-	v_period		text;
-	v_year			integer;
-	v_project_type		text;
-	v_version		text;
-	v_result 		json;
-	v_result_info		json;
-	v_result_point		json;
-	v_result_line		json;
-	v_querytext		text;
-	v_count			integer;
+v_expl nteger;
+v_period ext;
+v_year integer;
+v_project_type text;
+v_version text;
+v_result json;
+v_result_info json;
+v_result_point json;
+v_result_line json;
+v_querytext text;
+v_count integer;
+
 BEGIN
 
 	--  Search path	
@@ -52,9 +53,9 @@ BEGIN
 	-- FASE 2: When CRM is full operative, move ext_rtc_hydrometer from table to view and delete insert done here
 	
 	-- ext_cat_period
-	INSERT INTO ext_cat_period (id, code, period_seconds, period_year, period_name, period_type) 
+	INSERT INTO ext_cat_period (id, code, period_seconds, period_year, period_name) 
 	SELECT DISTINCT CONCAT(log_message::json->>'year', '-', log_message::json->>'period') , CONCAT(log_message::json->>'year', 0, log_message::json->>'period'), 2*30*24*3600, 
-	(log_message::json->>'year')::integer, (log_message::json->>'period')::integer, 1
+	(log_message::json->>'year')::integer, (log_message::json->>'period')::integer
 	FROM audit_log_data WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fprocesscat_id=74
 	ON CONFLICT (id) DO NOTHING;
 
@@ -94,8 +95,8 @@ BEGIN
 	ON CONFLICT (dma_id, cat_period_id) DO NOTHING;
 
 	-- ext_rtc_hydrometer_category_x_pattern
-	INSERT INTO ext_hydrometer_category_x_pattern (category_id, period_type, pattern_id) 
-	SELECT category_id, period_type, c.pattern_id
+	INSERT INTO ext_hydrometer_category_x_pattern (category_id) 
+	SELECT category_id
 	FROM audit_log_data 
 	JOIN ext_cat_period a ON CONCAT(log_message::json->>'year', 0, log_message::json->>'period') = a.id
 	JOIN ext_rtc_hydrometer b ON b.id=feature_id
