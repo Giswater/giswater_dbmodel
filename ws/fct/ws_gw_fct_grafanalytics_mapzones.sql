@@ -617,92 +617,21 @@ BEGIN
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 
-	IF v_updatetattributes THEN -- only disconnected features to make a simple log
-		v_result = null;
+	-- disconnected arcs
+	v_result = null;
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM v_edit_arc WHERE arc_id NOT IN 
+	(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row; 
+	v_result := COALESCE(v_result, '{}'); 
+	v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"", "values":',v_result, '}');
 
-		SELECT jsonb_agg(features.feature) INTO v_result
-		FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom'
-	  	) AS feature
-	  	FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM v_edit_arc WHERE arc_id NOT IN 
-		(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row) features;
-
-		v_result := COALESCE(v_result, '{}'); 
-		v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"", "features":',v_result,'}'); 
-
-
-		-- disconnected connecs
-		v_result = null;
-		
-		SELECT jsonb_agg(features.feature) INTO v_result
-		FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom'
-	  	) AS feature
-	  	FROM (SELECT connec_id, connecat_id, c.state, c.expl_id, 'Disconnected connec'::text as descript, c.the_geom FROM v_edit_connec c WHERE arc_id NOT IN 
-		(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row) features;
-
-		v_result := COALESCE(v_result, '{}'); 
-		v_result_point = concat ('{"geometryType":"Point", "qmlPath":"", "features":',v_result, '}'); 
-
-
-	ELSE -- all features in order to make a more complex log
-
-		-- arc elements
-		v_result = null;
-
-		EXECUTE 'SELECT jsonb_agg(features.feature) 
-		FROM (
-	  	SELECT jsonb_build_object(
-	    ''type'',       ''Feature'',
-	    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
-	    ''properties'', to_jsonb(row) - ''the_geom''
-	  	) AS feature
-	  	FROM (SELECT a.arc_id, b.'||quote_ident(v_field)||', a.the_geom FROM anl_arc a 
-			JOIN (SELECT '||quote_ident(v_fieldmp)||', json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as nodeparent from '||
-			quote_ident(v_table)||') b ON  nodeparent = descript 
-			WHERE fprocesscat_id='||v_fprocesscat_id||' AND cur_user=current_user) row) features'
-		INTO v_result;
-
-		v_result := COALESCE(v_result, '{}'); 
-
-		v_result_line = concat ('{"geometryType":"LineString", "qmlPath":'||v_lineqmlpath||', "features":',v_result, '}');
-
-		-- connec elements
-		v_result = null;
-		EXECUTE 'SELECT jsonb_agg(features.feature)
-		FROM (
-	  	SELECT jsonb_build_object(
-	    ''type'',       ''Feature'',
-	    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
-	    ''properties'', to_jsonb(row) - ''the_geom''
-	  	) AS feature
-	  	FROM (SELECT c.connec_id, b.'||quote_ident(v_field)||', c.the_geom FROM anl_arc a 
-			JOIN (SELECT  '||quote_ident(v_fieldmp)||', json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as nodeparent from '||quote_ident(v_table)||')
-			 b ON  nodeparent = descript 
-			JOIN connec c ON c.arc_id = a.arc_id
-			WHERE fprocesscat_id='||v_fprocesscat_id||' AND cur_user=current_user) row) features'
-		INTO v_result;
-
-		v_result := COALESCE(v_result, '{}'); 
-		v_result_point = concat ('{"geometryType":"Point", "qmlPath":'||v_pointqmlpath||', "features":',v_result, '}');
-	END IF;
-
-	IF v_audit_result is null THEN
-        v_status = 'Accepted';
-        v_level = 3;
-        v_message = 'Mapzones dynamic analysis done succesfull';
-    ELSE
-
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
-    END IF;
+	-- disconnected connecs
+	v_result = null;
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	FROM (SELECT connec_id, connecat_id, c.state, c.expl_id, 'Disconnected connec'::text as descript, c.the_geom FROM v_edit_connec c WHERE arc_id NOT IN 
+	(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row; 
+	v_result := COALESCE(v_result, '{}'); 
+	v_result_point = concat ('{"geometryType":"Point", "qmlPath":"", "values":',v_result, '}');
 
 	-- Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 
@@ -711,21 +640,12 @@ BEGIN
 	v_result_line := COALESCE(v_result_line, '{}'); 
 
 	--  Return
-	RETURN  ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}, "data":{ "info":'||v_result_info||','||
 					  '"setVisibleLayers":["'||v_visible_layer||'"],'||
-  					  '"setSimbology":{"status":"'||v_dynsymbolstatus||'", "type":"polCategorized", "layer":"'||v_visible_layer||
-						'", "column":"'||v_mapzonename||'", "opacity":"0.5"},'||
 					  '"point":'||v_result_point||','||
 					  '"line":'||v_result_line||
 					  '}}}')::json;
-
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' ||
-	to_json(v_error_context) || '}')::json;
-
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
