@@ -105,6 +105,9 @@ BEGIN
 				NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF;
 			IF (NEW.sector_id IS NULL) THEN
+				NEW.sector_id := 0;
+			END IF; 
+			IF (NEW.sector_id IS NULL) THEN
                 RETURN audit_function(1010,1304,NEW.connec_id);          
             END IF;            
         END IF;
@@ -123,6 +126,9 @@ BEGIN
 			END IF;
 			IF (NEW.dma_id IS NULL) THEN
 				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			END IF; 
+			IF (NEW.dma_id IS NULL) THEN
+				NEW.dma_id := 0;
 			END IF; 
             IF (NEW.dma_id IS NULL) THEN
                 RETURN audit_function(1014,1304,NEW.connec_id);  
@@ -157,9 +163,21 @@ BEGIN
 		
 		-- Presszone
         IF (NEW.presszonecat_id IS NULL) THEN
-            NEW.presszonecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='presszone_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		NEW.presszonecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='presszone_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		IF (NEW.sector_id IS NULL) THEN
+			NEW.sector_id := 0;
+		END IF; 
         END IF;
-		
+
+        -- dqa
+	IF (NEW.dqa_id IS NULL) THEN
+		NEW.dqa_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dqa_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		IF (NEW.dqa_id IS NULL) THEN
+			NEW.dqa_id := 0;
+		END IF; 
+	END IF;
+			
+	
 		-- Exploitation
 		IF (NEW.expl_id IS NULL) THEN
 			NEW.expl_id := (SELECT "value" FROM config_param_user WHERE "parameter"='exploitation_vdefault' AND "cur_user"="current_user"() LIMIT 1);

@@ -94,62 +94,79 @@ BEGIN
 		
 		-- Sector ID
 		IF (NEW.sector_id IS NULL) THEN
-				IF ((SELECT COUNT(*) FROM sector) = 0) THEN
-			RETURN audit_function(1008,1320);  
-				END IF;
-					SELECT count(*)into v_count FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001);
-				IF v_count = 1 THEN
-					NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
-				ELSIF v_count > 1 THEN
-					NEW.sector_id =(SELECT sector_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, v_promixity_buffer) 
-					order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
-				END IF;	
-				IF (NEW.sector_id IS NULL) THEN
-					NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-				END IF;
-				IF (NEW.sector_id IS NULL) THEN
+			IF ((SELECT COUNT(*) FROM sector) = 0) THEN
+				RETURN audit_function(1008,1320);  
+			END IF;
+			SELECT count(*)into v_count FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001);
+			IF v_count = 1 THEN
+				NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);
+			ELSIF v_count > 1 THEN
+				NEW.sector_id =(SELECT sector_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, v_promixity_buffer) 
+				order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
+			END IF;	
+			IF (NEW.sector_id IS NULL) THEN
+				NEW.sector_id := (SELECT "value" FROM config_param_user WHERE "parameter"='sector_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			END IF;
+			IF (NEW.sector_id IS NULL) THEN
+				NEW.sector_id := 0;
+			END IF; 
+			IF (NEW.sector_id IS NULL) THEN
 			RETURN audit_function(1010,1320,NEW.node_id);          
 		    END IF;            
 		END IF;
 		
 		-- Dma ID
 		IF (NEW.dma_id IS NULL) THEN
-				IF ((SELECT COUNT(*) FROM dma) = 0) THEN
-			RETURN audit_function(1012,1320);  
-		    END IF;
-					SELECT count(*)into v_count FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001);
-				IF v_count = 1 THEN
-					NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
-				ELSIF v_count > 1 THEN
-					NEW.dma_id =(SELECT dma_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, v_promixity_buffer) 
-					order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
-				END IF;
-				IF (NEW.dma_id IS NULL) THEN
-					NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-				END IF; 
-		    IF (NEW.dma_id IS NULL) THEN
-			RETURN audit_function(1014,1320,NEW.node_id);  
-		    END IF;            
+			IF ((SELECT COUNT(*) FROM dma) = 0) THEN
+				RETURN audit_function(1012,1320);  
+			END IF;
+			SELECT count(*)into v_count FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001);
+			IF v_count = 1 THEN
+				NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
+			ELSIF v_count > 1 THEN
+				NEW.dma_id =(SELECT dma_id FROM v_edit_node WHERE ST_DWithin(NEW.the_geom, v_edit_node.the_geom, v_promixity_buffer) 
+				order by ST_Distance (NEW.the_geom, v_edit_node.the_geom) LIMIT 1);
+			END IF;
+			IF (NEW.dma_id IS NULL) THEN
+				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dma_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			END IF; 
+			IF (NEW.dma_id IS NULL) THEN
+				NEW.dma_id := 0;
+			END IF; 
+			IF (NEW.dma_id IS NULL) THEN
+				RETURN audit_function(1014,1320,NEW.node_id);  
+			END IF;            
 		END IF;
 			
-			-- Verified
+		-- Verified
 		IF (NEW.verified IS NULL) THEN
 		    NEW.verified := (SELECT "value" FROM config_param_user WHERE "parameter"='verified_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		END IF;
 			
-			-- Presszone
+		-- Presszone
 		IF (NEW.presszonecat_id IS NULL) THEN
-		    NEW.presszonecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='presszone_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			NEW.presszonecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='presszone_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.sector_id IS NULL) THEN
+				NEW.sector_id := 0;
+			END IF; 
+		END IF;
+
+		-- dqa
+		IF (NEW.dqa_id IS NULL) THEN
+			NEW.dqa_id := (SELECT "value" FROM config_param_user WHERE "parameter"='dqa_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.dqa_id IS NULL) THEN
+				NEW.dqa_id := 0;
+			END IF; 
 		END IF;
 			
-			-- State
+		-- State
 		IF (NEW.state IS NULL) THEN
 		    NEW.state := (SELECT "value" FROM config_param_user WHERE "parameter"='state_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		END IF;
 			
-			-- State_type
-			IF (NEW.state_type IS NULL) THEN
-				NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		-- State_type
+		IF (NEW.state_type IS NULL) THEN
+			NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='statetype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		END IF;
 
 		--check relation state - state_type
