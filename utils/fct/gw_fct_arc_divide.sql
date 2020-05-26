@@ -18,6 +18,7 @@ SELECT "SCHEMA_NAME".gw_fct_arc_divide('1079');
 DECLARE
 v_node_geom	geometry;
 v_arc_id    varchar;
+v_code 		varchar;
 v_arc_geom	geometry;
 v_line1		geometry;
 v_line2		geometry;
@@ -223,8 +224,10 @@ BEGIN
 				END IF;
 						
 				-- Insert data into traceability table
-				INSERT INTO audit_log_arc_traceability ("type", arc_id, arc_id1, arc_id2, node_id, "tstamp", "user") 
-				VALUES ('DIVIDE ARC',  v_arc_id, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
+				select code INTO v_code FROM v_edit_arc  WHERE arc_id=v_arc_id;
+
+				INSERT INTO audit_log_arc_traceability ("type", arc_id, code,arc_id1, arc_id2, node_id, "tstamp", "user") 
+				VALUES ('DIVIDE ARC',  v_arc_id, v_code, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
 			
 				-- Update elements from old arc to new arcs
 				FOR rec_aux IN SELECT * FROM element_x_arc WHERE arc_id=v_arc_id  LOOP
@@ -364,8 +367,10 @@ BEGIN
 				INSERT INTO plan_psector_x_arc (psector_id, arc_id, state, doable) VALUES (v_psector, v_arc_id, 0, FALSE);
 				
 				-- Insert data into traceability table
-				INSERT INTO audit_log_arc_traceability ("type", arc_id, arc_id1, arc_id2, node_id, "tstamp", "user") 
-				VALUES ('DIVIDE WITH PLANIFIED NODE',  v_arc_id, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
+				select code INTO v_code FROM v_edit_arc  WHERE arc_id=v_arc_id;
+
+				INSERT INTO audit_log_arc_traceability ("type", arc_id, code, arc_id1, arc_id2, node_id, "tstamp", "user") 
+				VALUES ('DIVIDE WITH PLANIFIED NODE',  v_arc_id, v_code, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
 
 				-- Set addparam (parent/child)
 				UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"parent"}' WHERE  psector_id=v_psector AND arc_id=v_arc_id;
@@ -440,8 +445,10 @@ BEGIN
 				END IF;
 							
 				-- Insert data into traceability table
-				INSERT INTO audit_log_arc_traceability ("type", arc_id, arc_id1, arc_id2, node_id, "tstamp", "user") 
-				VALUES ('DIVIDE PLANIFIED ARC',  v_arc_id, rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
+				select code INTO v_code FROM v_edit_arc  WHERE arc_id=v_arc_id;
+
+				INSERT INTO audit_log_arc_traceability ("type", arc_id,code, arc_id1, arc_id2, node_id, "tstamp", "user") 
+				VALUES ('DIVIDE PLANIFIED ARC',  v_arc_id,v_code,  rec_aux1.arc_id, rec_aux2.arc_id, node_id_arg,CURRENT_TIMESTAMP,CURRENT_USER);
 			
 				-- Update elements from old arc to new arcs
 				FOR rec_aux IN SELECT * FROM element_x_arc WHERE arc_id=v_arc_id  LOOP
