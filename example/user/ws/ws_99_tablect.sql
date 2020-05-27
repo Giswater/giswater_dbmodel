@@ -94,19 +94,19 @@ SELECT gw_fct_admin_schema_manage_ct($${"client":{"lang":"ES"}, "data":{"action"
 
 -- sectorization
 SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR", "exploitation": "[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"TRUE","concaveHullParam":0.85}}}');
+"updateFeature":"TRUE", "updateMapZone":2,"geomParamUpdate":15}}}');
 
 SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DQA", "exploitation": "[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"TRUE","buffer":30}}}');
+"updateFeature":"TRUE", "updateMapZone":2,"geomParamUpdate":15}}}');
 
 SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE","exploitation":"[1,2]",
-"updateFeature":"TRUE","updateMapZone":"TRUE","buffer":20}}}');
+"updateFeature":"TRUE","updateMapZone":2,"geomParamUpdate":15}}}');
 
 SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation": "[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"TRUE","buffer":15}}}');
+"updateFeature":"TRUE", "updateMapZone":2,"geomParamUpdate":15}}}');
 
 SELECT gw_fct_grafanalytics_minsector('{"data":{"parameters":{"exploitation":"[1,2]", 
-"updateFeature":"TRUE", "updateMapZone":"TRUE","buffer":10}}}');
+"updateFeature":"TRUE", "updateMapZone":true,"geomParamUpdate":15}}}');
 
 
 -- lastprocess
