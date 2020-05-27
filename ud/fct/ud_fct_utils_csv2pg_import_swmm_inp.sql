@@ -5,6 +5,7 @@ This version of Giswater is provided by Giswater Association
 */
 
 --FUNCTION CODE:2524
+
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_utils_csv2pg_import_swmm_inp(text);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_utils_csv2pg_import_swmm_inp(p_data json)
   RETURNS json AS
@@ -17,51 +18,53 @@ SELECT SCHEMA_NAME.gw_fct_utils_csv2pg_import_swmm_inp($${
 */
 
 $BODY$
-	DECLARE
-	rpt_rec record;
-	v_epsg integer;
-	v_point_geom public.geometry;
-	v_line_geom public.geometry;
-	schemas_array name[];
-	v_target text;
-	v_count integer=0;
-	v_projecttype varchar;
-	geom_array public.geometry array;
-	geom_array_vertex public.geometry array;
-	v_data record;
-	v_extend_val public.geometry;
-	v_rec_table record;
-	v_query_fields text;
-	v_rec_view record;
-	v_sql text;
-	v_csv2pgcat_id integer =12;
-	v_thegeom public.geometry;
-	v_node_id text;
-	v_node1 text;
-	v_node2 text;
-	v_elevation float;
-	v_createsubcgeom boolean = true; 
-	v_delete_prev boolean = true; -- used on dev mode to
-	v_querytext text;
-	v_nodecat text;
-	i integer=1;
-	v_arc_id text;
-	v_id text;
-	v_mantablename text;
-	v_epatablename text;
-	v_result 	json;
-	v_result_info 	json;
-	v_result_point	json;
-	v_result_line 	json;
-	v_version	json;
-	v_path 		text;
+DECLARE
+rpt_rec record;
+v_epsg integer;
+v_point_geom public.geometry;
+v_line_geom public.geometry;
+schemas_array name[];
+v_target text;
+v_count integer=0;
+v_projecttype varchar;
+geom_array public.geometry array;
+geom_array_vertex public.geometry array;
+v_data record;
+v_extend_val public.geometry;
+v_rec_table record;
+v_query_fields text;
+v_rec_view record;
+v_sql text;
+v_csv2pgcat_id integer =12;
+v_thegeom public.geometry;
+v_node_id text;
+v_node1 text;
+v_node2 text;
+v_elevation float;
+v_createsubcgeom boolean = true; 
+v_delete_prev boolean = true; -- used on dev mode to
+v_querytext text;
+v_nodecat text;
+i integer=1;
+v_arc_id text;
+v_id text;
+v_mantablename text;
+v_epatablename text;
+v_result json;
+v_result_info json;
+v_result_point json;
+v_result_line json;
+v_version text;
+v_path text;
+v_error_context text;
+v_linkoffsets text;
 
 BEGIN
 	-- Search path
 	SET search_path = "SCHEMA_NAME", public;
 
 	-- get project type and srid
-	SELECT wsoftware, epsg INTO v_projecttype, v_epsg FROM version LIMIT 1;
+	SELECT wsoftware, epsg, giswater INTO v_projecttype, v_epsg, v_version FROM version LIMIT 1;
 
 	-- get input data
 	v_createsubcgeom := (((p_data ->>'data')::json->>'parameters')::json->>'createSubcGeom')::boolean;
@@ -70,9 +73,12 @@ BEGIN
 	-- delete previous data on log table
 	DELETE FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=41;
 
+	v_delete_prev = true;
+
 	IF v_delete_prev THEN
 
 		DELETE FROM rpt_cat_result;
+		DELETE FROM plan_psector;
 		
 		-- Disable constraints
 		PERFORM gw_fct_admin_schema_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"}}$$);
@@ -107,6 +113,8 @@ BEGIN
 		DELETE FROM man_manhole;
 		DELETE FROM man_conduit;
 		DELETE FROM man_varc;
+		DELETE FROM config_param_user WHERE parameter ILIKE 'inp_options%' AND cur_user = current_user;
+		DELETE FROM config_param_user WHERE parameter ILIKE 'inp_report%' AND cur_user = current_user;
 
 		FOR v_id IN SELECT id FROM audit_cat_table WHERE (sys_role_id ='role_edit' AND id NOT LIKE 'v%') AND isdeprecated = FALSE
 		LOOP 
@@ -179,15 +187,15 @@ BEGIN
 	INSERT INTO selector_expl(expl_id,cur_user) VALUES (1,current_user);
 	INSERT INTO selector_state(state_id,cur_user) VALUES (1,current_user);
 	INSERT INTO inp_selector_sector(sector_id,cur_user) VALUES (1,current_user);
-	INSERT INTO inp_selector_hydrology(hydrology_id,cur_user) VALUES (1,current_user);
-	INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('inp_options_dwfscenario', '1', current_user) ;
-
+	INSERT INTO inp_selector_hydrology (hydrology_id,cur_user) VALUES (1,current_user);
+	INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('inp_options_dwfscenario', '1', current_user);
 
 	INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (41, 'Setting selectors -> Done');
 
 
 	-- CATALOGS
 	--cat_feature
+	ALTER TABLE cat_feature DISABLE TRIGGER gw_trg_cat_feature;
 	--node
 	INSERT INTO cat_feature (id, system_id, feature_type, parent_layer) VALUES ('EPAMANH','JUNCTION','NODE', 'v_edit_node');
 	INSERT INTO cat_feature (id, system_id, feature_type, parent_layer) VALUES ('EPAOUTF','OUTFALL','NODE', 'v_edit_node');
@@ -205,16 +213,18 @@ BEGIN
 	
 	--arc_type
 	--arc
-	INSERT INTO arc_type VALUES ('EPACOND', 'CONDUIT', 'CONDUIT', 'man_conduit', 'inp_conduit', TRUE);
-	INSERT INTO arc_type VALUES ('EPAWEIR', 'VARC', 'WEIR', 'man_varc', 'inp_weir', TRUE);
-	INSERT INTO arc_type VALUES ('EPAORIF', 'VARC', 'ORIFICE', 'man_varc', 'inp_orifice', TRUE);
-	INSERT INTO arc_type VALUES ('EPAPUMP', 'VARC', 'PUMP', 'man_varc', 'inp_pump', TRUE);
-	INSERT INTO arc_type VALUES ('EPAOUTL', 'VARC', 'OUTLET', 'man_varc', 'inp_outlet', TRUE);
+	INSERT INTO arc_type VALUES ('EPACOND', 'CONDUIT', 'CONDUIT', 'man_conduit', 'inp_conduit', TRUE,TRUE);
+	INSERT INTO arc_type VALUES ('EPAWEIR', 'VARC', 'WEIR', 'man_varc', 'inp_weir', TRUE,TRUE);
+	INSERT INTO arc_type VALUES ('EPAORIF', 'VARC', 'ORIFICE', 'man_varc', 'inp_orifice', TRUE,TRUE);
+	INSERT INTO arc_type VALUES ('EPAPUMP', 'VARC', 'PUMP', 'man_varc', 'inp_pump', TRUE,TRUE);
+	INSERT INTO arc_type VALUES ('EPAOUTL', 'VARC', 'OUTLET', 'man_varc', 'inp_outlet', TRUE,TRUE);
 
 	--node_type
-	INSERT INTO node_type VALUES ('EPAMANH', 'MANHOLE', 'JUNCTION', 'man_manhole', 'inp_junction', TRUE);
-	INSERT INTO node_type VALUES ('EPAOUTF', 'OUTFALL', 'OUTFALL', 'man_outfall', 'inp_outfall', TRUE);
-	INSERT INTO node_type VALUES ('EPASTOR', 'STORAGE', 'STORAGE', 'man_storage', 'inp_storage', TRUE);
+	INSERT INTO node_type VALUES ('EPAMANH', 'MANHOLE', 'JUNCTION', 'man_manhole', 'inp_junction', TRUE,TRUE,2,FALSE);
+	INSERT INTO node_type VALUES ('EPAOUTF', 'OUTFALL', 'OUTFALL', 'man_outfall', 'inp_outfall', TRUE,TRUE,2,FALSE);
+	INSERT INTO node_type VALUES ('EPASTOR', 'STORAGE', 'STORAGE', 'man_storage', 'inp_storage', TRUE,TRUE,2,FALSE);
+	
+	ALTER TABLE cat_feature ENABLE TRIGGER gw_trg_cat_feature;
 
 	--cat_mat_node 
 	INSERT INTO cat_mat_node VALUES ('EPAMAT');
@@ -239,12 +249,27 @@ BEGIN
 	-- enable temporary the constraint in order to use ON CONFLICT on insert
 	ALTER TABLE config_param_user ADD CONSTRAINT config_param_user_parameter_cur_user_unique UNIQUE(parameter, cur_user);
 
+	-- improve velocity for junctions using directy tables in spite of vi_junctions view
+	INSERT INTO node (node_id, code, top_elev, ymax, node_type, nodecat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
+	SELECT csv1, csv1, csv2::numeric(12,3), csv3::numeric(12,3), 'EPAMANH', 'EPAMANH-CAT', 'JUNCTION', 1, 1, 1, 1, 2 
+	FROM temp_csv2pg where source='[JUNCTIONS]' AND csv2pgcat_id=12  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND user_name=current_user; 
+	INSERT INTO inp_junction (node_id, y0, ysur, apond) 
+	SELECT csv1, csv4::numeric(12,3), csv5::numeric(12,3), csv6::numeric(12,3) FROM temp_csv2pg where source='[JUNCTIONS]' AND csv2pgcat_id=12  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND user_name=current_user; 
+	INSERT INTO man_manhole 
+	SELECT csv1 FROM temp_csv2pg where source='[JUNCTIONS]' AND csv2pgcat_id=12  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND user_name=current_user; 
+
+	-- improve velocity for conduits using directy tables in spite of vi_conduits view
+	INSERT INTO arc (arc_id, code, node_1,node_2, custom_length, sys_elev1, sys_elev2, arc_type, epa_type, arccat_id, matcat_id, sector_id, dma_id, expl_id, state, state_type) 
+	SELECT csv1, csv1, csv2, csv3, csv4::numeric(12,3), csv6::numeric(12,3), csv7::numeric(12,3), 'EPACOND', 'CONDUIT', csv5, csv5, 1, 1, 1, 1, 2 
+	FROM temp_csv2pg where source='[CONDUITS]' AND csv2pgcat_id=12  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND user_name=current_user;
+	INSERT INTO man_conduit(arc_id) SELECT csv1
+	FROM temp_csv2pg where source='[CONDUITS]' AND csv2pgcat_id=12  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND user_name=current_user;
+	INSERT INTO inp_conduit (arc_id, custom_n, q0, qmax) SELECT csv1, csv5::numeric(12,3), csv8::numeric(12,3), csv9::numeric(12,3)
+	FROM temp_csv2pg where source='[CONDUITS]' AND csv2pgcat_id=12  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND user_name=current_user;
+
 	-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
-	FOR v_rec_table IN SELECT * FROM sys_csv2pg_config WHERE reverse_pg2csvcat_id=v_csv2pgcat_id order by id
+	FOR v_rec_table IN SELECT * FROM sys_csv2pg_config WHERE reverse_pg2csvcat_id=v_csv2pgcat_id AND tablename NOT IN ('vi_conduits', 'vi_junction') order by id
 	LOOP
-
-		--raise notice 'Third loop %', v_rec_table;
-
 		--identifing the humber of fields of the editable view
 		FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns where table_name=v_rec_table.tablename AND table_schema='SCHEMA_NAME'
 		LOOP
@@ -262,6 +287,14 @@ BEGIN
 		--raise notice 'v_sql %', v_sql;
 		EXECUTE v_sql;
 	END LOOP;
+
+	-- refactor of linksoffsets
+	v_linkoffsets = (SELECT value FROM config_param_user WHERE parameter='inp_options_link_offsets' AND cur_user=current_user);
+	IF v_linkoffsets != 'ELEVATION' THEN
+		UPDATE arc SET sys_elev1 = b.a1,  sys_elev2 = b.a2 FROM 
+		(SELECT a.arc_id, n1.sys_elev - sys_elev1 AS a1, n2.sys_elev - sys_elev2 AS a2 FROM arc a JOIN v_edit_node n1 ON n1.node_id = node_1 JOIN v_edit_node n2 ON n2.node_id = node_2) b
+		WHERE b.arc_id = arc.arc_id;
+	END IF;
 	
 	-- enable temporary the constraint in order to use ON CONFLICT on insert
 	ALTER TABLE config_param_user DROP CONSTRAINT config_param_user_parameter_cur_user_unique;
@@ -353,6 +386,9 @@ BEGIN
 	update dma SET the_geom=v_extend_val;
 	update ext_municipality SET the_geom=v_extend_val;
 
+	-- create cat_mat_arc
+	INSERT INTO cat_mat_arc	SELECT DISTINCT (matcat_id) FROM arc WHERE matcat_id IS NOT NULL;
+
 	-- Enable constraints
 	PERFORM gw_fct_admin_schema_manage_ct($${"client":{"lang":"ES"},"data":{"action":"ADD"}}$$);
 
@@ -367,43 +403,26 @@ BEGIN
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 	
-	--points
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript, the_geom FROM anl_node WHERE cur_user="current_user"() AND fprocesscat_id=41) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_point = concat ('{"geometryType":"Point", "values":',v_result, '}');
-
-	--lines
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, the_geom FROM anl_arc WHERE cur_user="current_user"() AND (fprocesscat_id=41)) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_line = concat ('{"geometryType":"LineString", "values":',v_result, '}');
-
-
 	--Control nulls
-	v_result_info := COALESCE(v_result_info, '{}'); 
-	v_result_point := COALESCE(v_result_point, '{}'); 
-	v_result_line := COALESCE(v_result_line, '{}'); 	
-	
-	v_result_line = concat ('{"geometryType":"LineString", "values":',v_result, '}');
-
-
-	--Control nulls
+	v_version := COALESCE(v_version, '{}'); 
 	v_result_info := COALESCE(v_result_info, '{}'); 
 	v_result_point := COALESCE(v_result_point, '{}'); 
 	v_result_line := COALESCE(v_result_line, '{}'); 	
 
--- 	Return
-	RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"This is a test message"}, "version":"'||v_version||'"'||
+	-- 	Return
+	RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Import inp done successfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||','||
+				'"line":'||v_result_line||'}'||
 		       '}'||
 	    '}')::json;
-	
+
+	--  Exception handling
+   -- EXCEPTION WHEN OTHERS THEN
+	--GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;  
+	--RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_error_context) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	  
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
