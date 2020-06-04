@@ -172,11 +172,6 @@ BEGIN
 	v_errortext=concat('Reset all sequences on project data schema.');
 	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
 
-	-- set all exploitations when v_qgis_init_guide_map is true
-	IF v_qgis_init_guide_map THEN
-		INSERT INTO selector_expl (expl_id, cur_user) SELECT expl_id, current_user FROM exploitation WHERE expl_id > 0
-		ON CONFLICT (expl_id, cur_user) DO NOTHING;
-	END IF;			
 
 	-- set mandatory values of config_param_user in case of not exists (for new users or for updates)
 	FOR rec_table IN SELECT * FROM audit_cat_param_user WHERE ismandatory IS TRUE AND sys_role_id IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, 'member'))
