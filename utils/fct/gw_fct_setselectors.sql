@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_setselectors(p_data json)
 $BODY$
 
 /*example
-SELECT SCHEMA_NAME.gw_fct_setselectors($${"client":{"device":9, "infoType":100, "lang":"ES"},"feature":{},"data":{"selector_type":"exploitation", "id":1, "check":true, "onlyone":true}}$$)
+SELECT SCHEMA_NAME.gw_fct_setselectors($${"client":{"device":9, "infoType":100, "lang":"ES"},"feature":{},"data":{"selector_type":"exploitation", "check":true, "mode":"expl_from_muni", "id":1 }$$)
 */
 
 DECLARE
@@ -21,8 +21,9 @@ DECLARE
 	v_selector_type text;
 	v_id text;
 	v_check boolean;
-	v_onlyone boolean;
+	v_mode boolean;
 	v_tablename text;
+	v_expl integer;
 	
 BEGIN
 
@@ -37,18 +38,19 @@ BEGIN
 	v_selector_type := (p_data ->> 'data')::json->> 'selector_type';
 	v_id := (p_data ->> 'data')::json->> 'id';
 	v_check := (p_data ->> 'data')::json->> 'check';
-	v_onlyone := (p_data ->> 'data')::json->> 'onlyone';
+	v_mode := (p_data ->> 'data')::json->> 'mode';
 
-	IF v_onlyone THEN
+	-- get expl from muni
+	IF v_mode = 'expl_from_muni' THEN
+	
+		v_expl = v_id;
+	
 		EXECUTE 'DELETE FROM selector_expl WHERE cur_user = current_user';
+		EXECUTE 'INSERT INTO selector_expl (expl_id, cur_user) VALUES('|| v_expl ||', '''|| current_user ||''')';
+		
 	END IF;
 	
-	IF v_check THEN
-		EXECUTE 'INSERT INTO selector_expl (expl_id, cur_user) VALUES('|| v_id ||', '''|| current_user ||''')';
-	ELSE
-		EXECUTE 'DELETE FROM selector_expl WHERE expl_id = '|| v_id ||'';
-	END IF;
-	
+
 	-- Return
 	RETURN ('{"status":"Accepted", "apiVersion":'||api_version||
 			',"body":{"message":{"priority":1, "text":"This is a test message"}'||
