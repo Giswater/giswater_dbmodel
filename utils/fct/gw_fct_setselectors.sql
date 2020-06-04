@@ -21,7 +21,7 @@ DECLARE
 	v_selector_type text;
 	v_id text;
 	v_check boolean;
-	v_mode boolean;
+	v_mode text;
 	v_tablename text;
 	v_expl integer;
 	
