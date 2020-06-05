@@ -55,6 +55,7 @@ DECLARE
     p_network_layer_gully varchar;
     p_network_layer_element varchar;
     p_network_layer_visit varchar;
+    p_network_layer_hydrant varchar;
 
     p_network_search_field_arc_id varchar;
     p_network_search_field_node_id varchar;
@@ -62,6 +63,7 @@ DECLARE
     p_network_search_field_gully_id varchar;
     p_network_search_field_element_id varchar;
     p_network_search_field_visit_id varchar;
+    p_network_search_field_hydrant_id varchar;
 
     p_network_search_field_arc_cat varchar; 
     p_network_search_field_node_cat varchar;
@@ -69,6 +71,7 @@ DECLARE
     p_network_search_field_gully_cat varchar;
     p_network_search_field_element_cat varchar;
     p_network_search_field_visit_cat varchar;
+    p_network_search_field_hydrant_cat varchar;
 
     p_network_search_field_arc varchar;
     p_network_search_field_node varchar;
@@ -76,6 +79,7 @@ DECLARE
     p_network_search_field_gully varchar;
     p_network_search_field_element varchar;
     p_network_search_field_visit varchar;
+    p_network_search_field_hydrant varchar;
     
   
     --muni
@@ -140,6 +144,7 @@ DECLARE
     v_feature_type_gully varchar;
     v_feature_type_element varchar;
     v_feature_type_visit varchar;
+    v_feature_type_hydrant varchar;
 
     
     qt2 text;
@@ -172,6 +177,8 @@ IF tab_arg = 'network' THEN
     SELECT ((value::json)->>'sys_table_id') INTO p_network_layer_gully FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_gully';
     SELECT ((value::json)->>'sys_table_id') INTO p_network_layer_element FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_element';
     SELECT ((value::json)->>'sys_table_id') INTO p_network_layer_visit FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_visit';
+    SELECT ((value::json)->>'sys_table_id') INTO p_network_layer_hydrant FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_hydrant';
+
 
     -- Layer's primary key;
     SELECT ((value::json)->>'sys_id_field') INTO p_network_search_field_arc_id FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_arc';
@@ -180,6 +187,8 @@ IF tab_arg = 'network' THEN
     SELECT ((value::json)->>'sys_id_field') INTO p_network_search_field_gully_id FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_gully';
     SELECT ((value::json)->>'sys_id_field') INTO p_network_search_field_element_id FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_element';
     SELECT ((value::json)->>'sys_id_field') INTO p_network_search_field_visit_id FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_visit';
+    SELECT ((value::json)->>'sys_id_field') INTO p_network_search_field_hydrant_id FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_hydrant';
+
 
     -- Layer's field to search:
     SELECT ((value::json)->>'sys_search_field') INTO p_network_search_field_arc FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_arc';
@@ -188,6 +197,8 @@ IF tab_arg = 'network' THEN
     SELECT ((value::json)->>'sys_search_field') INTO p_network_search_field_gully FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_gully';
     SELECT ((value::json)->>'sys_search_field') INTO p_network_search_field_element FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_element';
     SELECT ((value::json)->>'sys_search_field') INTO p_network_search_field_visit FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_visit';
+    SELECT ((value::json)->>'sys_search_field') INTO p_network_search_field_hydrant FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_hydrant';
+
    
     -- Layer's catalog field;
     SELECT ((value::json)->>'cat_field') INTO p_network_search_field_arc_cat FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_arc';
@@ -196,6 +207,7 @@ IF tab_arg = 'network' THEN
     SELECT ((value::json)->>'cat_field') INTO p_network_search_field_gully_cat FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_gully';
     SELECT ((value::json)->>'cat_field') INTO p_network_search_field_element_cat FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_element';
     SELECT ((value::json)->>'cat_field') INTO p_network_search_field_visit_cat FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_visit';
+    SELECT ((value::json)->>'cat_field') INTO p_network_search_field_hydrant_cat FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_hydrant';
 
     -- xxxxx:
     SELECT ((value::json)->>'feature_type') INTO v_feature_type_arc FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_arc';
@@ -204,6 +216,7 @@ IF tab_arg = 'network' THEN
     SELECT ((value::json)->>'feature_type') INTO v_feature_type_gully FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_gully';
     SELECT ((value::json)->>'feature_type') INTO v_feature_type_element FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_element';
     SELECT ((value::json)->>'feature_type') INTO v_feature_type_visit FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_visit';
+    SELECT ((value::json)->>'feature_type') INTO v_feature_type_hydrant FROM config_param_system WHERE context='api_search_network' AND parameter='api_search_hydrant';
     
 
     
@@ -263,6 +276,16 @@ IF tab_arg = 'network' THEN
                  ''element_id'' AS sys_idname,''',
                  v_feature_type_element,''' AS feature_type, ',
                  quote_literal(p_network_layer_element), '::text AS sys_table_id FROM ', p_network_layer_element);
+   END IF;
+
+  IF p_network_layer_hydrant IS NOT NULL THEN 
+           IF query_text IS NOT NULL THEN query_text=concat(query_text,' UNION '); END IF;
+        query_text=concat (query_text, 'SELECT ',p_network_search_field_hydrant_id,'::varchar AS sys_id, ',
+                 p_network_search_field_hydrant,'::varchar AS search_field, ', 
+                 p_network_search_field_hydrant_cat,'::varchar AS cat_id,
+                 ''node_id'' AS sys_idname,''',
+                 v_feature_type_hydrant,''' AS feature_type, ',
+                 quote_literal(p_network_layer_hydrant), '::text AS sys_table_id FROM ', p_network_layer_hydrant);
    END IF;
 
   IF p_network_layer_visit IS NOT NULL THEN 
