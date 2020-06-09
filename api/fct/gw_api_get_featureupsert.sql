@@ -130,6 +130,9 @@ BEGIN
 
 	SELECT value INTO v_promixity_buffer FROM config_param_system WHERE parameter='proximity_buffer';
 
+	SELECT (value)::boolean INTO v_edit_upsert_elevation_from_dem FROM config_param_user WHERE parameter='edit_upsert_elevation_from_dem' AND cur_user = current_user;
+	SELECT (value)::boolean INTO v_sys_raster_dem FROM config_param_system WHERE parameter='sys_raster_dem';
+
     -- get tablename and formname
     -- Common
      v_tablename = p_table_id;
@@ -479,8 +482,8 @@ BEGIN
 
 			-- elevation from raster
 			ELSIF ((aux_json->>'column_id') = 'elevation' OR (aux_json->>'column_id') = 'top_elev') AND v_sys_raster_dem AND v_edit_upsert_elevation_from_dem THEN
-				field_value = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM ext_raster_dem WHERE id = (SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) 
-				LIMIT 1));
+				field_value = (SELECT ST_Value(rast,1, p_reduced_geometry, false) FROM v_ext_raster_dem WHERE 
+				id = (SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1))::numeric (12,3);
 							
 			-- catalog values
 			ELSIF (aux_json->>'column_id')='cat_dnom' THEN

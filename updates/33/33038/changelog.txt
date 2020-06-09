@@ -1,3 +1,4 @@
 3.3.038
 *************
 - Add field code on audit_log_arc_traceability
+- Enhance manage raster functionality

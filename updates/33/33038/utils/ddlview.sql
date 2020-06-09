@@ -101,3 +101,22 @@ CREATE OR REPLACE VIEW v_plan_current_psector AS
            FROM v_plan_psector_x_other
           GROUP BY v_plan_psector_x_other.psector_id) c ON c.psector_id = plan_psector.psector_id
   WHERE plan_psector_selector.cur_user = "current_user"()::text;
+  
+  
+
+CREATE OR REPLACE VIEW v_ext_raster_dem AS 
+ SELECT DISTINCT ON (r.id) r.id,
+    c.code,
+    c.alias,
+    c.raster_type,
+    c.descript,
+    c.source,
+    c.provider,
+    c.year,
+    r.rast,
+    r.rastercat_id,
+    r.envelope
+   FROM v_edit_exploitation a,
+    ext_raster_dem r
+     JOIN ext_cat_raster c ON c.id = r.rastercat_id
+  WHERE st_dwithin(r.envelope, a.the_geom, 0::double precision);
