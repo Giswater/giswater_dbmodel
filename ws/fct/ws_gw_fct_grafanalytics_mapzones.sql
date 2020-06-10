@@ -643,6 +643,8 @@ BEGIN
 	RETURN ('{"status":"Accepted", "message":{"priority":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}, "data":{ "info":'||v_result_info||','||
 					  '"setVisibleLayers":["'||v_visible_layer||'"],'||
+					    '"setSimbology":{"status":"'||v_dynsymbolstatus||'", "type":"polCategorized", "layer":"'||v_visible_layer||
+						'", "column":"'||v_mapzonename||'", "opacity":"0.5"},'||
 					  '"point":'||v_result_point||','||
 					  '"line":'||v_result_line||
 					  '}}}')::json;
