@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_audit_check_project(p_data json)
 $BODY$
 
 /*
-SELECT SCHEMA_NAME.gw_fct_audit_check_project('{"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.038", "fprocesscat_id":1, "initProject":true, "qgisVersion":"3.10.4-A Coruña", "osVersion":"Windows 10"}}');
+SELECT SCHEMA_NAME.gw_fct_audit_check_project('{"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.038", "fprocesscat_id":1, "initProject":true, "qgisVersion":"3.10.4-A Coruña", "osVersion":"WindoSCHEMA_NAME 10"}}');
 
 SELECT SCHEMA_NAME.gw_fct_audit_check_project($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.019", "fprocesscat_id":1}}$$);
 */
@@ -93,6 +93,18 @@ BEGIN
 	DELETE FROM audit_check_data WHERE fprocesscat_id=101 AND user_name=current_user;
 	DELETE FROM audit_check_data WHERE fprocesscat_id IN (14,15,25,95) AND user_name=current_user;
 
+	-- reset all exploitations
+	IF v_qgis_init_guide_map THEN
+		DELETE FROM selector_expl WHERE cur_user = current_user;
+	ELSE
+		-- Force exploitation selector in case of null values
+		IF (SELECT count(*) FROM selector_expl WHERE cur_user=current_user) < 1 THEN 
+			INSERT INTO selector_expl (expl_id, cur_user) 
+			SELECT expl_id, current_user FROM exploitation WHERE active IS NOT FALSE AND expl_id > 0 limit 1;
+			v_errortext=concat('Set visible exploitation for user ',(SELECT expl_id FROM exploitation WHERE active IS NOT FALSE AND expl_id > 0 limit 1));
+			INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
+		END IF;
+	END IF;
 	
 	-- Starting process
 	INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (101, null, 4, 'AUDIT CHECK PROJECT');
@@ -210,14 +222,6 @@ BEGIN
 
 	-- delete on config_param_user fron updated values on audit_cat_param_user
 	DELETE FROM config_param_user WHERE parameter NOT IN (SELECT id FROM audit_cat_param_user) AND cur_user = current_user;
-
-	-- Force exploitation selector in case of null values
-	IF (SELECT count(*) FROM selector_expl WHERE cur_user=current_user) < 1 THEN 
-	  	INSERT INTO selector_expl (expl_id, cur_user) 
-	  	SELECT expl_id, current_user FROM exploitation WHERE active IS NOT FALSE AND expl_id > 0 limit 1;
-		v_errortext=concat('Set visible exploitation for user ',(SELECT expl_id FROM exploitation WHERE active IS NOT FALSE AND expl_id > 0 limit 1));
-		INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (101, 4, v_errortext);
-	END IF;
 
 	-- Force state selector in case of null values
 	IF (SELECT count(*) FROM selector_state WHERE cur_user=current_user) < 1 THEN 
