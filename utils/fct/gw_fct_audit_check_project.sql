@@ -12,6 +12,8 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_audit_check_project(p_data json)
 $BODY$
 
 /*
+SELECT SCHEMA_NAME.gw_fct_audit_check_project('{"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.038", "fprocesscat_id":1, "initProject":true, "qgisVersion":"3.10.4-A Coruña", "osVersion":"Windows 10"}}');
+
 SELECT SCHEMA_NAME.gw_fct_audit_check_project($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.019", "fprocesscat_id":1}}$$);
 */
 
@@ -57,6 +59,7 @@ v_user_control boolean = false;
 v_layer_log boolean = false;
 v_errcontext text;
 v_qgis_init_guide_map boolean;
+v_qgis_forminitproject_hidden boolean;
 
 
 BEGIN 
@@ -78,8 +81,10 @@ BEGIN
 	SELECT value INTO v_user_control FROM config_param_user where parameter='audit_project_user_control' AND cur_user=current_user;
 	SELECT value INTO v_layer_log FROM config_param_user where parameter='audit_project_layer_log' AND cur_user=current_user;
 	SELECT value INTO v_qgis_init_guide_map FROM config_param_user where parameter='qgis_init_guide_map' AND cur_user=current_user;
+	SELECT value INTO v_qgis_forminitproject_hidden FROM config_param_user where parameter='qgis_form_initproject_hidden' AND cur_user=current_user;
 
-	
+	IF v_qgis_forminitproject_hidden IS NULL THEN v_qgis_forminitproject_hidden = 'FALSE'; END IF;
+
 	-- init process
 	v_isenabled:=FALSE;
 	v_count=0;
@@ -470,7 +475,7 @@ BEGIN
 					'"line":'||v_result_line||','||
 					'"polygon":'||v_result_polygon||','||
 					'"missingLayers":'||v_missing_layers||'}'||
-				', "actions":{"hideForm":"true", "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
+				', "actions":{"hideForm":'||v_qgis_forminitproject_hidden||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
 	--  Return	   
 	RETURN v_return;
 
