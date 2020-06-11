@@ -4,11 +4,9 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
--- Function: SCHEMA_NAME.gw_api_getdimensioning(json)
+-- Function code: XXXX
 
--- DROP FUNCTION SCHEMA_NAME.gw_api_getdimensioning(json);
-
-CREATE OR REPLACE FUNCTION gw_api_getdimensioning(p_data json)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_api_getdimensioning(p_data json)
   RETURNS json AS
 $BODY$
 
@@ -57,7 +55,7 @@ BEGIN
 
 	EXECUTE 'SELECT gw_api_get_formfields($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)'
 	INTO v_fields_array
-	USING 'dimensioning', 'catalog', '', NULL, NULL, NULL, NULL, 'SELECT', null, 3;
+	USING 'v_edit_dimensions', 'catalog', '', NULL, NULL, NULL, NULL, 'SELECT', null, 3;
 
 	-- Set widget_name without tabname for widgets
 	FOREACH field IN ARRAY v_fields_array
