@@ -41,7 +41,7 @@ BEGIN
 
 	-- get expl from muni
 	IF v_mode = 'expl_from_muni' THEN
-		v_expl = (SELECT expl_id FROM exploitation e, ext_municipality m WHERE st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) AND muni_id = v_muni);
+		v_expl = (SELECT expl_id FROM exploitation e, ext_municipality m WHERE st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) AND muni_id = v_muni LIMIT 1);
 		EXECUTE 'DELETE FROM selector_expl WHERE cur_user = current_user';
 		EXECUTE 'INSERT INTO selector_expl (expl_id, cur_user) VALUES('|| v_expl ||', '''|| current_user ||''')';	
 	END IF;
@@ -60,4 +60,3 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-  
