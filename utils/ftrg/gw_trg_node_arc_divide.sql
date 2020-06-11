@@ -48,7 +48,7 @@ BEGIN
 
 		SELECT ((value::json)->>'value') INTO v_node_proximity FROM config_param_system WHERE parameter='node_proximity';
 		
-		SELECT node_id INTO node_id_aux FROM v_edit_node WHERE ST_intersects((NEW.the_geom), St_buffer(v_edit_node.the_geom,v_node_proximity)) AND NEW.state>0 where node_id != node_id_aux LIMIT 1;
+		SELECT node_id INTO node_id_aux FROM v_edit_node WHERE ST_intersects((NEW.the_geom), St_buffer(v_edit_node.the_geom,v_node_proximity)) AND NEW.state>0 where node_id != NEW.node_id LIMIT 1;
 		IF node_id_aux IS NULL THEN
 
 			SELECT arc_id INTO arc_id_aux FROM v_edit_arc WHERE ST_intersects((NEW.the_geom), St_buffer(v_edit_arc.the_geom,v_node_proximity)) AND NEW.state>0 LIMIT 1;
