@@ -55,7 +55,7 @@ BEGIN
 
 	EXECUTE 'SELECT gw_api_get_formfields($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)'
 	INTO v_fields_array
-	USING 'v_edit_dimensions', 'catalog', '', NULL, NULL, NULL, NULL, 'SELECT', null, 3;
+	USING 'v_edit_dimensions', 'feature', '', NULL, NULL, NULL, NULL, 'SELECT', null, 3;
 
 	-- Set widget_name without tabname for widgets
 	FOREACH field IN ARRAY v_fields_array

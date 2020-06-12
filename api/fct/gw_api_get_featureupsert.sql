@@ -23,6 +23,8 @@ SELECT SCHEMA_NAME.gw_api_get_featureupsert('ve_arc_pipe', null, '0102000020E764
 arc with nodes
 SELECT SCHEMA_NAME.gw_api_get_featureupsert('ve_arc_pipe', null, '0102000020E764000002000000998B3C512F881941B28315AA7F76514105968D7D748819419FDF72D781765141', 9, 100,'INSERT', true)
 SELECT SCHEMA_NAME.gw_api_get_featureupsert('ve_arc_pipe', '2001', null, 9, 100,'UPDATE', true)
+SELECT SCHEMA_NAME.gw_api_get_featureupsert('v_edit_dimensions', '2', null, 9, 100,'UPDATE', true)
+
 */
 
 DECLARE
@@ -356,7 +358,7 @@ BEGIN
 -- building the form widgets
 ----------------------------
 	IF  p_configtable is TRUE THEN 
-		raise notice 'Configuration fields are defined on config_api_layer_field';
+		raise notice 'Configuration fields are defined on config_api_layer_field using v_formname % v_tabname % v_tablename % v_idname % p_id % v_columntype %', v_formname, v_tabname, v_tablename, v_idname, p_id, v_columntype ;
 		
 		-- Call the function of feature fields generation
 		SELECT gw_api_get_formfields( v_formname, 'feature', v_tabname, v_tablename, v_idname, p_id, v_columntype, p_tg_op, null,p_device) INTO v_fields_array; 
