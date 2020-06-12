@@ -16,8 +16,8 @@ $BODY$
 SELECT SCHEMA_NAME.gw_api_setdimensioning($${
 		"client":{"device":9, "infoType":100, "lang":"ES"},
 		"form":{},
-		"feature":{"tableName":"dimensions"},
-		"data":{"filterFields":{"distance":"9.9974"}}}$$)
+		"feature":{"tableName":"dimensions", "id":1},
+		"data":{"fields":{"distance":"9.9974"}}}$$)
 */
 
 DECLARE
@@ -51,6 +51,7 @@ DECLARE
 	v_columntype character varying;
 	v_newid integer;
 	v_geometry geometry;
+	v_id integer;
 
 BEGIN
 
@@ -66,7 +67,9 @@ BEGIN
 	v_device := (p_data ->> 'client')::json->> 'device';
 	v_infotype := (p_data ->> 'client')::json->> 'infoType';
 	v_tablename := (p_data ->> 'feature')::json->> 'tableName';
-	v_fields := ((p_data ->> 'data')::json->> 'filterFields')::json;
+	v_id := (p_data ->> 'feature')::json->> 'id';
+	v_fields := ((p_data ->> 'data')::json->> 'fields')::json;
+	
 
 	select array_agg(row_to_json(a)) into v_text from json_each(v_fields)a;
 
@@ -137,11 +140,19 @@ BEGIN
 
 	END LOOP;
 
+	raise notice 'v_querytext %', v_querytext;
+
 	-- query text, final step
-	v_querytext := concat ((v_querytext),' )WHERE id = ' || (((p_data ->> 'data')::json->> 'filterFields')::json->>'id') || ' RETURNING id');
+	v_querytext := concat ((v_querytext),' )WHERE id = ' || v_id || ' RETURNING id');
+
+
+	raise notice 'v_querytext %', v_querytext;
 
 	-- execute query text
 	EXECUTE v_querytext into v_newid;
+
+
+	raise notice 'v_newid %', v_newid;
 
 
 --    Return
