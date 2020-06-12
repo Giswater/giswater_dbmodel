@@ -142,9 +142,10 @@ BEGIN
 
 	-- execute query text
 	EXECUTE v_querytext into v_newid;
-	
+
+
 --    Return
-    RETURN ('{"status":"Accepted", "message":'|| v_message ||', "apiVersion":'|| v_apiversion ||
+    RETURN ('{"status":"Accepted", "message":"Dimensioning udpate successfully", "apiVersion":'|| v_apiversion ||
 	    ', "body": {"feature":{"tableName":"'||v_tablename||'", "id":"'||v_newid||'"}}}')::json;    
 
 --    Exception handling
