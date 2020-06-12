@@ -10,6 +10,10 @@ DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_admin_role_permissions();
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_admin_role_permissions() RETURNS void AS
 $BODY$
 
+/*
+SELECT SCHEMA_NAME.gw_fct_admin_role_permissions() 
+*/
+
 DECLARE 
 	v_roleexists text;
 	v_dbnname varchar;
@@ -106,7 +110,11 @@ BEGIN
 		EXECUTE v_query_text;
 
 		-- Grant specificic permissions for tables
-		FOR v_tablerecord IN SELECT * FROM audit_cat_table WHERE sys_role_id IS NOT NULL AND isdeprecated != TRUE
+		FOR v_tablerecord IN SELECT * FROM aSCHEMA_NAMEit_cat_table WHERE sys_role_id IS NOT NULL AND isdeprecated != TRUE AND id IN 
+		(SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname = 'SCHEMA_NAME' 
+		UNION
+		SELECT viewname FROM pg_catalog.pg_views WHERE schemaname != 'pg_catalog' AND schemaname = 'SCHEMA_NAME')
+		
 		LOOP
 			v_query_text:= 'GRANT ALL ON TABLE '||v_tablerecord.id||' TO '||v_tablerecord.sys_role_id||';';
 			EXECUTE v_query_text;
@@ -114,7 +122,7 @@ BEGIN
 	
 		-- Grant specificic permissions for functions
 		/* todo
-		FOR v_tablerecord IN SELECT * FROM audit_cat_function WHERE project_type=v_project_type
+		FOR v_tablerecord IN SELECT * FROM aSCHEMA_NAMEit_cat_function WHERE project_type=v_project_type
 		LOOP
 			v_function_name=concat(v_tablerecord.function_name,'(',v_tablerecord.input_params,')');
 			v_query_text:= 'GRANT ALL ON FUNCTION '||v_tablerecord.id||' TO '||v_tablerecord.sys_role_id||';';
