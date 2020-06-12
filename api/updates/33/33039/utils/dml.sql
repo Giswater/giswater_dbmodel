@@ -11,4 +11,8 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 -- 2020/02/13
 UPDATE config_api_form_fields SET formname  ='v_edit_dimensions' WHERE formname = 'dimensioning';
 
-INSERT INTO config_api_layer ('v_edit_dimensions', false, null, true, 'dimensioning', Dimensions, 5);
+INSERT INTO ud.config_api_typevalue VALUES ('formtemplate_typevalue', 'dimensioning', 'dimensioning')
+ON CONFLICT (typevalue, id) DO NOTHING;
+
+INSERT INTO ud.config_api_layer VALUES ('v_edit_dimensions', false, null, true, null, 'dimensioning', 'Dimensions', 5)
+ON CONFLICT (layer_id) DO NOTHING;
