@@ -31,10 +31,13 @@ update config_api_form_fields set layout_name = 'symbology_layout', layout_order
 update config_api_form_fields set layout_name = 'symbology_layout', layout_order =  12 where formname = 'v_edit_dimensions' AND column_id = 'offset_label';
 update config_api_form_fields set layout_name = 'symbology_layout', layout_order =  14 where formname = 'v_edit_dimensions' AND column_id = 'x_label';
 update config_api_form_fields set layout_name = 'symbology_layout', layout_order =  15 where formname = 'v_edit_dimensions' AND column_id = 'y_label';
-update config_api_form_fields set layout_name = 'symbology_layout', WHERE formname = 'v_edit_dimensions' AND column_id = 'rotation_label';
+update config_api_form_fields set layout_name = 'symbology_layout', layout_order = 3 where formname = 'v_edit_dimensions' AND column_id = 'rotation_label';
+update config_api_form_fields set layout_name = 'symbology_layout' WHERE formname = 'v_edit_dimensions' AND column_id = 'rotation_label';
 
 
 update config_api_form_fields set layout_name = 'other_layout', layout_order =  11 where formname = 'v_edit_dimensions' AND column_id = 'expl_id';
 update config_api_form_fields set layout_name = 'other_layout', layout_order =  12 where formname = 'v_edit_dimensions' AND column_id = 'state';
+
+
 
 
