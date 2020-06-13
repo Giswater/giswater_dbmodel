@@ -35,8 +35,9 @@ update config_api_form_fields set layout_name = 'symbology_layout', layout_order
 update config_api_form_fields set layout_name = 'symbology_layout' WHERE formname = 'v_edit_dimensions' AND column_id = 'rotation_label';
 
 
-update config_api_form_fields set layout_name = 'other_layout', layout_order =  11 where formname = 'v_edit_dimensions' AND column_id = 'expl_id';
+update config_api_form_fields set iseditable = false, layout_name = 'other_layout', layout_order =  11 where formname = 'v_edit_dimensions' AND column_id = 'expl_id';
 update config_api_form_fields set layout_name = 'other_layout', layout_order =  12 where formname = 'v_edit_dimensions' AND column_id = 'state';
+update config_api_form_fields set iseditable = false where formname = 'v_edit_dimensions' AND column_id = 'feature_type';
 
 
 

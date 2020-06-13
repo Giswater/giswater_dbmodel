@@ -1,0 +1,4 @@
+3.3.039
+*************
+- Disable init form by default
+- Enhance dimensioning using on update
