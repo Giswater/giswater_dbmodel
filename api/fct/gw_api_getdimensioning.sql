@@ -35,6 +35,8 @@ DECLARE
 	aux_json json;
 	v_fields json;
 	field json;
+	v_id int8;
+
 
 BEGIN
 
@@ -52,6 +54,13 @@ BEGIN
 --  	Get project type
 	SELECT wsoftware INTO v_project_type FROM version LIMIT 1;
 
+
+	-- mandantory set due complex interaction againts QGIS and database when on qgis is feature interted value is updated, transaction is opened....
+	PERFORM setval('SCHEMA_NAME.dimensions_id_seq', (SELECT max(id) FROM dimensions), true);
+
+	v_id = (SELECT nextval('SCHEMA_NAME.dimensions_id_seq'::regclass));
+
+	v_featureinfo = '{"tableName":"v_edit_dimensions", "idName":"id", "id":'||v_id||'}';
 
 	EXECUTE 'SELECT gw_api_get_formfields($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)'
 	INTO v_fields_array
