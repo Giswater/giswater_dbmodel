@@ -49,7 +49,7 @@ BEGIN
 	--  get parameters from input
 	v_client = (p_data ->>'client')::json;
 	v_device = ((p_data ->>'client')::json->>'device')::integer;
-	--v_id = ((p_data ->>'feature')::json->>'id')::text;
+	v_id = ((p_data ->>'feature')::json->>'id')::text;
 	v_idname = ((p_data ->>'feature')::json->>'idName')::text;
 	v_tablename = (p_data ->>'feature')::json->>'tableName'::text;
 	v_message = ((p_data ->>'data')::json->>'message');
@@ -57,7 +57,6 @@ BEGIN
 	v_status = ((p_data ->>'data')::json->>'fields')::json->>'status'::text;
 	v_visitclass_id = ((p_data ->>'data')::json->>'fields')::json->>'visitclass_id'::text;
 	v_team = ((p_data ->>'data')::json->>'fields')::json->>'team_id'::text;
-	v_id = (select MAX(id) from om_visit_lot);
 	
 	-- Control NULL's
 	v_tablename := COALESCE(v_tablename, '');
@@ -112,6 +111,10 @@ BEGIN
 	-- IF new status is executed, set real_enddate with current date
 	IF v_status = '5' THEN
 		UPDATE om_visit_lot SET real_enddate = NOW() WHERE id=v_id::INTEGER;
+		--Add geometry to unexpected lots
+		IF (SELECT the_geom FROM om_visit_lot WHERE id=v_id::INTEGER) IS NULL THEN
+			PERFORM gw_fct_lot_psector_geom(v_id::INTEGER);
+		END IF; 
 	END IF;
 	
 
