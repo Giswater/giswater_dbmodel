@@ -65,7 +65,7 @@ BEGIN
 		v_sign = '>';
 	END IF;
 
-	-- reset graf & aSCHEMA_NAMEit_log tables
+	-- reset graf & audit_log tables
 	DELETE FROM anl_arc where cur_user=current_user AND fprocesscat_id=v_fprocesscat_id;
 	DELETE FROM audit_check_data WHERE fprocesscat_id=v_fprocesscat_id AND user_name=current_user;
 	DELETE FROM temp_anlgraf;	
