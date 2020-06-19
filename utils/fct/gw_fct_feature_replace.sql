@@ -67,7 +67,7 @@ v_arc_searchnodes_value text;
 v_arc_searchnodes_active text;
 v_error_context text;
 v_audit_result text;
-v_level integer;
+v_level integer = 1;
 v_status text;
 v_message text;
 rec_addfields record;
@@ -80,11 +80,11 @@ BEGIN
 
 	SELECT project_type, giswater  INTO v_project_type, v_version FROM sys_version order by 1 desc limit 1;
 
-    --set current process as users parameter
-    DELETE FROM config_param_user  WHERE  parameter = 'utils_cur_trans' AND cur_user =current_user;
+	--set current process as users parameter
+	DELETE FROM config_param_user  WHERE  parameter = 'utils_cur_trans' AND cur_user =current_user;
 
-    INSERT INTO config_param_user (value, parameter, cur_user)
-    VALUES (txid_current(),'utils_cur_trans',current_user );
+	INSERT INTO config_param_user (value, parameter, cur_user)
+	VALUES (txid_current(),'utils_cur_trans',current_user );
     
 	SELECT  value::json->>'value' as value INTO v_arc_searchnodes_value FROM config_param_system where parameter = 'edit_arc_searchnodes';
 	SELECT  value::json->>'activated' INTO v_arc_searchnodes_active FROM config_param_system where parameter = 'edit_arc_searchnodes';
@@ -95,7 +95,6 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (143, v_result_id, concat('------------------------------'));
 
 	-- get input parameters
-	
 	v_feature_type = lower(((p_data ->>'feature')::json->>'type'))::text;
 	v_old_feature_id = ((p_data ->>'data')::json->>'old_feature_id')::text;
 	v_workcat_id_end = ((p_data ->>'data')::json->>'workcat_id_end')::text;
@@ -428,20 +427,22 @@ BEGIN
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 			
 	-- Control nulls
+	v_status := COALESCE(v_status, ''); 
+	v_message := COALESCE(v_message, ''); 	
 	v_version := COALESCE(v_version, '{}'); 
 	v_result_info := COALESCE(v_result_info, '{}'); 
-	
  
 	-- Return
-	RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+	RETURN gw_fct_json_create_return(('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
+			"feature"
 		     ',"data":{ "info":'||v_result_info||'}}'||
-	    '}')::json;
+	    '}')::json , 2714);    
 	    
 	--    Exception handling
-    EXCEPTION WHEN OTHERS THEN
-		GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;  
-		RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_error_context) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;  
+	RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_error_context) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
