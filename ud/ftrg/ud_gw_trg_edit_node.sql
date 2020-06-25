@@ -406,7 +406,7 @@ BEGIN
 				v_auto_pol_id:= (SELECT nextval('urn_id_seq'));
 
 				INSERT INTO polygon(pol_id, sys_type, the_geom) 
-				VALUES (v_auto_pol_id, NEW.node_type, (SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,v_double_geom_buffer))) 
+				VALUES (v_auto_pol_id, NEW.sys_type, (SELECT ST_Multi(ST_Envelope(ST_Buffer(node.the_geom,v_double_geom_buffer))) 
 				from node where node_id=NEW.node_id));
 				
 				EXECUTE 'UPDATE '||v_man_table||' SET pol_id = '''||v_auto_pol_id||''' WHERE node_id = '''||NEW.node_id||''';';
