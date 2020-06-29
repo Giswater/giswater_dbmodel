@@ -147,7 +147,7 @@ CREATE TABLE om_visit_class(
   visit_type integer,
   param_options json,
   tablename character varying(30),
-  ui_tablename character varying(30)
+  ui_tablename character varying(30),
   CONSTRAINT om_visit_class_pkey PRIMARY KEY (id));
   
   

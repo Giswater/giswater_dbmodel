@@ -161,6 +161,48 @@ SELECT
   number_plate AS "Matricula"
 FROM ext_cat_vehicle;
 
+  
+CREATE OR REPLACE VIEW v_om_lot_x_user AS 
+ SELECT om_visit_lot_x_user.id,
+    om_visit_lot_x_user.user_id AS "Usuari",
+    cat_team.idval AS "Equip",
+    om_visit_lot_x_user.lot_id AS "Lot",
+    ext_workorder.wotype_name AS "Tipus actuacio",
+    om_visit_lot.serie AS "Serie",
+    ext_workorder.observations AS "Descripcio OT",
+    om_visit_lot.descript AS "Descripcio",
+    om_visit_lot_x_user.starttime AS "Data inici",
+    om_visit_lot_x_user.endtime AS "Data fi",
+    om_visit_lot_x_user.the_geom
+   FROM om_visit_lot_x_user
+     JOIN cat_team ON om_visit_lot_x_user.team_id = cat_team.id
+     LEFT JOIN om_visit_lot ON om_visit_lot.id = om_visit_lot_x_user.lot_id
+     LEFT JOIN ext_workorder ON ext_workorder.serie::text = om_visit_lot.serie::text;
+	 
+	 
+CREATE OR REPLACE VIEW v_visit_lot_user AS 
+ SELECT om_visit_lot_x_user.id,
+    om_visit_lot_x_user.user_id,
+    om_visit_lot_x_user.team_id,
+    om_visit_lot_x_user.lot_id,
+    om_visit_lot_x_user.starttime,
+    om_visit_lot_x_user.endtime,
+    now()::date AS date
+   FROM om_visit_lot_x_user
+  WHERE om_visit_lot_x_user.user_id::name = "current_user"()
+  ORDER BY om_visit_lot_x_user.id DESC
+ LIMIT 1;
+ 
+ -- DROP
+DROP VIEW IF EXISTS v_ui_om_visitman_x_arc;
+DROP VIEW IF EXISTS v_ui_om_visitman_x_connec;
+DROP VIEW IF EXISTS v_ui_om_visitman_x_node;
+   
+DROP VIEW IF EXISTS v_ui_om_visit_x_arc;
+DROP VIEW IF EXISTS v_ui_om_visit_x_node;
+DROP VIEW IF EXISTS v_ui_om_visit_x_connec;
+
+ -- CREATE
 CREATE OR REPLACE VIEW v_ui_om_visit_x_node AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -201,6 +243,8 @@ CREATE OR REPLACE VIEW v_ui_om_visit_x_node AS
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit_x_node.node_id;
   
+  
+
 CREATE OR REPLACE VIEW v_ui_om_visit_x_connec AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -242,6 +286,7 @@ CREATE OR REPLACE VIEW v_ui_om_visit_x_connec AS
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit_x_connec.connec_id;
   
+
 CREATE OR REPLACE VIEW v_ui_om_visit_x_arc AS 
  SELECT om_visit_event.id AS event_id,
     om_visit.id AS visit_id,
@@ -282,39 +327,8 @@ CREATE OR REPLACE VIEW v_ui_om_visit_x_arc AS
      LEFT JOIN ( SELECT DISTINCT doc_x_visit.visit_id
            FROM doc_x_visit) b ON b.visit_id = om_visit.id
   ORDER BY om_visit_x_arc.arc_id;
+
   
-CREATE OR REPLACE VIEW v_om_lot_x_user AS 
- SELECT om_visit_lot_x_user.id,
-    om_visit_lot_x_user.user_id AS "Usuari",
-    cat_team.idval AS "Equip",
-    om_visit_lot_x_user.lot_id AS "Lot",
-    ext_workorder.wotype_name AS "Tipus actuacio",
-    om_visit_lot.serie AS "Serie",
-    ext_workorder.observations AS "Descripcio OT",
-    om_visit_lot.descript AS "Descripcio",
-    om_visit_lot_x_user.starttime AS "Data inici",
-    om_visit_lot_x_user.endtime AS "Data fi",
-    om_visit_lot_x_user.the_geom
-   FROM om_visit_lot_x_user
-     JOIN cat_team ON om_visit_lot_x_user.team_id = cat_team.id
-     LEFT JOIN om_visit_lot ON om_visit_lot.id = om_visit_lot_x_user.lot_id
-     LEFT JOIN ext_workorder ON ext_workorder.serie::text = om_visit_lot.serie::text;
-	 
-	 
-CREATE OR REPLACE VIEW v_visit_lot_user AS 
- SELECT om_visit_lot_x_user.id,
-    om_visit_lot_x_user.user_id,
-    om_visit_lot_x_user.team_id,
-    om_visit_lot_x_user.lot_id,
-    om_visit_lot_x_user.starttime,
-    om_visit_lot_x_user.endtime,
-    now()::date AS date
-   FROM om_visit_lot_x_user
-  WHERE om_visit_lot_x_user.user_id::name = "current_user"()
-  ORDER BY om_visit_lot_x_user.id DESC
- LIMIT 1;
- 
- 
 CREATE OR REPLACE VIEW v_ui_om_visitman_x_arc AS 
  SELECT DISTINCT ON (v_ui_om_visit_x_arc.visit_id) v_ui_om_visit_x_arc.visit_id,
     v_ui_om_visit_x_arc.code,
@@ -329,7 +343,7 @@ CREATE OR REPLACE VIEW v_ui_om_visitman_x_arc AS
    FROM v_ui_om_visit_x_arc
      LEFT JOIN om_visit_cat ON om_visit_cat.id = v_ui_om_visit_x_arc.visitcat_id;
 	 
-	 
+
 CREATE OR REPLACE VIEW v_ui_om_visitman_x_connec AS 
  SELECT DISTINCT ON (v_ui_om_visit_x_connec.visit_id) v_ui_om_visit_x_connec.visit_id,
     v_ui_om_visit_x_connec.code,
@@ -344,7 +358,7 @@ CREATE OR REPLACE VIEW v_ui_om_visitman_x_connec AS
    FROM v_ui_om_visit_x_connec
      LEFT JOIN om_visit_cat ON om_visit_cat.id = v_ui_om_visit_x_connec.visitcat_id;
 	 
-	 
+
 CREATE OR REPLACE VIEW v_ui_om_visitman_x_node AS 
  SELECT DISTINCT ON (v_ui_om_visit_x_node.visit_id) v_ui_om_visit_x_node.visit_id,
     v_ui_om_visit_x_node.code,
