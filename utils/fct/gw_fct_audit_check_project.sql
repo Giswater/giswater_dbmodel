@@ -60,6 +60,7 @@ v_layer_log boolean = false;
 v_errcontext text;
 v_qgis_init_guide_map boolean;
 v_qgis_forminitproject_hidden boolean;
+v_qgis_layers_setpropierties boolean;
 
 
 BEGIN 
@@ -82,8 +83,12 @@ BEGIN
 	SELECT value INTO v_layer_log FROM config_param_user where parameter='audit_project_layer_log' AND cur_user=current_user;
 	SELECT value INTO v_qgis_init_guide_map FROM config_param_user where parameter='qgis_init_guide_map' AND cur_user=current_user;
 	SELECT value INTO v_qgis_forminitproject_hidden FROM config_param_user where parameter='qgis_form_initproject_hidden' AND cur_user=current_user;
+	SELECT value INTO v_qgis_layers_setpropierties FROM config_param_user where parameter='qgis_layers_set_propierties' AND cur_user=current_user;
 
 	IF v_qgis_forminitproject_hidden IS NULL THEN v_qgis_forminitproject_hidden = 'FALSE'; END IF;
+	IF v_qgis_init_guide_map IS NULL THEN v_qgis_init_guide_map = 'FALSE'; END IF;
+	IF v_qgis_layers_setpropierties IS NULL THEN v_qgis_layers_setpropierties = 'FALSE'; END IF;
+
 
 	-- init process
 	v_isenabled:=FALSE;
@@ -479,7 +484,7 @@ BEGIN
 					'"line":'||v_result_line||','||
 					'"polygon":'||v_result_polygon||','||
 					'"missingLayers":'||v_missing_layers||'}'||
-				', "actions":{"hideForm":'||v_qgis_forminitproject_hidden||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
+				', "actions":{"hideForm":'||v_qgis_forminitproject_hidden||',"setQgisLayers":'||v_qgis_layers_setpropierties||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
 	--  Return	   
 	RETURN v_return;
 
