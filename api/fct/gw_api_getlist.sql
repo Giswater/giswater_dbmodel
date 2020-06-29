@@ -145,6 +145,8 @@ DECLARE
 	v_default json;
 	v_startdate text;
 	v_columntype text;
+	v_isattribute boolean;
+	v_attribute_filter text;
 
 BEGIN
 
@@ -183,6 +185,7 @@ BEGIN
 	v_limit = ((p_data ->>'data')::json->>'fields')::json->>'limit'::text;
 	v_filterlot = ((p_data ->>'data')::json->>'fields')::json->>'lot_id'::text;
 	v_filterteam = ((p_data ->>'data')::json->>'fields')::json->>'team_id'::text;
+	v_isattribute := (p_data ->> 'data')::json->> 'isAttribute';
 
 	
 	IF v_tabname IS NULL THEN
@@ -209,7 +212,13 @@ BEGIN
 
 	END IF;
 
-
+--  Create filter if is attribute table list
+----------------------------
+	IF v_isattribute THEN
+		v_attribute_filter = ' AND listtype = ''attributeTable''';
+	ELSE
+		v_attribute_filter = '';
+	END IF;
 	
 --  Creating the list fields
 ----------------------------
@@ -258,14 +267,14 @@ BEGIN
 			INTO v_the_geom;
 
 		--  get querytext
-		EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2'
-			INTO v_query_result, v_default
+		EXECUTE concat('SELECT query_text FROM config_api_list WHERE tablename = $1 AND device = $2', v_attribute_filter)
+			INTO v_query_result
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_api_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1'
-				INTO v_query_result, v_default
+			EXECUTE concat('SELECT query_text FROM config_api_list WHERE tablename = $1 LIMIT 1', v_attribute_filter)
+				INTO v_query_result
 				USING v_tablename;
 		END IF;	
 
@@ -276,13 +285,13 @@ BEGIN
 
 	ELSE
 		--  get querytext
-		EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2'
+		EXECUTE concat('SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 AND device = $2', v_attribute_filter)
 			INTO v_query_result, v_default
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_api_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE 'SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1'
+			EXECUTE concat('SELECT query_text, vdefault FROM config_api_list WHERE tablename = $1 LIMIT 1', v_attribute_filter)
 				INTO v_query_result, v_default
 				USING v_tablename;
 		END IF;	
@@ -471,7 +480,7 @@ BEGIN
 	-- adding the widget of list
 	v_i = cardinality(v_filter_fields) ;
 	
-	EXECUTE 'SELECT listclass FROM config_api_list WHERE tablename = $1 LIMIT 1'
+	EXECUTE concat('SELECT listclass FROM config_api_list WHERE tablename = $1', v_attribute_filter, ' LIMIT 1')
 		INTO v_listclass
 		USING v_tablename;
 
@@ -547,3 +556,4 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+
