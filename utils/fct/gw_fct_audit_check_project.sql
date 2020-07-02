@@ -175,7 +175,7 @@ BEGIN
 		PERFORM setval('SCHEMA_NAME.inp_vertice_seq', 1, true);
 	END IF;
 
-	IF v_project_type='UD' THEN
+	IF 'role_epa' IN (SELECT rolname FROM pg_roles WHERE pg_has_role( current_user, oid, 'member')) AND v_project_type='UD' THEN
 		IF (SELECT hydrology_id FROM inp_selector_hydrology WHERE cur_user = current_user) IS NULL THEN
 			INSERT INTO inp_selector_hydrology (hydrology_id, cur_user) VALUES (1, current_user);
 		END IF;
