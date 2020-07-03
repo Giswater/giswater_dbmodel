@@ -33,6 +33,7 @@ update arc set sector_id=0, dma_id=0, dqa_id=0, presszonecat_id=0;
 update node set sector_id=0, dma_id=0, dqa_id=0,  presszonecat_id=0;
 update connec set sector_id=0, dma_id=0, dqa_id=0, presszonecat_id=0
 
+select * from SCHEMA_NAME.exploitation
 
 ----------
 TO EXECUTE
@@ -46,7 +47,7 @@ SELECT sector_id, count(sector_id) from v_edit_arc group by sector_id order by 1
 
 
 -- DMA
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation": "[1]", "checkData": false,"updateFeature":"TRUE", "updateMapZone":2, "geomParamUpdate":15,"debug":"false"}}}');
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation": "[527]", "checkData": false,"updateFeature":"TRUE", "updateMapZone":2, "geomParamUpdate":15,"debug":"false"}}}');
 SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "node":"1046", "updateFeature":"TRUE", "updateMapZone":2,"concaveHullParam":0.85,"debug":"false"}}}');
 SELECT count(*), log_message FROM audit_log_data WHERE fprocesscat_id=45 AND user_name=current_user group by log_message order by 2 --DMA
 SELECT dma_id, count(dma_id) from v_edit_arc  group by dma_id order by 1;
@@ -250,7 +251,7 @@ BEGIN
 		-- reset graf & audit_log tables
 		DELETE FROM anl_arc where cur_user=current_user and fprocesscat_id=v_fprocesscat_id;
 		DELETE FROM anl_node where cur_user=current_user and fprocesscat_id=v_fprocesscat_id;
-		DELETE FROM temp_anlgraf;
+		TRUNCATE temp_anlgraf;
 		DELETE FROM audit_check_data WHERE fprocesscat_id=v_fprocesscat_id AND user_name=current_user;
 			
 		-- reset selectors
