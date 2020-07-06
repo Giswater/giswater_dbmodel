@@ -98,3 +98,4 @@ $BODY$
   COST 100;
 ALTER FUNCTION ws_sample_json.gw_fct_json_create_return(json, integer)
   OWNER TO postgres;
+
