@@ -16,20 +16,6 @@ ON conflict (id) DO NOTHING;
 
 
 --2020/07/06
-INSERT INTO config_api_form_fields (formname, formtype, column_id, datatype, widgettype,label,tooltip, ismandatory, isparent,iseditable,
-hidden,layout_name)
-VALUES('ve_arc','feature','tstamp','date','text','Insert tstamp','tstamp - Fecha de inserción del elemento a la base de datos',
-false,false,false,true,'layout_data_2') ON CONFLICT (formname, formtype, column_id) DO NOTHING;
-
-INSERT INTO config_api_form_fields (formname, formtype, column_id, datatype, widgettype,label,tooltip, ismandatory, isparent,iseditable,
-hidden,layout_name)
-VALUES('ve_node','feature','tstamp','date','text','Insert tstamp','tstamp - Fecha de inserción del elemento a la base de datos',
-false,false,false,true,'layout_data_2') ON CONFLICT (formname, formtype, column_id) DO NOTHING;
-
-INSERT INTO config_api_form_fields (formname, formtype, column_id, datatype, widgettype,label,tooltip, ismandatory, isparent,iseditable,
-hidden,layout_name)
-VALUES('ve_connec','feature','tstamp','date','text','Insert tstamp','tstamp - Fecha de inserción del elemento a la base de datos',
-false,false,false,true,'layout_data_2') ON CONFLICT (formname, formtype, column_id) DO NOTHING;
 
 INSERT INTO config_param_system (parameter, value, data_type,context, descript, isenabled, isdeprecated)
 VALUES ('grafanalytics_lrs_feature', NULL, 'json', 'system', 'List of fields updated during the process of calculating linear reference',false, false)
