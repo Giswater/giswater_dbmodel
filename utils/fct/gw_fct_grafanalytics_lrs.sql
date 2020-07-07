@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 2972
+--FUNCTION CODE: 2826
 
 -- FUNCTION: SCHEMA_NAME.gw_fct_grafanalytics_lrs(json)
 
