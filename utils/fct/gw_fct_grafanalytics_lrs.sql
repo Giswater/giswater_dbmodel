@@ -6,11 +6,11 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2972
 
--- FUNCTION: ws.gw_fct_grafanalytics_lrs(json)
+-- FUNCTION: SCHEMA_NAME.gw_fct_grafanalytics_lrs(json)
 
--- DROP FUNCTION ws.gw_fct_grafanalytics_lrs(json);
+-- DROP FUNCTION SCHEMA_NAME.gw_fct_grafanalytics_lrs(json);
 
-CREATE OR REPLACE FUNCTION ws.gw_fct_grafanalytics_lrs(
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_grafanalytics_lrs(
 	p_data json)
     RETURNS json
     LANGUAGE 'plpgsql'
@@ -22,7 +22,7 @@ AS $BODY$
 
 /*
 
-SELECT ws.gw_fct_grafanalytics_lrs('{"data":{"parameters":{"exploitation":"[1]"}}}');
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_lrs('{"data":{"parameters":{"exploitation":"[1]"}}}');
 
 */
 
@@ -71,7 +71,7 @@ v_end_bifurc text;
 BEGIN
 
 	-- init path
-	SET search_path = "ws", public, pg_catalog;
+	SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
 	-- get variables (from input)
 	v_expl = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'exploitation');
@@ -138,7 +138,7 @@ BEGIN
 	-- create graf (all boundary conditions are opened, flag=0)
 
 	v_queryarc = 'SELECT json_array_elements_text((value::json->>''ignoreArc'')::json) 
-				FROM ws.config_param_system WHERE parameter=''grafanalytics_lrs_graf''';
+				FROM SCHEMA_NAME.config_param_system WHERE parameter=''grafanalytics_lrs_graf''';
 			
 	EXECUTE 'INSERT INTO temp_anlgraf ( arc_id, node_1, node_2, water, flag, checkf, length, cost, value )
 	SELECT  arc_id::integer, node_1::integer, node_2::integer, 0, 0, 0, st_length(the_geom), '||v_costfield||', 0 FROM v_edit_arc JOIN value_state_type ON state_type=id 
