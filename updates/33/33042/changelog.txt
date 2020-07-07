@@ -1,0 +1,7 @@
+3.3.041
+*************
+- Bug fix on review audit triggers (UD)
+- Bug fix on manage polygon on trg_edit_node
+- Enhance definition of v_ui_om_visitman_x_* and add node_1, node_2 in v_edit_review_arc
+- Update odbc2pg_hdyro_filldata function
+- Add new variable qgis_layers_set_propierties on init project
