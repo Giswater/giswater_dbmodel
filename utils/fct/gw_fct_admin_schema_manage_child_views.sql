@@ -72,8 +72,9 @@ raise notice 'v_action %',v_action;
 
 	IF v_action = 'MULTI-DELETE' THEN
 
-		FOR v_childview IN SELECT child_layer FROM cat_feature
+		FOR v_childview IN SELECT child_layer FROM cat_feature WHERE child_layer IS NOT NULL
 		LOOP
+
 			EXECUTE 'DROP VIEW IF EXISTS '||v_childview||' CASCADE';
 
 		END LOOP;
