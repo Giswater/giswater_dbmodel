@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION ws_sample_json.gw_fct_getstyle(p_data json)
 $BODY$
 
 /*
-
+ SELECT ws_sample_json.gw_fct_getstyle($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "layers":[ "v_edit_connec"], "function_id":"2431"}}$$);
 SELECT ws_sample_json.gw_fct_getstyle($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "layers":[ "v_edit_arc",  "v_edit_connec","v_edit_node"], "function_id":"2431"}}$$);
 
 */
@@ -37,7 +37,8 @@ BEGIN
 		EXECUTE 'SELECT addtoc FROM sys_table WHERE id='||quote_literal(v_layer)||''
 		into v_value; 
 		if v_value is null then
-			continue;
+			v_value=gw_fct_json_object_set_key((v_value)::json, 'error', 'Layer '||v_layer||' cannot be added, maybe it is a configuration problem, check the table sys_table or add it manually.');
+			
 		end if;
 		if v_value->>'style' = 'qml' then
 			EXECUTE 'SELECT sytelvalue from sys_style WHERE idval ='||quote_literal(v_funtion_id)||''
