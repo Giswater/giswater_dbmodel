@@ -22,7 +22,7 @@ AS $BODY$
 
 /*
 
-SELECT SCHEMA_NAME.gw_fct_grafanalytics_lrs('{"data":{"parameters":{"exploitation":"[1]"}}}');
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_lrs('{"data":{"parameters":{"exploitation":"1"}}}');
 
 */
 
@@ -75,6 +75,7 @@ BEGIN
 
 	-- get variables (from input)
 	v_expl = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'exploitation');
+	v_expl=json_agg(v_expl);	
 
 	-- get variables (from config_param_system)
 	v_costfield = (SELECT (value::json->>'arc')::json->>'costField' FROM config_param_system WHERE parameter='grafanalytics_lrs_graf');
