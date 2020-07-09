@@ -64,7 +64,6 @@ BEGIN
 	IF v_temp_layer IS NOT NULL THEN
 		EXECUTE 'SELECT sytelvalue from sys_style WHERE idval ='||quote_literal(v_funtion_id)||' AND sytletype ='||quote_literal(v_temp_layer)||''
 		into v_style;
-raise notice 'v_style --> %',('SELECT sytelvalue from sys_style WHERE idval ='||quote_literal(v_funtion_id)||' AND sytletype ='||quote_literal(v_temp_layer)||'');
 			raise notice 'v_style --> %',v_style;
 		if v_style is not null then			
 			v_return=gw_fct_json_object_set_key((v_value)::json, 'style', v_style);			
