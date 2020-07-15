@@ -30,3 +30,7 @@ ALTER TABLE om_visit_parameter ADD CONSTRAINT om_visit_parameter_feature_type_ch
 
 ALTER TABLE om_team_x_visitclass ADD CONSTRAINT om_team_x_visitclass_team_id_fkey FOREIGN KEY (team_id) REFERENCES cat_team (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE om_team_x_visitclass ADD CONSTRAINT om_team_x_visitclass_visitclass_id_fkey FOREIGN KEY (visitclass_id) REFERENCES om_visit_class (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE om_visit ADD CONSTRAINT om_visit_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES om_visit_lot (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+
+ALTER TABLE om_visit_lot_x_user ADD CONSTRAINT om_visit_lot_x_user_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES om_visit_lot (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
