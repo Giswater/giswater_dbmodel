@@ -24,3 +24,6 @@ VALUES ('2826', 'gw_fct_grafanalytics_lrs', 'utils', 'function', '{"featureType"
 "dvQueryText":"select expl_id as id, name as idval from exploitation where active is not false order by name", "selectedId":"1"}]',
 'Function that calculates linear reference', 'role_edit', false, true,'LRS',TRUE) ON CONFLICT (id) DO NOTHING;
 
+--2020/07/16
+INSERT INTO config_api_typevalue (typevalue, id, idval)
+VALUES ('widgettype_typevalue','textarea', 'textarea')ON CONFLICT (typevalue, id) DO NOTHING;
