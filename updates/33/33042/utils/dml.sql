@@ -26,4 +26,4 @@ VALUES ('2826', 'gw_fct_grafanalytics_lrs', 'utils', 'function', '{"featureType"
 
 --2020/07/16
 INSERT INTO config_api_typevalue (typevalue, id, idval)
-VALUES ('widgettype_typevalue','textarea', 'textarea')ON CONFLICT (typevalue, id) DO NOTHING;
+VALUES ('widgettype_typevalue','textarea', 'textArea')ON CONFLICT (typevalue, id) DO NOTHING;
