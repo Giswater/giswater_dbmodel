@@ -301,7 +301,7 @@ SELECT gw_fct_admin_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"
 
 delete from presszone;
 INSERT INTO presszone VALUES ('1', 'pzone1-1s', 1, NULL, NULL,  '{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
-INSERT INTO presszone VALUES ('2', 'pzone1-2s', 2, NULL, NULL, '{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
+INSERT INTO presszone VALUES ('2', 'pzone1-2s', 1, NULL, NULL, '{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
 INSERT INTO presszone VALUES ('3', 'pzone1-1d', 1, NULL, NULL, '{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
 INSERT INTO presszone VALUES ('4', 'pzone1-2d', 1, NULL, NULL, '{"use":[{"nodeParent":"1083", "toArc":[2095]}], "ignore":[]}');
 INSERT INTO presszone VALUES ('5', 'pzone2-1s', 2, NULL, NULL, '{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
