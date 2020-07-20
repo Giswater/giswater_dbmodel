@@ -412,7 +412,7 @@ CREATE OR REPLACE VIEW v_inp_pjointpattern AS
  SELECT row_number() OVER (ORDER BY a.pattern_id, a.idrow) AS id,
     a.idrow,
         CASE
-            WHEN a.pjoint_type::text = 'VNODE'::text THEN concat('VN', a.pattern_id)::character varying
+            WHEN a.pjoint_type::text = 'VNODE'::text THEN concat('VN', a.pattern_id)::character varying(16)
             ELSE a.pattern_id
         END AS pattern_id,
     sum(a.factor_1)::numeric(10,8) AS factor_1,
