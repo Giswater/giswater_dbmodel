@@ -21,3 +21,7 @@ INSERT INTO config_api_form_fields (formname, formtype, column_id, datatype, wid
 hidden,layout_name)
 VALUES('ve_connec','feature','tstamp','date','text','Insert tstamp','tstamp - Fecha de inserción del elemento a la base de datos',
 false,false,false,true,'layout_data_2') ON CONFLICT (formname, formtype, column_id) DO NOTHING;
+
+--2020/07/16
+INSERT INTO config_api_typevalue (typevalue, id, idval)
+VALUES ('widgettype_typevalue','textarea', 'textArea')ON CONFLICT (typevalue, id) DO NOTHING;

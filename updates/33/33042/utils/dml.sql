@@ -23,7 +23,3 @@ VALUES ('2826', 'gw_fct_grafanalytics_lrs', 'utils', 'function', '{"featureType"
 '[{"widgetname":"exploitation", "label":"Exploitation ids:","widgettype":"combo","datatype":"text","layoutname":"grl_option_parameters","layout_order":2, 
 "dvQueryText":"select expl_id as id, name as idval from exploitation where active is not false order by name", "selectedId":"1"}]',
 'Function that calculates linear reference', 'role_edit', false, true,'LRS',TRUE) ON CONFLICT (id) DO NOTHING;
-
---2020/07/16
-INSERT INTO config_api_typevalue (typevalue, id, idval)
-VALUES ('widgettype_typevalue','textarea', 'textArea')ON CONFLICT (typevalue, id) DO NOTHING;
