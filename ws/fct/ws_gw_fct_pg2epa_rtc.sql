@@ -86,7 +86,7 @@ BEGIN
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
 				   FROM v_inp_pjointpattern JOIN node ON pattern_id=node_id ORDER by 3,4;		
 
-			UPDATE rpt_inp_node SET demand=(1*v_epaunits)::numeric(12,8), pattern_id=node_id 
+			UPDATE rpt_inp_node SET demand=1, pattern_id=node_id 
 			WHERE node_id IN (SELECT DISTINCT pattern_id FROM rpt_inp_pattern_value WHERE result_id=result_id_var) AND result_id=result_id_var;
 		
 		END IF;
