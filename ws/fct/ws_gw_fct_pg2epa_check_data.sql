@@ -422,7 +422,8 @@ BEGIN
 
 	IF v_count > 0 THEN
 		INSERT INTO anl_arc (fid, arc_id, arccat_id, the_geom, descript)
-		SELECT 229, arc_id, arcccat_id , the_geom, concat('Length: ', (st_length(the_geom))::numeric (12,3)) where st_length(the_geom) < 0.2;
+		SELECT 229, arc_id, arccat_id , the_geom, concat('Length: ', (st_length(the_geom))::numeric (12,3)) FROM v_edit_inp_pipe 
+		WHERE st_length(the_geom) < 0.2;
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,
 		' pipe(s) with length less than 0.2 meters. Check it before continue.'));
@@ -472,7 +473,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 3, concat(
-		'ERROR: There is/are ',v_count,' register(s) on arc''s catalog with null values on dint column.'));
+		'ERROR: There is/are ',v_count,' register(s) on arc''s catalog not VARC with null values on dint column for the whole system.'));
 		v_count=0;
 	ELSE
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)

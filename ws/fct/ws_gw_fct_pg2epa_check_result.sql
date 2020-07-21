@@ -349,9 +349,9 @@ BEGIN
 
 			IF v_count > 0 THEN
 
-				DELETE FROM anl_connec WHERE fid = 60 and cur_user=current_user;
+				DELETE FROM anl_connec WHERE fid = 160 and cur_user=current_user;
 				INSERT INTO anl_connec (fid, connec_id, connecat_id, the_geom)
-				SELECT 60, connec_id, connecat_id, the_geom FROM v_edit_connec WHERE connec_id NOT IN (SELECT connec_id FROM v_rtc_hydrometer);
+				SELECT 160, connec_id, connecat_id, the_geom FROM v_edit_connec WHERE connec_id NOT IN (SELECT connec_id FROM v_rtc_hydrometer);
 
 				INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 				VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' connec(s) without hydrometers. It means that vnode is generated but pattern is null and demand is null for that vnode.'));
