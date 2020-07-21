@@ -71,6 +71,10 @@ BEGIN
 	
 		-- Insert start work day
 		INSERT INTO om_visit_lot_x_user (team_id, lot_id , the_geom) VALUES (v_team, v_lot, v_thegeom);
+        
+        -- Insert into selector
+		DELETE FROM selector_lot WHERE cur_user=v_user;
+		INSERT INTO selector_lot (lot_id, cur_user) VALUES (v_lot, v_user);
 		
 		-- message
 		SELECT gw_api_getmessage(null, 70) INTO v_message;
@@ -96,7 +100,11 @@ BEGIN
 			p_data = gw_fct_json_object_set_key (p_data, 'data', v_data);
 		ELSE
 			UPDATE om_visit_lot_x_user SET endtime = ("left"((date_trunc('second'::text, now()))::text, 19))::timestamp without time zone 
-			WHERE id = (SELECT id FROM (SELECT * FROM om_visit_lot_x_user WHERE user_id=v_user ORDER BY id DESC) a LIMIT 1); 
+			WHERE id = (SELECT id FROM (SELECT * FROM om_visit_lot_x_user WHERE user_id=v_user ORDER BY id DESC) a LIMIT 1);
+            
+            -- delete from selector on close lot
+			DELETE FROM selector_lot WHERE cur_user=v_user AND lot_id=v_lot;
+            
 			-- message
 			SELECT gw_api_getmessage(null, 80) INTO v_message;
 			v_data = p_data->>'data';
