@@ -213,8 +213,11 @@ BEGIN
 		LOOP
 
 			-- Inserting data
-			EXECUTE 'INSERT INTO om_visit_event_photo (visit_id, event_id, tstamp, value, text, hash) VALUES('''||v_id||''', '''||v_event_id||''', '''||NOW()||''', '''||CONCAT((v_addphotos->>'json_array_elements')::json->>'photo_url'::text, (v_addphotos->>'json_array_elements')::json->>'hash'::text)||''', ''demo image'', '''||((v_addphotos->>'json_array_elements')::json->>'hash'::text)::text||''')';
+			EXECUTE 'INSERT INTO om_visit_event_photo (visit_id, event_id, tstamp, value, hash, fextension)
+			 VALUES('''||v_id||''', '''||v_event_id||''', '''||NOW()||''', '''||CONCAT((v_addphotos->>'json_array_elements')::json->>'photo_url'::text, (v_addphotos->>'json_array_elements')::json->>'hash'::text)||''',
+			 '''||((v_addphotos->>'json_array_elements')::json->>'hash'::text)::text||''','''||((v_addphotos->>'json_array_elements')::json->>'fextension'::text)::text||''')';
 			
+            
 			-- getting message
 			SELECT gw_api_getmessage(v_feature, 40) INTO v_message;
 			
