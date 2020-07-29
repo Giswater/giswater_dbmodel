@@ -158,7 +158,7 @@ BEGIN
 	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message)
 	VALUES (-10, v_fid, v_result_id, 4, concat('CHECK RESULT WITH CURRENT USER-OPTIONS ACORDING EPA RULES'));
 	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message)
-	VALUES (-9, v_fid, v_result_id, 4, '---------------------------------------------------------------------------------');
+	VALUES (-9, v_fid, v_result_id, 4, '-------------------------------------------------------------------------------------');
 
 	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message) VALUES (-8, v_fid, v_result_id, 3, 'CRITICAL ERRORS');
 	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message) VALUES (-7, v_fid, v_result_id, 3, '----------------------');
@@ -168,9 +168,6 @@ BEGIN
 
 	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message) VALUES (-4, v_fid, v_result_id, 1, 'INFO');
 	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message) VALUES (-3, v_fid, v_result_id, 1, '-------');
-
-	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message) VALUES (-2, v_fid, v_result_id, 0, 'NETWORK STATS');
-	INSERT INTO audit_check_data (id, fid, result_id, criticity, error_message) VALUES (-1, v_fid, v_result_id, 0, '--------------------');
 		
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, v_result_id, 4, concat('Result id: ', v_result_id));
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, v_result_id, 4, concat('Created by: ', current_user, ', on ', to_char(now(),'YYYY-MM-DD HH-MM-SS')));
