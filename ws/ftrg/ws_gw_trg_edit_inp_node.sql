@@ -102,7 +102,7 @@ BEGIN
 
         UPDATE node 
         SET elevation=NEW.elevation, "depth"=NEW."depth", nodecat_id=NEW.nodecat_id, sector_id=NEW.sector_id, "state"=NEW."state", 
-            annotation=NEW.annotation, the_geom=NEW.the_geom 
+            annotation=NEW.annotation
         WHERE node_id=OLD.node_id;
 
         PERFORM audit_function(2,1310); 
