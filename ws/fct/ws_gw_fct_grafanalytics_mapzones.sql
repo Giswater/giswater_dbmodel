@@ -39,31 +39,25 @@ select * from SCHEMA_NAME.exploitation
 TO EXECUTE
 ----------
 
+-- QUERY SAMPLE
+----------------
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE", "exploitation":[1], "macroExploitation":[1], "checkData":false, 
+"updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
+----------------
+
 -- SECTOR
-SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR", "exploitation": "[1,2]", "checkData": false, "updateFeature":"FALSE", "updateMapZone":2, "geomParamUpdate":15, "debug":"false"}}}');
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR", "node":"113952", "updateFeature":TRUE}}}');
 SELECT count(*), log_message FROM audit_log_data WHERE fprocesscat_id=30 AND user_name=current_user group by log_message order by 2 --SECTOR
 SELECT sector_id, count(sector_id) from v_edit_arc group by sector_id order by 1;
 
-
 -- DMA
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation": "[527]", "checkData": false,"updateFeature":"TRUE", "updateMapZone":2, "geomParamUpdate":15,"debug":"false"}}}');
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "node":"1046", "updateFeature":"TRUE", "updateMapZone":2,"concaveHullParam":0.85,"debug":"false"}}}');
 SELECT count(*), log_message FROM audit_log_data WHERE fprocesscat_id=45 AND user_name=current_user group by log_message order by 2 --DMA
 SELECT dma_id, count(dma_id) from v_edit_arc  group by dma_id order by 1;
-UPDATE arc SET dma_id=0
-
 
 -- DQA
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DQA", "exploitation": "[1,2]", "checkData": false,"updateFeature":"TRUE", "updateMapZone":2 , "geomParamUpdate":15, "debug":"false"}}}');
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DQA", "node":"113952", "updateFeature":TRUE}}}');
 SELECT count(*), log_message FROM audit_log_data WHERE fprocesscat_id=44 AND user_name=current_user group by log_message order by 2 --DQA
 SELECT dqa_id, count(dma_id) from v_edit_arc  group by dqa_id order by 1;
 
-
 -- PRESZZONE
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE","exploitation":"[1,2]", "checkData": false, "updateFeature":"TRUE", "updateMapZone":2, "geomParamUpdate":15,"debug":"false"}}}');
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE", "node":"113952", "updateFeature":TRUE}}}');
 SELECT count(*), log_message FROM audit_log_data WHERE fprocesscat_id=48 AND user_name=current_user group by log_message order by 2 --PZONE
 SELECT presszonecat_id, count(presszonecat_id) from v_edit_arc  group by presszonecat_id order by 1;
 
@@ -110,6 +104,7 @@ v_cont1 integer default 0;
 v_class text;
 v_feature record;
 v_expl json;
+v_macroexpl json;
 v_data json;
 v_fprocesscat_id integer;
 v_nodeid text;
@@ -147,7 +142,8 @@ v_message text;
 v_checkdata boolean;
 v_mapzonename text;
 v_dynsymbolstatus boolean;
-
+v_usepsector boolean;
+v_parameters json;
 
 BEGIN
 	-- Search path
@@ -166,8 +162,12 @@ BEGIN
 	v_updatemapzgeom = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'updateMapZone');
 	v_geomparamupdate = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'geomParamUpdate');
 	v_expl = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'exploitation');
+	v_macroexpl = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'macroExploitation');
+	v_usepsector = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'usePlanPsector');
 	v_debug = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'debug');
 	v_checkdata = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'checkData');
+	v_parameters = (SELECT ((p_data::json->>'data')::json->>'parameters'));
+
 
 	-- select system variables
 	v_dynsymbolstatus = (SELECT value FROM config_param_system WHERE parameter = 'mapzones_dynamic_symbology');
@@ -257,13 +257,29 @@ BEGIN
 		-- reset selectors
 		DELETE FROM selector_state WHERE cur_user=current_user;
 		INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
-		DELETE FROM selector_psector WHERE cur_user=current_user;
 			
 		-- reset exploitation
 		IF v_expl IS NOT NULL THEN
 			DELETE FROM selector_expl WHERE cur_user=current_user;
 			INSERT INTO selector_expl (expl_id, cur_user) 
 			SELECT expl_id, current_user FROM exploitation WHERE expl_id IN	(SELECT (json_array_elements_text(v_expl))::integer);
+		END IF;
+
+		IF v_macroexpl IS NOT NULL THEN
+			DELETE FROM selector_expl WHERE cur_user=current_user;
+			INSERT INTO selector_expl (expl_id, cur_user) 
+			SELECT expl_id, current_user FROM exploitation WHERE macroexpl_id IN (SELECT (json_array_elements_text(v_macroexpl))::integer);
+		END IF;
+
+		IF v_usepsector IS NOT TRUE THEN
+		
+			-- save psector selector 
+			DELETE FROM temp_table WHERE fprocesscat_id=99 AND user_name=current_user;
+			INSERT INTO temp_table (fprocesscat_id, text_column)
+			SELECT 99, (array_agg(psector_id)) FROM selector_psector WHERE cur_user=current_user;
+
+			-- set psector selector
+			DELETE FROM selector_psector WHERE cur_user=current_user;
 		END IF;
 
 		-- start build log message
@@ -331,8 +347,11 @@ BEGIN
 
 			v_text =  concat ('SELECT * FROM (',v_text,')a JOIN temp_anlgraf e ON a.node_id::integer=e.node_1::integer');
 
-			-- open boundary conditions set flag=0 for graf delimiters that have been setted to 1 on query before BUT ONLY ENABLING the right sense (to_arc)
-			
+			-- close customized stoppers acording on grafconfig column on mapzone table
+			EXECUTE 'UPDATE temp_anlgraf SET flag = 1 WHERE node_1::text IN (SELECT (json_array_elements_text((grafconfig->>''stopper'')::json)) as node_id FROM '||quote_ident(v_table)||')';
+			EXECUTE 'UPDATE temp_anlgraf SET flag = 1 WHERE node_2::text IN (SELECT (json_array_elements_text((grafconfig->>''stopper'')::json)) as node_id FROM '||quote_ident(v_table)||')';
+
+			-- open boundary conditions set flag=0 for graf delimiters that have been setted to 1 on query before BUT ONLY ENABLING the right sense (to_arc)			
 			-- in function of graf class
 			IF v_class = 'SECTOR' THEN
 				-- sector (sector.grafconfig)
@@ -374,6 +393,14 @@ BEGIN
 					where grafconfig is not null order by 1,2) a
 					ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);		
 			END IF;
+			
+			-- close custom nodes acording init parameters
+			UPDATE temp_anlgraf SET flag = 1 WHERE node_1::text IN (SELECT json_array_elements_text((v_parameters->>'forceClosed')::json));
+			UPDATE temp_anlgraf SET flag = 1 WHERE node_2::text IN (SELECT json_array_elements_text((v_parameters->>'forceClosed')::json));
+
+			-- open custom nodes acording init parameters
+			UPDATE temp_anlgraf SET flag = 0 WHERE node_1::text IN (SELECT json_array_elements_text((v_parameters->>'forceOpen')::json));
+			UPDATE temp_anlgraf SET flag = 0 WHERE node_2::text IN (SELECT json_array_elements_text((v_parameters->>'forceOpen')::json));			
 						
 			IF v_debug IS NULL OR v_debug IS FALSE THEN
 
@@ -488,35 +515,35 @@ BEGIN
 					EXECUTE v_querytext;
 
 					-- recalculate staticpressure (fprocesscat_id=47)
-					IF v_fprocesscat_id=30 THEN 
+					IF v_fprocesscat_id=46 THEN 
 					
 						DELETE FROM audit_log_data WHERE fprocesscat_id=47 AND user_name=current_user;
 				
-						INSERT INTO audit_log_data (fprocesscat_id, feature_type, feature_id, log_message) SELECT 47, 'node', n.node_id, 
-						concat('{"staticpressure":',case when (a.elevation - n.elevation::float) is null then 0 ELSE (a.elevation - n.elevation::float) END, 
+						INSERT INTO audit_log_data (fprocesscat_id, feature_type, feature_id, log_message)
+						SELECT 47, 'node', n.node_id, 
+						concat('{"staticpressure":',case when (pz.head - n.elevation::float) is null then 0 ELSE (pz.head - n.elevation::float) END, 
 						', "nodeparent":"',anl_node.descript,'"}')
 						FROM node n 
-						JOIN anl_node USING (node_id) 
-						JOIN node a ON a.node_id=anl_node.descript
-						WHERE fprocesscat_id=30 AND cur_user=current_user;
+						JOIN anl_node USING (node_id)
+						JOIN 
+						(select head, json_array_elements_text((grafconfig->>'use')::json)::json->>'nodeParent' as node_id from cat_presszone) pz ON pz.node_id = anl_node.descript
+						WHERE fprocesscat_id=46 AND cur_user=current_user;
 
-						-- update node table those elements connected on graf
+						-- update on node table those elements connected on graf
 						UPDATE node SET staticpressure=(log_message::json->>'staticpressure')::float FROM audit_log_data a WHERE a.feature_id=node_id 
 						AND fprocesscat_id=47 AND user_name=current_user;
 						
-						-- update node table those elements disconnected from graf
+						-- update on node table those elements disconnected from graf
 						UPDATE node SET staticpressure=(staticpress1-(staticpress1-staticpress2)*st_linelocatepoint(v_edit_arc.the_geom, n.the_geom))::numeric(12,3)
 										FROM v_edit_arc,node n
 										WHERE st_dwithin(v_edit_arc.the_geom, n.the_geom, 0.05::double precision) AND v_edit_arc.state = 1 AND n.state = 1
 										and n.arc_id IS NOT NULL AND node.node_id=n.node_id;
 												
-						-- update connec table
-						UPDATE v_edit_connec SET staticpressure = (b.elevation-v_edit_connec.elevation) FROM 
-							(SELECT connec_id, a.elevation FROM connec JOIN (SELECT a.sector_id, node_id, elevation FROM 
-								(SELECT json_array_elements_text((grafconfig->>'use')::json)::json->>'nodeParent' as node_id, 
-								sector_id FROM sector)a JOIN node USING (node_id))a
-							USING (sector_id)) b
-							WHERE v_edit_connec.connec_id=b.connec_id;
+						-- updat connec table
+						UPDATE v_edit_connec SET staticpressure = (a.head - a.elevation) FROM 
+							(SELECT connec_id, head, elevation FROM connec
+							JOIN cat_presszone ON id = presszonecat_id) a
+							WHERE v_edit_connec.connec_id=a.connec_id;
 					END IF;
 
 					-- message
@@ -612,6 +639,14 @@ BEGIN
 
 		END IF;
 	END IF;
+
+	-- restore state selector (if it's needed)
+	IF v_usepsector IS NOT TRUE THEN
+		INSERT INTO selector_psector (psector_id, cur_user)
+		select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=99 and user_name=current_user
+		ON CONFLICT (psector_id, cur_user) DO NOTHING;
+	END IF;
+	
 	-- insert spacers on log
 	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  3, '');
 	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  2, '');	
