@@ -153,7 +153,6 @@ BEGIN
 		VALUES (25, 1, 'INFO: No arcs with state=1 using nodes with state=0 found.');
 	END IF;	
 	
-
 	-- Check state_type nulls (arc, node)
 	v_querytext = '(SELECT arc_id, arccat_id, the_geom FROM '||v_edit||'arc WHERE state > 0 AND state_type IS NULL 
 		        UNION SELECT node_id, nodecat_id, the_geom FROM '||v_edit||'node WHERE state > 0 AND state_type IS NULL) a';
@@ -442,6 +441,22 @@ BEGIN
 			VALUES (25, 1, 'INFO: All gullies have links.');
 		END IF;
 	
+	END IF;
+
+	-- check vnode inconsistency (link without vnode)
+	v_querytext = 'SELECT * FROM v_edit_link LEFT JOIN vnode ON vnode_id = exit_id::integer where exit_type =''VNODE'' AND vnode_id IS NULL';
+	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+		
+	IF v_count > 0 THEN -- automatic repair
+		PERFORM gw_fct_vnode_repair();	
+	END IF;
+
+	-- check vnode inconsistency (vnode without link)
+	v_querytext = 'SELECT vnode_id FROM vnode LEFT JOIN link ON vnode_id = exit_id::integer where link_id IS NULL';
+	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+
+	IF v_count > 0 THEN -- automatic delete
+		EXECUTE 'DELETE FROM vnode WHERE vnode_id IN ('||v_querytext||')a';
 	END IF;
 
 	--connec/gully without arc_id or with arc_id different than the one to which points its link
