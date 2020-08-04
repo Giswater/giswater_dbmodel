@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_audit_check_project(p_data json)
 $BODY$
 
 /*
-SELECT SCHEMA_NAME.gw_fct_audit_check_project('{"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.038", "fprocesscat_id":1, "initProject":true, "qgisVersion":"3.10.4-A Coruña", "osVersion":"WindoSCHEMA_NAME 10"}}');
+SELECT SCHEMA_NAME.gw_fct_audit_check_project('{"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.038", "fprocesscat_id":1, "initProject":true, "qgisVersion":"3.10.4-A Coruña", "osVersion":"Windows 10"}}');
 
 SELECT SCHEMA_NAME.gw_fct_audit_check_project($${"client":{"device":9, "infoType":100, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"3.3.019", "fprocesscat_id":1}}$$);
 */
