@@ -157,12 +157,18 @@ DROP VIEW IF EXISTS vp_basic_connec;
 DROP VIEW IF EXISTS v_edit_connec;
 DROP VIEW IF EXISTS ve_connec;
 DROP VIEW IF EXISTS v_connec;
+DROP VIEW IF EXISTS vu_connec;
 
 DROP VIEW IF EXISTS v_edit_man_fountain;
 DROP VIEW IF EXISTS v_edit_man_tap;
 DROP VIEW IF EXISTS v_edit_man_greentap;
 DROP VIEW IF EXISTS v_edit_man_wjoin;
 
+--change type of description columns
+ALTER TABLE connec ALTER COLUMN observ TYPE text;
+ALTER TABLE connec ALTER COLUMN descript TYPE text;
+ALTER TABLE connec ALTER COLUMN annotation TYPE text;
+ALTER TABLE connec ALTER COLUMN comment TYPE text;
 
 
 -- CREACIO DE LES VU
@@ -346,7 +352,7 @@ CREATE OR REPLACE VIEW vu_arc AS
 	 LEFT JOIN ext_streetaxis d ON d.id = arc.streetaxis2_id;
 
 
-DROP VIEW IF EXISTS vu_connec;
+
 CREATE OR REPLACE VIEW vu_connec AS 
  SELECT connec.connec_id,
 	connec.code,
