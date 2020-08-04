@@ -44,6 +44,7 @@ DECLARE
 	v_endfeature_geom public.geometry;
 	v_pjointtype text;
 	v_pjointid text;
+	
 BEGIN
 
     -- Search path
@@ -70,8 +71,6 @@ BEGIN
 			SELECT * INTO v_connect FROM gully WHERE gully_id = connect_id_aux;
 		END IF;
 		
-		--raise exception 'LINK: % CONNECT % ', v_link, v_connect;
-
 		-- exception control. It's no possible to create another link when already exists for the connect
 		IF v_connect.state=2 AND v_link.exit_id IS NOT NULL THEN
 			IF feature_type_aux = 'CONNEC' THEN
@@ -80,27 +79,27 @@ BEGIN
 				RAISE EXCEPTION 'The connect2network tool is not enabled to work with gully''s with state=2. For planned gully''s you must to create the links for that gully (one link for each alternative and each gully) by using the psector form and relate the gully using the arc_id field. After that you will can customize the link''s geometry. gully_id: %' ,connect_id_aux;
 			END IF;
 		END IF;
-
-		
-		-- get values from old vnode
-		SELECT * INTO v_exit FROM vnode WHERE vnode_id::text=v_link.exit_id;
 	
 		-- get arc_id (if feature does not have) using buffer  
-		IF v_connect.arc_id IS NULL AND v_link.exit_id IS NULL THEN
-			WITH index_query AS(
-			SELECT ST_Distance(the_geom, v_connect.the_geom) as distance, arc_id FROM v_edit_arc WHERE state>0 ORDER BY the_geom <-> v_connect.the_geom LIMIT 50)
-			SELECT arc_id INTO v_connect.arc_id FROM index_query ORDER BY distance limit 1;
+		IF v_connect.arc_id IS NULL THEN
+
+			IF v_link.the_geom IS NULL THEN -- looking for closest arc from connect
+				WITH index_query AS(
+				SELECT ST_Distance(the_geom, v_connect.the_geom) as distance, arc_id FROM v_edit_arc WHERE state > 0 LIMIT 5)
+				SELECT arc_id INTO v_connect.arc_id FROM index_query ORDER BY distance limit 1;
 			
-		ELSIF v_connect.arc_id IS NULL AND v_link.exit_id IS NOT NULL THEN
-			WITH index_query AS(
-			SELECT ST_Distance(the_geom, v_exit.the_geom) as distance, arc_id FROM v_edit_arc WHERE state>0 ORDER BY the_geom <-> v_exit.the_geom LIMIT 50)
-			SELECT arc_id INTO v_connect.arc_id FROM index_query ORDER BY distance limit 1;			
+			ELSIF v_link.the_geom IS NOT NULL THEN -- looking for closest arc from link's endpoint
+				WITH index_query AS(
+				SELECT ST_Distance(the_geom, st_endpoint(v_link.the_geom)) as distance, arc_id FROM v_edit_arc WHERE state > 0 LIMIT 5)
+				SELECT arc_id INTO v_connect.arc_id FROM index_query ORDER BY distance limit 1;			
+			END IF;
 		END IF;
 			
 		-- get v_edit_arc information
 		SELECT * INTO v_arc FROM arc WHERE arc_id = v_connect.arc_id;
-
-		raise notice 'v_connect.arc_id %, v_arc: % ', v_connect.arc_id, v_arc;
+		
+		-- get values from old vnode
+		SELECT * INTO v_exit FROM vnode WHERE vnode_id::text=v_link.exit_id;
 
 		-- state control
 		IF v_arc.state=2 AND v_connect.state=1 THEN
