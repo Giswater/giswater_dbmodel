@@ -420,7 +420,6 @@ BEGIN
 		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN -- case when arc_id comes from gully table
 			UPDATE gully SET arc_id=NEW.arc_id where gully_id=NEW.gully_id;
 			IF (SELECT link_id FROM link WHERE feature_id=NEW.gully_id AND feature_type='GULLY' LIMIT 1) IS NOT NULL THEN
-				UPDATE vnode SET vnode_type='AUTO' WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=NEW.gully_id AND exit_type='VNODE' LIMIT 1)::int8;
 				PERFORM gw_fct_connect_to_network((select array_agg(NEW.gully_id)), 'GULLY');
 			ELSIF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_force_automatic_connect2network' AND cur_user=current_user LIMIT 1) IS TRUE THEN
 				PERFORM gw_fct_connect_to_network((select array_agg(NEW.gully_id)), 'GULLY');
