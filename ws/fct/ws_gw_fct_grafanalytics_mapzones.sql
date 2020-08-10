@@ -144,6 +144,9 @@ v_mapzonename text;
 v_dynsymbolstatus boolean;
 v_usepsector boolean;
 v_parameters json;
+v_currentmapzone integer;
+v_prevmapzone integer;
+v_error boolean = false;
 
 BEGIN
 	-- Search path
@@ -400,7 +403,7 @@ BEGIN
 
 			-- open custom nodes acording init parameters
 			UPDATE temp_anlgraf SET flag = 0 WHERE node_1::text IN (SELECT json_array_elements_text((v_parameters->>'forceOpen')::json));
-			UPDATE temp_anlgraf SET flag = 0 WHERE node_2::text IN (SELECT json_array_elements_text((v_parameters->>'forceOpen')::json));			
+			UPDATE temp_anlgraf SET flag = 0 WHERE node_2::text IN (SELECT json_array_elements_text((v_parameters->>'forceOpen')::json));		
 						
 			IF v_debug IS NULL OR v_debug IS FALSE THEN
 
@@ -429,6 +432,15 @@ BEGIN
 					UPDATE temp_anlgraf SET water=0;
 
 					raise notice '------------ Feature_id % ', v_featureid;
+
+					-- check for current mapzone of feature looking onde nodeparent graf
+					EXECUTE 'SELECT '||quote_ident(v_fieldmp)||'::integer FROM 
+					(select *, json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as np FROM '||quote_ident(v_table)||')a where np::integer = '||v_featureid
+					INTO v_currentmapzone;
+
+					-- check for previous mapzone looking on node table
+					EXECUTE 'SELECT '||v_field||'::integer FROM node WHERE node_id::integer = '||v_featureid INTO v_prevmapzone;
+					--
 					
 					------------------
 					-- starting engine
@@ -448,6 +460,14 @@ BEGIN
 
 					-- inundation process
 					LOOP	
+						IF v_prevmapzone > 0 AND v_prevmapzone != v_currentmapzone THEN
+							INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (v_fprocesscat_id, NULL, 3,
+							concat('ERROR: nodeParent: ',v_featureid,' is related to more of one mapzones (',v_prevmapzone,' & ',v_currentmapzone,'). Process for mapzone ',
+							v_currentmapzone,'(',v_currentmapzone,') have been cancelled'));
+							v_error =  true;
+							EXIT;
+						END IF;
+						
 						v_count = v_count+1;
 						
 						UPDATE temp_anlgraf n SET water= 1, flag=n.flag+1, checkf=1 FROM v_anl_graf a where n.node_1::integer = a.node_1::integer AND n.arc_id = a.arc_id;
@@ -460,27 +480,29 @@ BEGIN
 					
 					-- finish engine
 					----------------
+					IF v_error IS NOT TRUE THEN
 					
-					-- insert arc results into audit table	
-					EXECUTE 'INSERT INTO anl_arc (fprocesscat_id, arccat_id, arc_id, the_geom, descript) 
-						SELECT  DISTINCT ON (arc_id) '||v_fprocesscat_id||', arccat_id, a.arc_id, the_geom, '||(v_featureid)||' FROM (SELECT arc_id FROM temp_anlgraf 
-						WHERE water >0) a 
-						JOIN v_edit_arc b ON a.arc_id::integer=b.arc_id::integer';
+						-- insert arc results into audit table	
+						EXECUTE 'INSERT INTO anl_arc (fprocesscat_id, arccat_id, arc_id, the_geom, descript) 
+							SELECT  DISTINCT ON (arc_id) '||v_fprocesscat_id||', arccat_id, a.arc_id, the_geom, '||(v_featureid)||' FROM (SELECT arc_id FROM temp_anlgraf 
+							WHERE water >0) a 
+							JOIN v_edit_arc b ON a.arc_id::integer=b.arc_id::integer';
 
-					-- insert node results into audit table
-					EXECUTE 'INSERT INTO anl_node (fprocesscat_id, nodecat_id, node_id, the_geom, descript) 
-						SELECT DISTINCT ON (node_id) '||v_fprocesscat_id||', nodecat_id, b.node_id, the_geom, '||(v_featureid)||' FROM (SELECT node_1 as node_id 
-						FROM temp_anlgraf WHERE water >0)a
-						JOIN v_edit_node b ON a.node_id::integer=b.node_id::integer';
-						
-					-- message
-					SELECT count(*) INTO v_count1 FROM anl_arc WHERE fprocesscat_id=v_fprocesscat_id AND descript=v_featureid::text AND cur_user=current_user;
-					SELECT count(*) INTO v_count2 FROM anl_node WHERE fprocesscat_id=v_fprocesscat_id AND descript=v_featureid::text AND cur_user=current_user;
-					SELECT count(*) INTO v_count3 FROM anl_arc JOIN connec USING (arc_id) WHERE fprocesscat_id=v_fprocesscat_id AND anl_arc.descript=v_featureid::text 
-					AND cur_user=current_user;			
-				
-					INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
-					VALUES (v_fprocesscat_id, 1, concat('INFO: ', v_class ,' for node: ',v_featureid ,' have been processed. ARCS (', v_count1, '), NODES (', v_count2, '), CONNECS (', v_count3,')'));
+						-- insert node results into audit table
+						EXECUTE 'INSERT INTO anl_node (fprocesscat_id, nodecat_id, node_id, the_geom, descript) 
+							SELECT DISTINCT ON (node_id) '||v_fprocesscat_id||', nodecat_id, b.node_id, the_geom, '||(v_featureid)||' FROM (SELECT node_1 as node_id 
+							FROM temp_anlgraf WHERE water >0)a
+							JOIN v_edit_node b ON a.node_id::integer=b.node_id::integer';
+							
+						-- message
+						SELECT count(*) INTO v_count1 FROM anl_arc WHERE fprocesscat_id=v_fprocesscat_id AND descript=v_featureid::text AND cur_user=current_user;
+						SELECT count(*) INTO v_count2 FROM anl_node WHERE fprocesscat_id=v_fprocesscat_id AND descript=v_featureid::text AND cur_user=current_user;
+						SELECT count(*) INTO v_count3 FROM anl_arc JOIN connec USING (arc_id) WHERE fprocesscat_id=v_fprocesscat_id AND anl_arc.descript=v_featureid::text 
+						AND cur_user=current_user;			
+					
+						INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
+						VALUES (v_fprocesscat_id, 1, concat('INFO: ', v_class ,' for node: ',v_featureid ,' have been processed. ARCS (', v_count1, '), NODES (', v_count2, '), CONNECS (', v_count3,')'));
+					END IF;
 
 				END LOOP;
 
@@ -632,6 +654,7 @@ BEGIN
 				END IF;
 
 				-- insert spacer for warning and info
+				INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  3, '');
 				INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  2, '');	
 				INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  1, '');
 		
@@ -647,11 +670,6 @@ BEGIN
 		ON CONFLICT (psector_id, cur_user) DO NOTHING;
 	END IF;
 	
-	-- insert spacers on log
-	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  3, '');
-	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  2, '');	
-	INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) VALUES (v_fprocesscat_id,  1, '');
-
 	-- get results
 	-- info
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
