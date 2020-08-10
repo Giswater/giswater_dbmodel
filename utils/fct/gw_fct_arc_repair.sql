@@ -6,13 +6,21 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2496
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_repair_arc();
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_arc_repair() RETURNS json AS
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_arc_repair(p_data json)
+  RETURNS json AS
 $BODY$
 
 /*EXAMPLE
 SELECT SCHEMA_NAME.gw_fct_arc_repair()
 
 -- fid: 103, 104
+
+SELECT SCHEMA_NAME.gw_fct_arc_repair($${
+"client":{"device":4, "infoType":1, "lang":"ES"},
+"form":{}, "feature":{"tableName":"v_edit_arc",
+"featureType":"ARC", "id":["2094"]},
+"data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"previousSelection",
+"parameters":{}}}$$);
 
 */
 
@@ -26,64 +34,108 @@ v_version text;
 v_projecttype text;
 v_saveondatabase boolean;
 
+v_id json;
+v_selectionmode text;
+v_worklayer text;
+v_array text;
+v_result_info json;
+v_result_point json;
+v_result_line json;
+
 BEGIN 
 
 	SET search_path= 'SCHEMA_NAME','public';
 
 	-- Delete previous log results
-	DELETE FROM audit_log_data WHERE fid=103 AND cur_user=current_user;
-	DELETE FROM audit_log_data WHERE fid=104 AND cur_user=current_user;
+	DELETE FROM anl_arc WHERE fid=118 AND cur_user=current_user;
+	DELETE FROM anl_arc WHERE fid=103 AND cur_user=current_user;
+	DELETE FROM audit_check_data WHERE fid=118 AND cur_user=current_user;
 
 	-- select config values
 	SELECT project_type, giswater  INTO v_projecttype, v_version FROM sys_version order by 1 desc limit 1;
+
+	-- getting input data 	
+	v_id :=  ((p_data ->>'feature')::json->>'id')::json;
+	v_array :=  replace(replace(replace (v_id::text, ']', ')'),'"', ''''), '[', '(');
+	v_worklayer := ((p_data ->>'feature')::json->>'tableName')::text;
+	v_selectionmode :=  ((p_data ->>'data')::json->>'selectionMode')::text;
+	v_arcsearchnodes := ((p_data ->>'data')::json->>'parameters')::json->>'arcSearchNodes';
+
     
 	-- Set config parameter
 	UPDATE config_param_system SET value=TRUE WHERE parameter='edit_topocontrol_disable_error' ;
-	
-	-- init counter
-	SELECT COUNT(*) into v_count FROM v_edit_arc ;  
 
-	-- Starting loop process
-	FOR arcrec IN SELECT * FROM v_edit_arc
-	LOOP
-		--counter
-		v_count_partial = v_count_partial+1;
-		RAISE NOTICE 'Comptador: % / %', v_count_partial,v_count;
+
+	-- execute
+	IF v_array='()' OR v_array IS NULL THEN
+		INSERT INTO anl_arc(fid, arc_id, the_geom, descript) 
+		SELECT 103, arc_id, the_geom, 'b' FROM arc WHERE arc_id IN (SELECT arc_id FROM v_edit_arc WHERE state=1 AND (node_1 IS NULL OR node_2 IS NULL ));
 		
-		-- execute
-		--UPDATE v_edit_arc SET the_geom=the_geom WHERE arc_id=arcrec.arc_id;
+		EXECUTE 'UPDATE arc SET the_geom=the_geom WHERE arc_id IN (SELECT arc_id FROM v_edit_arc WHERE state=1)';
 		
-	END LOOP;
+		INSERT INTO anl_arc(fid, arc_id, the_geom, descript) 
+		SELECT 103, arc_id, the_geom, 'a' FROM arc WHERE arc_id IN (SELECT arc_id FROM v_edit_arc WHERE state=1 AND (node_1 IS NULL OR node_2 IS NULL));
+		
+		INSERT INTO anl_arc(fid, arc_id, the_geom) SELECT 118, arc_id, the_geom FROM (SELECT arc_id, the_geom FROM anl_arc WHERE fid=103 AND descript='b' 
+		AND cur_user=current_user AND arc_id NOT IN (SELECT arc_id FROM anl_arc WHERE fid=103 AND descript ='a' AND cur_user=current_user))a; 
+	ELSE
+		EXECUTE 'INSERT INTO anl_arc(fid, arc_id, the_geom, descript) 
+		SELECT 103, arc_id, the_geom, ''b'' FROM arc WHERE arc_id IN ' ||v_array || ' AND state=1 AND node_1 IS NULL OR node_2 IS NULL';
+		
+		EXECUTE 'UPDATE arc SET the_geom=the_geom WHERE arc_id IN ' ||v_array || ' AND state=1';
+
+		EXECUTE 'INSERT INTO anl_arc(fid, arc_id, the_geom, descript) 
+		SELECT 103, arc_id, the_geom, ''a'' FROM arc WHERE arc_id IN ' ||v_array || ' AND state=1 AND node_1 IS NULL OR node_2 IS NULL';
+		
+		INSERT INTO anl_arc(fid, arc_id, the_geom) SELECT 118, arc_id, the_geom FROM (SELECT arc_id, the_geom FROM anl_arc WHERE fid=103 AND descript='b' 
+		AND cur_user=current_user AND arc_id NOT IN (SELECT arc_id FROM anl_arc WHERE fid=103 AND descript ='a' AND cur_user=current_user))a; 
+	END IF;
+
+	INSERT INTO audit_check_data (fid, error_message) VALUES (118, concat('ARC REPAIR FUNCTION'));
+	INSERT INTO audit_check_data (fid, error_message) VALUES (118, concat('-----------------------------'));
+	INSERT INTO audit_check_data (fid, error_message) VALUES (118, concat ('Repaired arcs: arc_id --> ', 
+	(SELECT array_agg(arc_id) FROM (SELECT arc_id FROM anl_arc WHERE fid=118 AND cur_user=current_user)a )));
+	
+		
 
 	-- Set config parameter
 	UPDATE config_param_system SET value=FALSE WHERE parameter='edit_topocontrol_disable_error' ;
 	
 	-- get results
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result FROM (SELECT * FROM audit_check_data WHERE cur_user="current_user"() AND ( fid=103 OR fid=104)) row;
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result FROM (SELECT id, error_message AS message FROM audit_check_data WHERE cur_user="current_user"() AND ( fid=118)) row;
+	v_result := COALESCE(v_result, '{}'); 
+	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 
-	IF v_saveondatabase IS FALSE THEN 
-		-- delete previous results
-		DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=103;
-		DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=104;
-	ELSE
-		-- set selector
-		DELETE FROM selector_audit WHERE fid=103 AND cur_user=current_user;
-		DELETE FROM selector_audit WHERE fid=104 AND cur_user=current_user;
-  
-		INSERT INTO selector_audit (fid,cur_user) VALUES (103, current_user);
-		INSERT INTO selector_audit (fid,cur_user) VALUES (104, current_user);
-	END IF;
+	--lines
+	v_result = null;
+
+	SELECT jsonb_agg(features.feature) INTO v_result
+	FROM (
+  	SELECT jsonb_build_object(
+     'type',       'Feature',
+    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+    'properties', to_jsonb(row) - 'the_geom'
+  	) AS feature
+  	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript,fid, the_geom
+  	FROM  anl_arc WHERE cur_user="current_user"() AND fid = 118) row) features;
+
+	v_result := COALESCE(v_result, '{}'); 
+	v_result_line = concat ('{"geometryType":"LineString", "features":',v_result, '}'); 
 
 	--    Control nulls
-	v_result := COALESCE(v_result, '[]'); 
-
-	--  Return
-    RETURN ('{"status":"Accepted", "message":{"level":1, "text":"This is a test message"}, "version":"'||v_version||'"'||
+	v_result_info := COALESCE(v_result_info, '{}'); 
+	v_result_point := COALESCE(v_result_point, '{}'); 
+	v_result_line := COALESCE(v_result_line, '{}'); 
+	
+--  Return
+    RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
-		     ',"data":{"result":' || v_result ||
-			     '}'||
-		       '}'||
-	'}')::json;
+		     ',"data":{ "info":'||v_result_info||','||
+				'"point":'||v_result_point||','||
+				'"line":'||v_result_line||','||
+				'"setVisibleLayers":[]'||
+		       '}}'||
+	    '}')::json;
     
 END;  
 $BODY$

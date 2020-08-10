@@ -13,3 +13,6 @@ UPDATE config_param_system SET project_type = 'ws' WHERE parameter = 'om_mincut_
 --2020/08/04
 INSERT INTO audit_cat_function (id, function_name, project_type, function_type) 
 VALUES (2994, 'gw_fct_vnode_repair', 'utils', 'function')ON CONFLICT (id) DO NOTHING;
+
+
+INSERT INTO config_toolbox VALUES (2496, 'Arc repair', TRUE, '{"featureType":["arc"]}', NULL, NULL, TRUE);
