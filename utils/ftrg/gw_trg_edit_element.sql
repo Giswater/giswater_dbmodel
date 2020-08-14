@@ -1,11 +1,10 @@
-/*
+﻿/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
 */
 
 --FUNCTION CODE: 1114
-
 
 -- DROP FUNCTION "SCHEMA_NAME".gw_trg_edit_element();
 
@@ -51,20 +50,20 @@ BEGIN
 	-- get values
 	v_unitsfactor = (SELECT value::float FROM config_param_user WHERE "parameter"='edit_element_doublegeom' AND cur_user=current_user);
 	IF v_unitsfactor IS NULL THEN
-		v_unitsfactor = 1;
+		v_unitsfactor = 1.5;
 	END IF;
 
 	v_srid = (SELECT epsg FROM version limit 1);
 
 	-- get associated feature
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-		v_feature = (SELECT node_id FROM v_edit_node WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));
+		v_feature = (SELECT node_id FROM v_edit_node WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));
 		IF v_feature IS NULL THEN
-			v_feature = (SELECT arc_id FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));
+			v_feature = (SELECT arc_id FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));
 			IF v_feature IS NULL THEN
-				v_feature = (SELECT connec_id FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));		
+				v_feature = (SELECT connec_id FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));		
 				IF v_feature IS NULL THEN
-					v_feature = (SELECT gully_id FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));				
+					v_feature = (SELECT gully_id FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));				
 					IF v_feature IS NULL THEN
 						v_tablefeature = 'gully';
 					END IF;
@@ -74,7 +73,8 @@ BEGIN
 			ELSE
 				v_tablefeature = 'arc';
 			END IF;
-		v_tablefeature = 'node';
+		ELSE
+			v_tablefeature = 'node';
 		END IF;
 	END IF;
  	
@@ -86,12 +86,6 @@ BEGIN
 			PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
 			NEW.element_id:= (SELECT nextval('urn_id_seq'));
 		END IF;
-
-		-- update element_x_feature table
-		IF v_tablefeature IS NOT NULL THEN
-			EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_tablefeature'_id, element_id) VALUES ('||v_feature||','||NEW.element_id||')';
-		END IF;
-		
 
 		-- Cat element
 		IF (NEW.elementcat_id IS NULL) THEN
@@ -228,7 +222,12 @@ BEGIN
 		NEW.function_type, NEW.category_type, NEW.location_type, NEW.workcat_id, NEW.workcat_id_end, NEW.buildercat_id, NEW.builtdate, NEW.enddate, 
 		NEW.ownercat_id, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.label_x, NEW.label_y, NEW.label_rotation, NEW.publish, 
 		NEW.inventory, NEW.undelete, NEW.expl_id, NEW.num_elements, v_new_pol_id);
-			
+
+		-- update element_x_feature table
+		IF v_tablefeature IS NOT NULL AND v_feature IS NOT NULL THEN
+			EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_tablefeature||'_id, element_id) VALUES ('||v_feature||','||NEW.element_id||')';
+		END IF;
+
 		RETURN NEW;			
 
 	-- UPDATE

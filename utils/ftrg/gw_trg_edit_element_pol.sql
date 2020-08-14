@@ -1,10 +1,9 @@
-/*
+﻿/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 */
 
 --FUNCTION CODE: XXXX
-
 
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_element_pol() RETURNS trigger AS
 $BODY$
@@ -45,7 +44,6 @@ BEGIN
 		UPDATE element SET pol_id=NEW.pol_id WHERE element_id=NEW.element_id;
 		
 		RETURN NEW;
-		
     
 	-- UPDATE
 	ELSIF TG_OP = 'UPDATE' THEN
@@ -58,7 +56,6 @@ BEGIN
 			END IF;
 			UPDATE v_edit_element SET pol_id=NULL WHERE element_id=OLD.element_id;
 			UPDATE v_edit_element SET pol_id=NEW.pol_id WHERE element_id=NEW.element_id;
-		
 		END IF;
 		
 		RETURN NEW;
@@ -66,13 +63,11 @@ BEGIN
 	-- DELETE
 	ELSIF TG_OP = 'DELETE' THEN
 	
-		UPDATE v_edit_element SET pol_id=NULL WHERE element_id=OLD.element_id;
+		DELETE FROM v_edit_element wHERE element_id=OLD.element_id;
 		DELETE FROM polygon WHERE pol_id=OLD.pol_id;
 				
 		RETURN NULL;
-		 
 	END IF;
-    
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
