@@ -1,4 +1,4 @@
-﻿/*
+/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -18,8 +18,8 @@ expl_id_int integer;
 code_autofill_bool boolean;
 
 v_doublegeometry boolean;
-v_length float;
-v_width float;
+v_geom1 float;
+v_geom2 float;
 v_rotation float;
 v_unitsfactor float;
 v_linelocatepoint float;
@@ -166,27 +166,34 @@ BEGIN
 		-- double geometry
 		IF v_doublegeometry AND NEW.elementcat_id IS NOT NULL THEN
 
-			v_length = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
-			v_width = (SELECT geom2 FROM cat_element WHERE id=NEW.elementcat_id);
+			v_geom1 = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
+			v_geom2 = (SELECT geom2 FROM cat_element WHERE id=NEW.elementcat_id);
 
-			IF v_length*v_width IS NULL THEN
+			IF v_geom1 IS NULL OR v_geom1 = 0 THEN
 			
 				RAISE EXCEPTION 'Null values on geom1 or geom2 fields. Check your catalog before continue';
-				
-			ELSIF v_length*v_width != 0 THEN
+
+			ELSIF v_geom1 IS NOT NULL AND (v_geom2 IS NULL OR v_geom2 = 0) THEN
+
+				-- get element dimensions to renerate CIRCULARE geometry									
+				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
+				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
+				INSERT INTO polygon(sys_type, the_geom, pol_id) VALUES ('ELEMENT', St_Multi(ST_buffer(NEW.the_geom, v_geom1*0.01*v_unitsfactor/2)),v_new_pol_id);
+			
+			ELSIF v_geom1*v_geom2 != 0 THEN
  
-				-- get element dimensions
+				-- get element dimensions to renerate RECTANGULAR geometry
 				v_unitsfactor = 0.01*v_unitsfactor ; -- using 0.01 to convert from cms of catalog  to meters of the map
-				v_length = v_length*v_unitsfactor;
-				v_width = v_width*v_unitsfactor;
+				v_geom1 = v_geom1*v_unitsfactor;
+				v_geom2 = v_geom2*v_unitsfactor;
 
 				-- calculate center coordinates
 				v_x = st_x(NEW.the_geom);
 				v_y = st_y(NEW.the_geom);
 	    
 				-- calculate dx & dy to fix extend from center
-				dx = v_length/2;
-				dy = v_width/2;
+				dx = v_geom1/2;
+				dy = v_geom2/2;
 
 				-- calculate the extend polygon
 				p01x = v_x - dx*cos(v_rotation)-dy*sin(v_rotation);
@@ -240,32 +247,39 @@ BEGIN
 		the_geom=NEW.the_geom, label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, undelete=NEW.undelete,expl_id=NEW.expl_id, num_elements=NEW.num_elements
 		WHERE element_id=OLD.element_id;
 
-
 		v_doublegeometry = (SELECT isdoublegeom FROM cat_element WHERE id = NEW.elementcat_id);
 
 		-- double geometry catalog update
-		IF v_doublegeometry AND NEW.elementcat_id != OLD.elementcat_id THEN
+		IF v_doublegeometry AND NEW.elementcat_id != OLD.elementcat_id OR NEW.rotation::text != OLD.rotation::text THEN
 
-			v_length = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
-			v_width = (SELECT geom2 FROM cat_element WHERE id=NEW.elementcat_id);
+			v_rotation = NEW.rotation * pi()/180;
 
-			IF v_length*v_width IS NULL THEN
-					RAISE EXCEPTION 'Null values on geom1 or geom2 fields. Check your catalog before continue';
-				
-			ELSIF v_length*v_width != 0 THEN
+			v_geom1 = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
+			v_geom2 = (SELECT geom2 FROM cat_element WHERE id=NEW.elementcat_id);
+
+			IF v_geom1 IS NULL OR v_geom1 = 0 THEN
+			
+				RAISE EXCEPTION 'Null values on geom1 or geom2 fields. Check your catalog before continue';
+
+			ELSIF v_geom1 IS NOT NULL AND (v_geom2 IS NULL OR v_geom2 = 0) THEN
+
+				-- get element dimensions to renerate CIRCULARE geometry									
+				UPDATE polygon SET the_geom = St_multi(ST_buffer(NEW.the_geom, v_geom1*0.01*v_unitsfactor/2));
+					
+			ELSIF v_geom1*v_geom2 != 0 THEN
 
 				-- get grate dimensions
-				v_unitsfactor = 0.01*v_unitsfactor; -- using 0.01 to convert from cms of catalog  to meters of the map
-				v_length = v_length*v_unitsfactor;
-				v_width = v_width*v_unitsfactor;
+				v_unitsfactor = 0.01*v_unitsfactor; -- using 0.01 to convert from cms of catalog to meters of the map
+				v_geom1 = v_geom1*v_unitsfactor;
+				v_geom2 = v_geom2*v_unitsfactor;
 
 				-- calculate center coordinates
 				v_x = st_x(NEW.the_geom);
 				v_y = st_y(NEW.the_geom);
 	    
 				-- calculate dx & dy to fix extend from center
-				dx = v_length/2;
-				dy = v_width/2;
+				dx = v_geom1/2;
+				dy = v_geom2/2;
 
 				-- calculate the extend polygon
 				p01x = v_x - dx*cos(v_rotation)-dy*sin(v_rotation);
@@ -288,14 +302,12 @@ BEGIN
 				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
 				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
 
-				IF (SELECT pol_id FROM gully WHERE gully_id = NEW.gully_id) IS NULL THEN
+				IF (SELECT pol_id FROM element WHERE element_id = NEW.element_id) IS NULL THEN
 					INSERT INTO polygon(sys_type, the_geom,pol_id) VALUES ('ELEMENT', v_the_geom_pol,v_new_pol_id);
 					UPDATE element SET pol_id=v_new_pol_id WHERE element_id = NEW.element_id;
-
 				ELSE
 					UPDATE polygon SET the_geom = v_the_geom_pol WHERE pol_id = (SELECT pol_id FROM element WHERE element_id = NEW.element_id);
 				END IF;
-				
 			END IF;
 		END IF;		
 
@@ -305,10 +317,9 @@ BEGIN
 	ELSIF TG_OP = 'DELETE' THEN
 		DELETE FROM element WHERE element_id=OLD.element_id;
 
-        RETURN NULL;
+		RETURN NULL;
    
 	END IF;
-    
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
