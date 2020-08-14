@@ -51,8 +51,10 @@ BEGIN
 				UPDATE om_visit_lot SET status = 4, real_startdate = NOW() WHERE id=NEW.lot_id;
 			END IF;
 
-			IF NEW.status <> 4 THEN 
+			-- when visit is not finished
+			IF NEW.status < 4 THEN 
 				NEW.enddate=null;
+				
 			-- when visit is finished and it has not lot_id assigned visit is automatic published
 			ELSIF NEW.status=4 AND NEW.lot_id IS NULL THEN
 				UPDATE om_visit SET publish=TRUE WHERE id=NEW.id;
@@ -63,11 +65,13 @@ BEGIN
 
 		ELSIF v_triggerfromtable ='om_visit_x_feature' THEN -- change feature_x_lot status (when function is triggered by om_visit_x_*
 
+			--TODO: when visit is inserted via QGIS, we need to set class_id (adding this widget in the form of the new visit)
+        
+			SELECT * INTO v_visit FROM om_visit WHERE id=NEW.visit_id;
 
+			-- insert element into lot_x_element table in case if doesn't exist when visit is planned(lot created in web)
+			IF v_lot IS NOT NULL AND v_visit.visit_type=1 THEN
 
-			IF v_lot IS NOT NULL THEN
-
-				-- insert element into lot_x_element table in case if doesn't exist
 				IF v_featuretype ='arc' THEN	
 					IF (SELECT arc_id FROM om_visit_lot_x_arc where arc_id=NEW.arc_id AND lot_id=v_lot) IS NULL THEN
 						v_code = (SELECT code FROM arc WHERE arc_id=NEW.arc_id);
@@ -91,29 +95,25 @@ BEGIN
 				END IF;
 
 
-				SELECT * INTO v_visit FROM om_visit WHERE id=NEW.visit_id;
-
 				-- move status of lot element to status=0 (visited)
-				IF v_visit.visit_type=1 THEN
-				--visit type=1 is planned visit. For unexpected visits planned element keeps planned
 
-					IF v_featuretype ='arc' THEN	
-						v_querytext= 'UPDATE om_visit_lot_x_arc SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND arc_id::text ='||quote_literal(NEW.arc_id);
-						
-					ELSIF v_featuretype ='node' THEN	
-						v_querytext= 'UPDATE om_visit_lot_x_node SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND node_id::text ='||quote_literal(NEW.node_id);
-						
-					ELSIF v_featuretype ='connec' THEN	
-						v_querytext= 'UPDATE om_visit_lot_x_connec SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND connec_id::text ='||quote_literal(NEW.connec_id);
-						
-					ELSIF v_featuretype ='gully' THEN	
-						v_querytext= 'UPDATE om_visit_lot_x_gully SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND gully_id::text ='||quote_literal(NEW.gully_id);
-					END IF;
+				IF v_featuretype ='arc' THEN	
+					v_querytext= 'UPDATE om_visit_lot_x_arc SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND arc_id::text ='||quote_literal(NEW.arc_id);
 					
-					IF v_querytext IS NOT NULL THEN
-						EXECUTE v_querytext;
-					END IF;
-				END IF;	
+				ELSIF v_featuretype ='node' THEN	
+					v_querytext= 'UPDATE om_visit_lot_x_node SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND node_id::text ='||quote_literal(NEW.node_id);
+					
+				ELSIF v_featuretype ='connec' THEN	
+					v_querytext= 'UPDATE om_visit_lot_x_connec SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND connec_id::text ='||quote_literal(NEW.connec_id);
+					
+				ELSIF v_featuretype ='gully' THEN
+					v_querytext= 'UPDATE om_visit_lot_x_gully SET status=0 WHERE lot_id::text=' || quote_literal (v_visit.lot_id) ||' AND gully_id::text ='||quote_literal(NEW.gully_id);
+				END IF;
+				
+				IF v_querytext IS NOT NULL THEN
+					EXECUTE v_querytext;
+				END IF;
+				
 			END IF;
 		END IF;
 
@@ -125,7 +125,7 @@ BEGIN
 
 		-- move status of lot element to status=0 (visited)
 
-		IF NEW.status = 4 AND OLD.status <> 4 THEN 
+		IF NEW.status = 4 AND OLD.status < 4 THEN 
 		
 			v_featuretype = (SELECT lower(feature_type) FROM om_visit_lot WHERE id = NEW.lot_id LIMIT 1);
 
@@ -172,6 +172,7 @@ BEGIN
 			IF NEW.status=5 AND NEW.lot_id IS NOT NULL THEN
 				UPDATE om_visit SET publish=TRUE WHERE id=NEW.id;
 			END IF;
+			
 		END IF;
 
 		IF v_version > '3.2.019' THEN
