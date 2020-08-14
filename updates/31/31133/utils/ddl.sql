@@ -1,4 +1,4 @@
-/*
+﻿/*
 This file is part of Giswater 3
 The program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 This version of Giswater is provided by Giswater Association
@@ -10,6 +10,9 @@ set search_path = 'SCHEMA_NAME';
 ALTER TABLE cat_element ADD column geom1 numeric(12,3);
 ALTER TABLE cat_element ADD column geom2 numeric(12,3);
 ALTER TABLE cat_element ADD column isdoublegeom boolean;
+
+ALTER TABLE element ADD column pol_id varchar(16);
+
 
 INSERT INTO audit_cat_param_user (id, description, sys_role_id) VALUES ('edit_element_doublegeom', 'Default value for doublegeom elements', 'role_edit');
 
@@ -71,3 +74,5 @@ CREATE TRIGGER gw_trg_edit_element_pol
   FOR EACH ROW
   EXECUTE PROCEDURE gw_trg_edit_element_pol();
 
+
+select gw_fct_admin_role_permissions();
