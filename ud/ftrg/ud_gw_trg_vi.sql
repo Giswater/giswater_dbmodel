@@ -19,15 +19,15 @@ The main characterisitics mapping from SWMM to GW are:
 */
 
 
-
 DECLARE 
-	v_view text;
-	v_epsg integer;
-	v_epatype text;
-	v_catalog text;
-	v_linkoffsets text;
-	v_y1 float;
-	v_y2 float;
+v_view text;
+v_epsg integer;
+v_epatype text;
+v_catalog text;
+v_linkoffsets text;
+v_y1 float;
+v_y2 float;
+
 BEGIN
 
     --Get schema name

@@ -359,10 +359,11 @@ BEGIN
 
 
 	-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
-	FOR v_rec_table IN SELECT * FROM config_fprocess WHERE reverse_fid=v_fid AND tablename NOT IN ('vi_pipes', 'vi_junctions') order by id
+	FOR v_rec_table IN SELECT * FROM config_fprocess WHERE reverse_fid=v_fid AND tablename NOT IN ('vi_pipes', 'vi_junctions') order by orderby
 	LOOP
 		--identifing the number of fields of the editable view
-		FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns where table_name=v_rec_table.tablename AND table_schema='SCHEMA_NAME'
+		FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns where table_name=v_rec_table.tablename 
+		AND table_schema='SCHEMA_NAME'
 		LOOP	
 
 			IF v_rec_view.rid=1 THEN

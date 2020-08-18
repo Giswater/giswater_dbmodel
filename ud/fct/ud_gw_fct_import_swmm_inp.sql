@@ -195,11 +195,13 @@ BEGIN
 	INSERT INTO selector_inp_hydrology(hydrology_id,cur_user) VALUES (1,current_user);
 	INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('inp_options_dwfscenario', '1', current_user);
 
-
 	INSERT INTO audit_check_data (fid, error_message) VALUES (239, 'Setting selectors -> Done');
 
-
 	-- CATALOGS
+	-- cat hydrology
+	INSERT INTO cat_hydrology VALUES (1, 'Default', 'CURVE_NUMBER');
+
+	
 	--cat_feature
 	ALTER TABLE cat_feature DISABLE TRIGGER gw_trg_cat_feature;
 	--node
@@ -219,16 +221,16 @@ BEGIN
 	
 	--arc_type
 	--arc
-	INSERT INTO arc_type VALUES ('EPACOND', 'CONDUIT', 'CONDUIT', 'man_conduit', 'inp_conduit', TRUE,TRUE);
-	INSERT INTO arc_type VALUES ('EPAWEIR', 'VARC', 'WEIR', 'man_varc', 'inp_weir', TRUE,TRUE);
-	INSERT INTO arc_type VALUES ('EPAORIF', 'VARC', 'ORIFICE', 'man_varc', 'inp_orifice', TRUE,TRUE);
-	INSERT INTO arc_type VALUES ('EPAPUMP', 'VARC', 'PUMP', 'man_varc', 'inp_pump', TRUE,TRUE);
-	INSERT INTO arc_type VALUES ('EPAOUTL', 'VARC', 'OUTLET', 'man_varc', 'inp_outlet', TRUE,TRUE);
+	INSERT INTO cat_feature_arc VALUES ('EPACOND', 'CONDUIT', 'CONDUIT', 'man_conduit', 'inp_conduit');
+	INSERT INTO cat_feature_arc VALUES ('EPAWEIR', 'VARC', 'WEIR', 'man_varc', 'inp_weir');
+	INSERT INTO cat_feature_arc VALUES ('EPAORIF', 'VARC', 'ORIFICE', 'man_varc', 'inp_orifice');
+	INSERT INTO cat_feature_arc VALUES ('EPAPUMP', 'VARC', 'PUMP', 'man_varc', 'inp_pump');
+	INSERT INTO cat_feature_arc VALUES ('EPAOUTL', 'VARC', 'OUTLET', 'man_varc', 'inp_outlet');
 
 	--node_type
-	INSERT INTO node_type VALUES ('EPAMANH', 'MANHOLE', 'JUNCTION', 'man_manhole', 'inp_junction', TRUE,TRUE,2,FALSE);
-	INSERT INTO node_type VALUES ('EPAOUTF', 'OUTFALL', 'OUTFALL', 'man_outfall', 'inp_outfall', TRUE,TRUE,2,FALSE);
-	INSERT INTO node_type VALUES ('EPASTOR', 'STORAGE', 'STORAGE', 'man_storage', 'inp_storage', TRUE,TRUE,2,FALSE);
+	INSERT INTO cat_feature_node VALUES ('EPAMANH', 'MANHOLE', 'JUNCTION', 'man_manhole', 'inp_junction', 2,FALSE);
+	INSERT INTO cat_feature_node VALUES ('EPAOUTF', 'OUTFALL', 'OUTFALL', 'man_outfall', 'inp_outfall', 2,FALSE);
+	INSERT INTO cat_feature_node VALUES ('EPASTOR', 'STORAGE', 'STORAGE', 'man_storage', 'inp_storage', 2,FALSE);
 	
 	ALTER TABLE cat_feature ENABLE TRIGGER gw_trg_cat_feature;
 	--cat_mat_node 
@@ -257,11 +259,11 @@ BEGIN
 	-- improve velocity for junctions using directy tables in spite of vi_junctions view
 	INSERT INTO node (node_id, code, top_elev, ymax, node_type, nodecat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
 	SELECT csv1, csv1, csv2::numeric(12,3), csv3::numeric(12,3), 'EPAMANH', 'EPAMANH-CAT', 'JUNCTION', 1, 1, 1, 1, 2 
-	FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
+	FROM temp_csv where source='[JUNCTION]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 	INSERT INTO inp_junction (node_id, y0, ysur, apond) 
 	SELECT csv1, csv4::numeric(12,3), csv5::numeric(12,3), csv6::numeric(12,3) FROM temp_csv where source='[JUNCTIONS]' AND fid =239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 	INSERT INTO man_manhole 
-	SELECT csv1 FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
+	SELECT csv1 FROM temp_csv where source='[JUNCTION]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 
 	-- improve velocity for conduits using directy tables in spite of vi_conduits view
 	INSERT INTO arc (arc_id, code, node_1,node_2, custom_length, sys_elev1, sys_elev2, arc_type, epa_type, arccat_id, matcat_id, sector_id, dma_id, expl_id, state, state_type) 
@@ -273,9 +275,9 @@ BEGIN
 	FROM temp_csv where source='[CONDUITS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 
 	-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
-	FOR v_rec_table IN SELECT * FROM config_fprocess WHERE fid2=v_fid AND tablename NOT IN ('vi_conduits', 'vi_junction') order by id
+	FOR v_rec_table IN SELECT * FROM config_fprocess WHERE fid2=v_fid AND tablename NOT IN ('vi_conduits', 'vi_junction') order by orderby
 	LOOP
-		--identifing the humber of fields of the editable view
+		--identifing the number of fields of the editable view
 		FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns where table_name=v_rec_table.tablename AND table_schema='SCHEMA_NAME'
 		LOOP
 			IF v_rec_view.rid=1 THEN
