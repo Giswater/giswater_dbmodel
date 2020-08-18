@@ -14,7 +14,7 @@ $BODY$
 /*EXAMPLE:
 SELECT SCHEMA_NAME.gw_fct_gettoolbox($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"isToolbox":false, "filterText":"Import inp epanet file"}}$$)
+"data":{"isToolbox":false, "function":2522, "filterText":"Import inp epanet file"}}$$)
 
 SELECT SCHEMA_NAME.gw_fct_gettoolbox($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
@@ -48,6 +48,7 @@ v_inp_result text;
 v_rpt_result text;
 v_return json;
 v_return2 text;
+v_function integer;
 
 BEGIN
 
@@ -60,10 +61,17 @@ BEGIN
 
 	-- get input parameter
 	v_filter := (p_data ->> 'data')::json->> 'filterText';
-	v_filter := COALESCE(v_filter, '');
+	v_function := (p_data ->> 'data')::json->> 'function';
 
 	-- get project type
         SELECT lower(project_type) INTO v_projectype FROM sys_version LIMIT 1;
+
+	-- convert v_function to alias
+	IF v_function IS NOT NULL THEN
+		SELECT alias FROM config_toolbox WHERE id = v_function INTO v_filter;
+	END IF;
+
+	v_filter := COALESCE(v_filter, '');
 
 	-- get epa results
 	IF (SELECT result_id FROM rpt_cat_result LIMIT 1) IS NOT NULL THEN
