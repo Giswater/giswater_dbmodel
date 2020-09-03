@@ -618,7 +618,7 @@ BEGIN
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (125, 2, concat('WARNING: There is/are ',v_count,' vnodes without link. This will be automatic repaired'));
 		
-		EXECUTE 'DELETE FROM vnode WHERE vnode_id IN ('||v_querytext||')a';
+		EXECUTE 'DELETE FROM vnode WHERE vnode_id IN ('||v_querytext||')';
 		
 	ELSE
 		INSERT INTO audit_check_data (fid, criticity, error_message)
