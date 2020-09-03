@@ -14,3 +14,4 @@ VALUES (2994, 'gw_fct_vnode_repair', 'utils', 'function')ON CONFLICT (id) DO NOT
 
 UPDATE audit_cat_param_user SET isenabled=TRUE, layout_order=10 WHERE id='om_param_type_vdefault';
 UPDATE audit_cat_param_user SET isenabled=FALSE WHERE id like'qgis_qml%';
+UPDATE audit_cat_param_user SET layout_order=8 WHERE id='visitenddate_vdefault';

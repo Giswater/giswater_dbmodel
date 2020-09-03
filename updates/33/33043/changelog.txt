@@ -1,0 +1,6 @@
+3.3.043
+*************
+- Bug fix on trg_inp_node when the_geom is not updated
+- Enable insert with automatic rotation and dimension for gully grate
+- Enhance graf_analytics_mapzones function
+- New function to control vnode inconsistency (link without vnode or vnode without link)
