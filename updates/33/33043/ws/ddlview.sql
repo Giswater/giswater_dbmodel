@@ -8,7 +8,7 @@ This version of Giswater is provided by Giswater Association
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
-DROP VIEW IF EXISTS v_edit_vnode; 
+
 CREATE OR REPLACE VIEW v_edit_vnode AS 
  SELECT a.vnode_id,
     a.feature_type,

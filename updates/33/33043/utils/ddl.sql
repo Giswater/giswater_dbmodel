@@ -9,6 +9,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 --2020/08/04
+DROP VIEW IF EXISTS v_edit_vnode; 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"vnode", "column":"vnode_type"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"vnode", "column":"annotation"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"vnode", "column":"sector_id"}}$$);

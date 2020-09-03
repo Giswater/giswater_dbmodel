@@ -456,7 +456,7 @@ BEGIN
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 	IF v_count > 0 THEN -- automatic delete
-		EXECUTE 'DELETE FROM vnode WHERE vnode_id IN ('||v_querytext||')a';
+		EXECUTE 'DELETE FROM vnode WHERE vnode_id IN ('||v_querytext||')';
 	END IF;
 
 	--connec/gully without arc_id or with arc_id different than the one to which points its link
