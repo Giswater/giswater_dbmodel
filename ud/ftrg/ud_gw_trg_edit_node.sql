@@ -488,7 +488,7 @@ BEGIN
 			IF (v_man_table IN ('man_chamber', 'man_storage', 'man_wwtp','man_netgully') 
         		and (v_doublegeometry IS TRUE)) THEN
 
-				v_sys_type  = (SELECT id FROM node_type WHERE man_table = v_man_table);
+				v_sys_type  = (SELECT type FROM node_type WHERE man_table = v_man_table);
 				
 				v_auto_pol_id:= (SELECT nextval('urn_id_seq'));
 
