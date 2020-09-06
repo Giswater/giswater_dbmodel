@@ -34,7 +34,7 @@ VALUES ('edit_typevalue','value_verified', 'connec', 'verified') ON CONFLICT (ty
 UPDATE config_form_fields SET dv_querytext = 'SELECT id, id as idval FROM edit_typevalue WHERE typevalue = ''value_verified''' where column_id = 'verified';
 
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field)
-VALUES ('plan_typevalue','value_priority', 'plan_psector', 'plan_psector') ON CONFLICT (typevalue_table, typevalue_name, target_table, target_field,parameter_id) DO NOTHING;	
+VALUES ('plan_typevalue','value_priority', 'plan_psector', 'plan_psector') ON CONFLICT (typevalue_table, typevalue_name, target_table, target_field, parameter_id) DO NOTHING;	
 
 UPDATE config_form_fields SET dv_querytext = 'SELECT idval as id,idval FROM plan_typevalue WHERE typevalue=''value_priority''' WHERE formname = 'v_edit_plan_psector' 
 and column_id = 'priority';
@@ -660,7 +660,7 @@ INSERT INTO sys_function VALUES ('2942', 'gw_trg_om_visit_singlevent', 'utils', 
 INSERT INTO sys_function VALUES ('2944', 'gw_trg_om_visit_multievent' ,'utils', 'trigger function', NULL, NULL, NULL, 'role_om');
 INSERT INTO sys_function VALUES ('2946', 'gw_trg_notify', 'utils', 'trigger function', NULL, NULL, NULL, 'role_basic');
 INSERT INTO sys_function VALUES ('2948', 'gw_trg_node_statecontrol', 'utils', 'trigger function', NULL, NULL, NULL, 'role_basic');
-INSERT INTO sys_function VALUES ('1146', 'gw_trg_node_arc_divide', 'utils', 'trigger function', NULL, NULL, NULL, 'role_basic');
+INSERT INTO sys_function VALUES ('1146', 'gw_trg_node_arc_divide', 'utils', 'trigger function', NULL, NULL, NULL, 'role_basic') ON CONFLICT ON (id) DO NOTHING;
 INSERT INTO sys_function VALUES ('2950', 'gw_trg_edit_streetaxis', 'utils', 'trigger function', NULL, NULL, NULL, 'role_basic');
 INSERT INTO sys_function VALUES ('2952', 'gw_trg_edit_plot', 'utils', 'trigger function', NULL, NULL, NULL, 'role_basic');
 INSERT INTO sys_function VALUES ('2954', 'gw_trg_edit_macrodqa', 'ws', 'trigger function', NULL, NULL, NULL, 'role_basic');
