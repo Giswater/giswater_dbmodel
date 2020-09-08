@@ -34,3 +34,50 @@ ON CONFLICT (typevalue, id) DO NOTHING;
 
 update sys_param_user SET id = concat(sys_param_user.id, 'edit_addfield_') 
 FROM sys_addfields WHERE sys_param_user.id = concat(param_name,'_',lower(cat_feature_id),'_vdefault');
+
+/*
+2020/09/08
+DELETE ALL REFERENCES TO LOT PLUGIN
+*/
+DELETE FROM sys_table WHERE id='v_ui_om_vehicle_x_parameters';
+DELETE FROM sys_table WHERE id='v_visit_lot_user';
+DELETE FROM sys_table WHERE id='v_om_user_x_team';
+DELETE FROM sys_table WHERE id='v_om_team_x_visitclass';
+DELETE FROM sys_table WHERE id='v_edit_cat_team';
+DELETE FROM sys_table WHERE id='v_ext_cat_vehicle';
+DELETE FROM sys_table WHERE id='v_om_lot_x_user';
+DELETE FROM sys_table WHERE id='v_ui_om_visit_lot';
+DELETE FROM sys_table WHERE id='v_res_lot_x_user';
+DELETE FROM sys_table WHERE id='ve_lot_x_node';
+DELETE FROM sys_table WHERE id='ve_lot_x_connec';
+DELETE FROM sys_table WHERE id='ve_lot_x_arc';
+DELETE FROM sys_table WHERE id='ve_lot_x_gully';
+DELETE FROM sys_table WHERE id='om_team_x_visitclass';
+DELETE FROM sys_table WHERE id='om_vehicle_x_parameters';
+DELETE FROM sys_table WHERE id='om_team_x_vehicle';
+DELETE FROM sys_table WHERE id='ext_cat_vehicle';
+DELETE FROM sys_table WHERE id='om_visit_team_x_user';
+DELETE FROM sys_table WHERE id='om_visit_lot_x_user';
+DELETE FROM sys_table WHERE id='config_visit_class_x_workorder';
+DELETE FROM sys_table WHERE id='ext_workorder';
+DELETE FROM sys_table WHERE id='ext_workorder_class';
+DELETE FROM sys_table WHERE id='om_visit_class_x_wo';
+DELETE FROM sys_table WHERE id='ext_workorder_type';
+DELETE FROM sys_table WHERE id='om_visit_lot_x_node';
+DELETE FROM sys_table WHERE id='om_visit_lot_x_connec';
+DELETE FROM sys_table WHERE id='om_visit_lot_x_arc';
+DELETE FROM sys_table WHERE id='om_visit_lot_x_gully';
+DELETE FROM sys_table WHERE id='selector_lot';
+DELETE FROM sys_table WHERE id='om_visit_lot';
+DELETE FROM sys_table WHERE id='cat_team';
+
+DELETE FROM sys_function WHERE function_name='gw_fct_getlot';
+DELETE FROM sys_function WHERE function_name='gw_fct_setlot';
+DELETE FROM sys_function WHERE function_name='gw_fct_getvisitmanager';
+DELETE FROM sys_function WHERE function_name='gw_fct_setvisitmanager';
+DELETE FROM sys_function WHERE function_name='gw_trg_edit_cat_team';
+DELETE FROM sys_function WHERE function_name='gw_trg_edit_cat_vehicle';
+DELETE FROM sys_function WHERE function_name='gw_trg_edit_lot_x_user';
+DELETE FROM sys_function WHERE function_name='gw_trg_edit_team_x_user';
+DELETE FROM sys_function WHERE function_name='gw_trg_edit_team_x_vehicle';
+DELETE FROM sys_function WHERE function_name='gw_trg_edit_team_x_visitclass';

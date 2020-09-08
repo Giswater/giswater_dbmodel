@@ -14,3 +14,40 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"cat_element
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"cat_element", "column":"geom2", "dataType":"numeric(12,3)", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"cat_element", "column":"isdoublegeom", "dataType":"boolean", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"element", "column":"pol_id", "dataType":"varchar(16)", "isUtils":"False"}}$$);
+
+/*
+2020/09/08
+DELETE ALL REFERENCES TO LOT PLUGIN
+*/
+DROP VIEW IF EXISTS v_ui_om_vehicle_x_parameters;
+DROP VIEW IF EXISTS v_visit_lot_user;
+DROP VIEW IF EXISTS v_om_user_x_team;
+DROP VIEW IF EXISTS v_om_team_x_visitclass;
+DROP VIEW IF EXISTS v_edit_cat_team;
+DROP VIEW IF EXISTS v_ext_cat_vehicle;
+DROP VIEW IF EXISTS v_om_lot_x_user;
+DROP VIEW IF EXISTS v_ui_om_visit_lot;
+DROP VIEW IF EXISTS v_res_lot_x_user;
+DROP VIEW IF EXISTS ve_lot_x_node;
+DROP VIEW IF EXISTS ve_lot_x_connec;
+DROP VIEW IF EXISTS ve_lot_x_arc;
+DROP VIEW IF EXISTS ve_lot_x_gully;
+
+DROP TABLE IF EXISTS om_team_x_visitclass;
+DROP TABLE IF EXISTS om_vehicle_x_parameters;
+DROP TABLE IF EXISTS om_team_x_vehicle;
+DROP TABLE IF EXISTS ext_cat_vehicle;
+DROP TABLE IF EXISTS om_visit_team_x_user;
+DROP TABLE IF EXISTS om_visit_lot_x_user;
+DROP TABLE IF EXISTS config_visit_class_x_workorder;
+DROP TABLE IF EXISTS ext_workorder;
+DROP TABLE IF EXISTS ext_workorder_class;
+DROP TABLE IF EXISTS om_visit_class_x_wo;
+DROP TABLE IF EXISTS ext_workorder_type;
+DROP TABLE IF EXISTS om_visit_lot_x_node;
+DROP TABLE IF EXISTS om_visit_lot_x_connec;
+DROP TABLE IF EXISTS om_visit_lot_x_arc;
+DROP TABLE IF EXISTS om_visit_lot_x_gully;
+DROP TABLE IF EXISTS selector_lot;
+DROP TABLE IF EXISTS om_visit_lot;
+DROP TABLE IF EXISTS cat_team;
