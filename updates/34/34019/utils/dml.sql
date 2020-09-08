@@ -28,3 +28,9 @@ VALUES (2996, 'gw_trg_edit_element_pol', 'utils', 'function')ON CONFLICT (id) DO
 
 INSERT INTO config_toolbox VALUES (2522, 'Import epanet inp file', TRUE, '{"featureType":[]}', '[{"widgetname":"useNode2arc", "label":"Create node2arc:", "widgettype":"check","datatype":"boolean","layoutname":"grl_option_parameters","layoutorder":1,"value":"false"}]', null, TRUE);
 INSERT INTO config_toolbox VALUES (2524, 'Import swmm inp file', TRUE, '{"featureType":[]}', '[{"widgetname":"createSubcGeom", "label":"Create subcatchments geometry:", "widgettype":"check","datatype":"boolean","layoutname":"grl_option_parameters","layoutorder":1,"value":"true"}]', null, TRUE);
+
+INSERT INTO config_typevalue (typevalue, id, idval, camelstyle) VALUES ('datatype_typevalue', 'text', 'text', 'text')
+ON CONFLICT (typevalue, id) DO NOTHING;
+
+update sys_param_user SET id = concat(sys_param_user.id, 'edit_addfield_') 
+FROM sys_addfields WHERE sys_param_user.id = concat(param_name,'_',lower(cat_feature_id),'_vdefault');
