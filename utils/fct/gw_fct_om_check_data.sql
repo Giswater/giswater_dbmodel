@@ -150,7 +150,7 @@ BEGIN
 		IF v_edit IS NULL THEN 
 			v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom FROM arc a WHERE sys_slope < 0 AND state > 0 AND inverted_slope IS FALSE) a';
 		ELSE
-			v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom FROM v_edit_arc a WHERE sys_slope < 0 AND state > 0 AND inverted_slope IS FALSE) a';
+			v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom FROM v_edit_arc a WHERE slope < 0 AND state > 0 AND inverted_slope IS FALSE) a';
 		END IF;
 		
 		EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
@@ -158,7 +158,7 @@ BEGIN
 			INSERT INTO audit_check_data (fid,  criticity, error_message)
 			VALUES (125, 3, concat('ERROR: There is/are ',v_count,' arcs with inverted slope false and slope negative values. Please, check your data before continue'));
 			INSERT INTO audit_check_data (fid, criticity, error_message)
-			VALUES (125, 3, concat('SELECT * FROM (v_edit)arc WHERE state > 0 AND sys_slope < 0 AND inverted_slope IS FALSE'));
+			VALUES (125, 3, concat('SELECT * FROM (v_edit)arc WHERE state > 0 AND (sys_)slope < 0 AND inverted_slope IS FALSE'));
 		ELSE
 			INSERT INTO audit_check_data (fid, criticity, error_message)
 			VALUES (125, 1, 'INFO: No arcs with inverted slope checked found.');
@@ -470,7 +470,8 @@ BEGIN
 	RAISE NOTICE '16 - Check for orphan rows on man_addfields values table';
 	IF v_project_type ='UD' THEN
 
-		v_querytext = 'SELECT * FROM man_addfields_value WHERE feature_id NOT IN (SELECT arc_id FROM arc UNION SELECT node_id FROM node UNION SELECT connec_id FROM connec UNION SELECT gully_id FROM gully)';
+		v_querytext = 'SELECT * FROM man_addfields_value a LEFT JOIN 
+			      (SELECT arc_id as feature_id FROM arc UNION SELECT node_id FROM node UNION SELECT connec_id FROM connec UNION SELECT gully_id FROM gully) b USING (feature_id) WHERE b.feature_id IS NULL';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 	
