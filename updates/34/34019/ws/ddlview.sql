@@ -50,7 +50,7 @@ CREATE OR REPLACE VIEW v_edit_vnode AS
   WHERE a.state < 2;
 
 
-CREATE OR REPLACE VIEW ws_sample.vu_arc AS 
+CREATE OR REPLACE VIEW vu_arc AS 
 WITH query_node AS (SELECT node_id, elevation, depth, nodetype_id, staticpressure FROM node JOIN cat_node ON nodecat_id = id)
  SELECT arc.arc_id,
     arc.code,
