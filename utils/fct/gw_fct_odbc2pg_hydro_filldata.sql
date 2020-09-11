@@ -49,9 +49,6 @@ BEGIN
 	-- select config values
 	SELECT project_type, giswater INTO v_project_type, v_version FROM sys_version order by id desc limit 1;
 
-	-- TODO: 
-	-- FASE 1: to improve: period_seconds, value
-	-- FASE 2: When CRM is full operative, move ext_rtc_hydrometer from table to view and delete insert done here
 	
 	-- ext_cat_period
 	INSERT INTO ext_cat_period (id, code, period_seconds, period_year, period_name, period_type) 
@@ -73,20 +70,20 @@ BEGIN
 		ON CONFLICT (id) DO NOTHING;
 	ELSE
 		INSERT INTO ext_rtc_hydrometer (id, connec_id, state_id, expl_id, category_id)
-		SELECT a.feature_id , log_message::json->>'connec_id', 1, (log_message::json->>'expl_id')::integer, 1 FROM audit_log_data a
-		WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
+		SELECT a.feature_id::int8 , (log_message::json->>'connec_id')::integer, 1, (log_message::json->>'expl_id')::integer, 1 FROM audit_log_data a
+		WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174 and (log_message::json->>'connec_id')!='None'
 		ON CONFLICT (id) DO NOTHING;
 	END IF;
 
 	-- hydrometer_x_connec
 	INSERT INTO rtc_hydrometer_x_connec (hydrometer_id, connec_id)
 	SELECT a.feature_id , connec_id FROM audit_log_data a
-	JOIN connec ON code=concat(expl_id,log_message::json->>'connec_id')
+	JOIN connec ON connec_id = (log_message::json->>'connec_id')
 	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (hydrometer_id) DO NOTHING;
 
-	-- ext_rtc_scada_dma_period
-	INSERT INTO ext_rtc_scada_dma_period (dma_id, cat_period_id, effc, minc, maxc, pattern_id) 
+	-- ext_rtc_dma_period
+	INSERT INTO ext_rtc_dma_period (dma_id, cat_period_id, effc, minc, maxc, pattern_id) 
 	SELECT dma_id, CONCAT(log_message::json->>'year', 0, log_message::json->>'period') , 1, 1, 1, dma.pattern_id
 	FROM audit_log_data 
 	JOIN rtc_hydrometer_x_connec ON feature_id=hydrometer_id 
@@ -100,7 +97,7 @@ BEGIN
 	SELECT category_id, period_type
 	FROM audit_log_data 
 	JOIN ext_cat_period a ON CONCAT(log_message::json->>'year', 0, log_message::json->>'period') = a.id
-	JOIN ext_rtc_hydrometer b ON b.id=feature_id
+	JOIN ext_rtc_hydrometer b ON b.id=feature_id::int8
 	JOIN ext_hydrometer_category c ON c.id::integer=b.category_id::integer	
 	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (category_id, period_type) DO NOTHING;
@@ -109,8 +106,8 @@ BEGIN
 	INSERT INTO ext_rtc_hydrometer_x_data (hydrometer_id, sum, cat_period_id, pattern_id) 
 	SELECT feature_id, (((log_message::json->>'value')::numeric(12,5)*(log_message::json->>'periodSeconds')::numeric)/1000)::numeric(12,2) as m3value, concat(log_message::json->>'year', '-', log_message::json->>'period'), c.pattern_id
 	FROM audit_log_data 
-	LEFT JOIN ext_rtc_hydrometer a ON a.id=feature_id
-	LEFT JOIN ext_cat_period b ON CONCAT(log_message::json->>'year', 0, log_message::json->>'period') = a.id
+	LEFT JOIN ext_rtc_hydrometer a ON a.id=feature_id::int8
+	LEFT JOIN ext_cat_period b ON CONCAT(log_message::json->>'year', 0, log_message::json->>'period')::int8 = a.id
 	LEFT JOIN ext_hydrometer_category_x_pattern c ON a.category_id=c.category_id::integer
 	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (hydrometer_id, cat_period_id) DO NOTHING;
@@ -118,7 +115,7 @@ BEGIN
 	UPDATE connec SET num_value = m3value FROM (
 	WITH query AS (
 	SELECT log_message::json->>'periodSeconds' as ps, log_message::json->>'value' as value, log_message::json->>'connec_id'::text as connec_id, log_message::json->>'expl_id' as expl_id
-	FROM audit_log_data WHERE fprocesscat_id = 74 and user_name = current_user)
+	FROM audit_log_data WHERE fid = 174 and cur_user = current_user)
 	SELECT sum(ps::integer*value::numeric(12,5)/1000)::numeric(12,2) as m3value, connec_id, expl_id::integer FROM query group by expl_id, connec_id) a WHERE connec.expl_id = a.expl_id and connec.connec_id = a.connec_id;
 
 	--  Return
