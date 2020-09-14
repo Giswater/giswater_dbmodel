@@ -14,7 +14,7 @@ $BODY$
 
 SELECT SCHEMA_NAME.gw_fct_arc_divide($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"feature":{"id":["1007"]},
+"feature":{"id":["269951"]},
 "data":{}}$$)
 
 -- fid: 212
@@ -30,7 +30,7 @@ v_line1 geometry;
 v_line2 geometry;
 v_intersect_loc	double precision;
 v_project_type text;
-v_state integer;
+v_state_arc integer;
 v_state_node integer;
 v_gully_id 	varchar;
 v_connec_id varchar;
@@ -91,19 +91,19 @@ v_node_id text;
 BEGIN
 
 	-- Search path
-    SET search_path = "SCHEMA_NAME", public;
-    v_schemaname = 'SCHEMA_NAME';
+	SET search_path = "SCHEMA_NAME", public;
+	v_schemaname = 'SCHEMA_NAME';
 
-    --set current process as users parameter
-    DELETE FROM config_param_user  WHERE  parameter = 'utils_cur_trans' AND cur_user =current_user;
+	--set current process as users parameter
+	DELETE FROM config_param_user  WHERE  parameter = 'utils_cur_trans' AND cur_user =current_user;
 
-    INSERT INTO config_param_user (value, parameter, cur_user)
-    VALUES (txid_current(),'utils_cur_trans',current_user );
+	INSERT INTO config_param_user (value, parameter, cur_user)
+	VALUES (txid_current(),'utils_cur_trans',current_user );
    
-    -- Get parameters from input json
-    v_array_node_id = lower(((p_data ->>'feature')::json->>'id')::text);
+	-- Get parameters from input json
+	v_array_node_id = lower(((p_data ->>'feature')::json->>'id')::text);
 
-    v_node_id = (SELECT json_array_elements_text(v_array_node_id)); 
+	v_node_id = (SELECT json_array_elements_text(v_array_node_id)); 
 	-- Get project type
 	SELECT project_type, epsg, giswater INTO v_project_type, v_srid,v_version FROM sys_version LIMIT 1;
 	
@@ -117,8 +117,8 @@ BEGIN
 		END IF;
 	END LOOP;
 
-    -- Get node values
-    SELECT the_geom INTO v_node_geom FROM node WHERE node_id = v_node_id;
+	-- Get node values
+	SELECT the_geom INTO v_node_geom FROM node WHERE node_id = v_node_id;
 	SELECT state INTO v_state_node FROM node WHERE node_id=v_node_id;
 	
 	IF v_project_type = 'WS' THEN
@@ -130,7 +130,10 @@ BEGIN
 		FROM cat_feature_node JOIN node ON node.node_type = cat_feature_node.id WHERE node.node_id=v_node_id;
 	END IF;
 
-    -- Get parameters from configs table
+	-- get arc values
+	select code INTO v_code FROM v_edit_arc  WHERE arc_id=v_arc_id;
+
+	-- Get parameters from configs table
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 	SELECT value::smallint INTO v_psector FROM config_param_user WHERE "parameter"='plan_psector_vdefault' AND cur_user=current_user;
 	SELECT value::smallint INTO v_ficticius FROM config_param_system WHERE parameter='plan_statetype_ficticius';
@@ -144,7 +147,7 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (212, null, 4, '-------------------------------------------------------------');
 
 	-- State control
-	IF v_state=0 THEN
+	IF v_state_arc=0 THEN
 		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		"data":{"message":"1050", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
 	ELSIF v_state_node=0 THEN
@@ -167,7 +170,7 @@ BEGIN
 			-- For the specificic case of extremal node not reconnected due topology issues (i.e. arc state (1) and node state (2)
 
 			-- Find closest arc inside tolerance
-			SELECT arc_id, state, the_geom INTO v_arc_id, v_state, v_arc_geom  FROM v_edit_arc AS a 
+			SELECT arc_id, state, the_geom INTO v_arc_id, v_state_arc, v_arc_geom  FROM v_edit_arc AS a 
 			WHERE ST_DWithin(v_node_geom, a.the_geom, v_arc_divide_tolerance) AND node_1 != v_node_id AND node_2 != v_node_id
 			ORDER BY ST_Distance(v_node_geom, a.the_geom) LIMIT 1;
 
@@ -189,7 +192,7 @@ BEGIN
 					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 					"data":{"message":"3094", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
 				ELSE
-			
+
 					-- Get arc data
 					SELECT * INTO rec_aux1 FROM arc WHERE arc_id = v_arc_id;
 					SELECT * INTO rec_aux2 FROM arc WHERE arc_id = v_arc_id;
@@ -228,8 +231,9 @@ BEGIN
 					v_epaquerytext1 =  'INSERT INTO '||v_epatable||' SELECT ';
 					v_epaquerytext2 =  v_epaquerytext||' FROM '||v_epatable||' WHERE arc_id= '||v_arc_id||'::text';
 
+
 					-- In function of states and user's variables proceed.....
-					IF (v_state=1 AND v_state_node=1) THEN 
+					IF v_state_node=1 THEN 
 
 						-- Insert new records into arc table
 						INSERT INTO arc SELECT rec_aux1.*;
@@ -397,9 +401,7 @@ BEGIN
 											geom3,xcoord,ycoord,compass,text, index_val,is_last) 
 											SELECT event_code, v_newvisit2, position_id, position_value, parameter_id,value, value1, value2,geom1, geom2, 
 											geom3,xcoord,ycoord,compass,text, index_val,is_last FROM om_visit_event WHERE id=rec_event.id;
-										
 										END IF;
-					
 									END LOOP;
 																
 									INSERT INTO om_visit_x_arc (visit_id, arc_id) VALUES (v_newvisit1, rec_aux1.arc_id);
@@ -429,8 +431,8 @@ BEGIN
 							VALUES (212, 1, concat('Copy ',v_count,' visits from old to new arcs.'));
 
 						END IF;
+						
 						-- Update arc_id on node
-
 						FOR rec_aux IN SELECT * FROM node WHERE arc_id=v_arc_id  LOOP
 
 							-- find the new arc id
@@ -467,94 +469,31 @@ BEGIN
 						DELETE FROM arc WHERE arc_id=v_arc_id;
 						
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, concat('Delete old arc: ',v_arc_id,'.'));	
+						VALUES (212, 1, concat('Delete old arc: ',v_arc_id,'.'));
+
 				
-					ELSIF (v_state=1 AND v_state_node=2) THEN
-						rec_aux1.state=2;
-						rec_aux1.state_type=v_ficticius;
-						
-						rec_aux2.state=2;
-						rec_aux2.state_type=v_ficticius;
-						
-						-- set temporary values for config variables in order to enable the insert of arc in spite of due a 'bug' of postgres 
-						--it seems that does not recognize the new node inserted
+					ELSIF v_state_node = 2 THEN --is psector
+
+						-- set temporary values for config variables in order to enable the insert of arc in spite of due a 'bug' of postgres (it seems that does not recognize the new node inserted)
 						UPDATE config_param_user SET value=TRUE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;				
 
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, 'Arc with state =1, node with state = 2.');
+						IF v_state_arc=1 THEN -- ficticius arc
 
-						-- Insert new records into arc table
-						INSERT INTO arc SELECT rec_aux1.*;
-						INSERT INTO arc SELECT rec_aux2.*;
-
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Insert new arcs into arc table.');
-
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, concat('Arc1: arc_id:', rec_aux1.arc_id,', code:',rec_aux1.code,' length:',
-						round(st_length(rec_aux1.the_geom)::numeric,2),'.'));
-						
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, concat('Arc1: arc_id:', rec_aux2.arc_id,', code:',rec_aux2.code,' length:',
-						round(st_length(rec_aux2.the_geom)::numeric,2),'.'));
-
-						-- Insert new records into man table		
-						EXECUTE v_manquerytext1||rec_aux1.arc_id::text||v_manquerytext2;
-						EXECUTE v_manquerytext1||rec_aux2.arc_id::text||v_manquerytext2;
-
-						-- Insert new records into epa table
-						EXECUTE v_epaquerytext1||rec_aux1.arc_id::text||v_epaquerytext2;
-						EXECUTE v_epaquerytext1||rec_aux2.arc_id::text||v_epaquerytext2;
-			
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Insert new arcs into man and epa table.');
-
-						-- restore temporary value for edit_disable_statetopocontrol variable
-						UPDATE config_param_user SET value=FALSE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;
-
-						-- update node_1 and node_2 because it's not possible to pass using parameters
-						UPDATE arc SET node_1=rec_aux1.node_1,node_2=rec_aux1.node_2 where arc_id=rec_aux1.arc_id;
-						UPDATE arc SET node_1=rec_aux2.node_1,node_2=rec_aux2.node_2 where arc_id=rec_aux2.arc_id;
-
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Update values of arcs node_1 and node_2.');
-
-						-- Update doability for the new arcs
-						UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux1.arc_id;
-						UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux2.arc_id;
-					
-						-- Insert existig arc (on service) to the current alternative
-						INSERT INTO plan_psector_x_arc (psector_id, arc_id, state, doable) VALUES (v_psector, v_arc_id, 0, FALSE);
-
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,concat('Insert arcs into current psector: ',v_psector,'.'));
-						
-						-- Insert data into traceability table
-						select code INTO v_code FROM v_edit_arc  WHERE arc_id=v_arc_id;
-
-						INSERT INTO audit_arc_traceability ("type", arc_id, code, arc_id1, arc_id2, node_id, tstamp, cur_user) 
-						VALUES ('DIVIDE WITH PLANIFIED NODE',  v_arc_id, v_code, rec_aux1.arc_id, rec_aux2.arc_id, v_node_id, now(), current_user);
-
-						-- Set addparam (parent/child)
-						UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"parent"}' WHERE  psector_id=v_psector AND arc_id=v_arc_id;
-						UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}' WHERE  psector_id=v_psector AND arc_id=rec_aux1.arc_id;
-						UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}' WHERE  psector_id=v_psector AND arc_id=rec_aux2.arc_id;
-
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Set values on plan_psector_x_arc addparam.');
+							INSERT INTO audit_check_data (fid,  criticity, error_message)
+							VALUES (212, 1, 'Arc with state =1, node with state = 2.');
+											
+							rec_aux1.state=2;
+							rec_aux1.state_type=v_ficticius;
 							
-					ELSIF (v_state=2 AND v_state_node=2) THEN 
-						
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, 'Arc and node have both state = 2.');
+							rec_aux2.state=2;
+							rec_aux2.state_type=v_ficticius;
+							
+						ELSIF v_state_arc = 2 THEN -- planned arc
 
-						-- set temporary values for config variables in order to enable the insert of arc in spite of due a 'bug' of postgres
-						-- it seems that does not recognize the new node inserted
-						UPDATE config_param_user SET value=TRUE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;				
+							INSERT INTO audit_check_data (fid,  criticity, error_message)
+							VALUES (212, 1, 'Arc and node have both state = 2.');
 
-						-- Insert new records into arc table
-						INSERT INTO arc SELECT rec_aux1.*;
-						INSERT INTO arc SELECT rec_aux2.*;
+						END IF;
 
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
 						VALUES (212, 1,'Insert new arcs into arc table.');
@@ -562,10 +501,17 @@ BEGIN
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
 						VALUES (212, 1, concat('Arc1: arc_id:', rec_aux1.arc_id,', code:',rec_aux1.code,' length:',
 						round(st_length(rec_aux1.the_geom)::numeric,2),'.'));
-						
+							
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, concat('Arc1: arc_id:', rec_aux2.arc_id,', code:',rec_aux2.code,' length:',
+						VALUES (212, 1, concat('Arc2: arc_id:', rec_aux2.arc_id,', code:',rec_aux2.code,' length:',
 						round(st_length(rec_aux2.the_geom)::numeric,2),'.'));
+
+						-- Insert new records into arc table
+						INSERT INTO arc SELECT rec_aux1.*;
+						INSERT INTO arc SELECT rec_aux2.*;
+
+						INSERT INTO audit_check_data (fid,  criticity, error_message)
+						VALUES (212, 1,'Insert new arcs into man and epa table.');
 
 						-- Insert new records into man table		
 						EXECUTE v_manquerytext1||rec_aux1.arc_id::text||v_manquerytext2;
@@ -575,19 +521,19 @@ BEGIN
 						EXECUTE v_epaquerytext1||rec_aux1.arc_id::text||v_epaquerytext2;
 						EXECUTE v_epaquerytext1||rec_aux2.arc_id::text||v_epaquerytext2;
 
-						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Insert new arcs into man and epa table.');
-
 						-- restore temporary value for edit_disable_statetopocontrol variable
 						UPDATE config_param_user SET value=FALSE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;
+
+						INSERT INTO audit_check_data (fid,  criticity, error_message)
+						VALUES (212, 1,'Update values of arcs node_1 and node_2.');
 
 						-- update node_1 and node_2 because it's not possible to pass using parameters
 						UPDATE arc SET node_1=rec_aux1.node_1,node_2=rec_aux1.node_2 where arc_id=rec_aux1.arc_id;
 						UPDATE arc SET node_1=rec_aux2.node_1,node_2=rec_aux2.node_2 where arc_id=rec_aux2.arc_id;
 
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Update values of arcs node_1 and node_2.');
-					
+						VALUES (212, 1,'Insert new values from new arcs into addfields table.');
+						
 						--Copy addfields from old arc to new arcs	
 						INSERT INTO man_addfields_value (feature_id, parameter_id, value_param)
 						SELECT 
@@ -604,11 +550,23 @@ BEGIN
 						FROM man_addfields_value WHERE feature_id=v_arc_id;
 						
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1,'Copy addfields from old to new arcs.');
+						VALUES (212, 1,'Copy elements is not avaliable from old arc to new arc when node.state = 2');
 
-						-- update arc_id of disconnected nodes linked to old arc
-						FOR rec_node IN SELECT node_id, the_geom FROM node WHERE arc_id=v_arc_id
-						LOOP
+						INSERT INTO audit_check_data (fid,  criticity, error_message)
+						VALUES (212, 1,'Copy documents is not avaliable from old arc to new arcs when node.state = 2');
+
+						INSERT INTO audit_check_data (fid,  criticity, error_message)
+						VALUES (212, 1,'Copy visits is not avaliable from old arc to new arcs when node.state = 2');
+
+						INSERT INTO audit_check_data (fid,  criticity, error_message)
+						VALUES (212, 1,'Reconnect disconnected nodes on this alternative');
+						
+						-- reconnect nodes (update arc_id of disconnected nodes linked to old arc)
+						FOR rec_node IN SELECT node_id, the_geom FROM v_edit_node WHERE arc_id=v_arc_id AND state = 2
+						LOOP					
+							INSERT INTO audit_check_data (fid,  criticity, error_message)
+							VALUES (212, 1, concat('Update arc_id on disconnected node: ',rec_node.node_id));
+							
 							UPDATE node SET arc_id=(SELECT arc_id FROM v_edit_arc WHERE ST_DWithin(rec_node.the_geom, 
 							v_edit_arc.the_geom,0.001) AND arc_id != v_arc_id LIMIT 1) 
 							WHERE node_id=rec_node.node_id;
@@ -617,170 +575,120 @@ BEGIN
 							VALUES (212, 1,concat('Update arc_id for disconnected node: ',rec_node.node_id,'.'));
 						END LOOP;
 
-						-- Capture linked feature information to redraw (later on this function)
-						-- connec
-						FOR v_connec_id IN SELECT connec_id FROM connec JOIN link ON link.feature_id=connec_id WHERE link.feature_type='CONNEC' AND arc_id=v_arc_id  AND 
-						connec.state=1
-						LOOP
-							v_array_connec:= array_append(v_array_connec, v_connec_id);
-						END LOOP;
-
-						SELECT count(connec_id) INTO v_count_connec FROM connec WHERE arc_id=v_arc_id AND state=1;
-
-						UPDATE connec SET arc_id=NULL WHERE arc_id=v_arc_id;
-
-						-- gully
-						IF v_project_type='UD' THEN
-
-							FOR v_gully_id IN SELECT gully_id FROM gully JOIN link ON link.feature_id=gully_id WHERE link.feature_type='GULLY' AND arc_id=v_arc_id AND 
-								gully.state=1
-							LOOP
-								v_array_gully:= array_append(v_array_gully, v_gully_id);
-							END LOOP;
-
-							SELECT count(gully_id) INTO v_count_gully FROM gully WHERE arc_id=v_arc_id AND state=1;
-
-							UPDATE gully SET arc_id=NULL WHERE arc_id=v_arc_id;
-						END IF;
-									
-						-- Insert data into traceability table
-						select code INTO v_code FROM v_edit_arc  WHERE arc_id=v_arc_id;
-						
-						INSERT INTO audit_arc_traceability ("type", arc_id, code, arc_id1, arc_id2, node_id, tstamp, cur_user) 
-						VALUES ('DIVIDE PLANIFIED ARC',  v_arc_id, v_code, rec_aux1.arc_id, rec_aux2.arc_id, v_node_id, CURRENT_TIMESTAMP, CURRENT_USER);
-					
-						-- Update elements from old arc to new arcs
-						SELECT count(id) into v_count FROM element_x_arc WHERE arc_id=v_arc_id;
-
-						IF v_count > 0 THEN
-							FOR rec_aux IN SELECT * FROM element_x_arc WHERE arc_id=v_arc_id  LOOP
-								INSERT INTO element_x_arc (id, element_id, arc_id) VALUES (nextval('element_x_arc_id_seq'),rec_aux.element_id, rec_aux1.arc_id);
-								INSERT INTO element_x_arc (id, element_id, arc_id) VALUES (nextval('element_x_arc_id_seq'),rec_aux.element_id, rec_aux2.arc_id);
-								DELETE FROM element_x_arc WHERE arc_id=v_arc_id;
-							END LOOP;
-
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1, concat('Copy ',v_count,' elements from old to new arcs.'));
-						END IF;
-
-						-- Update documents from old arc to the new arcs
-						SELECT count(id) into v_count FROM doc_x_arc WHERE arc_id=v_arc_id;
-						IF v_count > 0 THEN
-							FOR rec_aux IN SELECT * FROM doc_x_arc WHERE arc_id=v_arc_id  LOOP
-								INSERT INTO doc_x_arc (id, doc_id, arc_id) VALUES (nextval('doc_x_arc_id_seq'),rec_aux.doc_id, rec_aux1.arc_id);
-								INSERT INTO doc_x_arc (id, doc_id, arc_id) VALUES (nextval('doc_x_arc_id_seq'),rec_aux.doc_id, rec_aux2.arc_id);
-								DELETE FROM doc_x_arc WHERE arc_id=v_arc_id;
-							END LOOP;
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1, concat('Copy ',v_count,' documents from old to new arcs.'));
-						END IF;
-
-						-- Visits are not updatable because it's impossible to have visits on arc with state=2
-						
-						-- Update arc_id on node
-						FOR rec_aux IN SELECT * FROM node WHERE arc_id=v_arc_id  LOOP
-
-							-- find the new arc id
-							SELECT arc_id INTO v_newarc FROM v_edit_arc AS a 
-							WHERE ST_DWithin(rec_aux.the_geom, a.the_geom, 0.5) AND arc_id !=v_arc_id ORDER BY ST_Distance(rec_aux.the_geom, a.the_geom) LIMIT 1;
-
-							-- update values
-							UPDATE node SET arc_id=v_newarc WHERE node_id=rec_aux.node_id;
-								
-						END LOOP;
-						
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, 'Update arc_id on node.');
+						VALUES (212, 1,'Update psector''s arc_id value for connec and gully setting null value to force trigger to get new arc_id as closest as possible');		
+						
+						IF v_state_arc = 1 THEN -- ficticius arc
 
-						-- in case of divide ficitius arc, new arcs will be ficticius, but we need to set doable false because they are inserted by default as true
-						IF (SELECT state_type FROM arc WHERE arc_id=v_arc_id) = v_ficticius THEN
+							-- Insert data into traceability table
+							INSERT INTO audit_arc_traceability ("type", arc_id, code, arc_id1, arc_id2, node_id, tstamp, cur_user) 
+							VALUES ('DIVIDE EXISTING ARC WITH PLANNED NODE',  v_arc_id, v_code, rec_aux1.arc_id, rec_aux2.arc_id, v_node_id, now(), current_user);
+
+							-- insert connec's on alternative in order to reconnect
+							INSERT INTO plan_psector_x_connec (psector_id, connec_id, arc_id, state, doable)
+							SELECT v_psector, connec_id, v_arc_id, 1,true FROM connec WHERE arc_id = v_arc_id
+							ON CONFLICT DO NOTHING;
+
+							-- insert gullie's on alternative in order to reconnect
+							IF v_project_type='UD' THEN
+								INSERT INTO plan_psector_x_gully (psector_id, gully_id, arc_id, state, doable)
+								SELECT v_psector, gully_id, v_arc_id, 1, true FROM gully WHERE arc_id = v_arc_id
+								ON CONFLICT DO NOTHING;
+							END IF;
+							
+							-- Update doability for the new arcs
 							UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux1.arc_id;
 							UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux2.arc_id;
+
+							-- Insert existig arc (downgraded) to the current alternative
+							INSERT INTO plan_psector_x_arc (psector_id, arc_id, state, doable) VALUES (v_psector, v_arc_id, 0, FALSE);
+
+						ELSIF v_state_arc = 2 THEN -- planned arc									
+
+							-- Insert data into traceability table
+							INSERT INTO audit_arc_traceability ("type", arc_id, code, arc_id1, arc_id2, node_id, tstamp, cur_user) 
+							VALUES ('DIVIDE PLANNED ARC WITH PLANNED NODE',  v_arc_id, v_code, rec_aux1.arc_id, rec_aux2.arc_id, v_node_id, CURRENT_TIMESTAMP, CURRENT_USER);
+
+							-- in case of divide ficitius arc, new arcs will be ficticius, but we need to set doable false because they are inserted by default as true
+							IF (SELECT state_type FROM arc WHERE arc_id=v_arc_id) = v_ficticius THEN
 							
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1, 'Update psector_x_arc as doable for fictitious arcs.');
-					
+								UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux1.arc_id;
+								UPDATE plan_psector_x_arc SET doable=FALSE where arc_id=rec_aux2.arc_id;
+								
+								INSERT INTO audit_check_data (fid,  criticity, error_message)
+								VALUES (212, 1, 'Update psector_x_arc as doable for fictitious arcs.');
+							ELSE
+								UPDATE plan_psector_x_arc SET state=0 where arc_id=v_arc_id;
+							END IF;							
 						END IF;
-
-						-- reconnect links
-						UPDATE arc SET state=0 WHERE arc_id=v_arc_id;
-						
-						IF v_count_connec > 0 AND v_array_connec IS NOT NULL THEN
-
-							EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
-							"feature":{"id":'|| array_to_json(v_array_connec)||'},"data":{"feature_type":"CONNEC"}}$$)';
-
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1, concat('Reconnect ',v_count_connec,' connecs with state 1.'));
-						END IF;
-						IF v_count_gully > 0 AND v_count_gully IS NOT NULL THEN
-
-							EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
-							"feature":{"id":'|| array_to_json(v_array_gully)||'},"data":{"feature_type":"GULLY"}}$$)';
-
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1, concat('Reconnect ',v_count_gully,' gullies with state 1.'));
-						END IF;
-						
-						-- update arc_id for linked features in psector after reconnect
-						UPDATE plan_psector_x_connec a SET arc_id=c.arc_id FROM connec c WHERE c.connec_id=a.connec_id;
-						
-						IF v_project_type='UD' THEN
-							UPDATE plan_psector_x_gully a SET arc_id=c.arc_id FROM gully c WHERE c.gully_id=a.gully_id;
-						END IF;
-						
-						-- delete old arc
-						DELETE FROM arc WHERE arc_id=v_arc_id;		
 
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
-						VALUES (212, 1, 'Delete old arc.');	
+						VALUES (212, 1,concat('Insert old arc as downgraded into current psector: ',v_psector,'.'));
 						
-				ELSIF (v_state=2 AND v_state_node=1) THEN
+						-- reconnect connec
+						UPDATE v_edit_connec SET arc_id=NULL WHERE arc_id=v_arc_id;					
+
+						-- reconnect gully
+						IF v_project_type='UD' THEN
+							UPDATE v_edit_gully SET arc_id=NULL WHERE arc_id=v_arc_id;
+						END IF;				
+
+						INSERT INTO audit_check_data (fid,  criticity, error_message)
+						VALUES (212, 1,'Set values on plan_psector_x_arc addparam.');	
+
+						-- Set addparam (parent/child)
+						UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"parent"}' WHERE  psector_id=v_psector AND arc_id=v_arc_id;
+						UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}' WHERE  psector_id=v_psector AND arc_id=rec_aux1.arc_id;
+						UPDATE plan_psector_x_arc SET addparam='{"arcDivide":"child"}' WHERE  psector_id=v_psector AND arc_id=rec_aux2.arc_id;
+													
+						
+				ELSIF (v_state_arc=2 AND v_state_node=1) THEN
 					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 					"data":{"message":"3042", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
-
 				ELSE  
+					RAISE EXCEPTION 'AHS';
 					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-					"data":{"message":"2120", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
-
-				END IF;
-				END IF;
-			ELSE
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 					"data":{"message":"3044", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
 
+				END IF;
 			END IF;
 		ELSE
-			IF v_node_type IS NOT NULL THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"3046", "function":"2114","debug_msg":"'||v_node_type||'"}}$$);' INTO v_audit_result;
-			ELSE 
-
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"3046", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
-			END IF;
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3044", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
 
 		END IF;
-END IF;
-		
+	ELSE
+		IF v_node_type IS NOT NULL THEN
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+			"data":{"message":"3046", "function":"2114","debug_msg":"'||v_node_type||'"}}$$);' INTO v_audit_result;
+		ELSE 
+
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+			"data":{"message":"3046", "function":"2114","debug_msg":null}}$$);' INTO v_audit_result;
+		END IF;
+
+	END IF;
+	
+	END IF;
+			
 	-- get results
 	-- info
-
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result
 	FROM (SELECT id, error_message as message FROM audit_check_data 
 	WHERE cur_user="current_user"() AND fid=212 ORDER BY criticity desc, id asc) row;
 	
 	IF v_audit_result is null THEN
-        v_status = 'Accepted';
-        v_level = 3;
-        v_message = 'Arc divide done successfully';
-    ELSE
+		v_status = 'Accepted';
+		v_level = 3;
+		v_message = 'Arc divide done successfully';
+        
+	ELSE
 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
-        SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
+		SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'status')::text INTO v_status; 
+		SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'level')::integer INTO v_level;
+		SELECT ((((v_audit_result::json ->> 'body')::json ->> 'data')::json ->> 'info')::json ->> 'message')::text INTO v_message;
 
-    END IF;
+	END IF;
 
 	v_result_info := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result_info, '}');
@@ -794,8 +702,8 @@ END IF;
 	v_message := COALESCE(v_message, '{}'); 
 	v_hide_form := COALESCE(v_hide_form, true); 
 
---  Return
-     RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+	--  Return
+	RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 		     	'"setVisibleLayers":[]'||','||
@@ -807,12 +715,9 @@ END IF;
 	    '}')::json;
 
 	EXCEPTION WHEN OTHERS THEN
-	 GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	 RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
- 
-
-  END;
+	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
