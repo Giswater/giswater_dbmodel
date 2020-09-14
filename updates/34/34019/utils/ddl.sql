@@ -57,4 +57,5 @@ DROP FUNCTION IF EXISTS gw_fct_setlot(json);
 DROP FUNCTION IF EXISTS gw_setvisitmanager(json);
 DROP FUNCTION IF EXISTS gw_setvisitmanagerstart(json);
 DROP FUNCTION IF EXISTS gw_setvisitmanagerend(json);
+DROP FUNCTION IF EXISTS gw_fct_setvehicleload(json);
 
