@@ -10,3 +10,8 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 -- 2020/11/09
 
 UPDATE sys_function SET function_name = 'gw_trg_ui_mincut' WHERE id = 2692;
+
+
+-- 2020/15/09
+UPDATE sys_param_user SET id ='basic_search_exploitation_vdefault' WHERE id = 'basic_search_exploitation_vdefaut';
+UPDATE sys_param_user SET id ='basic_search_municipality_vdefault' WHERE id = 'basic_search_municipality_vdefaut';
