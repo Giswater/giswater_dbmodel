@@ -41,11 +41,13 @@ TO EXECUTE
 
 -- QUERY SAMPLE
 ----------------
-SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE", "exploitation":[1], "macroExploitation":[1], "checkData":false, 
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR", "exploitation":[1], "floodFromNode":"113766", "checkData":false, 
+"updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[], "forceClosed":[]}}}')
+
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE", "exploitation":[1], "macroExploitation":[1], "checkData":false, 
 "updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
 
-
-SELECT ws_sample.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "nodeHeader":"113952","exploitation":[1], "macroExploitation":[1], "checkData":false, 
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "nodeHeader":"113952","exploitation":[1], "macroExploitation":[1], "checkData":false, 
 "updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
 ----------------
 
@@ -111,7 +113,7 @@ v_expl json;
 v_macroexpl json;
 v_data json;
 v_fprocesscat_id integer;
-v_nodeid text;
+v_floodfromnode text;
 v_featureid integer;
 v_text text;
 v_querytext text;
@@ -148,8 +150,6 @@ v_mapzonename text;
 v_dynsymbolstatus boolean;
 v_usepsector boolean;
 v_parameters json;
-v_currentmapzone integer;
-v_prevmapzone integer;
 v_error boolean = false;
 v_nodemapzone text;
 
@@ -165,7 +165,7 @@ BEGIN
 
 	-- get variables
 	v_class = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'grafClass');
-	v_nodeid = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'nodeHeader');
+	v_floodfromnode = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'floodFromNode');
 	v_updatetattributes = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'updateFeature');
 	v_updatemapzgeom = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'updateMapZone');
 	v_geomparamupdate = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'geomParamUpdate');
@@ -179,6 +179,8 @@ BEGIN
 
 	-- select system variables
 	v_dynsymbolstatus = (SELECT value FROM config_param_system WHERE parameter = 'mapzones_dynamic_symbology');
+
+	IF v_floodfromnode = '' THEN v_floodfromnode = NULL; END IF;
 
 	-- select config values
 	SELECT giswater, epsg INTO v_version, v_srid FROM version order by 1 desc limit 1;
@@ -240,8 +242,7 @@ BEGIN
 		v_mapzonename = 'name';
 	ELSE
 		
-		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{}, 
-		"data":{"error":"3090", "function":"2710","debug_msg":null}}$$);'  INTO v_audit_result;
+		RAISE EXCEPTION 'Graf Class is not properly defined';
 	END IF;
 	
 	IF v_audit_result IS NULL THEN
@@ -293,6 +294,13 @@ BEGIN
 		-- start build log message
 		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('MAPZONES DYNAMIC SECTORITZATION - ', upper(v_class)));
 		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('----------------------------------------------------------'));
+		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('Use psectors: ', upper(v_usepsector::text)));
+		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('Mapzone constructor method: ', upper(v_updatemapzgeom::text)));
+		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('Update feature mapzone attributes: ', upper(v_updatetattributes::text)));
+		IF v_floodfromnode IS NOT NULL THEN
+			INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat('Flood from mode is ENABLED. Graphic log (disconnected arcs & connecs) have been disabled. Used node:',v_floodfromnode,'.'));
+		END IF;	
+		INSERT INTO audit_check_data (fprocesscat_id, error_message) VALUES (v_fprocesscat_id, concat(''));
 
 		-- trigger data quality analysis
 		v_input = concat('{"client":{"device":3, "infoType":100, "lang":"ES"},"feature":{},"data":{"parameters":{"selectionMode":"userSelectors", "grafClass":',quote_ident(v_class),'}}}')::json;
@@ -318,21 +326,21 @@ BEGIN
 			INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (v_fprocesscat_id, NULL, 1, '-------');
 
 			-- reset mapzones (update to 0)
-			IF v_nodeid IS NULL THEN
-				v_querytext = 'UPDATE v_edit_arc SET '||quote_ident(v_field)||' = 0 ';
+			IF v_floodfromnode IS NULL THEN
+				v_querytext = 'UPDATE arc SET '||quote_ident(v_field)||' = 0 FROM v_edit_arc v WHERE v.arc_id = arc.arc_id ';
 				EXECUTE v_querytext;
-				v_querytext = 'UPDATE v_edit_node SET '||quote_ident(v_field)||' = 0 ';
+				v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = 0 FROM v_edit_node v WHERE v.node_id = node.node_id ';
 				EXECUTE v_querytext;
-				v_querytext = 'UPDATE v_edit_connec SET '||quote_ident(v_field)||' = 0 ';
+				v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = 0 FROM v_edit_connec v WHERE v.connec_id = connec.connec_id ';
 				EXECUTE v_querytext;
 			ELSE
-				EXECUTE 'SELECT '||quote_ident(v_field)||' FROM v_edit_node WHERE node_id = '||quote_literal(v_nodeid)
+				EXECUTE 'SELECT '||quote_ident(v_field)||' FROM v_edit_node WHERE node_id = '||quote_literal(v_floodfromnode)
 				INTO v_nodemapzone;
-				v_querytext = 'UPDATE v_edit_arc SET '||quote_ident(v_field)||' = 0 WHERE '||quote_ident(v_field)||' = '||quote_literal(v_nodemapzone);
+				v_querytext = 'UPDATE arc SET '||quote_ident(v_field)||' = 0 WHERE '||quote_ident(v_field)||' = '||quote_literal(v_nodemapzone);
 				EXECUTE v_querytext;
-				v_querytext = 'UPDATE v_edit_node SET '||quote_ident(v_field)||' = 0 WHERE '||quote_ident(v_field)||' = '||quote_literal(v_nodemapzone);
+				v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = 0 WHERE '||quote_ident(v_field)||' = '||quote_literal(v_nodemapzone);
 				EXECUTE v_querytext;
-				v_querytext = 'UPDATE v_edit_connec SET '||quote_ident(v_field)||' = 0 WHERE '||quote_ident(v_field)||' = '||quote_literal(v_nodemapzone);
+				v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = 0 WHERE '||quote_ident(v_field)||' = '||quote_literal(v_nodemapzone);
 				EXECUTE v_querytext;
 			END IF;
 
@@ -412,7 +420,7 @@ BEGIN
 					where grafconfig is not null order by 1,2) a
 					ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);		
 			END IF;
-			
+
 			-- close custom nodes acording init parameters
 			UPDATE temp_anlgraf SET flag = 1 WHERE node_1::text IN (SELECT json_array_elements_text((v_parameters->>'forceClosed')::json));
 			UPDATE temp_anlgraf SET flag = 1 WHERE node_2::text IN (SELECT json_array_elements_text((v_parameters->>'forceClosed')::json));
@@ -429,7 +437,7 @@ BEGIN
 					EXIT WHEN v_cont1 = -1;
 					v_cont1 = v_cont1+1;
 					
-					IF v_nodeid IS NULL THEN
+					IF v_floodfromnode IS NULL THEN
 						v_querytext = 'SELECT * FROM ('||v_text||' AND checkf=0 LIMIT 1)a';
 						IF v_querytext IS NOT NULL THEN
 							--RAISE NOTICE 'v_querytext %', v_querytext;
@@ -439,25 +447,18 @@ BEGIN
 						v_featureid = v_feature.node_id;
 						EXIT WHEN v_featureid IS NULL;
 						
-					ELSIF v_nodeid IS NOT NULL THEN
-						v_featureid = v_nodeid::integer;
+					ELSIF v_floodfromnode IS NOT NULL THEN
+						v_featureid = v_floodfromnode::integer;
 						v_cont1 = -1;
 					END IF;
+
+					RAISE NOTICE 'v_featureid % v_cont1 %', v_featureid, v_cont1;
 
 					-- reset water flag
 					UPDATE temp_anlgraf SET water=0;
 
 					raise notice '------------ Feature_id % ', v_featureid;
-
-					-- check for current mapzone of feature looking onde nodeparent graf
-					EXECUTE 'SELECT '||quote_ident(v_fieldmp)||'::integer FROM 
-					(select *, json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as np FROM '||quote_ident(v_table)||')a where np::integer = '||v_featureid
-					INTO v_currentmapzone;
-
-					-- check for previous mapzone looking on node table
-					EXECUTE 'SELECT '||v_field||'::integer FROM node WHERE node_id::integer = '||v_featureid INTO v_prevmapzone;
-					--
-					
+			
 					------------------
 					-- starting engine
 
@@ -475,15 +476,8 @@ BEGIN
 					v_count = 0;
 
 					-- inundation process
-					LOOP	
-						IF v_prevmapzone > 0 AND v_prevmapzone != v_currentmapzone THEN
-							INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (v_fprocesscat_id, NULL, 3,
-							concat('ERROR: nodeParent: ',v_featureid,' is related to more of one mapzones (',v_prevmapzone,' & ',v_currentmapzone,'). Process for mapzone ',
-							v_currentmapzone,'(',v_currentmapzone,') have been cancelled'));
-							v_error =  true;
-							EXIT;
-						END IF;
-						
+
+					LOOP						
 						v_count = v_count+1;
 						
 						UPDATE temp_anlgraf n SET water= 1, flag=n.flag+1, checkf=1 FROM v_anl_graf a where n.node_1::integer = a.node_1::integer AND n.arc_id = a.arc_id;
@@ -509,7 +503,7 @@ BEGIN
 							SELECT DISTINCT ON (node_id) '||v_fprocesscat_id||', nodecat_id, b.node_id, the_geom, '||(v_featureid)||' FROM (SELECT node_1 as node_id 
 							FROM temp_anlgraf WHERE water >0)a
 							JOIN v_edit_node b ON a.node_id::integer=b.node_id::integer';
-							
+														
 						-- message
 						SELECT count(*) INTO v_count1 FROM anl_arc WHERE fprocesscat_id=v_fprocesscat_id AND descript=v_featureid::text AND cur_user=current_user;
 						SELECT count(*) INTO v_count2 FROM anl_node WHERE fprocesscat_id=v_fprocesscat_id AND descript=v_featureid::text AND cur_user=current_user;
@@ -588,17 +582,22 @@ BEGIN
 					INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
 					VALUES (v_fprocesscat_id, 2, concat('WARNING: Attribute ', v_class ,' on arc/node/connec features have been updated by this process'));
 
-					-- disconnected arcs
-					SELECT count(*) INTO v_count FROM v_edit_arc WHERE arc_id NOT IN 
-					(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id);
-					INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message)
-					VALUES (v_fprocesscat_id, 2, concat('WARNING: ', v_count ,' arcs have been disconnected'));
+					IF v_floodfromnode IS NULL THEN
+					
+						-- disconnected arcs
+						SELECT count(*) INTO v_count FROM v_edit_arc WHERE arc_id NOT IN 
+						(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id);
+						INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message)
+						VALUES (v_fprocesscat_id, 2, concat('WARNING: ', v_count ,' arcs have been disconnected'));
 
-					-- disconnected connecs
-					SELECT count(*) INTO v_count FROM v_edit_connec c WHERE arc_id NOT IN 
-					(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id);
-					INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message)
-					VALUES (v_fprocesscat_id, 2, concat('WARNING: ', v_count ,' connecs have been disconnected'));
+						-- disconnected connecs
+						SELECT count(*) INTO v_count FROM v_edit_connec c WHERE arc_id NOT IN 
+						(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id);
+						INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message)
+						VALUES (v_fprocesscat_id, 2, concat('WARNING: ', v_count ,' connecs have been disconnected'));
+
+					END IF;
+				
 				ELSE
 					-- message
 					INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
@@ -661,6 +660,15 @@ BEGIN
 
 					EXECUTE v_querytext;
 				END IF;
+
+				-- check for intercomunicated mapzones (select if at least one node header has different mazpones from what is configured)
+				EXECUTE 'INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message)
+				SELECT '||v_fprocesscat_id||', 3, concat(''OVERLAPED '||v_class||'s: Node '', mpz.node_id ,'' is header of '||v_class||''',''-'', mpz.'||
+				v_fieldmp||', '' ('',mpz.'||v_mapzonename||','') but it is assigned to '||v_class||' '', ''-'', n.'||v_field||','' ('',mpz.'||v_mapzonename||','')'') FROM node n
+				JOIN 
+				(SELECT json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as node_id, '||v_fieldmp||', '||v_mapzonename||' FROM '||v_table||') mpz
+				USING (node_id)
+				WHERE n.'||v_field||' != mpz.'||v_fieldmp||'';	
 					
 						
 				IF v_updatemapzgeom > 0 THEN
@@ -678,13 +686,6 @@ BEGIN
 
 		END IF;
 	END IF;
-
-	-- restore state selector (if it's needed)
-	IF v_usepsector IS NOT TRUE THEN
-		INSERT INTO selector_psector (psector_id, cur_user)
-		select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=99 and user_name=current_user
-		ON CONFLICT (psector_id, cur_user) DO NOTHING;
-	END IF;
 	
 	-- get results
 	-- info
@@ -693,21 +694,106 @@ BEGIN
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 
-	-- disconnected arcs
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM v_edit_arc WHERE arc_id NOT IN 
-	(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"", "values":',v_result, '}');
+	IF v_updatetattributes THEN -- only disconnected features to make a simple log
 
-	-- disconnected connecs
-	v_result = null;
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
-	FROM (SELECT connec_id, connecat_id, c.state, c.expl_id, 'Disconnected connec'::text as descript, c.the_geom FROM v_edit_connec c WHERE arc_id NOT IN 
-	(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row; 
-	v_result := COALESCE(v_result, '{}'); 
-	v_result_point = concat ('{"geometryType":"Point", "qmlPath":"", "values":',v_result, '}');
+		IF v_floodfromnode IS NULL THEN
+			v_result = null;
+
+			-- disconnected arcs
+			SELECT jsonb_agg(features.feature) INTO v_result
+			FROM (
+			SELECT jsonb_build_object(
+		     'type',       'Feature',
+		    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+		    'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM v_edit_arc WHERE arc_id NOT IN 
+			(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row) features;
+
+			v_result := COALESCE(v_result, '{}'); 
+			v_result_line = concat ('{"geometryType":"LineString", "qmlPath":"", "features":',v_result,'}'); 
+
+
+			-- disconnected connecs
+			v_result = null;
+			
+			SELECT jsonb_agg(features.feature) INTO v_result
+			FROM (
+			SELECT jsonb_build_object(
+		     'type',       'Feature',
+		    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+		    'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT connec_id, connecat_id, c.state, c.expl_id, 'Disconnected connec'::text as descript, c.the_geom FROM v_edit_connec c WHERE arc_id NOT IN 
+			(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row) features;
+
+			v_result := COALESCE(v_result, '{}'); 
+			v_result_point = concat ('{"geometryType":"Point", "qmlPath":"", "features":',v_result, '}'); 
+		END IF;
+
+	ELSE -- all features in order to make a more complex log
+
+		-- arc elements
+		v_result = null;
+
+		EXECUTE 'SELECT jsonb_agg(features.feature) 
+		FROM (
+	  	SELECT jsonb_build_object(
+	    ''type'',       ''Feature'',
+	    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+	    ''properties'', to_jsonb(row) - ''the_geom''
+	  	) AS feature
+	  	FROM (SELECT a.arc_id, b.'||quote_ident(v_field)||', a.the_geom FROM anl_arc a 
+			JOIN (SELECT '||quote_ident(v_fieldmp)||', json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as nodeparent from '||
+			quote_ident(v_table)||') b ON  nodeparent = descript 
+			WHERE fprocesscat_id='||v_fprocesscat_id||' AND cur_user=current_user) row) features'
+		INTO v_result;
+
+		v_result := COALESCE(v_result, '{}'); 
+
+		v_result_line = concat ('{"geometryType":"LineString", "qmlPath":'||v_lineqmlpath||', "features":',v_result, '}');
+
+		-- connec elements
+		v_result = null;
+		EXECUTE 'SELECT jsonb_agg(features.feature)
+		FROM (
+	  	SELECT jsonb_build_object(
+	    ''type'',       ''Feature'',
+	    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+	    ''properties'', to_jsonb(row) - ''the_geom''
+	  	) AS feature
+	  	FROM (SELECT c.connec_id, b.'||quote_ident(v_field)||', c.the_geom FROM anl_arc a 
+			JOIN (SELECT  '||quote_ident(v_fieldmp)||', json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as nodeparent from '||quote_ident(v_table)||')
+			 b ON  nodeparent = descript 
+			JOIN connec c ON c.arc_id = a.arc_id
+			WHERE fprocesscat_id='||v_fprocesscat_id||' AND cur_user=current_user) row) features'
+		INTO v_result;
+
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_point = concat ('{"geometryType":"Point", "qmlPath":'||v_pointqmlpath||', "features":',v_result, '}');
+	END IF;
+
+	IF v_audit_result is null THEN
+		v_status = 'Accepted';
+		v_level = 3;
+		v_message = 'Mapzones dynamic analysis done succesfull';
+	ELSE
+
+		-- disconnected connecs
+		v_result = null;
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (SELECT connec_id, connecat_id, c.state, c.expl_id, 'Disconnected connec'::text as descript, c.the_geom FROM v_edit_connec c WHERE arc_id NOT IN 
+		(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fprocesscat_id=v_fprocesscat_id)) row; 
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_point = concat ('{"geometryType":"Point", "qmlPath":"", "values":',v_result, '}');
+
+		-- restore state selector (if it's needed)
+		IF v_usepsector IS NOT TRUE THEN
+			INSERT INTO selector_psector (psector_id, cur_user)
+			select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=199 and cur_user=current_user
+			ON CONFLICT (psector_id, cur_user) DO NOTHING;
+		END IF;
+	END IF;
 
 	-- Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 

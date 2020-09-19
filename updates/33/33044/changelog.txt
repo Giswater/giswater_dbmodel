@@ -1,0 +1,3 @@
+3.3.044
+*************
+- Enhance grafanalytics function in combination with setfields function (when field closed of valves is changed)
