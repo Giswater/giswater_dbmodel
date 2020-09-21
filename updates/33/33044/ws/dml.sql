@@ -38,7 +38,7 @@ WHERE id = 2826;
 UPDATE audit_cat_function SET  descript =
 'Function to analyze graf of network. Multiple analysis is avaliable.  On advanced mode multi exploitation is avaliable and update mapzones geometry is enabled. Dynamic analisys to sectorize network using the flow traceability function. 
 Before work with this funcion it is mandatory to configurate field graf_delimiter on node_type and field grafconfig on [dma, sector, cat_presszone and dqa] tables.
-Widget witj (*) are optative. Standard value for Pipe buffer parameter maybe: 5-30 (mts)'
+Widget with (*) are optative. Standard value for Pipe buffer parameter maybe: 5-30 (mts)'
 WHERE id = 2768;
 
 INSERT INTO config_param_system (parameter, value, descript, label, isenabled, project_type) VALUES ('utils_grafanalytics_automatic_trigger', '{"status":"false", "parameters":{"updateMapZone":2, "geomParamUpdate":10, "usePlanPsector":false}}', 'Automatic trigger of graf analytics used when valve status is modified (open or close)', 'Automatic grafanalytics trigger', true, 'ws')
