@@ -330,6 +330,3 @@ CREATE OR REPLACE VIEW v_inp_pjointpattern AS
                     ELSE NULL::integer
                 END)) a
   GROUP BY a.idrow, a.pattern_id, a.pjoint_type;
-
-ALTER TABLE v_inp_pjointpattern
-  OWNER TO postgres;
