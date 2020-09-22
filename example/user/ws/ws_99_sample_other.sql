@@ -685,3 +685,10 @@ UPDATE config_form_fields SET placeholder = 'Only when state is obsolete' where 
 UPDATE config_form_fields SET placeholder = 'Top floor of the building (ex: 3)' where columnname = 'top_floor' AND formname like '%ve_connec%';
 UPDATE config_form_fields SET placeholder = 'Optional: Arc_id of related arc' where columnname = 'arc_id' AND formname like '%ve_node%';
 UPDATE config_form_fields SET placeholder = 'Optional: Node_id of the parent node' where columnname = 'parent_id' AND formname like '%ve_node%';
+
+
+UPDATE sys_param_user SET layoutorder=2, layoutname = 'lyt_connec_gully_vdef' WHERE id='feat_fountain_vdefault';
+UPDATE sys_param_user SET layoutorder=3, layoutname = 'lyt_connec_gully_vdef' WHERE id='feat_greentap_vdefault';
+UPDATE sys_param_user SET layoutorder=4, layoutname = 'lyt_connec_gully_vdef' WHERE id='feat_tap_vdefault';
+UPDATE sys_param_user SET layoutorder=5, layoutname = 'lyt_connec_gully_vdef' WHERE id='feat_vconnec_vdefault';
+UPDATE sys_param_user SET layoutorder=6, layoutname = 'lyt_connec_gully_vdef' WHERE id='feat_wjoin_vdefault';
