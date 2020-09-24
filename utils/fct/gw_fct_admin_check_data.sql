@@ -77,11 +77,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "active". Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext, v_count);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-		VALUES (195, 1, 'INFO: All features have value on field "active"', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All features have value on field "active"');
 	END IF;
 
 	--check if all features have value on field code_autofill
@@ -90,11 +90,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "code_autofill". Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext, v_count);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-		VALUES (195, 1, 'INFO: All features have value on field "code_autofill"', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All features have value on field "code_autofill"');
 	END IF;
 
 	--check if all nodes have value on field num_arcs
@@ -103,11 +103,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "num_arcs". Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext, v_count);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-		VALUES (195, 1, 'INFO: All nodes have value on field "num_arcs"', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "num_arcs"');
 	END IF;
 
 	--check if all nodes have value on field isarcdivide
@@ -116,11 +116,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isarcdivide". Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext, v_count);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-		VALUES (195, 1, 'INFO: All nodes have value on field "isarcdivide"', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "isarcdivide"');
 	END IF;
 
 	IF v_project_type = 'WS' THEN
@@ -130,11 +130,11 @@ BEGIN
 		IF v_count > 0 THEN
 			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "graf_delimiter". Features - ',v_feature_list::text,'.');
 
-			INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
 			VALUES (195, 3, v_errortext, v_count);
 		ELSE
-			INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-			VALUES (195, 1, 'INFO: All nodes have value on field "graf_delimiter"', 0);
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
+			VALUES (195, 1, 'INFO: All nodes have value on field "graf_delimiter"');
 		END IF;
 	END IF;
 
@@ -145,11 +145,11 @@ BEGIN
 		IF v_count > 0 THEN
 			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isexitupperintro". Features - ',v_feature_list::text,'.');
 
-			INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
 			VALUES (195, 3, v_errortext, v_count);
 		ELSE
-			INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-			VALUES (195, 1, 'INFO: All nodes have value on field "isexitupperintro"', 0);
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
+			VALUES (195, 1, 'INFO: All nodes have value on field "isexitupperintro"');
 		END IF;
 	END IF;
 	
@@ -159,11 +159,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "choose_hemisphere". Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext, v_count);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-		VALUES (195, 1, 'INFO: All nodes have value on field "choose_hemisphere"', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "choose_hemisphere"');
 	END IF;
 
 	--check if all nodes have value on field isprofilesurface
@@ -172,11 +172,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isprofilesurface". Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext, v_count);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, fcount)
-		VALUES (195, 1, 'INFO: All nodes have value on field "isprofilesurface"', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "isprofilesurface"');
 	END IF;
 	
 
