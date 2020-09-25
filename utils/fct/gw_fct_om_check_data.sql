@@ -599,7 +599,7 @@ BEGIN
 	
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 2, concat('WARNING: There is/are ',v_count,' vnode links without vnode. This will be automatic repaired.'));
+		VALUES (125, 2, concat('WARNING: There is/are ',v_count,' vnode links without vnode. This will be automatically repaired.'));
 		
 		PERFORM gw_fct_vnode_repair();	
 		
@@ -818,7 +818,31 @@ BEGIN
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (125, 1, 'INFO: All features have a diferent ID to be correctly identified');
 	END IF;
-		
+
+	RAISE NOTICE '26 - Check planned connects without reference link';
+
+	IF v_project_type = 'WS' THEN
+		v_querytext = 'SELECT count(*) FROM plan_psector_x_connec LEFT JOIN link ON feature_id = connec_id WHERE link_id IS NULL';
+	ELSIF v_project_type = 'UD' THEN
+		v_querytext = 'SELECT count(*) FROM (SELECT * FROM plan_psector_x_connec LEFT JOIN link ON feature_id = connec_id WHERE link_id IS NULL
+				UNION SELECT * FROM plan_psector_x_gully LEFT JOIN link ON feature_id = gully_id WHERE link_id IS NULL)a';
+	END IF;
+
+
+	EXECUTE v_querytext INTO v_count;
+
+	IF v_count = 1 THEN
+		INSERT INTO audit_check_data (fid, criticity, error_message)
+		VALUES (125, 3, concat('ERROR: There is ',v_count,' planned connec or gully without reference link'));
+	ELSIF v_count > 1 THEN
+		INSERT INTO audit_check_data (fid, criticity, error_message)
+		VALUES (125, 3, concat('ERROR: There are ',v_count,' planned connecs or gullys without reference link'));
+	ELSE
+		INSERT INTO audit_check_data (fid, criticity, error_message)
+		VALUES (125, 1, 'INFO: All features have a diferent ID to be correctly identified');
+	END IF;
+
+	--	
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 4, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 3, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 2, '');
