@@ -38,6 +38,7 @@ select * from SCHEMA_NAME.exploitation
 ----------
 TO EXECUTE
 ----------
+grant all on all functions in schema SCHEMA_NAME to role_basic
 
 -- QUERY SAMPLE
 ----------------
@@ -326,11 +327,11 @@ BEGIN
 			VALUES (v_fprocesscat_id, 3, concat('ERROR: Dynamic analysis for ',v_class,'''s is not configured on database. Please update system variable ''om_dynamicmapzones_status''
 			 to enable it '));
 		
-		-- (2) check data quality in order to continue or not
-		ELSIF (SELECT count(*) FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=111 AND criticity=3) > 3 THEN
+		-- (2) check data quality in order to continue or not (commented because mapzones may be null with json
+		--ELSIF (SELECT count(*) FROM audit_check_data WHERE user_name="current_user"() AND fprocesscat_id=111 AND criticity=3) > 3 THEN
 		
-			INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
-			SELECT 44, criticity, error_message FROM audit_check_data WHERE user_name=current_user AND fprocesscat_id=111 AND criticity=3 AND error_message LIKE('%ERROR:%');
+			--INSERT INTO audit_check_data (fprocesscat_id, criticity, error_message) 
+			--SELECT 44, criticity, error_message FROM audit_check_data WHERE user_name=current_user AND fprocesscat_id=111 AND criticity=3 AND error_message LIKE('%ERROR:%');
 		ELSE 
 			-- start build log message
 			INSERT INTO audit_check_data (fprocesscat_id, result_id, criticity, error_message) VALUES (v_fprocesscat_id, NULL, 2, 'WARNINGS');	
