@@ -543,15 +543,14 @@ BEGIN
 					IF v_floodfromnode IS NOT NULL THEN
 
 						-- getting node header	
-						v_floodfromnode = (
-							SELECT node_id FROM (SELECT node_1 as node_id, arc_id FROM anl_arc WHERE fid = 145 AND cur_user = current_user
+						EXECUTE 'SELECT node_id FROM (SELECT node_1 as node_id, arc_id FROM anl_arc WHERE fid = 145 AND cur_user = current_user
 							UNION SELECT node_2, arc_id FROM anl_arc WHERE fid = 145 AND cur_user = current_user)a
 							JOIN
-							(SELECT json_array_elements_text((grafconfig->>'use')::json)::json->>'nodeParent' as node_id,
-							json_array_elements_text((json_array_elements_text((grafconfig->>'use')::json)::json->>'toArc')::json) as arc_id, dma_id FROM dma) b
+							(SELECT json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as node_id,
+							json_array_elements_text((json_array_elements_text((grafconfig->>''use'')::json)::json->>''toArc'')::json) as arc_id, '||quote_ident(v_fieldmp)||' FROM '||quote_ident(v_table)||') b
 							USING (node_id, arc_id)
-							LIMIT 1
-							);
+							LIMIT 1'
+							INTO v_floodfromnode;
 							
 						-- update results
 						UPDATE anl_arc SET descript = v_floodfromnode WHERE fid = 145;
