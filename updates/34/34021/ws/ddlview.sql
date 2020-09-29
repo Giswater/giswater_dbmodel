@@ -70,3 +70,45 @@ CREATE OR REPLACE VIEW v_edit_link AS
              LEFT JOIN dma ON dma.dma_id::text = arc.dma_id::text
              LEFT JOIN plan_psector_x_connec USING (arc_id, connec_id)) a
   WHERE a.state > 0 AND a.link_id IS NOT NULL;
+
+
+
+CREATE OR REPLACE VIEW v_edit_vnode AS 
+ SELECT a.vnode_id,
+    a.feature_type,
+    a.elev,
+    a.sector_id,
+    a.dma_id,
+    a.state,
+    a.the_geom,
+    a.expl_id,
+    a.ispsectorgeom,
+    a.psector_rowid
+   FROM ( SELECT DISTINCT ON (vnode.vnode_id) vnode.vnode_id,
+            link.feature_type,
+            vnode.elev,
+            link.sector_id,
+            link.dma_id,
+                CASE
+                    WHEN plan_psector_x_connec.connec_id IS NULL OR plan_psector_x_connec.state = 0 THEN link.state
+                    ELSE plan_psector_x_connec.state
+                END AS state,
+                CASE
+                    WHEN plan_psector_x_connec.connec_id IS NULL OR plan_psector_x_connec.state = 0 THEN vnode.the_geom
+                    ELSE plan_psector_x_connec.vnode_geom
+                END AS the_geom,
+            link.expl_id,
+                CASE
+                    WHEN plan_psector_x_connec.connec_id IS NULL OR plan_psector_x_connec.state = 0 THEN false
+                    ELSE true
+                END AS ispsectorgeom,
+                CASE
+                    WHEN plan_psector_x_connec.connec_id IS NULL OR plan_psector_x_connec.state = 0 THEN NULL::integer
+                    ELSE plan_psector_x_connec.id
+                END AS psector_rowid
+           FROM v_edit_link link
+             JOIN vnode ON link.exit_id::text = vnode.vnode_id::text AND link.exit_type::text = 'VNODE'::text
+             LEFT JOIN v_state_connec ON link.feature_id::text = v_state_connec.connec_id::text
+             LEFT JOIN plan_psector_x_connec USING (arc_id, connec_id)
+          WHERE link.feature_id::text = v_state_connec.connec_id::text) a
+  WHERE a.state > 0;
