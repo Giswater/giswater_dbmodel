@@ -276,7 +276,7 @@ BEGIN
 		INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
 
 		-- save expl selector 
-		DELETE FROM temp_table WHERE fprocesscat_id=99 AND user_name=current_user;
+		DELETE FROM temp_table WHERE fprocesscat_id=289 AND user_name=current_user;
 		INSERT INTO temp_table (fprocesscat_id, text_column)  
 		SELECT 289, (array_agg(expl_id)) FROM selector_expl WHERE cur_user=current_user;			
 		
@@ -296,9 +296,9 @@ BEGIN
 		IF v_usepsector IS NOT TRUE THEN
 		
 			-- save psector selector 
-			DELETE FROM temp_table WHERE fprocesscat_id=99 AND user_name=current_user;
+			DELETE FROM temp_table WHERE fprocesscat_id=288 AND user_name=current_user;
 			INSERT INTO temp_table (fprocesscat_id, text_column)
-			SELECT 99, (array_agg(psector_id)) FROM selector_psector WHERE cur_user=current_user;
+			SELECT 288, (array_agg(psector_id)) FROM selector_psector WHERE cur_user=current_user;
 
 			-- set psector selector
 			DELETE FROM selector_psector WHERE cur_user=current_user;
@@ -535,15 +535,14 @@ BEGIN
 					IF v_floodfromnode IS NOT NULL THEN
 
 						-- getting node header	
-						v_floodfromnode = (
-							SELECT node_id FROM (SELECT node_1 as node_id, arc_id FROM arc JOIN anl_arc USING (arc_id) WHERE fprocesscat_id = 45 AND cur_user = current_user
-							UNION SELECT node_2, arc_id FROM arc JOIN anl_arc USING (arc_id) WHERE fprocesscat_id = 45 AND cur_user = current_user)a
+						EXECUTE 'SELECT node_id FROM (SELECT node_1 as node_id, arc_id FROM anl_arc WHERE fid = 145 AND cur_user = current_user
+							UNION SELECT node_2, arc_id FROM anl_arc WHERE fid = 145 AND cur_user = current_user)a
 							JOIN
-							(SELECT json_array_elements_text((grafconfig->>'use')::json)::json->>'nodeParent' as node_id,
-							json_array_elements_text((json_array_elements_text((grafconfig->>'use')::json)::json->>'toArc')::json) as arc_id, dma_id FROM dma) b
+							(SELECT json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as node_id,
+							json_array_elements_text((json_array_elements_text((grafconfig->>''use'')::json)::json->>''toArc'')::json) as arc_id, '||quote_ident(v_fieldmp)||' FROM '||quote_ident(v_table)||') b
 							USING (node_id, arc_id)
-							LIMIT 1
-							);
+							LIMIT 1'
+							INTO v_floodfromnode;
 							
 						-- update results
 						UPDATE anl_arc SET descript = v_floodfromnode WHERE fprocesscat_id = 45;
@@ -819,10 +818,10 @@ BEGIN
 		v_result := COALESCE(v_result, '{}'); 
 		v_result_point = concat ('{"geometryType":"Point", "qmlPath":"", "values":',v_result, '}');
 
-		-- restore state selector (if it's needed)
+		-- restore psector selector (if it's needed)
 		IF v_usepsector IS NOT TRUE THEN
 			INSERT INTO selector_psector (psector_id, cur_user)
-			select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=199 and cur_user=current_user
+			select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=288 and cur_user=current_user
 			ON CONFLICT (psector_id, cur_user) DO NOTHING;
 		END IF;
 	END IF;
