@@ -45,7 +45,10 @@ SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafCl
 "updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[], "forceClosed":[]}}}')
 
 SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE", "exploitation":[1], "macroExploitation":[1], "checkData":false, 
-"updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
+"updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "MapzoneFromNode":"113908", "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
+
+SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE", "exploitation":[1],  "checkData":false, 
+"updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false}}}');
 
 SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "nodeHeader":"113952","exploitation":[1], "macroExploitation":[1], "checkData":false, 
 "updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
@@ -262,12 +265,22 @@ BEGIN
 		DELETE FROM anl_node where cur_user=current_user and fprocesscat_id=v_fprocesscat_id;
 		TRUNCATE temp_anlgraf;
 		DELETE FROM audit_check_data WHERE fprocesscat_id=v_fprocesscat_id AND user_name=current_user;
-			
-		-- reset selectors
+
+		-- save state selector 
+		DELETE FROM temp_table WHERE fprocesscat_id=99 AND user_name=current_user;
+		INSERT INTO temp_table (fprocesscat_id, text_column)  
+		SELECT 99, (array_agg(state_id)) FROM selector_state WHERE cur_user=current_user;
+		
+		-- reset state selectors
 		DELETE FROM selector_state WHERE cur_user=current_user;
 		INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
-			
-		-- reset exploitation
+
+		-- save expl selector 
+		DELETE FROM temp_table WHERE fprocesscat_id=99 AND user_name=current_user;
+		INSERT INTO temp_table (fprocesscat_id, text_column)  
+		SELECT 289, (array_agg(expl_id)) FROM selector_expl WHERE cur_user=current_user;			
+		
+		-- reset expl selector
 		IF v_expl IS NOT NULL THEN
 			DELETE FROM selector_expl WHERE cur_user=current_user;
 			INSERT INTO selector_expl (expl_id, cur_user) 
@@ -513,11 +526,30 @@ BEGIN
 						INSERT INTO audit_check_data (fprocesscat_id,  criticity, error_message) 
 						VALUES (v_fprocesscat_id, 1, concat('INFO: ', v_class ,' for node: ',v_featureid ,' have been processed. ARCS (', v_count1, '), NODES (', v_count2, '), CONNECS (', v_count3,')'));
 					END IF;
-
 				END LOOP;
 
 				-- update feature atributes
-				IF v_updatetattributes THEN 
+				IF v_updatetattributes THEN
+
+					-- flood from node may be a header or not. In case of won't be a header by this process we can get header from any node
+					IF v_floodfromnode IS NOT NULL THEN
+
+						-- getting node header	
+						v_floodfromnode = (
+							SELECT node_id FROM (SELECT node_1 as node_id, arc_id FROM arc JOIN anl_arc USING (arc_id) WHERE fprocesscat_id = 45 AND cur_user = current_user
+							UNION SELECT node_2, arc_id FROM arc JOIN anl_arc USING (arc_id) WHERE fprocesscat_id = 45 AND cur_user = current_user)a
+							JOIN
+							(SELECT json_array_elements_text((grafconfig->>'use')::json)::json->>'nodeParent' as node_id,
+							json_array_elements_text((json_array_elements_text((grafconfig->>'use')::json)::json->>'toArc')::json) as arc_id, dma_id FROM dma) b
+							USING (node_id, arc_id)
+							LIMIT 1
+							);
+							
+						-- update results
+						UPDATE anl_arc SET descript = v_floodfromnode WHERE fprocesscat_id = 45;
+						UPDATE anl_node SET descript = v_floodfromnode WHERE fprocesscat_id = 45;
+
+					END IF;				
 
 					-- update arc table
 					v_querytext = 'UPDATE arc SET '||quote_ident(v_field)||' = b.'||quote_ident(v_fieldmp)||' FROM anl_arc a JOIN 
@@ -795,6 +827,16 @@ BEGIN
 		END IF;
 	END IF;
 
+	-- restore state selector
+	INSERT INTO selector_state (state_id, cur_user)
+	select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=99 and user_name=current_user
+	ON CONFLICT (state_id, cur_user) DO NOTHING;
+
+	-- restore expl selector
+	INSERT INTO selector_expl (expl_id, cur_user)
+	select unnest(text_column::integer[]), current_user from temp_table where fprocesscat_id=289 and user_name=current_user
+	ON CONFLICT (expl_id, cur_user) DO NOTHING;
+	
 	-- Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 
 	v_visible_layer := COALESCE(v_visible_layer, '{}'); 

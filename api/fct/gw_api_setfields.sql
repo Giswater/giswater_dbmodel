@@ -62,6 +62,7 @@ DECLARE
     v_jsonfield json;
     v_fieldsreload text;
     v_columnfromid json;
+    v_oppositenode text;
 
 
 -- variables only used on the automatic trigger mapzone
@@ -246,7 +247,7 @@ BEGIN
 			
 				IF v_closedstatus IS TRUE OR (v_closedstatus IS FALSE AND v_count = 2) THEN
 
-					-- count mapzones
+					-- looking for mapzones
 					EXECUTE 'SELECT count(*) FROM (SELECT DISTINCT '||lower(v_mapzone)||'_id FROM node WHERE node_id IN 
 						(SELECT node_1 as node_id FROM arc WHERE node_2 = '||v_id||'::text UNION SELECT node_2 FROM arc WHERE node_1 = '||v_id||'::text)) a WHERE '||lower(v_mapzone)||'_id::integer > 0 '
 						INTO v_count;
@@ -273,12 +274,27 @@ BEGIN
 						v_querytext = '{"data":{"parameters":{"grafClass":"'||v_mapzone||'", "exploitation":['||v_expl||'], "checkData":false, "updateFeature":true, 
 						"updateMapZone":'||v_updatemapzone||', "geomParamUpdate":'||v_geomparamupdate||',"debug":false, "usePlanPsector":'||v_useplanpsector||', "forceOpen":[], "forceClosed":[]}}}';
 					END IF;
-							
+
+					-- execute grafanalytics_mapzones
 					PERFORM gw_fct_grafanalytics_mapzones(v_querytext::json);
 
-					-- return message 
 					IF v_closedstatus IS TRUE THEN
+
+						-- looking for dry side using catching opposite node
+						EXECUTE 'SELECT node_2 FROM arc WHERE node_1 = '''||v_id||''' AND '||lower(v_mapzone)||'_id = 0 UNION SELECT node_1 FROM arc WHERE node_2 ='''||v_id||''' AND '||lower(v_mapzone)||'_id = 0 LIMIT 1'
+							INTO v_oppositenode;
+
+						IF v_oppositenode IS NOT NULL THEN
+
+							-- execute grafanalytics_mapzones using dry side in order to check some header
+							v_querytext = '{"data":{"parameters":{"grafClass":"'||v_mapzone||'", "exploitation":['||v_expl||'], "floodFromNode":"'||v_oppositenode||'", "checkData":false, "updateFeature":true, 
+							"updateMapZone":'||v_updatemapzone||', "geomParamUpdate":'||v_geomparamupdate||',"debug":false, "usePlanPsector":'||v_useplanpsector||', "forceOpen":[], "forceClosed":[]}}}';
+
+							PERFORM gw_fct_grafanalytics_mapzones(v_querytext::json);
+						END IF;
+					
 						v_message = '{"level": 0, "text": "DYNAMIC MAPZONES: Valve have been succesfully closed. Maybe this operation have been affected on mapzones. Take a look on map for check it"}';
+
 					ELSIF v_closedstatus IS FALSE THEN
 						IF v_count= 1 THEN
 							v_message = '{"level": 0, "text": "DYNAMIC MAPZONES: Valve have been succesfully opened. If there were disconnected elements, it have been reconnected to mapzone"}';
