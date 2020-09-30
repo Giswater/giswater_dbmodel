@@ -153,6 +153,9 @@ v_lot integer;
 v_userrole text;
 v_code text;
 v_check_code text;
+v_filter_lot_null text = '';
+v_visit_id integer;
+v_load_visit boolean;
 	
 BEGIN
 	
@@ -215,6 +218,50 @@ BEGIN
 
 	--  get visitclass
 	IF v_visitclass IS NULL THEN
+
+		IF v_featureid IS NULL THEN
+			v_featureid = v_id;
+		END IF;
+		
+		IF v_featuretype IS NULL AND p_visittype=1 AND v_id IS NULL THEN
+		
+			EXECUTE ('SELECT lower(sys_type) FROM '||v_featuretablename||' LIMIT 1') INTO v_featuretype;
+		END IF;
+
+
+		IF v_offline THEN
+			v_id = NULL;
+		ELSE
+			IF v_featuretype IS NOT NULL AND v_featureid IS NOT NULL THEN
+				-- Compare current lot_id with old visits for only show existing visits for current lot
+				v_lot = (SELECT lot_id FROM om_visit_lot_x_user WHERE endtime IS NULL AND user_id=current_user);
+
+				-- getting visit class in function of visit type and tablename (when tablename IS NULL then noinfra)
+				v_visitclass := (SELECT id FROM config_visit_class WHERE visit_type=p_visittype AND feature_type = upper(v_featuretype) AND param_options->>'offlineDefault' = 'true' LIMIT 1)::integer;
+				
+				IF v_visitclass IS NULL THEN
+					v_visitclass := (SELECT id FROM config_visit_class WHERE feature_type=upper(v_featuretype) AND visit_type=1 LIMIT 1);
+				END IF;
+
+				IF v_lot IS NOT NULL THEN
+					v_filter_lot_null = concat(' AND om_visit.lot_id = ', v_lot);
+				END IF;
+
+				EXECUTE ('SELECT visit_id FROM om_visit_x_'|| (v_featuretype) ||' 
+				JOIN om_visit ON om_visit.id = om_visit_x_'|| (v_featuretype) ||'.visit_id 
+				WHERE ' || (v_featuretype) || '_id = ' || quote_literal(v_featureid) || '::text ' || v_filter_lot_null || ' AND om_visit.class_id = '|| v_visitclass || '
+				ORDER BY om_visit_x_'|| (v_featuretype) ||'.id desc LIMIT 1') INTO v_visit_id;
+
+				
+			END IF;
+
+			IF v_visit_id IS NOT NULL THEN
+				EXECUTE ('SELECT true FROM om_visit WHERE enddate > now() - ''7 days''::interval AND id = '|| v_visit_id || ' ORDER BY id desc LIMIT 1') INTO v_load_visit;
+			END IF;
+		
+			RAISE NOTICE 'v_load_visit -> %',v_load_visit;
+
+		END IF;
 		
 		--new visit
 		IF v_id IS NULL OR (SELECT id FROM om_visit WHERE id=v_id::bigint) IS NULL THEN
@@ -254,8 +301,12 @@ BEGIN
 			END IF;				
 							
 		-- existing visit
+		ELSIF v_load_visit THEN
+				
+			EXECUTE ('SELECT class_id FROM om_visit WHERE id = '|| v_visit_id || ' ORDER BY id desc LIMIT 1') INTO v_visitclass;
+			v_id = v_visit_id;
 		ELSE 
-			v_visitclass := (SELECT class_id FROM om_visit WHERE id=v_id::bigint);
+			v_visitclass := (SELECT class_id FROM om_visit WHERE id=v_id::bigint);			
 		END IF;
 	END IF;
 
@@ -460,7 +511,7 @@ BEGIN
 				END IF;
 				
 				RAISE NOTICE ' --- GETTING tabData DEFAULT VALUES ON NEW VISIT ---';
-				SELECT gw_fct_getformfields( v_formname, 'form_visit', 'data', v_tablename, null, null, null, 'INSERT', null, v_device) INTO v_fields;
+				SELECT gw_fct_getformfields( v_formname, 'form_visit', 'data', v_tablename, null, null, null, 'INSERT', null, v_device, null) INTO v_fields;
 
 				FOREACH aux_json IN ARRAY v_fields
 				LOOP					
@@ -545,7 +596,7 @@ BEGIN
 					
 				END LOOP;
 			ELSE 
-				SELECT gw_fct_getformfields( v_formname, 'form_visit', 'data', v_tablename, null, null, null, 'INSERT', null, v_device) INTO v_fields;
+				SELECT gw_fct_getformfields( v_formname, 'form_visit', 'data', v_tablename, null, null, null, 'INSERT', null, v_device, null) INTO v_fields;
 
 				RAISE NOTICE ' --- GETTING tabData VALUES ON VISIT  ---';
 
@@ -618,10 +669,10 @@ BEGIN
 
 		END IF;
 
-		SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tabData' and device = v_device LIMIT 1;
+		SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_data' and device = v_device LIMIT 1;
 
 		IF v_tab IS NULL THEN 
-			SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tabData' LIMIT 1;
+			SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_data' LIMIT 1;
 		END IF;
 
 		IF v_status = 0 or v_offline = 'true' THEN
@@ -683,10 +734,10 @@ BEGIN
 			v_fields_json := COALESCE(v_fields_json, '{}');
 
 			-- building tab
-			SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tabFiles' and device = v_device LIMIT 1;
+			SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_files' and device = v_device LIMIT 1;
 		
 			IF v_tab IS NULL THEN 
-				SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tabFiles' LIMIT 1;
+				SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_files' LIMIT 1;
 			END IF;
 
 			IF v_status = 0 THEN
