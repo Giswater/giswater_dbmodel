@@ -734,10 +734,10 @@ BEGIN
 			v_fields_json := COALESCE(v_fields_json, '{}');
 
 			-- building tab
-			SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_files' and device = v_device LIMIT 1;
+			SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_file' and device = v_device LIMIT 1;
 		
 			IF v_tab IS NULL THEN 
-				SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_files' LIMIT 1;
+				SELECT * INTO v_tab FROM config_form_tabs WHERE formname='visit' AND tabname='tab_file' LIMIT 1;
 			END IF;
 
 			IF v_status = 0 THEN
