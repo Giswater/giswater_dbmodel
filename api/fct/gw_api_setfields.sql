@@ -281,9 +281,11 @@ BEGIN
 					IF v_closedstatus IS TRUE THEN
 
 						-- looking for dry side using catching opposite node
-						EXECUTE 'SELECT node_2 FROM arc WHERE node_1 = '''||v_id||''' AND '||lower(v_mapzone)||'_id = 0 UNION SELECT node_1 FROM arc WHERE node_2 ='''||v_id||''' AND '||lower(v_mapzone)||'_id = 0 LIMIT 1'
+						IF v_mapzone = 'PRESSZONE' THEN v_mapzone = 'presszonecat'; END IF;
+						EXECUTE 'SELECT node_2 FROM arc WHERE node_1 = '''||v_id||''' AND '||lower(v_mapzone)||'_id::integer = 0 UNION SELECT node_1 FROM arc WHERE node_2 ='''||v_id||''' AND '||lower(v_mapzone)||'_id::integer = 0 LIMIT 1'
 							INTO v_oppositenode;
 
+						v_mapzone = 'PRESSZONE';	
 						IF v_oppositenode IS NOT NULL THEN
 
 							-- execute grafanalytics_mapzones using dry side in order to check some header
