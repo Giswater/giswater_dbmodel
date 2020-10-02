@@ -85,7 +85,7 @@ BEGIN
 
 	--    Get fields
     EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT id, label, name, type, ''TRUE'' AS disabled, "dataType", placeholder, (ROW_NUMBER() OVER(ORDER BY orderby asc)) AS rownum, 
-        dv_table, dv_id_column, dv_name_column, dv_querytext FROM config_web_fields WHERE table_id = $1 order by 8) a'
+        dv_table, dv_id_column, dv_name_column, sql_text as dv_querytext FROM config_web_fields WHERE table_id = $1 order by 8) a'
         INTO fields_array
         USING table_id;  
 
