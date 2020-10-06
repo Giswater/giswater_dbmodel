@@ -81,11 +81,11 @@ v_updatemapzone float;
 
 BEGIN
 
---    Set search path to local schema
+	-- Set search path to local schema
     SET search_path = "SCHEMA_NAME", public;
     v_schemaname = 'SCHEMA_NAME';
 
---  get api version
+	-- get api version
     EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''ApiVersion'') row'
         INTO api_version;
 
@@ -210,7 +210,7 @@ BEGIN
 	v_message = '{"level": 3, "text": "Feature have been succesfully updated."}';
 
 	-- trigger automatic mapzones
-	SELECT type INTO v_type FROM cat_feature JOIN node_type USING (id) WHERE child_layer = v_tablename AND graf_delimiter !='NONE';
+	SELECT type INTO v_type FROM cat_feature JOIN node_type USING (id) WHERE child_layer = v_tablename;
 
 	IF v_type = 'VALVE' AND v_closedstatus IS NOT NULL THEN
 
@@ -282,15 +282,18 @@ BEGIN
 
 						-- looking for dry side using catching opposite node
 						IF v_mapzone = 'PRESSZONE' THEN v_mapzone = 'presszonecat'; END IF;
-						EXECUTE 'SELECT node_2 FROM arc WHERE node_1 = '''||v_id||''' AND '||lower(v_mapzone)||'_id::integer = 0 UNION SELECT node_1 FROM arc WHERE node_2 ='''||v_id||''' AND '||lower(v_mapzone)||'_id::integer = 0 LIMIT 1'
+						EXECUTE 'SELECT node_2 FROM arc WHERE node_1 = '''||v_id||''' AND '||lower(v_mapzone)||'_id::integer = 0 UNION SELECT node_1 
+						FROM arc WHERE node_2 ='''||v_id||''' AND '||lower(v_mapzone)||'_id::integer = 0 LIMIT 1'
 							INTO v_oppositenode;
-
-						v_mapzone = 'PRESSZONE';	
+						IF v_mapzone = 'presszonecat' THEN v_mapzone = 'PRESSZONE'; END IF;
+						
 						IF v_oppositenode IS NOT NULL THEN
 
 							-- execute grafanalytics_mapzones using dry side in order to check some header
 							v_querytext = '{"data":{"parameters":{"grafClass":"'||v_mapzone||'", "exploitation":['||v_expl||'], "floodFromNode":"'||v_oppositenode||'", "checkData":false, "updateFeature":true, 
 							"updateMapZone":'||v_updatemapzone||', "geomParamUpdate":'||v_geomparamupdate||',"debug":false, "usePlanPsector":'||v_useplanpsector||', "forceOpen":[], "forceClosed":[]}}}';
+
+							--RAISE EXCEPTION 'v_querytext %', v_querytext;
 
 							PERFORM gw_fct_grafanalytics_mapzones(v_querytext::json);
 						END IF;
@@ -328,8 +331,7 @@ BEGIN
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN 
-	RETURN ('{"status":"Failed","message":{"level":2, "text":""' || to_json(SQLERRM) || '}, "apiVersion":'|| api_version ||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
-
+	RETURN ('{"status":"Nothing"}');
 
 END;
 $BODY$
