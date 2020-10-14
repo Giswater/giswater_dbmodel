@@ -50,39 +50,39 @@ BEGIN
 	SELECT project_type, giswater INTO v_project_type, v_version FROM sys_version order by id desc limit 1;
 
 	
-	-- ext_cat_period
+	raise notice 'ext_cat_period';
 	INSERT INTO ext_cat_period (id, code, period_seconds, period_year, period_name, period_type) 
 	SELECT DISTINCT CONCAT(log_message::json->>'year', '-', log_message::json->>'period') , CONCAT(log_message::json->>'year', 0, log_message::json->>'period'), 2*30*24*3600, 
 	(log_message::json->>'year')::integer, (log_message::json->>'period')::integer, 1
 	FROM audit_log_data WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (id) DO NOTHING;
 
-	-- rtc_hdyrometer
+	raise notice 'rtc_hdyrometer';
 	INSERT INTO rtc_hydrometer (hydrometer_id)
 	SELECT feature_id FROM audit_log_data WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (hydrometer_id) DO NOTHING;
 
-	-- ext_rtc_hdydrometer
+	raise notice 'ext_rtc_hdydrometer';
 	IF (SELECT value FROM config_param_system WHERE parameter='admin_crm_schema')::boolean THEN
-		INSERT INTO crm.hydrometer (id, connec_id, state_id, expl_id, category_id)
-		SELECT a.feature_id , log_message::json->>'connec_id', 1, (log_message::json->>'expl_id')::integer, 1  FROM audit_log_data a
+		INSERT INTO crm.hydrometer (id, code, connec_id, state_id, expl_id, category_id)
+		SELECT a.feature_id , a.feature_id , log_message::json->>'connec_id', 1, (log_message::json->>'expl_id')::integer, 1  FROM audit_log_data a
 		WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 		ON CONFLICT (id) DO NOTHING;
 	ELSE
-		INSERT INTO ext_rtc_hydrometer (id, connec_id, state_id, expl_id, category_id)
-		SELECT a.feature_id::int8 , (log_message::json->>'connec_id')::integer, 1, (log_message::json->>'expl_id')::integer, 1 FROM audit_log_data a
+		INSERT INTO ext_rtc_hydrometer (id, code, connec_id, state_id, expl_id, category_id)
+		SELECT a.feature_id::int8 , a.feature_id ,(log_message::json->>'connec_id')::integer, 1, (log_message::json->>'expl_id')::integer, 1 FROM audit_log_data a
 		WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174 and (log_message::json->>'connec_id')!='None'
 		ON CONFLICT (id) DO NOTHING;
 	END IF;
 
-	-- hydrometer_x_connec
+	raise notice 'hydrometer_x_connec';
 	INSERT INTO rtc_hydrometer_x_connec (hydrometer_id, connec_id)
 	SELECT a.feature_id , connec_id FROM audit_log_data a
 	JOIN connec ON connec_id = (log_message::json->>'connec_id')
-	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
+	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174 and connec_id = '723'
 	ON CONFLICT (hydrometer_id) DO NOTHING;
 
-	-- ext_rtc_dma_period
+	raise notice 'ext_rtc_dma_period';
 	INSERT INTO ext_rtc_dma_period (dma_id, cat_period_id, effc, minc, maxc, pattern_id) 
 	SELECT dma_id, CONCAT(log_message::json->>'year', 0, log_message::json->>'period') , 1, 1, 1, dma.pattern_id
 	FROM audit_log_data 
@@ -92,7 +92,7 @@ BEGIN
 	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (dma_id, cat_period_id) DO NOTHING;
 
-	-- ext_rtc_hydrometer_category_x_pattern
+	raise notice 'ext_rtc_hydrometer_category_x_pattern';
 	INSERT INTO ext_hydrometer_category_x_pattern (category_id, period_type) 
 	SELECT category_id, period_type
 	FROM audit_log_data 
@@ -102,7 +102,7 @@ BEGIN
 	WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (category_id, period_type) DO NOTHING;
 
-	--ext_rtc_hydrometer_x_data
+	raise notice 'ext_rtc_hydrometer_x_data';
 	INSERT INTO ext_rtc_hydrometer_x_data (hydrometer_id, sum, cat_period_id, pattern_id) 
 	SELECT feature_id, (((log_message::json->>'value')::numeric(12,5)*(log_message::json->>'periodSeconds')::numeric)/1000)::numeric(12,2) as m3value, concat(log_message::json->>'year', '-', log_message::json->>'period'), c.pattern_id
 	FROM audit_log_data 
