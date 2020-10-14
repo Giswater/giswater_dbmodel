@@ -52,8 +52,8 @@ BEGIN
 	
 	raise notice 'ext_cat_period';
 	INSERT INTO ext_cat_period (id, code, period_seconds, period_year, period_name, period_type) 
-	SELECT DISTINCT CONCAT(log_message::json->>'year', '-', log_message::json->>'period') , CONCAT(log_message::json->>'year', 0, log_message::json->>'period'), 2*30*24*3600, 
-	(log_message::json->>'year')::integer, (log_message::json->>'period')::integer, 1
+	SELECT DISTINCT CONCAT(log_message::json->>'year', '-', log_message::json->>'period') , CONCAT(log_message::json->>'year', '-', log_message::json->>'period'), 2*30*24*3600, 
+	(log_message::json->>'year')::integer, (log_message::json->>'period')::integer, (log_message::json->>'period')::integer
 	FROM audit_log_data WHERE log_message::json->>'year' IS NOT NULL AND log_message::json->>'period' IS NOT NULL AND fid = 174
 	ON CONFLICT (id) DO NOTHING;
 
