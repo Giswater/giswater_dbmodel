@@ -75,7 +75,7 @@ BEGIN
 	DELETE FROM audit_check_data WHERE fid = 125 AND cur_user=current_user;
 	
 	-- delete old values on anl table
-	DELETE FROM anl_connec WHERE cur_user=current_user AND fid IN (110,201,202,204,205,206);
+	DELETE FROM anl_connec WHERE cur_user=current_user AND fid IN (110,201,202,204,205,206,291);
 	DELETE FROM anl_arc WHERE cur_user=current_user AND fid IN (104, 196, 197, 188, 123, 202 );
 	DELETE FROM anl_node WHERE cur_user=current_user AND fid IN (177,187, 202);
 
@@ -842,12 +842,40 @@ BEGIN
 		VALUES (125, 1, 'INFO: All plannec connecs or gullys have a reference link');
 	END IF;
 
+
+	RAISE NOTICE '27 - Connecs and gullies with different expl_id than arc';
+
+	IF v_project_type = 'WS' THEN
+		v_querytext = 'SELECT DISTINCT connec_id, connecat_id, c.the_geom FROM connec c JOIN arc b using (arc_id) WHERE b.expl_id::text != c.expl_id::text';
+	ELSIF v_project_type = 'UD' THEN
+		v_querytext = 'SELECT * FROM (SELECT DISTINCT connec_id, connecat_id, c.the_geom FROM connec c JOIN arc b using (arc_id) WHERE b.expl_id::text != c.expl_id::text
+				UNION SELECT DISTINCT  gully_id, gratecat_id, g.the_geom gully_id FROM gully g JOIN arc d using (arc_id) WHERE d.expl_id::text != g.expl_id::text)a';
+	END IF;
+
+	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+
+	IF v_count = 1 THEN
+		EXECUTE concat ('INSERT INTO anl_connec (fid, connec_id, connecat_id, descript, the_geom)
+		SELECT 291, connec_id, connecat_id, ''Connec or gully with different expl_id than related arc'', the_geom FROM (', v_querytext,')a');
+		INSERT INTO audit_check_data (fid, criticity, error_message)
+		VALUES (125, 3, concat('ERROR: There is ',v_count,' connec or gully with exploitation different than the exploitation of the related arc'));
+	ELSIF v_count > 1 THEN
+		EXECUTE concat ('INSERT INTO anl_connec (fid, connec_id, connecat_id, descript, the_geom)
+		SELECT 291, connec_id, connecat_id, ''Connec or gully with different expl_id than related arc'', the_geom FROM (', v_querytext,')a');
+		INSERT INTO audit_check_data (fid, criticity, error_message)
+		VALUES (125, 3, concat('ERROR: There are ',v_count,' connecs or gullies with exploitation different than the exploitation of the related arc'));
+	ELSE
+		INSERT INTO audit_check_data (fid, criticity, error_message)
+		VALUES (125, 1, 'INFO: All connecs or gullys have the same exploitation as the related arc');
+	END IF;
+
 	--	
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 4, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 3, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 2, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (125, v_result_id, 1, '');
 	
+
 	-- get results
 	-- info
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
@@ -870,7 +898,7 @@ BEGIN
 	AND fid IN (177,187, 202)
 	UNION
 	SELECT id, connec_id, connecat_id, state, expl_id, descript,fid, the_geom FROM anl_connec WHERE cur_user="current_user"()
-	AND fid IN (110,201,202,204,205,206)) row) features;
+	AND fid IN (110,201,202,204,205,206,291)) row) features;
 
 	v_result := COALESCE(v_result, '{}'); 
 
@@ -923,9 +951,9 @@ BEGIN
 	    '}')::json;
 
 	--  Exception handling
-	--EXCEPTION WHEN OTHERS THEN
-	--GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	--RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+	EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 
 END;
