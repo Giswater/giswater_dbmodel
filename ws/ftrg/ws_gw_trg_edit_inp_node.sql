@@ -6,7 +6,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION NODE: 1310
 
-
 -----------------------------
 -- TRIGGERS EDITING VIEWS FOR NODE
 -----------------------------
@@ -39,7 +38,7 @@ BEGIN
     ELSIF TG_OP = 'UPDATE' THEN
 	
 	-- State
-	IF (NEW.state != OLD.state) THEN
+	IF (NEW.state::text != OLD.state::text) THEN
 		UPDATE node SET state=NEW.state WHERE node_id = OLD.node_id;
 	END IF;
 
@@ -50,8 +49,8 @@ BEGIN
 		UPDATE node SET the_geom=NEW.the_geom WHERE node_id = OLD.node_id;
 			
 		-- Parent id
-        SELECT concat('man_',lower(system_id)), pol_id INTO v_tablename, v_pol_id FROM polygon JOIN cat_feature ON cat_feature.id=polygon.sys_type
-        WHERE ST_DWithin(NEW.the_geom, polygon.the_geom, 0.001) LIMIT 1;
+		SELECT concat('man_',lower(system_id)), pol_id INTO v_tablename, v_pol_id FROM polygon JOIN cat_feature ON cat_feature.id=polygon.sys_type
+		WHERE ST_DWithin(NEW.the_geom, polygon.the_geom, 0.001) LIMIT 1;
 	
 		IF v_pol_id IS NOT NULL THEN
 			v_sql:= 'SELECT node_id FROM '||v_tablename||' WHERE pol_id::integer='||v_pol_id||' LIMIT 1';
@@ -103,8 +102,7 @@ BEGIN
 
 
         UPDATE node 
-        SET elevation=NEW.elevation, "depth"=NEW."depth", nodecat_id=NEW.nodecat_id, sector_id=NEW.sector_id, "state"=NEW."state", 
-            annotation=NEW.annotation
+        SET elevation=NEW.elevation, "depth"=NEW."depth", sector_id=NEW.sector_id, annotation=NEW.annotation
         WHERE node_id=OLD.node_id;
 
         RETURN NEW;
