@@ -11,18 +11,19 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_plan_psector_link()
 $BODY$
 DECLARE 
     
-	v_link_geom public.geometry;
-	v_vnode_geom public.geometry;
-	v_table_name text;
-	v_feature_geom public.geometry;
-	v_point_aux public.geometry;
-	v_arc_geom public.geometry;
-	v_userdefined_geom boolean;
-	v_idlink text;
-	v_idvnode text;
-	v_channel text;
-	v_schemaname text;
-	v_arc_id text;
+v_link_geom public.geometry;
+v_vnode_geom public.geometry;
+v_table_name text;
+v_feature_geom public.geometry;
+v_point_aux public.geometry;
+v_arc_geom public.geometry;
+v_userdefined_geom boolean;
+v_idlink text;
+v_idvnode text;
+v_channel text;
+v_schemaname text;
+v_arc_id text;
+v_projecttype text;
 	
 BEGIN 
 
@@ -39,6 +40,8 @@ BEGIN
 	ELSIF v_table_name = 'gully' THEN
 		SELECT the_geom INTO v_feature_geom FROM gully WHERE gully_id=NEW.gully_id;
 	END IF;
+
+	v_projecttype = (SELECT project_type FROM sys_version LIMIT 1);
 
 
 	-- getting arc_geom
@@ -64,15 +67,11 @@ BEGIN
 			UPDATE plan_psector_x_gully SET arc_id = v_arc_id WHERE id=NEW.id;
 
 			RETURN NEW;
-			
-		END IF;
-	
+		END IF;	
 	END IF;
-
 
 	IF v_arc_geom IS NOT NULL THEN
 	
-
 		-- update values on plan psector table
 		IF NEW.userdefined_geom IS NOT TRUE THEN
 			v_link_geom := ST_ShortestLine(v_feature_geom, v_arc_geom);
@@ -88,12 +87,13 @@ BEGIN
 		-- update plan_psector tables
 		IF v_table_name = 'connec' THEN
 			UPDATE plan_psector_x_connec SET link_geom=v_link_geom, vnode_geom=v_vnode_geom, userdefined_geom=v_userdefined_geom WHERE id=NEW.id;
+			IF (SELECT exit_type FROM link WHERE feature_id = NEW.connec_id AND feature_type ='CONNEC') ='NODE' AND v_projecttype ='WS' THEN -- this is because enable the export to inp model using pjoint
+				RAISE EXCEPTION 'Error: It is not possible to add this connec to psector because it is related to node. Hint: First move endpoint of link more than 0.01 mts. to relate it to parent arc';
+			END IF;
 
 		ELSIF v_table_name = 'gully' THEN
 			UPDATE plan_psector_x_gully SET link_geom=v_link_geom, vnode_geom=v_vnode_geom, userdefined_geom=v_userdefined_geom WHERE id=NEW.id;
-
 		END IF;	
-
 	ELSE
 		IF v_table_name = 'connec' THEN
 			UPDATE plan_psector_x_connec SET link_geom=NULL, vnode_geom=NULL, userdefined_geom=NULL WHERE id=NEW.id;
@@ -102,11 +102,7 @@ BEGIN
 			UPDATE plan_psector_x_gully SET link_geom=NULL, vnode_geom=NULL, userdefined_geom=NULL WHERE id=NEW.id;
 
 		END IF;	
-	
 	END IF;
-
-
-
 
 	-- notify to qgis in order to reindex geometries for snapping
 	v_channel := replace (current_user::text,'.','_');
