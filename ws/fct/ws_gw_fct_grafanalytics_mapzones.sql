@@ -569,8 +569,8 @@ BEGIN
 							 ON  nodeparent = descript WHERE fid='||v_fid||' AND a.arc_id=arc.arc_id AND cur_user=current_user';
 					EXECUTE v_querytext;
 
-					-- update node table without graf nodes using v_edit_node because the exploitation filter. Row before do not needed because table anl_* is filtered by process
-					v_querytext = 'UPDATE v_edit_node SET '||quote_ident(v_field)||' = arc.'||quote_ident(v_field)||' FROM arc WHERE arc.arc_id=v_edit_node.arc_id';
+					-- update node table without graf nodes using node with from v_edit_arc because the exploitation filter. Row before do not needed because table anl_* is filtered by process
+					v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = arc.'||quote_ident(v_field)||' FROM arc WHERE v_edit_arc.arc_id=node.arc_id';
 					EXECUTE v_querytext;
 
 					-- update node table with graf nodes
@@ -581,8 +581,8 @@ BEGIN
 							AND cur_user=current_user';
 					EXECUTE v_querytext;
 
-					-- used v_edit_connec because the exploitation filter (same before)
-					v_querytext = 'UPDATE v_edit_connec SET '||quote_ident(v_field)||' = arc.'||quote_ident(v_field)||' FROM arc WHERE arc.arc_id=v_edit_connec.arc_id';
+					-- used connec using v_edit_arc because the exploitation filter (same before)
+					v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = arc.'||quote_ident(v_field)||' FROM v_edit_arc WHERE v_edit_arc.arc_id=connec.arc_id';
 					EXECUTE v_querytext;
 				
 					-- recalculate staticpressure (fid=147)
@@ -612,10 +612,10 @@ BEGIN
 										and n.arc_id IS NOT NULL AND node.node_id=n.node_id;
 												
 						-- updat connec table
-						UPDATE v_edit_connec SET staticpressure =(a.head - a.elevation + (case when a.depth is null then 0 else a.depth end)::float) FROM 
-							(SELECT connec_id, head, elevation, depth FROM connec
+						UPDATE connec SET staticpressure =(a.head - a.elevation + (case when a.depth is null then 0 else a.depth end)::float) FROM 
+							(SELECT connec_id, head, elevation, depth FROM v_edit_connec
 							JOIN presszone USING (presszone_id)) a
-							WHERE v_edit_connec.connec_id=a.connec_id;
+							WHERE connec.connec_id=a.connec_id;
 					END IF;
 
 					IF v_floodfromnode IS NULL THEN
@@ -667,16 +667,16 @@ BEGIN
 				
 					-- pipe buffer
 					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
-							(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as geom from v_edit_arc where '||
-							quote_ident(v_field)||'::text != ''0'' AND v_edit_arc.'||quote_ident(v_field)||' IN
-							(SELECT DISTINCT '||quote_ident(v_field)||' FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
+							(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as geom from arc where '||
+							quote_ident(v_field)||'::text != ''0'' AND arc.'||quote_ident(v_field)||' IN
+							(SELECT DISTINCT '||quote_ident(v_field)||' FROM arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
 							group by '||quote_ident(v_field)||')a 
 							WHERE a.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
 
 							/*
 							UPDATE arc set the_geom = geom FROM (
-								SELECT dma_id, st_multi(st_buffer(st_collect(the_geom),10)) as geom from v_edit_arc where dma_id::integer > 0 AND v_edit_arc.dma_id IN
-								(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
+								SELECT dma_id, st_multi(st_buffer(st_collect(the_geom),10)) as geom from arc where dma_id::integer > 0 AND arc.dma_id IN
+								(SELECT DISTINCT dma_id FROM arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
 								GROUP BY dma_id
 							)a WHERE a.dma_id=dma.dma_id;
 							*/
@@ -688,15 +688,15 @@ BEGIN
 					-- use plot and pipe buffer
 					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
 								(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-								(SELECT '||quote_ident(v_field)||', st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom from v_edit_arc 
-								where '||quote_ident(v_field)||'::text != ''0'' AND v_edit_arc.'||quote_ident(v_field)||' IN
-								(SELECT DISTINCT '||quote_ident(v_field)||' FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
+								(SELECT '||quote_ident(v_field)||', st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom from arc 
+								where '||quote_ident(v_field)||'::text != ''0'' AND arc.'||quote_ident(v_field)||' IN
+								(SELECT DISTINCT '||quote_ident(v_field)||' FROM arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
 								group by '||quote_ident(v_field)||'
 								UNION
 								SELECT '||quote_ident(v_field)||', st_collect(ext_plot.the_geom) as geom FROM v_edit_connec, ext_plot
 								WHERE '||quote_ident(v_field)||'::text != ''0'' 
 								AND v_edit_connec.'||quote_ident(v_field)||' IN
-								(SELECT DISTINCT '||quote_ident(v_field)||' FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
+								(SELECT DISTINCT '||quote_ident(v_field)||' FROM arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
 								AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
 								group by '||quote_ident(v_field)||'	
 								)a group by '||quote_ident(v_field)||')b 
@@ -705,15 +705,15 @@ BEGIN
 							/*
 							UPDATE arc set the_geom = geom FROM(
 								SELECT dma_id, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-								(SELECT dma_id, st_buffer(st_collect(the_geom), 10) as geom from v_edit_arc 
-								where dma_id::integer > 0 AND v_edit_arc.dma_id IN
-								(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
+								(SELECT dma_id, st_buffer(st_collect(the_geom), 10) as geom from arc 
+								where dma_id::integer > 0 AND arc.dma_id IN
+								(SELECT DISTINCT dma_id FROM arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
 								group by dma_id
 								UNION
 								SELECT dma_id, st_collect(ext_plot.the_geom) as geom FROM v_edit_connec, ext_plot
 								WHERE dma_id::integer > 0 
 								AND v_edit_connec.dma_id IN
-								(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
+								(SELECT DISTINCT dma_id FROM arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
 								AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
 								group by dma_id	
 								)a group by dma_id
@@ -756,7 +756,7 @@ BEGIN
 							as geom FROM v_edit_link link, connec c
 							WHERE c.dma_id::text != '0' 
 							AND c.dma_id IN
-							(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
+							(SELECT DISTINCT dma_id FROM arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
 							AND link.feature_id = connec_id and link.feature_type = 'CONNEC'
 							group by c.dma_id	
 							)a group by dma_id
@@ -811,7 +811,7 @@ BEGIN
 		    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 		    'properties', to_jsonb(row) - 'the_geom'
 			) AS feature
-			FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM v_edit_arc WHERE arc_id NOT IN 
+			FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM arc WHERE arc_id NOT IN 
 			(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fid=v_fid)) row) features;
 
 			v_result := COALESCE(v_result, '{}'); 
