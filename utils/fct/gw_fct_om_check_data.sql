@@ -594,20 +594,8 @@ BEGIN
 	END IF;
 
 	RAISE NOTICE '21 - Check vnode inconsistency (link without vnode)';
-	v_querytext = 'SELECT * FROM v_edit_link LEFT JOIN vnode ON vnode_id = exit_id::integer where exit_type =''VNODE'' AND vnode_id IS NULL';
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-	
-	IF v_count > 0 THEN
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 2, concat('WARNING: There is/are ',v_count,' vnode links without vnode. This will be automatically repaired.'));
-		
-		PERFORM gw_fct_vnode_repair();	
-		
-	ELSE
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 1, 'INFO: All vnode links have vnode.');
+	-- updated using function setvnoderepair
 
-	END IF;
 	
 	RAISE NOTICE '22 - Check vnode inconsistency (vnode without link)';
 	v_querytext = 'SELECT vnode_id FROM vnode LEFT JOIN link ON vnode_id = exit_id::integer where link_id IS NULL';
@@ -867,33 +855,6 @@ BEGIN
 	ELSE
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (125, 1, 'INFO: All connecs or gullys have the same exploitation as the related arc');
-	END IF;
-
-
-	RAISE NOTICE '32 - Check duplicated vnodes (298)';
-	v_querytext = 'SELECT DISTINCT ON(the_geom) n1.vnode_id as n1, n2.vnode_id as n2, n1.the_geom FROM vnode n1, vnode n2 WHERE st_dwithin(n1.the_geom, n2.the_geom, 0.009) AND n1.vnode_id != n2.vnode_id';
-
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-	IF v_count > 0 THEN
-		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, descript, the_geom) SELECT 298, n1, concat(''Overlaped vnodes '',n1,''-'',n2), the_geom FROM (', v_querytext,')a');
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 3, concat('ERROR: There is/are ',v_count,' overlaped vnodes, with less than 0.01 meters distance. Use gw_fct_setvnoderepair function to fix it'));
-	ELSE
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 1, 'INFO: There is no overlaped vnodes');
-	END IF;
-
-	RAISE NOTICE '33 - Check vnodes over nodes (299)';
-	v_querytext = 'SELECT DISTINCT ON(the_geom) n1.vnode_id as n1, n2.node_id as n2, n1.the_geom FROM vnode n1, node n2 WHERE st_dwithin(n1.the_geom, n2.the_geom, 0.009)';
-
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-	IF v_count > 0 THEN
-		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, descript, the_geom) SELECT 299, n1, concat(''Vnodes ('',n1,'') over node ('',n2,'')''), the_geom FROM (', v_querytext,')a');
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 2, concat('WARNING: There is/are ',v_count,' vnode(s) over node, with less than 0.01 meters distance. Maybe you can make bigger this moving link endpoint or use gw_fct_setvnoderepair to fusion it'));
-	ELSE
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (125, 1, 'INFO: There is no vnodes over node');
 	END IF;
 
 	--	
