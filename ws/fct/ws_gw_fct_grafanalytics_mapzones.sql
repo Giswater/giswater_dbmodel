@@ -47,7 +47,7 @@ SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR
 SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation":[1], "macroExploitation":[1], "checkData":false, 
 "updateFeature":true, "updateMapZone":2, "geomParamUpdate":15,"debug":false, "usePlanPsector":false, "forceOpen":[1,2,3], "forceClosed":[2,3,4]}}}');
 
-SELECT SCHEMA_NAME.gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation":[502],  "checkData":false, 
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation":[502],  "checkData":false, 
 "updateFeature":true, "updateMapZone":4, "geomParamUpdate":20,"debug":false}}}');
 
 
@@ -570,7 +570,7 @@ BEGIN
 					EXECUTE v_querytext;
 
 					-- update node table without graf nodes using node with from v_edit_arc because the exploitation filter. Row before do not needed because table anl_* is filtered by process
-					v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = arc.'||quote_ident(v_field)||' FROM arc WHERE v_edit_arc.arc_id=node.arc_id';
+					v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM v_edit_arc a WHERE a.arc_id=node.arc_id';
 					EXECUTE v_querytext;
 
 					-- update node table with graf nodes
@@ -582,7 +582,7 @@ BEGIN
 					EXECUTE v_querytext;
 
 					-- used connec using v_edit_arc because the exploitation filter (same before)
-					v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = arc.'||quote_ident(v_field)||' FROM v_edit_arc WHERE v_edit_arc.arc_id=connec.arc_id';
+					v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM v_edit_arc a WHERE a.arc_id=connec.arc_id';
 					EXECUTE v_querytext;
 				
 					-- recalculate staticpressure (fid=147)
@@ -811,7 +811,7 @@ BEGIN
 		    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 		    'properties', to_jsonb(row) - 'the_geom'
 			) AS feature
-			FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM arc WHERE arc_id NOT IN 
+			FROM (SELECT arc_id, arccat_id, state, expl_id, 'Disconnected arc'::text as descript, the_geom FROM v_edit_arc WHERE arc_id NOT IN 
 			(SELECT arc_id FROM anl_arc WHERE cur_user="current_user"() AND fid=v_fid)) row) features;
 
 			v_result := COALESCE(v_result, '{}'); 
