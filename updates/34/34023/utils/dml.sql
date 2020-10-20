@@ -16,3 +16,5 @@ SELECT 'v_edit_inp_connec', formtype, columnname, layoutorder, datatype, widgett
 isparent, iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, dv_parent_id, dv_querytext_filterc,
 widgetfunction, linkedaction, stylesheet, listfilterparam, layoutname, widgetcontrols, hidden
 FROM config_form_fields WHERE columnname in ('state_type') AND formname like 'v_edit_inp_junction%';
+
+UPDATE sys_param_user SET datatype = 'float', widgettype = 'spinbox' where id = 'edit_element_doublegeom';
