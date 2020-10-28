@@ -80,9 +80,9 @@ BEGIN
     
  --	Geometry column
 	IF v_x2 IS NULL THEN
-	v_input_geometry:= ST_SetSRID(ST_MakePoint(v_x1, v_y1),v_epsg);
+        v_input_geometry:= ST_SetSRID(ST_MakePoint(v_x1, v_y1),v_epsg);
 	ELSIF v_x2 IS NOT NULL THEN
-	v_input_geometry:= ST_SetSRID(ST_MakeLine(ST_MakePoint(v_x1, v_y1), ST_MakePoint(v_x2, v_y2)), v_epsg);
+        v_input_geometry:= ST_SetSRID(ST_MakeLine(ST_MakePoint(v_x1, v_y1), ST_MakePoint(v_x2, v_y2)), v_epsg);
 	END IF;
 
 --	USE reduced geometry to intersect with expl mapzone in order to enhance the selectedId expl
@@ -102,6 +102,9 @@ BEGIN
 	FOREACH field IN ARRAY v_fields_array
 	LOOP
 		v_fields_array[(field->>'orderby')::INT] := gw_fct_json_object_set_key(v_fields_array[(field->>'orderby')::INT], 'widgetname', field->>'column_id');
+        IF (field->>'column_id') = 'expl_id' THEN
+			v_fields_array[(field->>'orderby')::INT] := gw_fct_json_object_set_key(field, 'selectedId', v_expl::text);
+		END IF;
 	END LOOP;
 
 	v_fields := array_to_json(v_fields_array);
