@@ -136,6 +136,7 @@ v_isdmaborder boolean = false; -- For those arcs that are on the border of mapzo
 v_issectorborder boolean = false; -- For those arcs that are on the border of mapzones againts two sectors (one each node)
 v_dqa_id integer;
 v_arc_insert_automatic_endpoint boolean;
+v_edit_insert_elevation_from_dem boolean;
 
 BEGIN
 
