@@ -1,0 +1,4 @@
+3.3.046
+*************
+- Mapzones - improve calculation of static pressure
+- Capture dimensioning expl_id from coordinates
