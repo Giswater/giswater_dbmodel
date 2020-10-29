@@ -139,10 +139,6 @@ BEGIN
 
 	END LOOP;
 
-	-- force expl_id using spatial intersect with geometry
-	UPDATE dimensions SET expl_id = (SELECT e.expl_id FROM dimensions d, exploitation e WHERE st_dwithin(d.the_geom, e.the_geom, 0.01) AND id = v_id limit 1)
-	WHERE  id = v_id;
-
 	-- query text, final step	
 	v_querytext := concat ((v_querytext),' )WHERE id = ' || v_id || '');
 	-- execute query text
