@@ -37,6 +37,7 @@ DECLARE
 	field json;
 	v_id int8;
     v_expl integer;
+    v_state integer;
 	v_epsg integer;
 	v_input_geometry public.geometry;
 	v_x1 double precision;
@@ -92,7 +93,13 @@ BEGIN
 	ELSE
 		SELECT expl_id INTO v_expl FROM selector_expl WHERE cur_user = current_user LIMIT 1;
 	END IF;
-	
+    
+    -- get user's values
+	SELECT "value" INTO v_state FROM config_param_user WHERE "parameter"='state_vdefault' AND "cur_user"="current_user"();
+
+	IF v_state IS NULL THEN
+		v_state = (SELECT state_id FROM selector_state WHERE cur_user = current_user ORDER BY 1 ASC LIMIT 1);
+	END IF;
     
 	EXECUTE 'SELECT gw_api_get_formfields($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)'
 	INTO v_fields_array
@@ -104,6 +111,9 @@ BEGIN
 		v_fields_array[(field->>'orderby')::INT] := gw_fct_json_object_set_key(v_fields_array[(field->>'orderby')::INT], 'widgetname', field->>'column_id');
         IF (field->>'column_id') = 'expl_id' THEN
 			v_fields_array[(field->>'orderby')::INT] := gw_fct_json_object_set_key(field, 'selectedId', v_expl::text);
+		END IF;
+		IF (field->>'column_id') = 'state' THEN
+			v_fields_array[(field->>'orderby')::INT] := gw_fct_json_object_set_key(field, 'selectedId', v_state::text);
 		END IF;
 	END LOOP;
 

@@ -72,7 +72,10 @@ BEGIN
 	
 
 	select array_agg(row_to_json(a)) into v_text from json_each(v_fields)a;
-
+	IF v_tablename = 'v_edit_dimensions' THEN
+		v_tablename = 'dimensions';
+	END IF;
+	
 	-- query text, step1
 	v_querytext := 'UPDATE ' || quote_ident(v_tablename) ||' SET (';
 
