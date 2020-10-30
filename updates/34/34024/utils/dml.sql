@@ -57,3 +57,7 @@ isautoupdate, datatype, widgettype, ismandatory, layoutname, iseditable, isdepre
 VALUES ('edit_arc_insert_automatic_endpoint', 'config', 'If value, enables to digitize new arcs without node_2. Node2 it is automatic triggered using default nodecat value from user and common values from arc',
 'role_edit', 'Automatic node insert as arc endpoint', TRUE, 7, 'utils', FALSE, FALSE, 'boolean', 'check', TRUE, 'lyt_other',
 TRUE, FALSE, 'false') ON CONFLICT (id) DO NOTHING;
+
+-- 2020/10/28
+DELETE FROM sys_param_user where id = 'inp_options_skipdemandpattern';
+UPDATE sys_param_user SET vdefault = lower(vdefault) WHERE id = 'qgis_form_initproject_hidden';
