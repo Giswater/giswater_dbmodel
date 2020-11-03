@@ -346,6 +346,116 @@ BEGIN
 		VALUES (115, null, 1,'INFO: There is/are no row(s) without values on row(s) without values on plan_arc_x_pavement.pavcat_id column.');
 	END IF;
 
+	--check if features with state = 2 are related to any psector (252)
+	IF v_project_type = 'WS' THEN
+		v_query = 'SELECT a.feature_id, a.feature, a.catalog, a.the_geom, count(*) FROM (
+		SELECT node_id as feature_id, ''NODE'' as feature, nodecat_id as catalog, the_geom FROM node WHERE state=2 AND node_id NOT IN (select node_id FROM plan_psector_x_node) UNION
+		SELECT arc_id as feature_id, ''ARC'' as feature, arccat_id as catalog, the_geom  FROM arc WHERE state=2 AND arc_id NOT IN (select arc_id FROM plan_psector_x_arc) UNION
+		SELECT connec_id as feature_id, ''CONNEC'' as feature, connecat_id  as catalog, the_geom  FROM connec WHERE state=2 AND connec_id NOT IN (select connec_id FROM plan_psector_x_connec)) a 
+		GROUP BY a.feature_id, a.feature , a.catalog, a.the_geom';
+
+	ELSE	
+		v_query = 'SELECT a.feature_id, a.feature , a.catalog, a.the_geom, count(*) FROM (
+		SELECT node_id as feature_id, ''NODE'' as feature, nodecat_id as catalog, the_geom FROM node WHERE state=2 AND node_id NOT IN (select node_id FROM plan_psector_x_node) UNION
+		SELECT arc_id as feature_id, ''ARC'' as feature, arccat_id as catalog, the_geom  FROM arc WHERE state=2 AND arc_id NOT IN (select arc_id FROM plan_psector_x_arc) UNION
+		SELECT connec_id as feature_id, ''CONNEC'' as feature, connecat_id  as catalog, the_geom  FROM connec WHERE state=2 AND connec_id NOT IN (select connec_id FROM plan_psector_x_connec) UNION
+		SELECT gully_id as feature_id, ''GULLY'' as feature , gratecat_id as catalog, the_geom FROM gully WHERE state=2 AND connec_id NOT IN (select gully_id FROM plan_psector_x_gully)) a 
+		GROUP BY a.feature_id, a.feature ,a.catalog, a.the_geom';
+	END IF;
+
+		EXECUTE 'SELECT count(*) FROM ('||v_query||')b'
+		INTO v_count; 
+
+	IF v_count > 0 THEN
+		EXECUTE 'SELECT count(*) FROM ('||v_query||')b WHERE feature = ''ARC'';'
+		INTO v_count; 
+		IF v_count > 0 THEN
+			EXECUTE concat ('INSERT INTO anl_arc (fid, arc_id, arccat_id, descript, the_geom,state)
+			SELECT 252, b.feature_id, b.catalog, ''Arcs state = 2 without psector'', b.the_geom, 2 FROM (', v_query,')b  WHERE feature = ''ARC''');
+			INSERT INTO audit_check_data (fid, result_id,  criticity, enabled,  error_message, fcount)
+			VALUES (115, '252', 3, FALSE, concat('ERROR-252: There are ',v_count,' arcs without psector.'),v_count);
+		END IF;
+		EXECUTE 'SELECT count(*) FROM ('||v_query||')b WHERE feature = ''NODE'';'
+		INTO v_count; 
+		IF v_count > 0 THEN
+			EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom, state)
+			SELECT 252, b.feature_id, b.catalog, ''Nodes state = 2 without psector'', b.the_geom, 2 FROM (', v_query,')b  WHERE feature = ''NODE''');
+			INSERT INTO audit_check_data (fid, result_id,  criticity, enabled,  error_message,fcount)
+			VALUES (115, '252', 3, FALSE, concat('ERROR-252: There are ',v_count,' node without psector.'),v_count);		END IF;
+		EXECUTE 'SELECT count(*) FROM ('||v_query||')b WHERE feature = ''CONNEC'';'
+		INTO v_count; 
+		IF v_count > 0 THEN
+			EXECUTE concat ('INSERT INTO anl_connec (fid, connec_id, connecat_id, descript, the_geom,state)
+			SELECT 252, b.feature_id, b.catalog, ''Connecs state = 2 without psector'', b.the_geom,2 FROM (', v_query,')b  WHERE feature = ''CONNEC''');
+			INSERT INTO audit_check_data (fid, result_id,  criticity, enabled,  error_message,fcount)
+			VALUES (115, '252', 3, FALSE, concat('ERROR-252: There are ',v_count,' connec without psector.'),v_count);		END IF;
+		EXECUTE 'SELECT count(*) FROM ('||v_query||')b WHERE feature = ''GULLY'';'
+		INTO v_count; 
+		IF v_count > 0 THEN
+			EXECUTE concat ('INSERT INTO anl_gully (fid, gully_id, gullycat_id, descript, the_geom, state)
+			SELECT 252, b.feature_id, b.catalog, ''Gullies state = 2 without psector'', b.the_geom, 2 FROM (', v_query,')b  WHERE feature = ''GULLY''');
+			INSERT INTO audit_check_data (fid, result_id,  criticity, enabled,  error_message, fcount)
+			VALUES (115, '252', 3, FALSE, concat('ERROR-252: There are ',v_count,' gully without psector.'),v_count);		END IF;
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (115, '252', 1,'INFO: There are no features with state=2 without psector.',v_count);
+	END IF;
+
+	--check if arcs with state = 2 have final nodes state = 2 in the psector (354)
+	v_query =  'SELECT * FROM
+	(SELECT pa.arc_id, a.arccat_id, pa.psector_id , node_1 as node, a.the_geom FROM plan_psector_x_arc pa JOIN arc a USING (arc_id)
+		JOIN node n ON node_id = node_1 where n.state = 2 AND a.state=2
+	EXCEPT
+	SELECT pa.arc_id, arc.arccat_id, pa.psector_id , node_1 as node,  arc.the_geom FROM plan_psector_x_arc pa JOIN arc USING (arc_id)
+		JOIN plan_psector_x_node pn1 ON pn1.node_id = arc.node_1
+		WHERE pa.psector_id = pn1.psector_id and pa.state = 1 AND pn1.state = 1)a
+	UNION
+	SELECT * FROM
+	(SELECT pa.arc_id, a.arccat_id, pa.psector_id , node_2 as node,  a.the_geom FROM plan_psector_x_arc pa JOIN arc a USING (arc_id)
+		JOIN node n ON node_id = node_2 where n.state = 2 AND a.state=2
+	EXCEPT
+	SELECT pa.arc_id, arc.arccat_id, pa.psector_id , node_2 as node,  arc.the_geom FROM plan_psector_x_arc pa JOIN arc USING (arc_id)
+		JOIN plan_psector_x_node pn2 ON pn2.node_id = arc.node_2
+		WHERE pa.psector_id = pn2.psector_id AND pa.state = 1 AND pn2.state = 1)b';
+
+	EXECUTE 'SELECT count(*) FROM ('||v_query||')c'
+	INTO v_count; 
+
+	IF v_count > 0 THEN
+
+		EXECUTE concat ('INSERT INTO anl_arc (fid, arc_id, arccat_id, descript, the_geom,state)
+		SELECT 354, c.arc_id, c.arccat_id, ''Arcs state = 2 without planned final nodes in psector'', c.the_geom, 2 FROM (', v_query,')c ');
+		INSERT INTO audit_check_data (fid, result_id,  criticity, enabled,  error_message, fcount)
+		VALUES (115, '354', 3, FALSE, concat('ERROR-354: There are ',v_count,' arcs without final planned nodes defined in psector.'),v_count);
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (115, '354', 1,'INFO: There are no arcs with state=2 with planned final nodes not defined psector.',v_count);
+	END IF;
+
+	--check if arcs with state = 2 have final nodes state = 1 or 2 operative in psector (355)
+	v_query =  'SELECT * FROM (
+	SELECT pa.arc_id, arc.arccat_id, pa.psector_id , node_1 as node, arc.the_geom FROM plan_psector_x_arc pa JOIN arc USING (arc_id)
+	JOIN plan_psector_x_node pn1 ON pn1.node_id = arc.node_1
+	WHERE pa.psector_id = pn1.psector_id AND pa.state = 1 AND pn1.state = 0
+	UNION
+	SELECT pa.arc_id, arc.arccat_id, pa.psector_id, node_2, arc.the_geom FROM plan_psector_x_arc pa JOIN arc USING (arc_id)
+	JOIN plan_psector_x_node pn2 ON pn2.node_id = arc.node_2
+	WHERE pa.psector_id = pn2.psector_id AND pa.state = 1 AND pn2.state = 0) b';
+
+	EXECUTE 'SELECT count(*) FROM ('||v_query||')c'
+	INTO v_count; 
+
+	IF v_count > 0 THEN
+
+		EXECUTE concat ('INSERT INTO anl_arc (fid, arc_id, arccat_id, descript, the_geom,state)
+		SELECT 355, c.arc_id, c.arccat_id, concat(''Arcs state = 2 final nodes obsolete in psector '',c.psector_id), c.the_geom, 2 FROM (', v_query,')c ');
+		INSERT INTO audit_check_data (fid, result_id,  criticity, enabled,  error_message, fcount)
+		VALUES (115, '355', 3, FALSE, concat('ERROR-355: There are ',v_count,' arcs with final nodes defined as obsolete in psector.'),v_count);
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (115, '355', 1,'INFO: There are no arcs with state=2 with final nodes obsolete in psector.',v_count);
+	END IF;
+	
 	-- get results
 	-- info
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
