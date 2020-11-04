@@ -252,6 +252,8 @@ BEGIN
 		-- double geometry catalog update
 		IF v_doublegeometry AND NEW.elementcat_id != OLD.elementcat_id OR NEW.rotation::text != OLD.rotation::text THEN
 
+			IF NEW.rotation IS NULL THEN NEW.rotation=0; END IF;				
+
 			v_rotation = NEW.rotation * pi()/180;
 
 			v_geom1 = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
