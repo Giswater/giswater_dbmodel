@@ -175,14 +175,14 @@ BEGIN
 
 			ELSIF v_geom1 IS NOT NULL AND (v_geom2 IS NULL OR v_geom2 = 0) THEN
 
-				-- get element dimensions to renerate CIRCULARE geometry									
+				-- get element dimensions to generate CIRCULARE geometry									
 				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
 				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
 				INSERT INTO polygon(sys_type, the_geom, pol_id) VALUES ('ELEMENT', St_Multi(ST_buffer(NEW.the_geom, v_geom1*0.01*v_unitsfactor/2)),v_new_pol_id);
 			
 			ELSIF v_geom1*v_geom2 != 0 THEN
  
-				-- get element dimensions to renerate RECTANGULAR geometry
+				-- get element dimensions to generate RECTANGULAR geometry
 				v_unitsfactor = 0.01*v_unitsfactor ; -- using 0.01 to convert from cms of catalog  to meters of the map
 				v_geom1 = v_geom1*v_unitsfactor;
 				v_geom2 = v_geom2*v_unitsfactor;
@@ -265,8 +265,18 @@ BEGIN
 
 			ELSIF v_geom1 IS NOT NULL AND (v_geom2 IS NULL OR v_geom2 = 0) THEN
 
-				-- get element dimensions to renerate CIRCULARE geometry									
-				UPDATE polygon SET the_geom = St_multi(ST_buffer(NEW.the_geom, v_geom1*0.01*v_unitsfactor/2));
+				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
+				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
+
+				-- get element dimensions to generate CIRCULARE geometry
+				IF (SELECT pol_id FROM element WHERE element_id = NEW.element_id) IS NULL THEN
+					INSERT INTO polygon(sys_type, the_geom, pol_id) VALUES 
+					('ELEMENT', St_multi(ST_buffer(NEW.the_geom, v_geom1*0.01*v_unitsfactor/2)),v_new_pol_id);
+					UPDATE element SET pol_id=v_new_pol_id WHERE element_id = NEW.element_id;
+				ELSE									
+					UPDATE polygon SET the_geom = St_multi(ST_buffer(NEW.the_geom, v_geom1*0.01*v_unitsfactor/2)) 
+					WHERE pol_id = (SELECT pol_id FROM element WHERE element_id = NEW.element_id);
+				END IF;
 					
 			ELSIF v_geom1*v_geom2 != 0 THEN
 
