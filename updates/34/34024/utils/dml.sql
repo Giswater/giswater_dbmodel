@@ -58,6 +58,12 @@ VALUES ('edit_arc_insert_automatic_endpoint', 'config', 'If value, enables to di
 'role_edit', 'Automatic node insert as arc endpoint', TRUE, 7, 'utils', FALSE, FALSE, 'boolean', 'check', TRUE, 'lyt_other',
 TRUE, FALSE, 'false') ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO sys_message(id, error_message, hint_message, log_level, show_user, project_type)
+VALUES (3160, 'This feature with state = 2 is only attached to one psector' , 'It''s necessary to remove feature completaly using end feature tool', 2, TRUE, 'utils') ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO sys_message(id, error_message, hint_message, log_level, show_user, project_type)
+VALUES (3162, 'This feature is a final node for planned arc ' , 'It''s necessary to remove arcs first, then nodes', 2, TRUE, 'utils') ON CONFLICT (id) DO NOTHING;
+
 -- 2020/10/28
 DELETE FROM sys_param_user where id = 'inp_options_skipdemandpattern';
 UPDATE sys_param_user SET vdefault = lower(vdefault) WHERE id = 'qgis_form_initproject_hidden';
@@ -234,10 +240,10 @@ UPDATE config_form_tabs
 SET tabactions=tabactions::jsonb || '{"actionName":"actionRotation", "actionTooltip":"Rotation",  "disabled":false}'::jsonb
 WHERE formname ='v_edit_node';
 
+
 INSERT INTO sys_message(id, error_message, hint_message, log_level, show_user, project_type)
 VALUES (3164, 'Arc have incorrectly defined final nodes in this plan alternative', 'Make sure that arcs finales are on service', 2, TRUE, 'utils') ON CONFLICT (id) DO NOTHING ;
 
 INSERT INTO sys_function(id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query)
 VALUES ('3002', 'gw_fct_setplan', 'utils', 'function','json', 'json', 
 'Function that returns qgis layer configuration for masterplan', 'role_master', NULL) ON CONFLICT (id) DO NOTHING;
-
