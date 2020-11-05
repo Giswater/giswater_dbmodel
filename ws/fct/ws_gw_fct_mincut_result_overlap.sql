@@ -14,11 +14,11 @@ $BODY$
 /*
 SELECT SCHEMA_NAME.gw_fct_mincut_result_overlap($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"form":{},"data":{"step":"check", "result":5}}$$)
+"form":{},"data":{"status":"check", "mincutId":5}}$$)
 
 SELECT SCHEMA_NAME.gw_fct_mincut_result_overlap($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"form":{}, "data":{"step":"continue", "result":333}}$$)
+"form":{}, "data":{"status":"continue", "mincutId":333}}$$)
 
 -- fid: 131,216
 
@@ -40,7 +40,7 @@ v_conflictarray integer[];
 v_id integer;
 v_querytext text;
 v_addaffconnecs integer;
-v_step text;
+v_status text;
 v_mincutid integer;
 v_result json;
 v_result_info json;
@@ -71,8 +71,10 @@ BEGIN
 	SET search_path = "SCHEMA_NAME", public;
 
 	-- get input data 
-	v_step :=  ((p_data ->>'data')::json->>'step')::text;
+	v_status :=  ((p_data ->>'data')::json->>'status')::text;
 	v_mincutid :=  ((p_data ->>'data')::json->>'result')::integer;
+
+	-- setting variable
 	v_visiblelayer := '"v_om_mincut_arc", "v_om_mincut_node", "v_om_mincut_connec", "v_anl_mincut_init_point"';
 
 	-- Reset temporal tables
@@ -95,7 +97,7 @@ BEGIN
 
 	SELECT * INTO v_mincutrec FROM om_mincut WHERE id = v_mincutid;
 
-	IF v_step  = 'check' THEN
+	IF v_status  = 'check' THEN
 
 		-- it's not possible to up this deletion because this values are used in case of ste = 'continue'
 		DELETE FROM anl_arc WHERE fid=131 and cur_user=current_user;
@@ -390,13 +392,13 @@ BEGIN
 				'"setVisibleLayers":['||v_visiblelayer||']}'||
 			', "actions":{"overlap":"' || v_signal || '"}}}')::json;
 		
-	ELSIF v_step  = 'continue' THEN
-	
+	ELSIF v_status  = 'continue' THEN
+
 		-- update mincut details
 		INSERT INTO om_mincut_arc (arc_id, result_id, the_geom)	
 		SELECT arc_id, v_mincutid, the_geom FROM anl_arc WHERE fid = 131 AND cur_user = current_user AND result_id = '-2'
 		ON CONFLICT (arc_id, result_id) DO NOTHING;
-	
+
 		INSERT INTO om_mincut_connec (connec_id, result_id, the_geom)
 		SELECT connec_id, v_mincutid, the_geom FROM anl_connec WHERE fid = 131 AND cur_user = current_user AND result_id = '-2'
 		ON CONFLICT (connec_id, result_id) DO NOTHING;
