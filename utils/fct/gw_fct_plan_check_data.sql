@@ -36,6 +36,7 @@ v_result_line json;
 v_result_polygon json;
 v_saveondatabase boolean;
 v_error_context text;
+v_query text;
 
 BEGIN 
 
