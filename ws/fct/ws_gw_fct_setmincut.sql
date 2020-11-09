@@ -104,12 +104,12 @@ BEGIN
 		RETURN ('{"status":"Accepted", "version":"'||v_version||'","body":{"form":{}, "data":{}}');
 		
 	ELSIF v_action = 'mincutValveUnaccess' THEN
-
-		RETURN gw_fct_json_create_return(gw_fct_mincut_valve_unaccess(p_data));
+    
+		RETURN gw_fct_mincut_valve_unaccess(p_data);
 
 	ELSIF v_action = 'mincutAccept' THEN
-
-		RETURN gw_fct_json_create_return(gw_fct_setmincutoverlap(p_data));
+    
+		RETURN gw_fct_setmincutoverlap(p_data);
 		
 	END IF;
 END;
