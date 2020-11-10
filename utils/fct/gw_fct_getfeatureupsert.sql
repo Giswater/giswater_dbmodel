@@ -136,7 +136,7 @@ v_isdmaborder boolean = false; -- For those arcs that are on the border of mapzo
 v_issectorborder boolean = false; -- For those arcs that are on the border of mapzones againts two sectors (one each node)
 v_dqa_id integer;
 v_arc_insert_automatic_endpoint boolean;
-v_edit_insert_elevation_from_dem boolean;
+
 
 BEGIN
 
@@ -171,7 +171,7 @@ BEGIN
 	SELECT (value)::boolean INTO v_sys_raster_dem FROM config_param_system WHERE parameter='admin_raster_dem';
 
 	-- get user parameters
-	SELECT (value)::boolean INTO v_edit_insert_elevation_from_dem FROM config_param_user WHERE parameter='edit_insert_elevation_from_dem' AND cur_user = current_user;
+	SELECT (value)::boolean INTO v_edit_upsert_elevation_from_dem FROM config_param_user WHERE parameter='edit_upsert_elevation_from_dem' AND cur_user = current_user;
 	SELECT (value)::boolean INTO v_arc_insert_automatic_endpoint FROM config_param_user WHERE parameter='edit_arc_insert_automatic_endpoint' AND cur_user = current_user;
 
 	-- get tablename and formname
