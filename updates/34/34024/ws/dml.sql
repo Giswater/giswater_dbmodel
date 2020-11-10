@@ -14,3 +14,7 @@ UPDATE config_info_layer SET orderby=3 WHERE layer_id='v_edit_om_visit';
 UPDATE config_info_layer SET orderby=4 WHERE layer_id='v_edit_arc';
 UPDATE config_info_layer SET orderby=5 WHERE layer_id='v_edit_dimensions';
 DELETE FROM config_info_layer WHERE layer_id='v_edit_cad_auxpoint';
+
+
+-- 2020/11/10
+UPDATE sys_function SET  function_name= 'gw_fct_setmincutoverlap' WHERE id =2244;
