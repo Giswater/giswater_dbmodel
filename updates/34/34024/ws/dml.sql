@@ -18,3 +18,6 @@ DELETE FROM config_info_layer WHERE layer_id='v_edit_cad_auxpoint';
 
 -- 2020/11/10
 UPDATE sys_function SET  function_name= 'gw_fct_setmincutoverlap' WHERE id =2244;
+
+-- 2020/11/12
+UPDATE sys_function SET (input_params, return_type) = ('json', 'json') WHERE id =2312;
