@@ -4,14 +4,13 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 3010
+--FUNCTION CODE: 2988
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getmincut(p_data json)
 RETURNS json AS
 $BODY$
 
 /*
--- Button networkMincut on mincut dialog
 SELECT gw_fct_getmincut('{"data":{"mincutId":"3"}}');
 
 fid = 216
@@ -40,6 +39,7 @@ BEGIN
 
 	-- get input parameters
 	v_mincut := ((p_data ->>'data')::json->>'mincutId')::integer;	
+	
 	
 	-- mincut details
 	SELECT * INTO v_mincutrec FROM om_mincut WHERE id = v_mincut;
