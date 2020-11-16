@@ -309,3 +309,12 @@ UPDATE sys_function SET descript ='Function to reset user values.
 Two options are enabled: 1-reset from default values; 2-reset from values of another user' WHERE id = 2922;
 
 UPDATE config_toolbox SET alias = 'Linear Reference System' WHERE alias = 'LRS';
+
+-- 2020/11/16
+INSERT INTO sys_function(id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query)
+VALUES (3010, 'gw_fct_getmincut', 'ws', 'function','json', 'json', 
+'Function that gets mincut information', 'role_om', NULL) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO sys_fprocess(fid, fprocess_name, project_type)
+VALUES (359, 'Set configuration of field to_arc', 'ws') ON CONFLICT (fid) DO NOTHING;
+
