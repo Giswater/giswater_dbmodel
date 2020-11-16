@@ -47,7 +47,7 @@ v_result_info json;
 v_result_point json;
 v_result_line json;
 v_result_pol json;
-v_visiblelayer text;
+v_visiblelayer text = '"v_om_mincut_arc", "v_om_mincut_node", "v_om_mincut_connec", "v_anl_mincut_init_point"';
 v_error_context text;
 v_signal text;
 v_geometry text;
@@ -73,9 +73,6 @@ BEGIN
 	-- get input data 
 	v_status :=  ((p_data ->>'data')::json->>'status')::text;
 	v_mincutid :=  ((p_data ->>'data')::json->>'result')::integer;
-
-	-- setting variable
-	v_visiblelayer := '"v_om_mincut_arc", "v_om_mincut_node", "v_om_mincut_connec", "v_anl_mincut_init_point"';
 
 	-- Reset temporal tables
 	DELETE FROM audit_check_data WHERE fid = 216 and cur_user=current_user;
