@@ -72,7 +72,7 @@ BEGIN
 
 	-- get input data 
 	v_status :=  ((p_data ->>'data')::json->>'status')::text;
-	v_mincutid :=  ((p_data ->>'data')::json->>'result')::integer;
+	v_mincutid :=  ((p_data ->>'data')::json->>'mincutId')::integer;
 
 	-- Reset temporal tables
 	DELETE FROM audit_check_data WHERE fid = 216 and cur_user=current_user;
