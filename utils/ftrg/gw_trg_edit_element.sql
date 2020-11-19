@@ -39,6 +39,7 @@ v_x float;
 v_y float;
 v_new_pol_id varchar(16);
 v_srid integer;
+v_version text;
 
 v_feature text;
 v_tablefeature text;
@@ -54,6 +55,7 @@ BEGIN
 	END IF;
 
 	v_srid = (SELECT epsg FROM version limit 1);
+	v_version = (SELECT wsoftware FROM version limit 1);
 
 	-- get associated feature
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
@@ -61,11 +63,13 @@ BEGIN
 		IF v_feature IS NULL THEN
 			v_feature = (SELECT arc_id FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));
 			IF v_feature IS NULL THEN
-				v_feature = (SELECT connec_id FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));		
-				IF v_feature IS NULL THEN
-					v_feature = (SELECT gully_id FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));				
+				v_feature = (SELECT connec_id FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));
+				IF v_version='UD' THEN		
 					IF v_feature IS NULL THEN
-						v_tablefeature = 'gully';
+						v_feature = (SELECT gully_id FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.1));				
+						IF v_feature IS NULL THEN
+							v_tablefeature = 'gully';
+						END IF;
 					END IF;
 				ELSE
 					v_tablefeature = 'connec';
