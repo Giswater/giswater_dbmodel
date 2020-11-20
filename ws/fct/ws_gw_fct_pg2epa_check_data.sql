@@ -469,7 +469,7 @@ BEGIN
 	END IF;
 	
 	
-	RAISE NOTICE '19 - Check dint value for catalog of arcs';
+	RAISE NOTICE '19 - Check dint value for catalogs';
 	SELECT count(*) INTO v_count FROM cat_arc WHERE dint IS NULL AND arctype_id !='VARC';
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
@@ -478,7 +478,19 @@ BEGIN
 		v_count=0;
 	ELSE
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-		VALUES (v_fid, v_result_id, 1, 'INFO: Dint for arc''s catalog checked. No mandatory values missed.');
+		VALUES (v_fid, v_result_id, 1, 'INFO: Dint for arc''s catalog checked. No values missed.');
+	END IF;
+	
+	
+	SELECT count(*) INTO v_count FROM cat_node WHERE dint IS NULL;
+	IF v_count > 0 THEN
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 2, concat(
+		'WARNING: There is/are ',v_count,' register(s) on node''s catalog without dint defined. If this registers acts as shortipe on the epanet exportation dint is needed.'));
+		v_count=0;
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 1, 'INFO: Dint for node''s catalog checked. No values missed.');
 	END IF;
 	
 	
