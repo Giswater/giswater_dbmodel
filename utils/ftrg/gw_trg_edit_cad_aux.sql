@@ -28,8 +28,11 @@ BEGIN
 			INSERT INTO temp_table (fprocesscat_id, geom_polygon, user_name)
 			VALUES  (28, NEW.geom_polygon, current_user);
 		ELSIF geom_type='point' THEN
-            INSERT INTO temp_table (fprocesscat_id, geom_point, user_name)
-            VALUES  (27, NEW.geom_point, current_user);
+			INSERT INTO temp_table (fprocesscat_id, geom_point, user_name)
+			VALUES  (27, NEW.geom_point, current_user);
+		ELSIF geom_type='line' THEN
+			INSERT INTO temp_table (fprocesscat_id, geom_line, user_name)
+			VALUES  (26, NEW.geom_line, current_user);
 		END IF;
 		
         RETURN NEW;
@@ -43,6 +46,10 @@ BEGIN
 	ELSIF geom_type='point' THEN	               
 		UPDATE temp_table 
 		SET id=NEW.id, geom_point=NEW.geom_point
+		WHERE id=OLD.id;
+	ELSIF geom_type='line' THEN	               
+		UPDATE temp_table 
+		SET id=NEW.id, geom_line=NEW.geom_line
 		WHERE id=OLD.id;
 	END IF;
                
