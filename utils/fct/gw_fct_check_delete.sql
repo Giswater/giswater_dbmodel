@@ -15,7 +15,12 @@ $BODY$
 SELECT SCHEMA_NAME.gw_fct_check_delete($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "feature":{"id":"1007","featureType":"NODE"},
-"data":{}}$$)
+"data":{}}$$);
+
+ SELECT SCHEMA_NAME.gw_fct_check_delete($${
+ "client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, 
+ "feature":{"id":["1"], "featureType":"PSECTOR", "tableName":"v_ui_plan_psector", 
+ "idName":"psector_id"}, "data":{"filterFields":{}, "pageInfo":{}}}$$);
 */
 
 DECLARE
@@ -26,18 +31,19 @@ v_project_type text;
 v_error text;
 v_feature_type text;
 v_feature_id text;
+v_psector_array text; 
+v_count integer;
+v_feature_array text[];
+rec text;
+rec_type record;
 
 v_result text;
 v_result_info text;
-v_result_point text;
-v_result_line text;
-v_result_polygon text;
 v_error_context text;
 v_level integer;
 v_status text;
 v_message text;
 v_version text;
-
 BEGIN
 
     -- Search path
@@ -175,7 +181,7 @@ BEGIN
 		END IF;	
 
 
-		ELSIF v_feature_type='GULLY' THEN
+	ELSIF v_feature_type='GULLY' THEN
 
 		SELECT count(element_id) INTO v_num_feature FROM element_x_gully WHERE gully_id=v_feature_id ;
 		IF v_num_feature > 0 THEN
@@ -204,30 +210,77 @@ BEGIN
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 			"data":{"message":"1064", "function":"2120","debug_msg":"'||v_error||'"}}$$);';
 		END IF;	
+	
+	ELSIF v_feature_type='PSECTOR' THEN
+	
+		DELETE FROM audit_check_data WHERE fid= 360 AND cur_user=current_user;
 		
+		select string_agg(quote_literal(a),', ') into v_psector_array from json_array_elements_text(v_feature_id::json) a;
+	
+		--loop over distinct feature types
+		FOR rec_type IN SELECT * FROM sys_feature_type WHERE classlevel=1 OR classlevel=2 LOOP
+
+			EXECUTE 'SELECT array_agg('||rec_type.id||'_id) FROM plan_psector_x_'||rec_type.id||' 
+			WHERE  psector_id::text IN ('||v_psector_array||')'
+			INTO v_feature_array;
+		
+			IF v_feature_array IS NOT NULL THEN
+	
+					FOREACH rec IN ARRAY(v_feature_array) LOOP
+						
+						EXECUTE 'SELECT count(psector_id) FROM plan_psector_x_'||rec_type.id||' 
+						JOIN '||rec_type.id||' n USING ('||rec_type.id||'_id) 
+						WHERE n.state = 2 AND '||rec_type.id||'_id = '||quote_literal(rec)||''
+						INTO v_count;
+						
+						IF v_count = 1 THEN
+							
+							IF (SELECT result_id FROM audit_check_data WHERE fid=360 limit 1)is null then
+								EXECUTE 'INSERT INTO audit_check_data (fid, error_message, result_id)
+								VALUES (360, CONCAT(''Features that will be removed from the inventory:''),'||quote_literal(rec_type.id)||');';
+							END IF;
+							
+							EXECUTE 'INSERT INTO audit_check_data (fid, error_message, result_id)
+							SELECT DISTINCT 360,concat('||quote_literal(initcap(rec_type.id))||','' '','||rec||',
+							'' - psector '',psector_id, ''.''),'''||rec_type.id||'''
+							FROM plan_psector_x_'||rec_type.id||' JOIN '||rec_type.id||' n
+							USING ('||rec_type.id||'_id) 
+							WHERE n.state = 2 AND n.'||rec_type.id||'_id = '||quote_literal(rec)||';';
+						END IF;
+					 
+					END LOOP;
+			END IF;
+		END LOOP;
     END IF;
 
 
 	v_result_info := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result_info, '}');
 
-	v_result_point = '{"geometryType":"", "features":[]}';
-	v_result_line = '{"geometryType":"", "features":[]}';
-	v_result_polygon = '{"geometryType":"", "features":[]}';
-
 	v_status = 'Accepted';
-    v_level = 3;
-    v_message = 'Process done successfully';
+	
+	IF v_feature_type='PSECTOR' THEN
+
+		SELECT string_agg(error_message,' \n') INTO v_message FROM audit_check_data 
+		WHERE cur_user="current_user"() AND fid=360;
+		
+		IF v_message IS NOT NULL THEN
+			v_level = 1;
+		ELSE
+			v_level = 3;
+			v_message = concat('Are you sure you want to delete psector: ',replace(v_psector_array,'''',''),'?');
+		END IF;
+		
+	ELSE
+		v_level = 3;
+		v_message = 'Process done successfully';
+	END IF;
 
 	--  Return
-     RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
-		     ',"data":{ "info":'||v_result_info||','||
-		     	'"setVisibleLayers":[]'||','||
-				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||','||
-				'"polygon":'||v_result_polygon||'}'||
-		       '}'||
+		     ',"data":{ "info":'||v_result_info||
+			'}}'||
 	    '}')::json;
 
 	EXCEPTION WHEN OTHERS THEN
