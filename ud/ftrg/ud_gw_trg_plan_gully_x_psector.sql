@@ -48,9 +48,11 @@ BEGIN
 
 		RETURN NEW;
 	ELSIF TG_OP = 'DELETE' THEN
-		IF (SELECT count(psector_id) FROM plan_psector_x_gully JOIN gully USING (gully_id) WHERE gully.state = 2 AND gully_id = OLD.gully_id) = 1 THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-	         "data":{"message":"3160", "function":"2968","debug_msg":'||OLD.psector_id||'}}$$);';
+		IF (SELECT value FROM config_param_user WHERE parameter = 'forceDelete' AND cur_user= current_user) !='TRUE' THEN
+			IF (SELECT count(psector_id) FROM plan_psector_x_gully JOIN gully USING (gully_id) WHERE gully.state = 2 AND gully_id = OLD.gully_id) = 1 THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+		         "data":{"message":"3160", "function":"2968","debug_msg":'||OLD.psector_id||'}}$$);';
+		    END IF;
 	    END IF;
 
 	    RETURN OLD;

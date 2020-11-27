@@ -73,6 +73,8 @@ BEGIN
 
 		select string_agg(quote_literal(a),',') into v_psector_array from json_array_elements_text(v_id::json) a;
 
+		INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('forceDelete', 'TRUE', current_user);
+		
 		--loop over distinct feature types
 		FOR rec_type IN SELECT * FROM sys_feature_type WHERE classlevel=1 OR classlevel=2 LOOP
 
@@ -114,6 +116,8 @@ BEGIN
 			INTO v_message;
 		END IF;
 
+		DELETE FROM config_param_user WHERE parameter = 'forceDelete' AND cur_user= current_user;
+		
 	ELSE
 
 		/* IF don't receive info
