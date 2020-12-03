@@ -105,3 +105,8 @@ INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, data
 label, ismandatory, isparent, iseditable, isautoupdate, layoutname, hidden)
 VALUES ('new_presszone', 'form_catalog', 'head', 7, 'numeric','text', 'Head', FALSE, FALSE,TRUE, FALSE,'lyt_data_1',FALSE)
 ON CONFLICT (formname, formtype, columnname) DO NOTHING;
+
+-- 2020/12/03
+UPDATE config_mincut_checkvalve SET active = TRUE WHERE active IS NULL;
+UPDATE config_mincut_inlet SET active = TRUE WHERE active IS NULL;
+UPDATE config_mincut_valve SET active = TRUE WHERE active IS NULL;
