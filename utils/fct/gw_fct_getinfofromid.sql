@@ -207,7 +207,7 @@ BEGIN
 		-- tablename is used as table parent.
 		v_table_parent = v_tablename;
 		--check if is delimiter
-		IF upper(v_project_type) = 'WS' AND v_table_parent='v_edit_node' THEN
+		IF upper(v_project_type) = 'WS' AND v_table_parent='v_edit_node' AND v_id IS NOT NULL THEN
 
 			EXECUTE 'SELECT nodetype_id FROM '||v_table_parent||' WHERE node_id = '||quote_literal(v_id)||';'
 			INTO v_nodetype;
