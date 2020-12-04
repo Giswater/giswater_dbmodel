@@ -87,7 +87,8 @@ BEGIN
 		 SELECT alias, descript, functionparams AS input_params, inputparams AS return_type, observ AS isnotparammsg, sys_role, function_name as functionname, isparametric
 		 FROM sys_function 
 		 JOIN config_toolbox USING (id)
-		 WHERE alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_om''
+		 WHERE config_toolbox.active IS TRUE AND  
+		 alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_om''
 		 AND (project_type='||quote_literal(v_projectype)||' or project_type=''utils'')) a'
 		USING v_filter
 		INTO v_om_fields;
@@ -97,7 +98,8 @@ BEGIN
 		 SELECT alias, descript, functionparams AS input_params, inputparams AS return_type, observ AS isnotparammsg, sys_role, function_name as functionname, isparametric
 		 FROM sys_function
  		 JOIN config_toolbox USING (id)
-		 WHERE alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_edit''
+		 WHERE config_toolbox.active IS TRUE AND  
+		 alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_edit''
 		 AND ( project_type='||quote_literal(v_projectype)||' or project_type=''utils'')) a'
 		USING v_filter
 		INTO v_edit_fields;
@@ -107,7 +109,8 @@ BEGIN
 		 SELECT alias, descript, functionparams AS input_params, inputparams AS return_type, observ AS isnotparammsg, sys_role, function_name as functionname, isparametric
 		FROM sys_function
 		JOIN config_toolbox USING (id)
-		WHERE alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_epa''
+		WHERE config_toolbox.active IS TRUE AND  
+		alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_epa''
 		AND ( project_type='||quote_literal(v_projectype)||' or project_type=''utils'')) a'
 		USING v_filter
 		INTO v_epa_fields;
@@ -119,7 +122,8 @@ BEGIN
 		 SELECT alias, descript, functionparams AS input_params, inputparams AS return_type, observ AS isnotparammsg, sys_role, function_name as functionname, isparametric
 		 FROM sys_function
  		 JOIN config_toolbox USING (id)
-		 WHERE alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_master''
+		 WHERE config_toolbox.active IS TRUE AND  
+		 alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_master''
 		 AND (project_type='||quote_literal(v_projectype)||' OR project_type=''utils'')) a'
 		USING v_filter
 		INTO v_master_fields;
@@ -129,7 +133,8 @@ BEGIN
 		 SELECT alias, descript, functionparams AS input_params, inputparams AS return_type, observ AS isnotparammsg, sys_role, function_name as functionname, isparametric
 		 FROM sys_function
 		 JOIN config_toolbox USING (id)
-		 WHERE alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_admin''
+		 WHERE config_toolbox.active IS TRUE AND 
+		 alias LIKE ''%'|| v_filter ||'%'' AND sys_role =''role_admin''
 		 AND (project_type='||quote_literal(v_projectype)||' or project_type=''utils'')) a'
 		USING v_filter
 		INTO v_admin_fields;
