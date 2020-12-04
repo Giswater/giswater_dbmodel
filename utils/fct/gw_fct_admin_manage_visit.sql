@@ -197,7 +197,7 @@ BEGIN
 	string_agg(concat(config_visit_parameter.id,' ', lower(config_visit_parameter.data_type)),', ' order by config_visit_parameter.id) as datatype
 	INTO v_old_parameters
 	FROM config_visit_parameter JOIN config_visit_parameter_action ON config_visit_parameter.id=config_visit_parameter_action.parameter_id
-	WHERE class_id=v_class_id;
+	WHERE class_id=v_class_id AND config_visit_parameter.active IS TRUE AND config_visit_parameter_action.active IS TRUE;
 
 	raise notice 'v_old_parameters,%,%',v_old_parameters,v_class_id;
 
