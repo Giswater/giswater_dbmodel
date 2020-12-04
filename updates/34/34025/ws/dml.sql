@@ -110,3 +110,8 @@ ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 UPDATE config_mincut_checkvalve SET active = TRUE WHERE active IS NULL;
 UPDATE config_mincut_inlet SET active = TRUE WHERE active IS NULL;
 UPDATE config_mincut_valve SET active = TRUE WHERE active IS NULL;
+
+-- 2020/12/04
+UPDATE sys_param_user SET iseditable = true, vdefault = 'NO', 
+descript = concat(descript,'. Only this widget is editable on options dialogs because giswater result reader is not enabled to read other combinations') 
+WHERE id = 'inp_report_f_factor';
