@@ -115,3 +115,6 @@ UPDATE config_mincut_valve SET active = TRUE WHERE active IS NULL;
 UPDATE sys_param_user SET iseditable = true, vdefault = 'NO', 
 descript = concat(descript,'. Only this widget is editable on options dialogs because giswater result reader is not enabled to read other combinations') 
 WHERE id = 'inp_report_f_factor';
+
+DELETE FROM inp_arc_type WHERE id IN(PUMP','VALVE');
+INSERT INTO inp_arc_type ('VIRTUALVALVE');

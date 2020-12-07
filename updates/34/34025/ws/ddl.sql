@@ -15,3 +15,11 @@ ALTER TABLE inp_valve RENAME diameter TO custom_dint;
 ALTER TABLE config_mincut_checkvalve ALTER COLUMN active SET DEFAULT TRUE;
 ALTER TABLE config_mincut_inlet ALTER COLUMN active SET DEFAULT TRUE;
 ALTER TABLE config_mincut_valve ALTER COLUMN active SET DEFAULT TRUE;
+
+
+ALTER TABLE inp_virtualvalve DROP CONSTRAINT inp_virtualvalve_curve_id_fkey;
+
+ALTER TABLE inp_virtualvalve
+  ADD CONSTRAINT inp_virtualvalve_curve_id_fkey FOREIGN KEY (curve_id)
+      REFERENCES inp_curve (id) MATCH SIMPLE
+      ON UPDATE CASCADE ON DELETE CASCADE;
