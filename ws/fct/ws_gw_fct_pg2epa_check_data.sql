@@ -287,7 +287,7 @@ BEGIN
 	SELECT count(*) INTO v_count FROM anl_node WHERE fid = 170 AND cur_user=current_user;
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ', v_count,' valve(s) without to_arc value according with the two closest arcs. Take a look on temporal table to know details.'));
+		VALUES (v_fid, v_result_id, 3, concat('ERROR: There is/are ', v_count,' valve(s) without to_arc value according with the two closest arcs. Take a look on temporal table to know details.'));
 	ELSE 
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1,
@@ -374,7 +374,7 @@ BEGIN
 	SELECT count(*) INTO v_count FROM anl_node WHERE fid = 171 AND cur_user=current_user;
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ', v_count,' pump(s) without to_arc value according with closest arcs. Take a look on temporal table to know details.'));
+		VALUES (v_fid, v_result_id, 3, concat('ERROR: There is/are ', v_count,' pump(s) without to_arc value according with closest arcs. Take a look on temporal table to know details.'));
 	ELSE 
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1,
