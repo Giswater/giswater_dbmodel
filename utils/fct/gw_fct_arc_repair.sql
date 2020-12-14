@@ -23,8 +23,6 @@ SELECT gw_fct_arc_repair($${
 "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"previousSelection",
 "parameters":{}}}$$);
 
-<<<<<<< HEAD
-=======
 -- MODE 2: massive using id as array
 SELECT gw_fct_arc_repair($${"client":{"device":4, "infoType":1,"lang":"ES"},"feature":{"id":
 "SELECT array_to_json(array_agg(arc_id::text)) FROM arc WHERE expl_id='||v_expl||' AND (node_1 IS NULL OR node_2 IS NULL)"},
@@ -34,8 +32,6 @@ SELECT gw_fct_arc_repair($${"client":{"device":4, "infoType":1,"lang":"ES"},"fea
 SELECT gw_fct_arc_repair(concat('
 {"client":{"device":4, "infoType":1, "lang":"ES"},"form":{}, "feature":{"tableName":"v_edit_arc","featureType":"ARC", "id":["',arc_id,'"]},
 "data":{"filterFields":{}, "pageInfo":{}, "parameters":{}}}')::json) FROM arc WHERE expl_id=v_expl AND (node_1 IS NULL OR node_2 IS NULL);
-
->>>>>>> d7a82f967... Enhance sample query on arc repair
 */
 
 DECLARE
