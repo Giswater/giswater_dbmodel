@@ -161,7 +161,7 @@ BEGIN
 	END IF;
 
 	-- inlet_x_exploitation
-	SELECT count(*) INTO v_count FROM config_mincut_inlet WHERE expl_id NOT IN (SELECT expl_id FROM exploitation WHERE active IS TRUE AND );
+	SELECT count(*) INTO v_count FROM config_mincut_inlet WHERE expl_id NOT IN (SELECT expl_id FROM exploitation WHERE active IS TRUE);
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (211, 3, concat('ERROR: There is/are at least ',v_count,' 
