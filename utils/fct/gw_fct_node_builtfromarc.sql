@@ -98,7 +98,9 @@ BEGIN
 		UPDATE cat_feature_node SET isarcdivide=FALSE WHERE id=v_nodetype_id;	
 	
 		-- execute function
-		PERFORM gw_fct_arc_repair(arc_id, 0,0) FROM arc WHERE expl_id=v_expl AND (node_1 IS NULL OR node_2 IS NULL);
+		PERFORM gw_fct_arc_repair(concat('
+		{"client":{"device":4, "infoType":1, "lang":"ES"},"form":{}, "feature":{"tableName":"v_edit_arc","featureType":"ARC", "id":["',arc_id,
+		'"]},"data":{"filterFields":{}, "pageInfo":{}, "parameters":{}}}')::json) FROM arc WHERE expl_id=v_expl AND (node_1 IS NULL OR node_2 IS NULL);
 	
 		-- restore isarcdivide to previous value
 		UPDATE cat_feature_node SET isarcdivide=v_isarcdivide WHERE id=v_nodetype_id;	
