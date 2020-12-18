@@ -4,3 +4,5 @@
 - Refactorize v_plan_psector integrating auxiliar views v_plan_psector_x_*
 - Enhance mapzones algorithm when conflict
 - Enhance junction views to make it dependant of vi_parent_arc
+- Enhance log message for check topology network
+- Delete ws_gw_fct_utils_update_dma_hydroval function
