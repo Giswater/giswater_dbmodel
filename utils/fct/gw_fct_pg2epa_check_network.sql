@@ -221,13 +221,6 @@ BEGIN
 		GROUP BY a.node_1,the_geom
 		having max(water) = 0;
 
-	INSERT INTO anl_node (fid, result_id, node_id, the_geom, descript)
-	SELECT DISTINCT ON (a.node_2) 139, v_result, a.node_2, the_geom, concat('Node disconnected from any', v_boundaryelem)  
-		FROM temp_anlgraf a
-		JOIN temp_node b ON a.node_2=b.node_id
-		GROUP BY a.node_2,the_geom
-		having max(water) = 0;
-
 	SELECT count(*) FROM anl_arc INTO v_count WHERE fid = 139 AND cur_user=current_user;
 
 	IF v_count > 0 THEN
@@ -410,7 +403,7 @@ BEGIN
 		'properties', to_jsonb(row) - 'the_geom'
 		) AS feature
 		FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript,fid, the_geom
-			  FROM  anl_arc WHERE cur_user="current_user"() AND  (fid = 139 OR fid = 227 OR fid = 232)
+			  FROM  anl_arc WHERE cur_user="current_user"() AND  (fid = 139 OR fid = 231 OR fid = 232)
 			 ) row) features;
 
 	v_result := COALESCE(v_result, '{}'); 

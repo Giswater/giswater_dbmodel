@@ -97,7 +97,7 @@ BEGIN
 		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom) SELECT 107, node_id, nodecat_id, ''Orphan node'',
 		the_geom FROM ', v_querytext);
 		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (v_fid, 2, concat('WARNING: ',v_count,' node''s orphans with epa_type and state_type ready to work, will not exported because any arcs are connected. Take a look on temporal for details.'));
+		VALUES (v_fid, v_result_id, 3, concat('ERROR(107): There is/are ',v_count,' node''s orphan. Giswater filters may prevent shown this nodes if they are JUNCTION as well as will be disabled the exportation.'));
 	ELSE
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (v_fid, 1, 'INFO: No node(s) orphan found.');
