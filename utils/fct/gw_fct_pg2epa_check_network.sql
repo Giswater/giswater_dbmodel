@@ -206,19 +206,12 @@ BEGIN
 			RAISE NOTICE '% - %', v_cont, v_affectedrows;
 	END LOOP;
 
-	-- insert into result table disconnected arcs
+	-- arc results
 	INSERT INTO anl_arc (fid, result_id, arc_id, the_geom, descript)
 	SELECT DISTINCT ON (a.arc_id) 139, v_result, a.arc_id, the_geom, concat('Arc disconnected from any', v_boundaryelem)  
 		FROM temp_anlgraf a
 		JOIN temp_arc b ON a.arc_id=b.arc_id
 		GROUP BY a.arc_id,the_geom
-		having max(water) = 0;
-
-	INSERT INTO anl_node (fid, result_id, node_id, the_geom, descript)
-	SELECT DISTINCT ON (a.node_1) 139, v_result, a.node_1, the_geom, concat('Node disconnected from any', v_boundaryelem)  
-		FROM temp_anlgraf a
-		JOIN temp_node b ON a.node_1=b.node_id
-		GROUP BY a.node_1,the_geom
 		having max(water) = 0;
 
 	SELECT count(*) FROM anl_arc INTO v_count WHERE fid = 139 AND cur_user=current_user;
@@ -233,6 +226,28 @@ BEGIN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1, concat('INFO: No arcs topological disconnected found on this result from any ', v_boundaryelem));
 	END IF;
+
+	-- node results
+	INSERT INTO anl_node (fid, result_id, node_id, the_geom, descript)
+	SELECT DISTINCT ON (a.node_1) 139, v_result, a.node_1, the_geom, concat('Node disconnected from any', v_boundaryelem)  
+		FROM temp_anlgraf a
+		JOIN temp_node b ON a.node_1=b.node_id
+		GROUP BY a.node_1,the_geom
+		having max(water) = 0;
+
+	SELECT count(*) FROM anl_node INTO v_count WHERE fid = 139 AND cur_user=current_user;
+
+	IF v_count > 0 THEN
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 3, concat('ERROR: There is/are ',v_count,' node(s) because topological disconnected from any ', v_boundaryelem
+		,'. Main reasons may be: state_type, epa_type, sector_id or expl_id or some node not connected'));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 3, concat('HINT: Use toolbox function ''Check network topology for specific result'' for more information'));
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 1, concat('INFO: No nodes topological disconnected found on this result from any ', v_boundaryelem));
+	END IF;
+
 
 	IF v_project_type = 'WS' THEN
 
