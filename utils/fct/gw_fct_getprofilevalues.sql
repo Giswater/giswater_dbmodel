@@ -12,8 +12,7 @@ $BODY$
 
 /*example
 current petition from client:
-SELECT SCHEMA_NAME.gw_fct_getprofilevalues($${"data":{"initNode":"116", "endNode":"111", "linksDistance":1, "scale":{ "eh":1000, "ev":1000}}}$$);
-SELECT SCHEMA_NAME.gw_fct_getprofilevalues($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "initNode":"60", "endNode":"61", "linksDistance":5, "scale":{ "eh":1000, "ev":1000}}}$$);
+SELECT SCHEMA_NAME.gw_fct_getprofilevalues($${"data":{"initNode":"60", "endNode":"61", "linksDistance":5, "scale":{ "eh":1000, "ev":1000}}}$$);
 
 further petitions from client:
 SELECT SCHEMA_NAME.gw_fct_getprofilevalues($${"client":{},
@@ -31,14 +30,18 @@ SELECT SCHEMA_NAME.gw_fct_getprofilevalues($${"client":{},
 -- fid: 222
 
 Mains:
-- Profile works with 4 types of nodes
-	- TOP-REAL: Normal case, dimensions provided and node has representation on surface
-	- TOP-ESTIM: Node has representation on surface but dimensions are not provided (ymax). Interpolation is done
+- 3 types of nodes
+	- TOP: Normal case, dimensions provided and node has representation on surface
 	- BOTTOM: Node has not representation on surface (node_type WHERE isprofilesurface IS FALSE) 
-	- LINK: vnodes
+	- VNODES: vnodes, to represent only terrain
+- 2 types of data
+	- REAL: Data is fullfilled on nodes (sys_top_elev, sys_elev, sys_ymax)
+	- INTERPOLATED: When data is missed in some intermediate node, values are interpolated. Vnodes are automatic disabled
+	
 - profile works with user-friendly variables
-	- legendFactor: Factor on make bigger o smaller llegend and text 
-	- linksDistance: Value to prevent on guitar when text is overlaped with another text 
+	- Vnode min distance: Value to prevent on guitar when text is overlaped with another text 
+
+Is mandatory start-end nodes must have data, and must be profile_surface = true
 
 */
 
@@ -54,9 +57,9 @@ v_terrain json;
 v_llegend json;
 v_stylesheet json;
 v_version text;
-v_status text;
-v_level integer;
-v_message text;
+v_status text = 'Accepted';
+v_level integer = 3;
+v_message text = 'Profile done successfully';
 v_audit_result text; 
 v_guitarlegend json;
 v_textarc text;
@@ -95,6 +98,9 @@ v_error_context text;
 v_initv float;
 v_inith float;
 v_initpoint json;
+v_querytext1 text;
+v_querytext2 text;
+
 
 -- field variables to work with UD/WS
 v_fcatgeom text;
@@ -105,8 +111,6 @@ v_fsystopelev text;
 v_fsyselev text;
 v_fsysymax text;
 v_querytext text;
-v_qnode1 text;
-v_qnode2 text;
 v_elev1 text;
 v_elev2 text;
 v_z1 text;
@@ -114,6 +118,9 @@ v_z2 text;
 v_y1 text;
 v_y2 text;
 v_papersize integer;
+v_count integer;
+v_nodevalid boolean;
+v_nodemessage text;
 
 BEGIN
 
@@ -146,9 +153,23 @@ BEGIN
   	SELECT (value::json->>'node')::json->>'cat_geom1' INTO v_node_geom1 FROM config_param_system WHERE parameter = 'om_profile_vdefault';
 
   	-- set value to v_linksdistance if null
-    IF v_linksdistance IS NULL THEN
-        v_linksdistance = 0.5;
-    END IF;
+	IF v_linksdistance IS NULL THEN
+		v_linksdistance = 0;
+	END IF;
+
+	-- Check start-end nodes
+	v_nodemessage = 'Start/End nodes is/are not valid(s). CHECK elev data AND cat_feature.isprofilesurface. Only NOT start/end nodes may have missed elev data OR may have cat_feature.isprofilesurface = false';
+	SELECT isprofilesurface INTO v_nodevalid FROM v_edit_node JOIN cat_feature_node ON node_type = id WHERE sys_elev IS NOT NULL AND sys_top_elev IS NOT NULL AND sys_ymax IS NOT NULL AND node_id = v_init;
+	IF v_nodevalid THEN
+		SELECT isprofilesurface INTO v_nodevalid FROM v_edit_node JOIN cat_feature_node ON node_type = id WHERE sys_elev IS NOT NULL AND sys_top_elev IS NOT NULL AND sys_ymax IS NOT NULL AND node_id = v_end;
+		IF v_nodevalid IS FALSE THEN	
+			v_level = 2;
+			v_message = v_nodemessage;
+		END IF;
+	ELSE
+		v_level = 2;
+		v_message = v_nodemessage;
+	END IF;	
 
 	-- define variables in function of the project type
 	IF v_project_type = 'UD' THEN
@@ -158,33 +179,37 @@ BEGIN
 		v_fslope = 'slope'; 
 		v_fsystopelev = 'sys_top_elev';	v_fsyselev = 'sys_elev'; v_fsysymax = 'sys_ymax';
 
-		v_querytext = ' UNION SELECT c.arc_id, vnode_id,link_id,''LINK'',gully_id, vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1, total_length
+		v_querytext1 = ' UNION SELECT c.arc_id, vnode_id,link_id,''LINK'',gully_id, vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1, total_length
 				FROM v_arc_x_vnode 
 				JOIN anl_arc USING (arc_id)
 				JOIN v_edit_gully c ON c.gully_id = v_arc_x_vnode.feature_id
 				WHERE fid=222 AND cur_user = current_user
-				AND anl_arc.node_1 = v_arc_x_vnode.';
-		v_qnode1 = 'node_1 ';
-		v_qnode2 = 'node_2 ';
-		v_elev1 = 'sys_elev1';
-		v_elev2 = 'sys_elev2';
-		v_z1 = 'b.z1';
-		v_z2 = 'b.z2';
-		v_y1 = 'sys_y1';
-		v_y2 = 'sys_y2';
+				AND anl_arc.node_1 = v_arc_x_vnode.node_1';
+
+		v_querytext2 = ' UNION SELECT c.arc_id, vnode_id,link_id,''LINK'',gully_id, vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode2, total_length
+				FROM v_arc_x_vnode 
+				JOIN anl_arc USING (arc_id)
+				JOIN v_edit_gully c ON c.gully_id = v_arc_x_vnode.feature_id
+				WHERE fid=222 AND cur_user = current_user
+				AND anl_arc.node_1 = v_arc_x_vnode.node_2';
+		v_elev1 = 'case when node_1=node_id then sys_elev1 else sys_elev2 end';
+		v_elev2 = 'case when node_1=node_id then sys_elev2 else sys_elev1 end';
+		v_z1 = 'case when node_1=node_id then b.z1 else b.z2 end';
+		v_z2 = 'case when node_1=node_id then b.z2 else b.z1 end';
+		v_y1 = 'case when node_1=node_id then sys_y1 else sys_y2 end';
+		v_y2 = 'case when node_1=node_id then sys_y2 else sys_y1 end';
 
 	ELSIF v_project_type = 'WS' THEN
 		v_fcatgeom = 'cat_dnom::float*0.01'; v_ftopelev = 'elevation'; v_fymax = 'depth'; v_fslope = '100*(elevation1 - depth1 - elevation2 + depth2)/gis_length';
 		v_fsyselev = 'elevation - depth'; v_fsystopelev = v_ftopelev; v_fsysymax = v_fymax; 
-		v_querytext = '';
-		v_qnode1 = '';
-		v_qnode2 = '';
-		v_elev1 = 'elevation1';
-		v_elev2 = 'elevation2';
+		v_querytext1 = '';
+		v_querytext2 = '';
+		v_elev1 = 'case when node_1=node_id then elevation1 else elevation2 end';
+		v_elev2 = 'case when node_1=node_id then elevation2 else elevation1 end';
 		v_z1 = '0::integer';
 		v_z2 = '0::integer';
-		v_y1 = 'depth1';
-		v_y2 = 'depth2';
+		v_y1 = 'case when node_1=node_id then depth1 else depth2 end';
+		v_y2 = 'case when node_1=node_id then depth2 else depth1 end';
 	END IF;
 
 	-- start process
@@ -205,9 +230,12 @@ BEGIN
 		(SELECT edge::text AS arc_id, node::text AS node_id, agg_cost as total_length FROM pgr_dijkstra(''SELECT arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, gis_length::float as cost, 
 		gis_length::float as reverse_cost FROM v_edit_arc'', '||v_init||','||v_end||'))a
 		USING (node_id)';
-	
-	IF v_linksdistance > 0 THEN
-	
+
+	-- looking for null values (in case of exists links graf will be disabled as below)
+	SELECT count(*) INTO v_count FROM anl_node WHERE (elev IS NULL or ymax is null) AND fid = 222 and cur_user = current_user AND top_elev IS NULL;
+
+	IF v_linksdistance > 0 AND v_count = 0 THEN
+
 		-- get vnode values
 		EXECUTE 'INSERT INTO anl_node (fid, sys_type, node_id, code, '||v_ftopelev||', '||v_fymax||', elev, arc_id , arc_distance, total_distance)
 			SELECT 222, feature_type, feature_id, link_id, vnode_topelev, vnode_ymax, vnode_elev, arc_id, dist, dist+total_length FROM (SELECT DISTINCT ON (dist) * FROM 
@@ -219,7 +247,7 @@ BEGIN
 				JOIN v_edit_connec c ON c.connec_id = v_arc_x_vnode.feature_id
 				WHERE fid=222 AND cur_user = current_user
 				AND anl_arc.node_1 = v_arc_x_vnode.node_1
-			'||v_querytext||v_qnode1||'-- gully on same sense (pg_routing & arc)
+			'||v_querytext1||'-- gully on same sense (pg_routing & arc)
 			UNION
 			-- connec on reverse sense (pg_routing & arc)
 			SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, connec_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode2 as dist, total_length
@@ -228,10 +256,11 @@ BEGIN
 				JOIN v_edit_connec c ON c.connec_id = v_arc_x_vnode.feature_id
 				WHERE fid=222 AND cur_user = current_user
 				AND anl_arc.node_1 = v_arc_x_vnode.node_2
-			'||v_querytext||v_qnode2||' -- gully on reverse sense (pg_routing & arc)
+			'||v_querytext2||' -- gully on reverse sense (pg_routing & arc)
 			)a
 		)b 
 		ORDER BY b.arc_id, dist';
+
 			
 		-- delete links overlaped with nodes using the user's parameter
 		v_dist = (SELECT array_agg(total_distance) FROM (SELECT total_distance FROM anl_node WHERE fid=222 AND cur_user = current_user order by total_distance, arc_id)a);
@@ -246,6 +275,9 @@ BEGIN
 				DELETE FROM anl_node WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i];
 			END IF;			
 		END LOOP;
+	ELSIF v_linksdistance > 0 AND v_count > 0 THEN
+		v_level = 3;
+		v_message = 'Profile done, but during the execution vnode information have been disabled because only is possible to interpolate missed data on intermediate nodes, but not vnodes.';
 	END IF;
 
 	-- update descript
@@ -262,6 +294,11 @@ BEGIN
 	UPDATE anl_arc SET cat_geom1 = v_arc_geom1 WHERE cat_geom1 IS NULL AND fid=222 AND cur_user = current_user;
 	UPDATE anl_node SET cat_geom1 = v_node_geom1 WHERE cat_geom1 IS NULL AND fid=222 AND cur_user = current_user AND sys_type !='LINK';
 
+	-- update arc table when node has not values and need to be interpolated
+	UPDATE anl_arc SET z1 = 0, sys_type  = 'SLOPE-ESTIMATED' WHERE z1 is null AND fid=222 AND cur_user = current_user;
+	UPDATE anl_arc SET z2 = 0, sys_type  = 'SLOPE-ESTIMATED' WHERE z2 is null AND fid=222 AND cur_user = current_user;
+	UPDATE anl_arc SET sys_type = 'SLOPE-REAL' WHERE sys_type != 'SLOPE-ESTIMATED' AND fid=222 AND cur_user = current_user;
+
 	-- update node table when node has not values and need to be interpolated
 	v_dist = (SELECT array_agg(total_distance) FROM (SELECT total_distance FROM anl_node WHERE fid=222 AND cur_user = current_user order by total_distance, arc_id)a);
 	EXECUTE '(SELECT array_agg(top_elev) FROM (SELECT '||v_ftopelev||' as top_elev FROM anl_node WHERE fid=222 AND cur_user = current_user order by total_distance, arc_id)a)' INTO v_telev;
@@ -275,13 +312,27 @@ BEGIN
 		
 		--topelev values
 		IF v_telev[i] IS NULL THEN
+
+		raise notice 'interpolating';
+
 			IF v_telev[i+1] IS NOT NULL AND v_telev[i-1] IS NOT NULL THEN
-				EXECUTE 'UPDATE anl_node SET '||v_ftopelev||' = (v_telev[i-1]+ ((v_dist[i]-v_dist[i-1])*(v_telev[i+1]-v_telev[i-1])/(v_dist[i+1]-v_dist[i-1])))::numeric(12,3) WHERE node_id = v_nid[i]';
+				v_querytext = 'UPDATE anl_node SET '||v_ftopelev||' = ('||v_telev[i-1]||'+ (('||v_dist[i]||'-'||v_dist[i-1]||')*('||v_telev[i+1]||'-'||v_telev[i-1]||')/('||v_dist[i+1]||'-'||v_dist[i-1]||')))::numeric(12,3) 
+					       WHERE node_id::integer = '||v_nid[i];
+
+				raise notice 'v_querytext distance (1): %', v_querytext;
+				EXECUTE v_querytext;
+
+				
 			ELSIF v_telev[i+2] IS NOT NULL AND v_telev[i-2] IS NOT NULL THEN
-				EXECUTE 'UPDATE anl_node SET '||v_ftopelev||' = (v_telev[i-2]+ ((v_dist[i]-v_dist[i-2])*(v_telev[i+2]-v_telev[i-2])/(v_dist[i+2]-v_dist[i-2])))::numeric(12,3) WHERE node_id = v_nid[i]';
+				v_querytext = 'UPDATE anl_node SET '||v_ftopelev||' = ('||v_telev[i-2]||'+ (('||v_dist[i]||'-'||v_dist[i-2]||')*('||v_telev[i+2]||'-'||v_telev[i-2]||')/('||v_dist[i+2]||'-'||v_dist[i-2]||')))::numeric(12,3) 
+					       WHERE node_id::integer = '||v_nid[i];
+
+				raise notice 'v_querytext distance (2):%', v_querytext;
+				EXECUTE v_querytext;       
+
 			END IF;
 
-			UPDATE anl_node SET result_id = 'estimated', descript = gw_fct_json_object_set_key(descript::json, 'top_elev', 'N/I'::text) 
+			UPDATE anl_node SET result_id = 'interpolated', descript = gw_fct_json_object_set_key(descript::json, 'top_elev', 'None'::text) 
 			WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i];
 		END IF;
 		
@@ -292,7 +343,7 @@ BEGIN
 			ELSIF v_elev[i+2] IS NOT NULL AND v_elev[i-2] IS NOT NULL THEN
 				UPDATE anl_node SET elev = (v_elev[i-2]+ ((v_dist[i]-v_dist[i-2])*(v_elev[i+2]-v_elev[i-2])/(v_dist[i+2]-v_dist[i-2])))::numeric(12,3) WHERE node_id = v_nid[i];
 			END IF;
-			UPDATE anl_node SET  result_id = 'estimated', descript = gw_fct_json_object_set_key(descript::json, 'elev', 'N/I'::text) 
+			UPDATE anl_node SET  result_id = 'interpolated', descript = gw_fct_json_object_set_key(descript::json, 'elev', 'None'::text) 
 			WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i];
 		END IF;	
 
@@ -300,13 +351,16 @@ BEGIN
 	END LOOP;
 
 	-- update node table those ymax nulls
-	EXECUTE 'UPDATE anl_node SET descript = gw_fct_json_object_set_key(descript::json, ''ymax'', ''N/I''::text),  '||v_fymax||' = '||v_ftopelev||' - elev 
+	EXECUTE 'UPDATE anl_node SET descript = gw_fct_json_object_set_key(descript::json, ''ymax'', ''None''::text),  '||v_fymax||' = '||v_ftopelev||' - elev 
 		WHERE fid=222 AND cur_user = current_user AND '||v_fymax||' IS NULL';
 
-	-- update node table setting those nodes without manhole on surface (isprofilesurface IS FALSE)
-	UPDATE anl_node SET sys_type = 'BOTTOM' FROM cat_feature_node n WHERE n.id = sys_type AND isprofilesurface IS FALSE AND fid=222 AND cur_user = current_user;
-	UPDATE anl_node SET sys_type = 'TOP-REAL' WHERE sys_type NOT IN ('BOTTOM', 'LINK') AND fid=222 AND cur_user = current_user;
-	UPDATE anl_node SET sys_type = 'TOP-ESTIM' WHERE sys_type ='TOP-REAL' AND result_id = 'estimated' AND fid=222 AND cur_user = current_user;
+	-- update node catalog
+	UPDATE anl_node SET nodecat_id = 'BOTTOM' FROM cat_feature_node n WHERE n.id = sys_type AND isprofilesurface IS FALSE AND fid=222 AND cur_user = current_user AND nodecat_id !='VNODE';
+	UPDATE anl_node SET nodecat_id = 'TOP' WHERE nodecat_id NOT IN ('BOTTOM', 'VNODE') AND fid=222 AND cur_user = current_user;
+
+	-- update node type
+	UPDATE anl_node SET sys_type = 'REAL' WHERE sys_type NOT IN ('LINK') AND fid=222 AND cur_user = current_user;
+	UPDATE anl_node SET sys_type = 'INTERPOLATED' WHERE result_id = 'interpolated' AND fid=222 AND cur_user = current_user;
 	
 	UPDATE anl_node SET result_id = null where result_id is not null AND fid=222 AND cur_user = current_user;
 
@@ -348,7 +402,6 @@ BEGIN
 		v_compheight = v_profheigtht;
 		v_compwidth = v_profwidth;
 	END IF;
-
 	
 	-- get portrait extension
 	IF v_papersize = 0 THEN
@@ -412,18 +465,30 @@ BEGIN
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_arc
 	FROM (SELECT arc_id, descript, cat_geom1, length, z1, z2, y1, y2, elev1, elev2, node_1, node_2 FROM anl_arc WHERE fid=222 AND cur_user = current_user ORDER BY total_length) row;
 
-	EXECUTE 'SELECT array_to_json(array_agg(row_to_json(row))) FROM (SELECT node_id, descript, sys_type, cat_geom1, '||
+
+	EXECUTE 'SELECT array_to_json(array_agg(row_to_json(row))) FROM (SELECT node_id, nodecat_id as surface_type, descript, sys_type as data_type, cat_geom1, '||
 			v_ftopelev||' AS top_elev, elev, '||v_fymax||' AS ymax FROM anl_node WHERE fid=222 AND cur_user = current_user AND nodecat_id != ''VNODE'' ORDER BY total_distance) row'
 			INTO v_node;
-
-
+			/*      
+			SELECT node_id, descript, sys_type, cat_geom1, top_elev, elev, ymax FROM anl_node WHERE fid=222 AND cur_user = current_user AND nodecat_id != 'VNODE' ORDER BY total_distance
+			select * from anl_arc WHERE fid=222 AND cur_user = current_user order by total_length
+			select * from anl_node WHERE fid=222 AND cur_user = current_user ORDER BY total_distance 
+			*/
+			
 	EXECUTE 'SELECT array_to_json(array_agg(row_to_json(row))) FROM (
 			WITH querytext AS (SELECT row_number() over (order by total_distance) as rid, * FROM anl_node where fid = 222 AND cur_user = current_user ORDER by total_distance)
 			select row_number() over (order by a.total_distance) as rid, a.'||v_ftopelev||' as top_n1, b.'||v_ftopelev||' as top_n2, (b.'||v_ftopelev||'-a.'||v_ftopelev||')::numeric(12,3) as delta_y, 
-			b.total_distance - a.total_distance as delta_x, a.total_distance as total_x, a.descript as label_n1 from querytext a
-			join querytext b ON a.rid = b.rid-1 
-			join (select * from anl_arc where fid = 222 AND cur_user = current_user) c ON a.arc_id = c.arc_id) row'
+			b.total_distance - a.total_distance as delta_x, a.total_distance as total_x, a.descript as label_n1, a.nodecat_id as surface_type from querytext a
+			left join querytext b ON a.rid = b.rid-1 
+			left join (select * from anl_arc where fid = 222 AND cur_user = current_user) c ON a.arc_id = c.arc_id) row'
 			INTO v_terrain;
+			/*
+			WITH querytext AS (SELECT row_number() over (order by total_distance) as rid, * FROM anl_node where fid = 222 AND cur_user = current_user ORDER by total_distance)
+			select row_number() over (order by a.total_distance) as rid, a.top_elev as top_n1, b.top_elev as top_n2, (b.top_elev-a.top_elev)::numeric(12,3) as delta_y, 
+			b.total_distance - a.total_distance as delta_x, a.total_distance as total_x, a.descript as label_n1, a.nodecat_id as surface_type from querytext a
+			left join querytext b ON a.rid = b.rid-1 
+			left join (select * from anl_arc where fid = 222 AND cur_user = current_user) c ON a.arc_id = c.arc_id
+			*/
 
 	-- control null values
 	IF v_guitarlegend IS NULL THEN v_guitarlegend='{}'; END IF;
@@ -436,11 +501,6 @@ BEGIN
 	v_node := COALESCE(v_node, '{}'); 
 	v_terrain := COALESCE(v_terrain, '{}'); 
 
-
-	-- default values
-	v_status = 'Accepted';	
-        v_level = 3;
-        v_message = 'Profile done successfully';
 
 	--  Return
 	RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
