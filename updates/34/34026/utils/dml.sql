@@ -42,3 +42,10 @@ UPDATE sys_param_user SET vdefault = $${{"title":{"text":{"color":"black", "weig
 "grid":{"boundary":{"color":"gray","style":"solid", "width":1}, "lines":{"color":"lightgray","style":"solid", "width":1},"text":{"color":"black", "weight":"normal"}},
 "guitar":{"lines":{"color":"black", "style":"solid", "width":1}, "auxiliarlines":{"color":"gray","style":"solid", "width":1}, "text":{"color":"black", "weight":"normal"}}}}$$
 WHERE id = 'om_profile_stylesheet';
+
+
+-- reserved id's for anl_drained_flows toolbox extra tools
+-- INSERT INTO sys_fprocess VALUES (367, 'Drained flows');
+
+-- INSERT INTO sys_function VALUES (3010,'anl_drained_flows');
+-- INSERT INTO sys_function VALUES (3012,'anl_drained_flows_recursive');
