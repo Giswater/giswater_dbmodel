@@ -30,3 +30,5 @@ UPDATE config_form_tabs SET tabactions =
 DELETE FROM sys_function WHERE id = 2638;
 
 DROP FUNCTION IF EXISTS gw_fct_utils_update_dma_hydroval();
+
+INSERT INTO sys_table (id, descript, sys_role) VALUES ('temp_mincut', 'Temporal table for mincut analysis', 'role_om') ON CONFLICT (id) DO NOTHING;
