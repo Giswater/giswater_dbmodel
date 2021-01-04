@@ -46,6 +46,5 @@ WHERE id = 'om_profile_stylesheet';
 
 -- reserved id's for anl_drained_flows toolbox extra tools
 -- INSERT INTO sys_fprocess VALUES (367, 'Drained flows');
-
--- INSERT INTO sys_function VALUES (3010,'anl_drained_flows');
--- INSERT INTO sys_function VALUES (3012,'anl_drained_flows_recursive');
+-- INSERT INTO sys_function VALUES (3014,'anl_drained_flows');
+-- INSERT INTO sys_function VALUES (3016,'anl_drained_flows_recursive');
