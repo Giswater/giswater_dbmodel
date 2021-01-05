@@ -48,3 +48,7 @@ WHERE id = 'om_profile_stylesheet';
 -- INSERT INTO sys_fprocess VALUES (367, 'Drained flows');
 -- INSERT INTO sys_function VALUES (3014,'anl_drained_flows');
 -- INSERT INTO sys_function VALUES (3016,'anl_drained_flows_recursive');
+
+-- 2021/01/05
+SELECT gw_fct_json_object_delete_keys(value::json,'showLog') from config_param_user WHERE parameter = 'inp_options_debug';
+SELECT gw_fct_json_object_delete_keys(value::json,'showLog') from sys_param_user WHERE parameter = 'inp_options_debug';
