@@ -112,8 +112,7 @@ BEGIN
 		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom) SELECT 187, node_id, nodecat_id, ''nodes
 		with state_type isoperative = false'', the_geom FROM (', v_querytext,')a');
 		INSERT INTO audit_check_data (fid, result_id,  criticity, error_message)
-		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' node(s) with state > 0 and state_type.is_operative on FALSE. Please, check your
-		data before continue. ()'));
+		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' node(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue. ()'));
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 2, concat('SELECT * FROM anl_node WHERE fid=187 AND cur_user=current_user'));
 	ELSE
@@ -130,8 +129,7 @@ BEGIN
 		EXECUTE concat ('INSERT INTO anl_arc (fid, arc_id, arccat_id, descript, the_geom) SELECT 188, arc_id, arccat_id, ''arcs with state_type
 		isoperative = false'', the_geom FROM (', v_querytext,')a');
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' arc(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before
-		continue'));
+		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' arc(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue'));
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 2, concat('SELECT * FROM anl_arc WHERE fid=188 AND cur_user=current_user'));
 	ELSE

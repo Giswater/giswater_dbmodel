@@ -13,7 +13,6 @@ DROP VIEW IF EXISTS vi_coverages;
 DROP VIEW IF EXISTS vi_groundwater;
 DROP VIEW IF EXISTS vi_infiltration;
 
-UPDATE inp_subcatchment SET outlet_id = _parent_id WHERE _parent_id IS NOT NULL;
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"inp_subcatchment", "column":"_parent_id", "isUtils":"False"}}$$);
 
 -- 2020/11/02
