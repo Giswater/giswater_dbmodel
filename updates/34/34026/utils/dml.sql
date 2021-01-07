@@ -50,5 +50,5 @@ WHERE id = 'om_profile_stylesheet';
 -- INSERT INTO sys_function VALUES (3016,'anl_drained_flows_recursive');
 
 -- 2021/01/05
-SELECT gw_fct_json_object_delete_keys(value::json,'showLog') from config_param_user WHERE parameter = 'inp_options_debug';
-SELECT gw_fct_json_object_delete_keys(value::json,'showLog') from sys_param_user WHERE parameter = 'inp_options_debug';
+UPDATE config_param_user SET value = gw_fct_json_object_delete_keys(value::json,'showLog') WHERE parameter = 'inp_options_debug';
+UPDATE sys_param_user SET vdefault = gw_fct_json_object_delete_keys(vdefault::json,'showLog') WHERE id = 'inp_options_debug';
