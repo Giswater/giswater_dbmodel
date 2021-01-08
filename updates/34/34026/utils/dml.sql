@@ -52,3 +52,7 @@ WHERE id = 'om_profile_stylesheet';
 -- 2021/01/05
 UPDATE config_param_user SET value = gw_fct_json_object_delete_keys(value::json,'showLog') WHERE parameter = 'inp_options_debug';
 UPDATE sys_param_user SET vdefault = gw_fct_json_object_delete_keys(vdefault::json,'showLog') WHERE id = 'inp_options_debug';
+
+-- 2021/01/08
+INSERT INTO sys_message VALUES (3168, 'Before set isparent=TRUE, other field has to have related dv_parent_id', NULL, 2, TRUE, 'utils') ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_message VALUES (3170, 'Before delete dv_parent_id, you must set isparent=FALSE to the parent field', NULL, 2, TRUE, 'utils') ON CONFLICT (id) DO NOTHING;
