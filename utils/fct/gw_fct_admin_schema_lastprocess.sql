@@ -185,6 +185,7 @@ BEGIN
 		ELSE
 			ALTER TABLE cat_arc_shape DROP COLUMN if exists _tsect_id;	
 			ALTER TABLE cat_arc_shape DROP COLUMN if exists _curve_id;	
+			ALTER TABLE node DROP COLUMN if exists _sys_elev;	
 					
 		END IF;
 
