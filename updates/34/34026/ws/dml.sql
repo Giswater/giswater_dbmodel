@@ -32,3 +32,8 @@ DELETE FROM sys_function WHERE id = 2638;
 DROP FUNCTION IF EXISTS gw_fct_utils_update_dma_hydroval();
 
 INSERT INTO sys_table (id, descript, sys_role) VALUES ('temp_mincut', 'Temporal table for mincut analysis', 'role_om') ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO sys_param_user VALUES('inp_options_epaversion','hidden', 'EPA version', 'role_epa', null, 'EPA version', null,null, true, 37, 
+'ud', false, null, null, null, false, 'text', 'linetext', true, null, '5.0.022', 'lyt_hydraulics_1', true, null, null, null, null, false, 
+'{"from":"2.0.12", "to":null,"language":"english"}')
+ON CONFLICT (id) DO NOTHING;
