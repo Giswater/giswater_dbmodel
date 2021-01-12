@@ -9,8 +9,8 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 -- 2020/12/30
-ALTER TABLE sys_fprocess ADD COLUMN source text;
-ALTER TABLE sys_function ADD COLUMN source text;
-ALTER TABLE sys_message ADD COLUMN source text;
-ALTER TABLE sys_param_user ADD COLUMN source text;
-ALTER TABLE sys_table ADD COLUMN source text;
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fprocess", "column":"source", "dataType":"text", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_function", "column":"source", "dataType":"text", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_message", "column":"source", "dataType":"text", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_param_user", "column":"source", "dataType":"text", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_table", "column":"source", "dataType":"text", "isUtils":"False"}}$$);
