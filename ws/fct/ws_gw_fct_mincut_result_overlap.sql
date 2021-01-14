@@ -51,7 +51,6 @@ v_visiblelayer text = '"v_om_mincut_arc", "v_om_mincut_node", "v_om_mincut_conne
 v_error_context text;
 v_signal text;
 v_geometry text;
-v_mincutdetails text;
 v_numarcs int4;
 v_length  float;
 v_volume float;
@@ -64,6 +63,7 @@ v_qmllinepath text;
 v_qmlpointpath text;
 v_version record;
 v_selected text;
+v_arc_id text;
 
 
 BEGIN
@@ -111,6 +111,8 @@ BEGIN
 		
 	SELECT * INTO v_mincutrec FROM om_mincut WHERE id = v_mincutid;
 
+	SELECT anl_feature_id INTO v_arc_id FROM om_mincut WHERE id = v_mincutid;
+	
 	IF v_status  = 'check' THEN
 
 		-- it's not possible to up this deletion because this values are used in case of ste = 'continue'
@@ -326,6 +328,7 @@ BEGIN
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'Mincut stats');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '--------------');
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Minsector (arc_id): ', v_arc_id));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of arcs: ', (v_mincutrec.output->>'arcs')::json->>'number'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length', ' mts'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume', ' m3'));
@@ -444,10 +447,9 @@ BEGIN
 				
 		IF v_priority IS NULL THEN v_priority='{}'; END IF;
 	
-		v_mincutdetails = (concat('"arcs":{"number":"',v_numarcs,'", "length":"',v_length,'", "volume":"', 
-		v_volume, '"}, "connecs":{"number":"',v_numconnecs,'","hydrometers":{"total":"',v_numhydrometer,'","classified":',v_priority,'}}'));
+		v_output = (concat('{"minsector_id":"',v_arc_id,'","arcs":{"number":"',v_numarcs,'", "length":"',v_length,'", "volume":"', 
+		v_volume, '"}, "connecs":{"number":"',v_numconnecs,'","hydrometers":{"total":"',v_numhydrometer,'","classified":',v_priority,'}}}'));
 
-		v_output = concat ('{', v_mincutdetails , '}');
 			
 		--update output results and gettin it
 		UPDATE om_mincut SET output = v_output WHERE id = v_mincutid;
@@ -458,6 +460,7 @@ BEGIN
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'Mincut stats (with additional affectations)');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '-----------------------------------------------');
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Minsector (arc_id): ', v_arc_id));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of arcs: ', (v_mincutrec.output->>'arcs')::json->>'number'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length', ' mts'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume', ' m3'));
