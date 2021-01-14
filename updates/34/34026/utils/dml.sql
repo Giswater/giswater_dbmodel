@@ -81,3 +81,6 @@ INSERT INTO inp_typevalue VALUES ('inp_pjoint_type', 'NODE', 'NODE') ON CONFLICT
 INSERT INTO inp_typevalue VALUES ('inp_pjoint_type', 'VNODE', 'VNODE') ON CONFLICT (typevalue, id) DO NOTHING;
 
 INSERT INTO config_param_system VALUES ('admin_config_control_trigger', 'TRUE', 'Enable or disable trigger related to config tables. If true, is enabled', 'Config control trigger:', NULL, NULL, FALSE, NULL, 'utils', NULL, NULL, 'boolean') ON CONFLICT (parameter) DO NOTHING;
+
+DELETE FROM sys_param_user WHERE id = 'basic_search_municipality_vdefault';
+DELETE FROM config_param_user WHERE parameter = 'basic_search_municipality_vdefault';
