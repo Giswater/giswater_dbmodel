@@ -102,6 +102,9 @@ BEGIN
 
 	UPDATE om_mincut SET muni_id=v_muni_id WHERE id=result_id_arg;
 
+	-- mincut is on planning
+	UPDATE om_mincut SET mincut_state=4 WHERE id=result_id_arg;
+
 	IF v_debug THEN
 		RAISE NOTICE '3-Update user selectors';
 	END IF; 
