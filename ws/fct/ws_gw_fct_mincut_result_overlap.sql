@@ -94,7 +94,7 @@ BEGIN
 	INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Minimun cut have been checked looking for overlaps againts other mincuts'));
 
 	SELECT count(*) INTO v_count FROM selector_hydrometer WHERE cur_user = current_user;
-	SELECT array_agg(a.c) INTO v_selected FROM (SELECT concat(state_id,'-',name) as c FROM selector_hydrometer JOIN ext_rtc_hydrometer_state ON state_id = id order by state_id) a;
+	SELECT array_agg(a.c) INTO v_selected FROM (SELECT concat(state_id,'-',name) as c FROM selector_hydrometer JOIN ext_rtc_hydrometer_state ON state_id = id WHERE cur_user = current_user order by state_id) a;
 
 	-- log for hydrometer's state
 	IF v_count = 0 THEN
