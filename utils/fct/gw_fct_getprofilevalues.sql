@@ -98,8 +98,6 @@ v_error_context text;
 v_initv float;
 v_inith float;
 v_initpoint json;
-v_querytext1 text;
-v_querytext2 text;
 
 
 -- field variables to work with UD/WS
@@ -179,19 +177,12 @@ BEGIN
 		v_fslope = 'slope'; 
 		v_fsystopelev = 'sys_top_elev';	v_fsyselev = 'sys_elev'; v_fsysymax = 'sys_ymax';
 
-		v_querytext1 = ' UNION SELECT c.arc_id, vnode_id,link_id,''LINK'',gully_id, vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1, total_length
-				FROM v_arc_x_vnode 
-				JOIN anl_arc USING (arc_id)
-				JOIN v_edit_gully c ON c.gully_id = v_arc_x_vnode.feature_id
-				WHERE fid=222 AND cur_user = current_user
-				AND anl_arc.node_1 = v_arc_x_vnode.node_1';
+		v_querytext = ' UNION
+				SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, gully_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1 as dist, total_length
+				FROM quopt JOIN gully c ON c.gully_id = quopt.feature_id';
 
-		v_querytext2 = ' UNION SELECT c.arc_id, vnode_id,link_id,''LINK'',gully_id, vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode2, total_length
-				FROM v_arc_x_vnode 
-				JOIN anl_arc USING (arc_id)
-				JOIN v_edit_gully c ON c.gully_id = v_arc_x_vnode.feature_id
-				WHERE fid=222 AND cur_user = current_user
-				AND anl_arc.node_1 = v_arc_x_vnode.node_2';
+
+		
 		v_elev1 = 'case when node_1=node_id then sys_elev1 else sys_elev2 end';
 		v_elev2 = 'case when node_1=node_id then sys_elev2 else sys_elev1 end';
 		v_z1 = 'case when node_1=node_id then b.z1 else b.z2 end';
@@ -202,8 +193,7 @@ BEGIN
 	ELSIF v_project_type = 'WS' THEN
 		v_fcatgeom = 'cat_dnom::float*0.01'; v_ftopelev = 'elevation'; v_fymax = 'depth'; v_fslope = '100*(elevation1 - depth1 - elevation2 + depth2)/gis_length';
 		v_fsyselev = 'elevation - depth'; v_fsystopelev = v_ftopelev; v_fsysymax = v_fymax; 
-		v_querytext1 = '';
-		v_querytext2 = '';
+		v_querytext = '';
 		v_elev1 = 'case when node_1=node_id then elevation1 else elevation2 end';
 		v_elev2 = 'case when node_1=node_id then elevation2 else elevation1 end';
 		v_z1 = '0::integer';
@@ -240,23 +230,32 @@ BEGIN
 		EXECUTE 'INSERT INTO anl_node (fid, sys_type, node_id, code, '||v_ftopelev||', '||v_fymax||', elev, arc_id , arc_distance, total_distance)
 			SELECT 222, feature_type, feature_id, link_id, vnode_topelev, vnode_ymax, vnode_elev, arc_id, dist, dist+total_length FROM (SELECT DISTINCT ON (dist) * FROM 
 			(
-			-- connec on same sense (pg_routing & arc)
-			SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, connec_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1 as dist, total_length
-				FROM v_arc_x_vnode 
-				JOIN anl_arc USING (arc_id)
-				JOIN v_edit_connec c ON c.connec_id = v_arc_x_vnode.feature_id
-				WHERE fid=222 AND cur_user = current_user
-				AND anl_arc.node_1 = v_arc_x_vnode.node_1
-			'||v_querytext1||'-- gully on same sense (pg_routing & arc)
-			UNION
-			-- connec on reverse sense (pg_routing & arc)
-			SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, connec_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode2 as dist, total_length
-				FROM v_arc_x_vnode 
-				JOIN anl_arc USING (arc_id)
-				JOIN v_edit_connec c ON c.connec_id = v_arc_x_vnode.feature_id
-				WHERE fid=222 AND cur_user = current_user
-				AND anl_arc.node_1 = v_arc_x_vnode.node_2
-			'||v_querytext2||' -- gully on reverse sense (pg_routing & arc)
+			SELECT * FROM (WITH quopt AS (
+				SELECT *
+					FROM v_arc_x_vnode
+					JOIN anl_arc a USING (arc_id)
+					WHERE fid=222 AND cur_user = current_user
+					AND a.node_1 = v_arc_x_vnode.node_1
+					)
+				SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, connec_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1 as dist, total_length
+				FROM quopt JOIN connec c ON c.connec_id = quopt.feature_id
+				'||v_querytext||'
+
+				)a
+				UNION
+				SELECT * FROM (
+				WITH quopt AS (
+				SELECT *
+					FROM v_arc_x_vnode
+					JOIN anl_arc a USING (arc_id)
+					WHERE fid=222 AND cur_user = current_user
+					AND a.node_1 = v_arc_x_vnode.node_2
+					)
+				SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, connec_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1 as dist, total_length
+				FROM quopt JOIN connec c ON c.connec_id = quopt.feature_id
+				'||v_querytext||'
+
+				)b
 			)a
 		)b 
 		ORDER BY b.arc_id, dist';
