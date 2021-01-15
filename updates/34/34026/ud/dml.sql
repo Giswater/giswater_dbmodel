@@ -38,7 +38,6 @@ UPDATE config_form_tabs SET tabactions = '[{"disabled": false, "actionName": "ac
 {"actionName":"actionGetArcId", "actionTooltip":"Set arc_id",  "disabled":false},
 {"disabled": false, "actionName": "actionHelp", "actionTooltip": "Help"}]' WHERE formname ='v_edit_node';
 
-
 INSERT INTO sys_param_user VALUES('inp_options_rule_step','epaoptions', 'Rule step control', 'role_epa', 'RULE_STEP', 'Rule step', null,null, true, 36, 
 'ud', false, null, null, null, false, 'text', 'linetext', true, null, '00:00:00', 'lyt_hydraulics_1', true, null, null, null, null, false, 
 '{"from":"5.1.000", "to":null,"language":"english"}')
@@ -56,3 +55,5 @@ INSERT INTO sys_param_user VALUES('inp_options_epaversion','hidden', 'EPA versio
 '{"from":"5.0.022", "to":null,"language":"english"}')
 ON CONFLICT (id) DO NOTHING;
 
+UPDATE config_param_system SET value  = $${"arc":"SELECT arc_id AS arc_id, concat(v_edit_arc.matcat_id,'-Ø',(c.geom1*100)::integer) as catalog, (case when slope is not null then concat((100*slope)::numeric(12,2),' / ',gis_length::numeric(12,2),'m') else concat('None / ',gis_length::numeric(12,2),'m') end) as dimensions , arc_id as code FROM v_edit_arc JOIN cat_arc c ON id = arccat_id"}$$ 
+WHERE parameter = 'om_profile_guitartext';
