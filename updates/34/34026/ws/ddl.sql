@@ -15,3 +15,5 @@ source int8,
 target int8,
 cost int2,
 reverse_cost int2);
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"ext_rtc_hydrometer_state", "column":"is_operative", "dataType":"boolean"}}$$);
