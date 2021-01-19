@@ -6,3 +6,8 @@
 - Enhance junction views to make it dependant of vi_parent_arc
 - Enhance log message for check topology network
 - Delete ws_gw_fct_utils_update_dma_hydroval function
+- New state when mincut is created but is not finished, 4 (on planning)
+- Add index on anl_* tables
+- Add is_operative to hydrometer_state and modify fct's to only add operative hydrometers
+- Bug fix on mincut_result_overlap function checking hydrometer state values without WHERE cur_user
+- Enhance profile tool
