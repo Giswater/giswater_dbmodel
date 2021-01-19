@@ -62,7 +62,6 @@ v_version text;
 v_status text = 'Accepted';
 v_level integer = 3;
 v_message text = 'Profile done successfully';
-v_audit_result text; 
 v_guitarlegend json;
 v_textarc text;
 v_vdefault json;
@@ -124,6 +123,12 @@ v_nodemessage text;
 
 BEGIN
 
+	--  Search path
+	SET search_path = "SCHEMA_NAME", public;
+
+	-- get projectytpe
+	SELECT project_type, giswater FROM sys_version LIMIT 1 INTO v_project_type, v_version;
+
 	--  Get input data
 	v_init = (p_data->>'data')::json->>'initNode';
 	v_end = (p_data->>'data')::json->>'endNode';
@@ -135,12 +140,6 @@ BEGIN
 	v_composer := (p_data ->> 'data')::json->> 'composer';
 	v_templates := (p_data ->> 'data')::json->> 'ComposerTemplates';
 	v_papersize := ((p_data ->> 'data')::json->> 'papersize')::json->>'id';
-
-	--  Search path
-	SET search_path = "SCHEMA_NAME", public;
-
-	-- get projectytpe
-	SELECT project_type, giswater FROM sys_version LIMIT 1 INTO v_project_type, v_version;
 
 	-- get systemvalues
 	SELECT value INTO v_guitarlegend FROM config_param_system WHERE parameter = 'om_profile_guitarlegend';
@@ -186,8 +185,6 @@ BEGIN
 			v_querytext = ' UNION
 					SELECT c.arc_id, vnode_id,link_id,''LINK'' as feature_type, gully_id as feature_id,vnode_topelev, vnode_ymax, vnode_elev, vnode_distfromnode1 as dist, total_length
 					FROM quopt JOIN gully c ON c.gully_id = quopt.feature_id';
-
-
 			
 			v_elev1 = 'case when node_1=node_id then sys_elev1 else sys_elev2 end';
 			v_elev2 = 'case when node_1=node_id then sys_elev2 else sys_elev1 end';
@@ -228,7 +225,7 @@ BEGIN
 			USING (node_id)';
 
 		-- looking for null values (in case of exists links graf will be disabled as below)
-		SELECT count(*) INTO v_count FROM anl_node WHERE (elev IS NULL or ymax is null) AND fid = 222 and cur_user = current_user AND top_elev IS NULL;
+		SELECT count(*) INTO v_count FROM anl_node WHERE (elev IS NULL or ymax is null OR top_elev is null) AND fid = 222 and cur_user = current_user;
 
 		IF v_linksdistance > 0 AND v_count = 0 THEN
 
@@ -266,7 +263,6 @@ BEGIN
 			)b 
 			ORDER BY b.arc_id, dist';
 
-				
 			-- delete links overlaped with nodes using the user's parameter
 			v_dist = (SELECT array_agg(total_distance) FROM (SELECT total_distance FROM anl_node WHERE fid=222 AND cur_user = current_user order by total_distance, arc_id)a);
 			v_nid = (SELECT array_agg(node_id) FROM (SELECT node_id FROM anl_node WHERE fid=222 AND cur_user = current_user order by total_distance, arc_id)a);
@@ -318,23 +314,28 @@ BEGIN
 			--topelev values
 			IF v_telev[i] IS NULL THEN
 
-			raise notice 'interpolating';
-
 				IF v_telev[i+1] IS NOT NULL AND v_telev[i-1] IS NOT NULL THEN
 					v_querytext = 'UPDATE anl_node SET '||v_ftopelev||' = ('||v_telev[i-1]||'+ (('||v_dist[i]||'-'||v_dist[i-1]||')*('||v_telev[i+1]||'-'||v_telev[i-1]||')/('||v_dist[i+1]||'-'||v_dist[i-1]||')))::numeric(12,3) 
 						       WHERE node_id::integer = '||v_nid[i];
-
-					raise notice 'v_querytext distance (1): %', v_querytext;
+					EXECUTE v_querytext;
+					
+				ELSIF v_telev[i+1] IS NOT NULL AND v_telev[i-2] IS NOT NULL THEN
+					v_querytext = 'UPDATE anl_node SET '||v_ftopelev||' = ('||v_telev[i-2]||'+ (('||v_dist[i]||'-'||v_dist[i-2]||')*('||v_telev[i+1]||'-'||v_telev[i-2]||')/('||v_dist[i+1]||'-'||v_dist[i-2]||')))::numeric(12,3) 
+						       WHERE node_id::integer = '||v_nid[i];
 					EXECUTE v_querytext;
 
-					
+				ELSIF v_telev[i+2] IS NOT NULL AND v_telev[i-1] IS NOT NULL THEN
+					v_querytext = 'UPDATE anl_node SET '||v_ftopelev||' = ('||v_telev[i-1]||'+ (('||v_dist[i]||'-'||v_dist[i-1]||')*('||v_telev[i+2]||'-'||v_telev[i-1]||')/('||v_dist[i+2]||'-'||v_dist[i-1]||')))::numeric(12,3) 
+						       WHERE node_id::integer = '||v_nid[i];
+					EXECUTE v_querytext;
+
 				ELSIF v_telev[i+2] IS NOT NULL AND v_telev[i-2] IS NOT NULL THEN
 					v_querytext = 'UPDATE anl_node SET '||v_ftopelev||' = ('||v_telev[i-2]||'+ (('||v_dist[i]||'-'||v_dist[i-2]||')*('||v_telev[i+2]||'-'||v_telev[i-2]||')/('||v_dist[i+2]||'-'||v_dist[i-2]||')))::numeric(12,3) 
 						       WHERE node_id::integer = '||v_nid[i];
-
-					raise notice 'v_querytext distance (2):%', v_querytext;
-					EXECUTE v_querytext;       
-
+					EXECUTE v_querytext;
+				ELSE
+					v_level  = 2;
+					v_message = 'Interpolation tool it is designed to interpolate with data missed maximun at two consecutives nodes. Please check your data!';
 				END IF;
 
 				UPDATE anl_node SET result_id = 'interpolated', descript = gw_fct_json_object_set_key(descript::json, 'top_elev', 'None'::text) 
@@ -343,11 +344,24 @@ BEGIN
 			
 			--elev values
 			IF v_elev[i] IS NULL THEN
+				raise notice 'elev';
 				IF v_elev[i+1] IS NOT NULL AND v_elev[i-1] IS NOT NULL THEN
 					UPDATE anl_node SET elev = (v_elev[i-1]+ ((v_dist[i]-v_dist[i-1])*(v_elev[i+1]-v_elev[i-1])/(v_dist[i+1]-v_dist[i-1])))::numeric(12,3) WHERE node_id = v_nid[i];
+					raise notice 'elev11';
+				ELSIF v_elev[i+1] IS NOT NULL AND v_elev[i-2] IS NOT NULL THEN
+					UPDATE anl_node SET elev = (v_elev[i-2]+ ((v_dist[i]-v_dist[i-2])*(v_elev[i+1]-v_elev[i-2])/(v_dist[i+1]-v_dist[i-2])))::numeric(12,3) WHERE node_id = v_nid[i];
+					raise notice 'elev12';
+				ELSIF v_elev[i+2] IS NOT NULL AND v_elev[i-1] IS NOT NULL THEN
+					UPDATE anl_node SET elev = (v_elev[i-1]+ ((v_dist[i]-v_dist[i-1])*(v_elev[i+2]-v_elev[i-1])/(v_dist[i+2]-v_dist[i-1])))::numeric(12,3) WHERE node_id = v_nid[i];
+					raise notice 'elev21';
 				ELSIF v_elev[i+2] IS NOT NULL AND v_elev[i-2] IS NOT NULL THEN
 					UPDATE anl_node SET elev = (v_elev[i-2]+ ((v_dist[i]-v_dist[i-2])*(v_elev[i+2]-v_elev[i-2])/(v_dist[i+2]-v_dist[i-2])))::numeric(12,3) WHERE node_id = v_nid[i];
+					raise notice 'elev22';
+				ELSE
+					v_level  = 2;
+					v_message = 'Interpolation tool it is designed to interpolate with data missed maximun at two consecutives nodes. Please check your data!';
 				END IF;
+				
 				UPDATE anl_node SET  result_id = 'interpolated', descript = gw_fct_json_object_set_key(descript::json, 'elev', 'None'::text) 
 				WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i];
 			END IF;	
