@@ -80,6 +80,8 @@ BEGIN
 			RETURN gw_fct_mincut_result_overlap(p_data);
 
 		ELSIF v_mincut_class IN (2, 3) THEN
+        
+            UPDATE om_mincut SET mincut_class = v_mincut_class WHERE id=v_mincut;
 		
 			RETURN gw_fct_mincut_connec(p_data);
 		

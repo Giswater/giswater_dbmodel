@@ -50,6 +50,10 @@ BEGIN
 	-- get input parameters
 	v_mincut := ((p_data ->>'data')::json->>'mincutId')::integer;	
 	v_mincut_class := ((p_data ->>'data')::json->>'mincutClass')::integer;	
+
+	-- delete is_operative=false hydrometers
+	DELETE FROM om_mincut_hydrometer WHERE hydrometer_id IN (SELECT hydrometer_id FROM v_rtc_hydrometer JOIN om_mincut_hydrometer USING (hydrometer_id)
+	WHERE is_operative=FALSE AND result_id=v_mincut) AND result_id=v_mincut;
 	
 	-- get connecs when mincut class = 3
 	IF v_mincut_class=3 THEN
