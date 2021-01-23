@@ -746,17 +746,18 @@ BEGIN
 					-- pipe buffer
 					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
 							(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as geom from arc 
-							where arc.state > 0 '||quote_ident(v_field)||'::text != ''0'' AND arc.'||quote_ident(v_field)||' IN
+							where arc.state > 0 AND '||quote_ident(v_field)||'::text != ''0'' AND arc.'||quote_ident(v_field)||' IN
 							(SELECT DISTINCT '||quote_ident(v_field)||' FROM arc JOIN anl_arc USING (arc_id) WHERE fid = '||v_fid||' and cur_user = current_user)
 							group by '||quote_ident(v_field)||')a 
 							WHERE a.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
 
 							/*
 							UPDATE arc set the_geom = geom FROM (
-								SELECT dma_id, st_multi(st_buffer(st_collect(the_geom),10)) as geom from arc where dma_id::integer > 0 AND arc.dma_id IN
+								SELECT dma_id, st_multi(st_buffer(st_collect(the_geom),10)) as geom from arc 
+								 where arc.state > 0 AND dma_id::integer > 0 AND arc.dma_id IN
 								(SELECT DISTINCT dma_id FROM arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
 								GROUP BY dma_id
-							)a WHERE a.dma_id=dma.dma_id;
+							)a WHERE a.dma_id=arc.dma_id;
 							*/
 
 					EXECUTE v_querytext;
