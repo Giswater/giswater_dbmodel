@@ -186,6 +186,8 @@ BEGIN
 			ALTER TABLE cat_arc_shape DROP COLUMN if exists _tsect_id;	
 			ALTER TABLE cat_arc_shape DROP COLUMN if exists _curve_id;	
 			ALTER TABLE node DROP COLUMN if exists _sys_elev;	
+			ALTER TABLE arc DROP COLUMN if exists _sys_length;	
+
 					
 		END IF;
 
@@ -228,6 +230,9 @@ BEGIN
 		
 		-- force all cat feature not active in order to increase step-by-step 
 		UPDATE cat_feature SET active = false;
+		
+		-- force nodeinsert automatic endpoint
+		UPDATE sys_param_user SET vdefault = 'true', ismandatory = true WHERE id ='edit_arc_insert_automatic_endpoint';
 		
 	ELSIF v_isnew IS FALSE THEN
 		
