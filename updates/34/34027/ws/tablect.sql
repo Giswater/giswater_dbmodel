@@ -8,9 +8,7 @@ This version of Giswater is provided by Giswater Association
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
--- 2021/01/21
-DROP FUNCTION IF EXISTS gw_fct_mincut(character varying, character varying, integer, text);
-DROP FUNCTION IF EXISTS gw_fct_mincut(character varying, character varying, integer, bigint, bigint);
-
 -- 2021/01/23
-UPDATE cat_feature_node SET graf_delimiter  ='CHECKVALVE' WHERE id = 'CHECK-VALVE';
+ALTER TABLE ws_sample.cat_feature_node DROP CONSTRAINT node_type_graf_delimiter_check;
+ALTER TABLE ws_sample.cat_feature_node ADD CONSTRAINT node_type_graf_delimiter_check CHECK (graf_delimiter::text = ANY 
+(ARRAY['NONE'::text, 'MINSECTOR'::text, 'PRESSZONE'::text, 'DQA'::text, 'DMA'::text, 'SECTOR'::text,'CHECKVALVE'::text ]));
