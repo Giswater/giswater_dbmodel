@@ -195,7 +195,9 @@ BEGIN
 				FROM v_arc_x_vnode 
 				JOIN anl_arc USING (arc_id)
 				JOIN v_edit_gully c ON c.gully_id = v_arc_x_vnode.feature_id
-				WHERE fid=222 AND cur_user = current_user';
+				WHERE fid=222 AND cur_user = current_user
+				AND anl_arc.node_1 = v_arc_x_vnode.node_2';
+
 				
 			v_elev1 = 'case when node_1=node_id then sys_elev1 else sys_elev2 end';
 			v_elev2 = 'case when node_1=node_id then sys_elev2 else sys_elev1 end';
