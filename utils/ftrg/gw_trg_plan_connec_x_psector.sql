@@ -18,19 +18,45 @@ BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
-	SELECT connec.state, connec.arc_id INTO v_stateaux, v_arcaux FROM connec WHERE connec_id=NEW.connec_id;
-		
-	IF v_stateaux=1	THEN 
-		NEW.state=0;
-		NEW.doable=false;
-		NEW.arc_id=v_arcaux;
-		
-	ELSIF v_stateaux=2 THEN
-		NEW.state=1;
-		NEW.doable=true;
+	-- control if connect has link
+	IF TG_OP = 'INSERT' AND (SELECT link_id FROM link WHERE feature_id = NEW.connec_id) IS NULL THEN
+        /* Enabled in 3.5
+        EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+         "data":{"message":"3138", "function":"2936","debug_msg":null}}$$);';*/
 	END IF;
 
-RETURN NEW;
+	IF TG_OP = 'INSERT' OR  TG_OP = 'UPDATE' THEN
+		SELECT connec.state, connec.arc_id INTO v_stateaux, v_arcaux FROM connec WHERE connec_id=NEW.connec_id;
+			
+		IF NEW.state IS NULL THEN
+			NEW.state=0;
+		END IF;
+		
+		IF NEW.state = 1 AND v_stateaux = 1 THEN
+			NEW.doable=false;
+			-- looking for arc_id state=2 closest
+		
+		ELSIF NEW.state = 0 AND v_stateaux=1 THEN
+			NEW.doable=false;
+			NEW.arc_id=v_arcaux;
+			
+		ELSIF v_stateaux=2 THEN
+			NEW.state=1;
+			NEW.doable=true;
+			-- looking for arc_id state=2 closest
+		END IF;
+
+		RETURN NEW;
+	ELSIF TG_OP = 'DELETE' THEN
+		IF (SELECT value FROM config_param_user WHERE parameter = 'forceDelete' AND cur_user= current_user) !='TRUE' THEN
+			IF (SELECT count(psector_id) FROM plan_psector_x_connec JOIN connec USING (connec_id) WHERE connec.state = 2 AND connec_id = OLD.connec_id) = 1 THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+		         "data":{"message":"3160", "function":"2936","debug_msg":'||OLD.psector_id||'}}$$);';
+		    END IF;
+	    END IF;
+
+	    RETURN OLD;
+	END IF;
 
 END;  
 $BODY$

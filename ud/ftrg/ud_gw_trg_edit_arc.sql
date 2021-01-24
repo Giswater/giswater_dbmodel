@@ -68,7 +68,7 @@ BEGIN
 
 		 -- Arc type
 		IF (NEW.arc_type IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_feature_arc) = 0) THEN
+			IF ((SELECT COUNT(*) FROM cat_feature_arc JOIN cat_feature USING (id) WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 			"data":{"message":"1018", "function":"1202","debug_msg":null}}$$);';
 			END IF;
@@ -95,7 +95,7 @@ BEGIN
 		
 		-- Arc catalog ID
 		IF (NEW.arccat_id IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_arc) = 0) THEN
+			IF ((SELECT COUNT(*) FROM cat_arc WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 			"data":{"message":"1020", "function":"1202","debug_msg":null}}$$);';
 			END IF; 
@@ -104,7 +104,7 @@ BEGIN
 				NEW.arccat_id := (SELECT arccat_id from arc WHERE ST_DWithin(NEW.the_geom, arc.the_geom,0.001) LIMIT 1);
 			END IF;
 			IF (NEW.arccat_id IS NULL) THEN
-					NEW.arccat_id := (SELECT id FROM cat_arc LIMIT 1);
+					NEW.arccat_id := (SELECT id FROM cat_arc WHERE active IS TRUE LIMIT 1);
 			END IF;       
 		END IF;
 		
@@ -113,7 +113,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
+			IF ((SELECT COUNT(*) FROM exploitation WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		       	"data":{"message":"1110", "function":"1202","debug_msg":null}}$$);';
 			END IF;
@@ -125,9 +125,9 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
+				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -212,7 +212,7 @@ BEGIN
 		IF (NEW.muni_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM ext_municipality) = 0) THEN
+			IF ((SELECT COUNT(*) FROM ext_municipality WHERE active IS TRUE ) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		       	"data":{"message":"3110", "function":"1202","debug_msg":null}}$$);';
 			END IF;
@@ -226,7 +226,8 @@ BEGIN
 			IF (NEW.muni_id IS NULL) THEN
 				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
 				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+						AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -268,13 +269,8 @@ BEGIN
 
 		--check relation state - state_type
 	        IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-	        	IF NEW.state IS NOT NULL THEN
-					v_sql = NEW.state;
-				ELSE
-					v_sql = 'null';
-				END IF;
 	        	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-       			"data":{"message":"3036", "function":"1202","debug_msg":"'||v_sql::text||'"}}$$);'; 
+       			"data":{"message":"3036", "function":"1202","debug_msg":"'||NEW.state::text||'"}}$$);'; 
 	       	END IF;			
    
 
@@ -305,6 +301,9 @@ BEGIN
 		--Builtdate
 		IF (NEW.builtdate IS NULL) THEN
 			NEW.builtdate:=(SELECT "value" FROM config_param_user WHERE "parameter"='edit_builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.builtdate IS NULL) AND (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE THEN
+				NEW.builtdate :=date(now());
+			END IF;
 		END IF;
 
 		
@@ -473,6 +472,9 @@ BEGIN
 			IF NEW.state = 1 AND OLD.state=2 THEN
 				DELETE FROM plan_psector_x_arc WHERE arc_id=NEW.arc_id;					
 			END IF;			
+			IF NEW.state=0 THEN
+				UPDATE arc SET node_1=NULL, node_2=NULL WHERE arc_id = OLD.arc_id;
+			END IF;
 		END IF;
 		
 		-- State_type
@@ -537,7 +539,7 @@ BEGIN
 				v_inp_table:= 'inp_virtual';
 			END IF;
 			IF v_inp_table IS NOT NULL THEN
-				v_sql:= 'DELETE FROM '||v_inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
+				v_sql:= 'INSERT INTO '||v_inp_table||' (arc_id) VALUES ('||quote_literal(NEW.arc_id)||')';
 				EXECUTE v_sql;
 			END IF;
 
@@ -569,9 +571,11 @@ BEGIN
 		   (NEW.elev1 != OLD.elev1) OR (NEW.elev1 IS NULL AND OLD.elev1 IS NOT NULL) OR (NEW.elev1 IS NOT NULL AND OLD.elev1 IS NULL) OR
 		   (NEW.elev2 != OLD.elev2) OR (NEW.elev2 IS NULL AND OLD.elev2 IS NOT NULL) OR (NEW.elev2 IS NOT NULL AND OLD.elev2 IS NULL) OR
 		   (NEW.custom_elev1 != OLD.custom_elev1) OR (NEW.custom_elev1 IS NULL AND OLD.custom_elev1 IS NOT NULL) OR (NEW.custom_elev1 IS NOT NULL AND OLD.custom_elev1 IS NULL) OR
-		   (NEW.custom_elev2 != OLD.custom_elev2) OR (NEW.custom_elev2 IS NULL AND OLD.custom_elev2 IS NOT NULL) OR (NEW.custom_elev2 IS NOT NULL AND OLD.custom_elev2 IS NULL) THEN  
+		   (NEW.custom_elev2 != OLD.custom_elev2) OR (NEW.custom_elev2 IS NULL AND OLD.custom_elev2 IS NOT NULL) OR (NEW.custom_elev2 IS NOT NULL AND OLD.custom_elev2 IS NULL) OR
+		   (NEW.inverted_slope::text != OLD.inverted_slope::text)
+		   THEN  
 			UPDATE arc SET y1=NEW.y1, y2=NEW.y2, custom_y1=NEW.custom_y1, custom_y2=NEW.custom_y2, elev1=NEW.elev1, elev2=NEW.elev2,
-					custom_elev1=NEW.custom_elev1, custom_elev2=NEW.custom_elev2
+					custom_elev1=NEW.custom_elev1, custom_elev2=NEW.custom_elev2, inverted_slope=NEW.inverted_slope
 					WHERE arc_id=NEW.arc_id;
 		END IF;
 
@@ -581,23 +585,23 @@ BEGIN
 				
 			UPDATE arc 
 			SET arc_type=NEW.arc_type, arccat_id=NEW.arccat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type,
-			annotation= NEW.annotation, "observ"=NEW.observ,"comment"=NEW.comment, inverted_slope=NEW.inverted_slope, custom_length=NEW.custom_length, dma_id=NEW.dma_id, 
+			annotation= NEW.annotation, "observ"=NEW.observ,"comment"=NEW.comment, custom_length=NEW.custom_length, dma_id=NEW.dma_id, 
 			soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type,location_type=NEW.location_type, 
 			workcat_id=NEW.workcat_id, buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate,ownercat_id=NEW.ownercat_id, muni_id=NEW.muni_id, streetaxis_id=v_streetaxis,  
 			postcode=NEW.postcode, district_id = NEW.district_id, streetaxis2_id=v_streetaxis2, postcomplement=NEW.postcomplement, 
 			postcomplement2=NEW.postcomplement2, postnumber=NEW.postnumber, postnumber2=NEW.postnumber2,  descript=NEW.descript, link=NEW.link, 
-			verified=NEW.verified, the_geom=NEW.the_geom, undelete=NEW.undelete,label_x=NEW.label_x,
+			verified=NEW.verified, undelete=NEW.undelete,label_x=NEW.label_x,
 			label_y=NEW.label_y, label_rotation=NEW.label_rotation,workcat_id_end=NEW.workcat_id_end, code=NEW.code, publish=NEW.publish, inventory=NEW.inventory, 
 			enddate=NEW.enddate, uncertain=NEW.uncertain, expl_id=NEW.expl_id, num_value = NEW.num_value,lastupdate=now(), lastupdate_user=current_user
 			WHERE arc_id=OLD.arc_id;	
 		ELSE
 			UPDATE arc
 			SET arc_type=NEW.arc_type, arccat_id=NEW.arccat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type,
-			annotation= NEW.annotation, "observ"=NEW.observ,"comment"=NEW.comment, inverted_slope=NEW.inverted_slope, custom_length=NEW.custom_length, dma_id=NEW.dma_id, 
+			annotation= NEW.annotation, "observ"=NEW.observ,"comment"=NEW.comment, custom_length=NEW.custom_length, dma_id=NEW.dma_id, 
 			soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type,location_type=NEW.location_type, 
 			workcat_id=NEW.workcat_id, buildercat_id=NEW.buildercat_id, builtdate=NEW.builtdate,ownercat_id=NEW.ownercat_id, muni_id=NEW.muni_id, streetaxis_id=v_streetaxis,  
 			postcode=NEW.postcode, district_id=NEW.district_id, streetaxis2_id=v_streetaxis2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, postnumber=NEW.postnumber, 
-			postnumber2=NEW.postnumber2,  descript=NEW.descript, link=NEW.link, verified=NEW.verified, the_geom=NEW.the_geom, undelete=NEW.undelete,label_x=NEW.label_x,
+			postnumber2=NEW.postnumber2,  descript=NEW.descript, link=NEW.link, verified=NEW.verified, undelete=NEW.undelete,label_x=NEW.label_x,
 			label_y=NEW.label_y, label_rotation=NEW.label_rotation,workcat_id_end=NEW.workcat_id_end, code=NEW.code, publish=NEW.publish, inventory=NEW.inventory, 
 			enddate=NEW.enddate, uncertain=NEW.uncertain, expl_id=NEW.expl_id, num_value = NEW.num_value,lastupdate=now(), lastupdate_user=current_user, matcat_id=NEW.matcat_id
 			WHERE arc_id=OLD.arc_id;	

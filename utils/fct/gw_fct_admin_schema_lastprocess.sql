@@ -13,7 +13,8 @@ $BODY$
 /*EXAMPLE
 SELECT SCHEMA_NAME.gw_fct_admin_schema_lastprocess($${
 "client":{"lang":"ES"}, 
-"data":{"isNewProject":"TRUE", "gwVersion":"3.1.105", "projectType":"WS", "isSample":true, "epsg":"25831", "title":"test project", "author":"test", "date":"01/01/2000", "superUsers":["postgres", "giswater"]}}$$)
+"data":{"isNewProject":"TRUE", "gwVersion":"3.1.105", "projectType":"WS", "isSample":true
+		"epsg":"25831", "title":"test project", "author":"test", "date":"01/01/2000", "superUsers":["postgres", "giswater"]}}$$)
 
 SELECT SCHEMA_NAME.gw_fct_admin_schema_lastprocess($${
 "client":{"lang":"ES"},
@@ -83,8 +84,7 @@ BEGIN
 	IF v_isnew IS TRUE THEN
 			
 		INSERT INTO config_param_system (parameter, value, datatype, descript, project_type, label)
-		VALUES ('admin_superusers', v_superusers ,'json', 'Basic information about superusers for this schema','utils', 'Schema manager:')
-		ON CONFLICT (parameter) DO NOTHING;
+		VALUES ('admin_superusers', v_superusers ,'json', 'Basic information about superusers for this schema','utils', 'Schema manager:');
 			
 		-- inserting version table
 		INSERT INTO sys_version (giswater, project_type, postgres, postgis, language, epsg, sample) VALUES (v_gwversion, upper(v_projecttype), (select version()),
@@ -181,8 +181,13 @@ BEGIN
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_22;
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_23;
 			ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_24;	
-			ALTER TABLE config_mincut_inlet DROP COLUMN if exists _to_arc;	
-			
+			ALTER TABLE config_mincut_inlet DROP COLUMN if exists _to_arc;
+		ELSE
+			ALTER TABLE cat_arc_shape DROP COLUMN if exists _tsect_id;	
+			ALTER TABLE cat_arc_shape DROP COLUMN if exists _curve_id;	
+			ALTER TABLE node DROP COLUMN if exists _sys_elev;	
+			ALTER TABLE arc DROP COLUMN if exists _sys_length;	
+
 		END IF;
 
 		ALTER TABLE sys_addfields DROP COLUMN if exists _default_value_;
@@ -194,7 +199,7 @@ BEGIN
 		
 		-- inserting on config_param_system table
 		INSERT INTO config_param_system (parameter, value, datatype, descript, project_type, label)
-		VALUES ('admin_schema_info', v_schema_info,'json', 'Basic information about schema','utils', 'Schema manager:') ON CONFLICT (parameter) DO NOTHING;
+		VALUES ('admin_schema_info', v_schema_info,'json', 'Basic information about schema','utils', 'Schema manager:');
 
 		-- fk from utils schema
 		IF (SELECT value FROM config_param_system WHERE parameter='admin_utils_schema') IS NOT NULL THEN
@@ -202,11 +207,10 @@ BEGIN
 		END IF;
 		
 		-- generate child views 
+		UPDATE config_param_system SET value='FALSE' WHERE parameter='admin_config_control_trigger';
 		PERFORM gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{},
-		"data":{"filterFields":{}, "pageInfo":{}, "action":"MULTI-DELETE" }}$$);
-		
-		PERFORM  gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{},
 		"data":{"filterFields":{}, "pageInfo":{}, "multi_create":true}}$$)::text;
+		UPDATE config_param_system SET value='TRUE' WHERE parameter='admin_config_control_trigger';
 		
 		--change widgettype for matcat_id when new empty data project (UD)
 		IF v_projecttype = 'UD' THEN 
@@ -219,13 +223,25 @@ BEGIN
 			UPDATE config_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_mat_arc' 
 			WHERE columnname='matcat_id' AND formname LIKE 've_arc%';
 		END IF;
+
+		-- forcing user variables in order to enhance usability for new projects
+		UPDATE sys_param_user SET vdefault = '1', ismandatory =  true WHERE id ='edit_state_vdefault';
+		UPDATE sys_param_user SET vdefault = 'true', ismandatory = true WHERE id ='qgis_info_docker';
+		UPDATE sys_param_user SET vdefault = 'true', ismandatory = true WHERE id ='qgis_form_docker';
+
+		
+		-- force all cat feature not active in order to increase step-by-step 
+		UPDATE cat_feature SET active = false;
+		
+		-- hidden lastupdate and lastupdate_user columns
+		update config_form_fields SET hidden = true WHERE columnname IN ('lastupdate', 'lastupdate_user', 'publish', 'uncertain');
 		
 	ELSIF v_isnew IS FALSE THEN
 		
-		v_oldversion = (SELECT giswater FROM sys_version ORDER BY id DESC LIMIT 1);
+        v_oldversion = (SELECT giswater FROM sys_version ORDER BY id DESC LIMIT 1);
         
 
-		-- create child views for users from 3.2 to 3.3 updates
+        -- create child views for users from 3.2 to 3.3 updates
 		IF v_oldversion < '3.3.000' AND v_gwversion > '3.3.000' THEN
 			PERFORM gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "multi_create":true}}$$)::text;
 		END IF;

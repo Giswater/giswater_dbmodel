@@ -49,6 +49,7 @@ v_psector_vdefault integer;
 v_arc_id text;
 v_streetaxis text;
 v_streetaxis2 text;
+v_autorotation_disabled boolean;
     
 BEGIN
 
@@ -62,6 +63,7 @@ BEGIN
 
 	-- get values
 	v_promixity_buffer = (SELECT "value" FROM config_param_system WHERE "parameter"='edit_feature_buffer_on_mapzone');
+	v_autorotation_disabled = (SELECT value::boolean FROM config_param_user WHERE "parameter"='edit_gullyrotation_disable' AND cur_user=current_user);
 	v_unitsfactor = (SELECT value::float FROM config_param_user WHERE "parameter"='edit_gully_doublegeom' AND cur_user=current_user);
 	IF v_unitsfactor IS NULL THEN
 		v_doublegeometry = FALSE;
@@ -77,6 +79,14 @@ BEGIN
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
 		v_streetaxis = (SELECT id FROM ext_streetaxis WHERE muni_id = NEW.muni_id AND name = NEW.streetname LIMIT 1);
 		v_streetaxis2 = (SELECT id FROM ext_streetaxis WHERE muni_id = NEW.muni_id AND name = NEW.streetname2 LIMIT 1);
+
+		IF NEW.arc_id IS NOT NULL AND NEW.expl_id IS NOT NULL THEN
+			IF (SELECT expl_id FROM arc WHERE arc_id = NEW.arc_id) != NEW.expl_id THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3144", "function":"1206","debug_msg":"'||NEW.arc_id::text||'"}}$$);';
+			END IF;
+		END IF;
+
 	END IF;
 	
 	-- Control insertions ID
@@ -94,7 +104,7 @@ BEGIN
 		ELSIF (NEW.gully_type IS NULL and v_customfeature IS NULL) THEN
 			NEW.gully_type:= (SELECT "value" FROM config_param_user WHERE "parameter"='gullycat_vdefault' AND "cur_user"="current_user"() LIMIT 1);		
 			IF (NEW.gully_type IS NULL) THEN
-				NEW.gully_type:=(SELECT id FROM cat_feature WHERE feature_type = 'GULLY' LIMIT 1);
+				NEW.gully_type:=(SELECT id FROM cat_feature WHERE feature_type = 'GULLY' AND active IS TRUE  LIMIT 1);
 			END IF;
 		END IF;
 
@@ -108,7 +118,7 @@ BEGIN
 		IF (NEW.gratecat_id IS NULL OR NEW.gratecat_id = '') THEN
 				NEW.gratecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_gratecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			IF (NEW.gratecat_id IS NULL) THEN
-				NEW.gratecat_id:=(SELECT id FROM cat_grate LIMIT 1);
+				NEW.gratecat_id:=(SELECT id FROM cat_grate WHERE active IS TRUE LIMIT 1);
 			END IF;
 		END IF;
 
@@ -122,7 +132,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
+			IF ((SELECT COUNT(*) FROM exploitation WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		       	"data":{"message":"1110", "function":"1206","debug_msg":null}}$$);';
 			END IF;
@@ -134,9 +144,9 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
+				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -233,9 +243,10 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.muni_id IS NULL) THEN
-				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
+				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) AND active IS TRUE ;
 				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+					AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -277,14 +288,8 @@ BEGIN
 
 		--check relation state - state_type
 		IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-			IF NEW.state IS NOT NULL THEN
-				v_sql = NEW.state;
-			ELSE
-				v_sql = 'null';
-			END IF;
-
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3036", "function":"1206","debug_msg":"'||v_sql::text||'"}}$$);'; 
+				"data":{"message":"3036", "function":"1206","debug_msg":"'||NEW.state::text||'"}}$$);'; 
 	   	END IF;		
 
 		-- Workcat_id
@@ -305,6 +310,9 @@ BEGIN
 		--Builtdate
 		IF (NEW.builtdate IS NULL) THEN
 			NEW.builtdate :=(SELECT "value" FROM config_param_user WHERE "parameter"='edit_builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.builtdate IS NULL) AND (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE THEN
+				NEW.builtdate :=date(now());
+			END IF;
 		END IF;  
 
 		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature WHERE id=NEW.gully_type;
@@ -390,8 +398,12 @@ BEGIN
 		ELSE
 			v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,v_linelocatepoint), st_lineinterpolatepoint(v_thegeom,v_linelocatepoint+0.01));
 		END IF;
-
-		NEW.rotation = v_rotation*180/pi();
+        
+        -- use automatic rotation only on INSERT. On update it's only posible manual rotation update 
+		IF v_autorotation_disabled IS NULL OR v_autorotation_disabled IS FALSE THEN
+			NEW.rotation = v_rotation*180/pi();
+		END IF;
+		
 		v_rotation = -(v_rotation - pi()/2);
 
 		-- double geometry
@@ -525,27 +537,26 @@ BEGIN
 		-- Reconnect arc_id
 		IF (NEW.arc_id != OLD.arc_id) OR (NEW.arc_id IS NOT NULL AND OLD.arc_id IS NULL) OR (NEW.arc_id IS NULL AND OLD.arc_id IS NOT NULL) THEN
 
-			-- when arc_id comes from gully table
-			IF OLD.arc_id NOT IN (SELECT arc_id FROM plan_psector_x_gully WHERE gully_id=NEW.gully_id) THEN 
-			
+			-- when arc_id comes from psector table
+			IF OLD.arc_id IN (SELECT arc_id FROM plan_psector_x_gully WHERE gully_id=NEW.gully_id) THEN 
+				UPDATE plan_psector_x_gully SET arc_id = NEW.arc_id WHERE gully_id=OLD.gully_id AND arc_id = OLD.arc_id;		
+
+			ELSE
+				-- when arc_id comes from gully table
 				UPDATE gully SET arc_id=NEW.arc_id where gully_id=NEW.gully_id;
 				
 				IF (SELECT link_id FROM link WHERE feature_id=NEW.gully_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
 
 					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
-					"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
+					"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"GULLY"}}$$)';
 				
 				ELSIF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_gully_automatic_link' AND cur_user=current_user LIMIT 1) IS TRUE THEN
 
 					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
-					"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
-				END IF;
-
-			-- when arc_id comes from plan psector tables
-			ELSIF (OLD.arc_id IN (SELECT arc_id FROM plan_psector_x_gully WHERE gully_id=NEW.gully_id)) THEN
-				UPDATE plan_psector_x_gully SET arc_id = NEW.arc_id WHERE gully_id=OLD.gully_id AND arc_id = OLD.arc_id;		
+					"feature":{"id":'|| array_to_json(array_agg(NEW.gully_id))||'},"data":{"feature_type":"GULLY"}}$$)';
+				END IF;		
 			END IF;
-		END IF;
+		END IF;	
 		
 		-- State_type
 		IF NEW.state=0 AND OLD.state=1 THEN
@@ -560,12 +571,10 @@ BEGIN
 				END IF;
 			END IF;
 			
-			-- Control of automatic downgrade of associated link/vnode
-			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_downgrade_link'
-			AND cur_user=current_user LIMIT 1) IS TRUE THEN	
-				UPDATE link SET state=0 WHERE feature_id=OLD.gully_id;
-				UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.gully_id LIMIT 1)::integer;
-			END IF;
+			-- Automatic downgrade of associated link/vnode
+			UPDATE link SET state=0 WHERE feature_id=OLD.gully_id;
+			UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.gully_id LIMIT 1)::integer;
+
 		END IF;
 
 		-- Looking for state control and insert planified gully to default psector
@@ -585,11 +594,6 @@ BEGIN
 	    IF (NEW.state_type != OLD.state_type) AND NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
 	      	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 			"data":{"message":"3036", "function":"1206","debug_msg":"'||NEW.state::text||'"}}$$);'; 
-	    END IF;		
-
-		-- rotation
-		IF NEW.rotation != OLD.rotation THEN
-			UPDATE gully SET rotation=NEW.rotation WHERE gully_id = OLD.gully_id;
 		END IF;		
 		
 		--link_path
@@ -598,22 +602,19 @@ BEGIN
 			NEW.link = replace(NEW.link, v_link_path,'');
 		END IF;
 
-		-- double geometry rotation update
-		IF v_doublegeometry AND ST_equals(NEW.the_geom, OLD.the_geom) IS FALSE THEN
-			WITH index_query AS(
-			SELECT ST_Distance(the_geom, NEW.the_geom) as distance, the_geom FROM arc WHERE state=1 ORDER BY the_geom <-> NEW.the_geom LIMIT 10)
-			SELECT St_linelocatepoint(the_geom, St_closestpoint(the_geom, NEW.the_geom)), the_geom INTO v_linelocatepoint, v_thegeom FROM index_query ORDER BY distance LIMIT 1;
-			IF v_linelocatepoint < 0.01 THEN
-				v_rotation = st_azimuth (st_startpoint(v_thegeom), st_lineinterpolatepoint(v_thegeom,0.01));
-			ELSIF v_linelocatepoint > 0.99 THEN
-				v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,0.98), st_lineinterpolatepoint(v_thegeom,0.99));
-			ELSE
-				v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,v_linelocatepoint), st_lineinterpolatepoint(v_thegeom,v_linelocatepoint+0.01));
-			END IF;
-
-			NEW.rotation = v_rotation*180/pi();
-			v_rotation = -(v_rotation - pi()/2);
-		END IF;
+		--set rotation field
+        WITH index_query AS(
+        SELECT ST_Distance(the_geom, NEW.the_geom) as distance, the_geom FROM arc WHERE state=1 ORDER BY the_geom <-> NEW.the_geom LIMIT 10)
+        SELECT St_linelocatepoint(the_geom, St_closestpoint(the_geom, NEW.the_geom)), the_geom INTO v_linelocatepoint, v_thegeom FROM index_query ORDER BY distance LIMIT 1;
+        IF v_linelocatepoint < 0.01 THEN
+            v_rotation = st_azimuth (st_startpoint(v_thegeom), st_lineinterpolatepoint(v_thegeom,0.01));
+        ELSIF v_linelocatepoint > 0.99 THEN
+            v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,0.98), st_lineinterpolatepoint(v_thegeom,0.99));
+        ELSE
+            v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,v_linelocatepoint), st_lineinterpolatepoint(v_thegeom,v_linelocatepoint+0.01));
+        END IF;
+		
+		v_rotation = -(v_rotation - pi()/2);
 
 		-- double geometry catalog update
 		IF v_doublegeometry AND NEW.gratecat_id != OLD.gratecat_id THEN
@@ -670,6 +671,7 @@ BEGIN
 					ELSE
 						UPDATE polygon SET the_geom = v_the_geom_pol WHERE pol_id = (SELECT pol_id FROM gully WHERE gully_id = NEW.gully_id);
 					END IF;
+					
 				END IF;
 		END IF;
 

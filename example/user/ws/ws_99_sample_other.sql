@@ -7,6 +7,8 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
+UPDATE arc SET presszone_id = 0;
+
 UPDATE config_param_system SET VALUE = '{"SECTOR":true, "PRESSZONE":true, "DQA":true, "MINSECTOR":true, "DMA":true}' WHERE parameter = 'utils_grafanalytics_status';
 
 INSERT INTO sys_function VALUES (2888, 'gw_fct_fill_om_tables','ws','function','void','void','Create example visits (used on sample creation)','role_admin',false);
@@ -33,9 +35,9 @@ UPDATE plan_arc_x_pavement SET pavcat_id = 'Asphalt';
 
 UPDATE plan_psector_x_arc SET psector_id = 2 WHERE arc_id = '20651';
 
-INSERT INTO plan_psector_x_arc VALUES (7, '2065', 2, 0, false, NULL);
-INSERT INTO plan_psector_x_arc VALUES (8, '2085', 1, 0, false, NULL);
-INSERT INTO plan_psector_x_arc VALUES (9, '2086', 1, 0, false, NULL);
+INSERT INTO plan_psector_x_arc VALUES (4, '2065', 2, 0, false, NULL);
+INSERT INTO plan_psector_x_arc VALUES (5, '2085', 1, 0, false, NULL);
+INSERT INTO plan_psector_x_arc VALUES (8, '2086', 1, 0, false, NULL);
 
 INSERT INTO plan_psector_x_node VALUES (2, '1076', 1, 0, false, NULL);
 
@@ -52,6 +54,20 @@ INSERT INTO doc VALUES ('Demo document 1', 'OTHER', 'https://github.com/Giswater
 INSERT INTO doc VALUES ('Demo document 3', 'OTHER', 'https://github.com/Giswater/giswater/blob/master-2.1/legal/Licensing.txt', NULL, '2018-03-14 17:09:59.762257', current_user, '2018-03-14 17:09:59.762257');
 INSERT INTO doc VALUES ('Demo document 2', 'OTHER', 'https://github.com/Giswater/giswater/blob/master-2.1/legal/Readme.txt', NULL, '2018-03-14 17:09:19.852804', current_user, '2018-03-14 17:09:19.852804');
 
+SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1,"lang":"ES"},"feature":{"id":
+"SELECT array_to_json(array_agg(connec_id::text)) FROM v_edit_connec WHERE connec_id IS NOT NULL AND state=1"},
+"data":{"feature_type":"CONNEC"}}$$);
+
+-- for connec 3014 that stays outside the selectors and doesn't connect to network with fct
+INSERT INTO vnode VALUES ((SELECT nextval('vnode_vnode_id_seq')), 1, '0101000020E7640000198F5EB77093194113A8AB6482755141');
+INSERT INTO link VALUES ((SELECT nextval('link_link_id_seq')), '3014', 'CONNEC', 483, 'VNODE', FALSE, 1, 1, '0102000020E7640000020000006CAAF3ACD4931941988F62837F755141198F5EB77093194113A8AB6482755141');
+
+SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"id":["114463","114462","114461"]},"data":{"feature_type":"CONNEC"}}$$);
+SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"id":["3018","3003"]},"data":{"feature_type":"CONNEC"}}$$);
+
+
+--SELECT gw_fct_plan_result($${"client":{"device":4, "infoType":1, "lang":"ES"},
+--"feature":{},"data":{"parameters":{"coefficient":1, "description":"Demo prices for reconstruction", "resultType":1, "resultId":"Starting prices","saveOnDatabase":true}}}$$);
 
 SELECT gw_fct_fill_doc_tables();
 SELECT gw_fct_fill_om_tables();
@@ -62,7 +78,9 @@ doc.id,
 om_visit.id
 FROM doc, om_visit;
 
-
+update node set link='https://www.giswater.org';
+update arc set link='https://www.giswater.org';
+update connec set link='https://www.giswater.org';
 update rtc_hydrometer set link='https://www.giswater.org';
 
 update cat_feature_node SET isarcdivide=FALSE, num_arcs=0 WHERE id='AIR_VALVE';
@@ -73,10 +91,10 @@ UPDATE cat_feature_node SET graf_delimiter='DQA' WHERE id IN('CLORINATHOR');
 UPDATE cat_feature_node SET graf_delimiter='DMA' WHERE id IN('FLOWMETER');
 UPDATE cat_feature_node SET graf_delimiter='SECTOR' WHERE id IN('SOURCE','TANK','WATERWELL','WTP');
 
-INSERT INTO config_valve VALUES('CHECK_VALVE');
-INSERT INTO config_valve VALUES('FL_CONTR_VALVE');
-INSERT INTO config_valve VALUES('GEN_PURP_VALVE');
-INSERT INTO config_valve VALUES('THROTTLE_VALVE');
+INSERT INTO config_mincut_valve VALUES('CHECK_VALVE');
+INSERT INTO config_mincut_valve VALUES('FL_CONTR_VALVE');
+INSERT INTO config_mincut_valve VALUES('GEN_PURP_VALVE');
+INSERT INTO config_mincut_valve VALUES('THROTTLE_VALVE');
 
 
 update ext_rtc_hydrometer SET state_id=1;
@@ -88,10 +106,14 @@ join connec b on a.connec_id = b.connec_id
 where ext_rtc_hydrometer.id = a.hydrometer_id;
 
 
+SELECT gw_fct_audit_check_project($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"0", "fid":1}}$$)::text;
+
+
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OUTFALL_VALVE"},
 "data":{"action":"CREATE", "multi_create":"false", "parameters":{"columnname":"outfallvalve_param_1", "datatype":"string", 
 "widgettype":"text", "label":"Outvalve param_1","ismandatory":"False",
 "fieldLength":"250", "numDecimals" :null,"addfield_active":"True", "iseditable":"True","isenabled":"True"}}}$$);
+
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OUTFALL_VALVE"},
 "data":{"action":"CREATE", "multi_create":"false", "parameters":{"columnname":"outfallvalve_param_2", "datatype":"boolean", 
@@ -209,24 +231,31 @@ SELECT 'edit_typevalue','pressmeter_param_1','man_addfields_value','value_param'
 
 -- rotate vnodes and connec labels
 INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_link_connecrotation_update', TRUE, current_user) ON CONFLICT (parameter, cur_user) DO NOTHING;
+UPDATE link SET the_geom=the_geom;
 
 
 --update sys_param_user with cat_feature vdefaults
 UPDATE cat_feature SET id=id;
 
+--set enddate NULL for on service features
+UPDATE node SET enddate=NULL WHERE state=1;
+UPDATE arc SET enddate=NULL WHERE state=1;
+UPDATE connec SET enddate=NULL WHERE state=1;
 
 UPDATE cat_node SET ischange=2 WHERE id IN ('TDN160-63 PN16', 'XDN110-90 PN16');
 UPDATE cat_node SET ischange=0 WHERE id LIKE '%JUNCTION%';
 UPDATE cat_node SET ischange=0 WHERE id LIKE '%ENDLINE%';
 UPDATE cat_node SET ischange=1 WHERE id LIKE '%JUNCTION CHNG%';
 
-
+UPDATE node SET enddate = '2017-12-06' WHERE node_id='18';
+UPDATE arc SET enddate = '2017-12-06' WHERE arc_id='113913';
 
 UPDATE cat_arc SET cost = 'VIRTUAL_M', m2bottom_cost = 'VIRTUAL_M2', m3protec_cost = 'VIRTUAL_M3' WHERE id = 'VIRTUAL';
 
+UPDATE connec SET the_geom  = '0101000020E764000044D7D93156941941F95742A672755141' 
+WHERE connec_id ='3024';
 
-
-UPDATE inp_valve SET diameter = 100;
+UPDATE inp_valve SET custom_dint = 100;
 
 --move closed and broken to the top of lyt_data_2
 UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=0 WHERE columnname = 'closed' AND formname like '%_valve';
@@ -273,24 +302,90 @@ UPDATE config_form_fields SET layoutorder =70 , layoutname ='lyt_data_1' WHERE c
 UPDATE config_form_fields SET stylesheet ='{"label":"color:red; font-weight:bold"}' WHERE columnname IN ('expl_id', 'sector_id');
 
 
-SELECT gw_fct_admin_manage_triggers('fk','ALL');
+-- drop constraints
+SELECT gw_fct_admin_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"}}$$);
+
+delete from presszone;
+INSERT INTO presszone VALUES ('1', 'pzone1-1s', 1, NULL, NULL,  '{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO presszone VALUES ('2', 'pzone1-2s', 1, NULL, NULL, '{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
+INSERT INTO presszone VALUES ('3', 'pzone1-1d', 1, NULL, NULL, '{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO presszone VALUES ('4', 'pzone1-2d', 1, NULL, NULL, '{"use":[{"nodeParent":"1083", "toArc":[2095]}], "ignore":[]}');
+INSERT INTO presszone VALUES ('5', 'pzone2-1s', 2, NULL, NULL, '{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
+INSERT INTO presszone VALUES ('6', 'pzone2-2d', 2,  NULL, NULL, '{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
 
 
+delete from dma;
+INSERT INTO dma VALUES (1, 'dma1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO dma VALUES (2, 'dma1-2d', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'dma02_estimated', NULL,'{"use":[{"nodeParent":"1080", "toArc":[2092]}], "ignore":[]}');
+INSERT INTO dma VALUES (3, 'dma2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'dma03_estimated', NULL,'{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
+INSERT INTO dma VALUES (4, 'source-1', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"1101", "toArc":[2205]},{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO dma VALUES (5, 'source-2', 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
+
+
+delete from dqa;
+INSERT INTO dqa VALUES (1, 'dqa1-1d', 1, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO dqa VALUES (2, 'dqa2-1d', 2, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
+INSERT INTO dqa VALUES (3, 'dqa1-1s', 1, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"1101", "toArc":[2205]},{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO dqa VALUES (4, 'dqa2-1s', 2, NULL, NULL, NULL, NULL, NULL, NULL, 'chlorine','{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
+
+
+delete from sector;
+INSERT INTO sector VALUES (1, 'sector1-1s', 1, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"1097", "toArc":[2207]}], "ignore":[]}');
+INSERT INTO sector VALUES (2, 'sector1-2s', 1, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"1101", "toArc":[2205]}], "ignore":[]}');
+INSERT INTO sector VALUES (3, 'sector1-1d', 1, NULL, NULL, NULL , 'distribution','{"use":[{"nodeParent":"113766", "toArc":[113906]}], "ignore":[]}');
+INSERT INTO sector VALUES (4, 'sector2-1s', 2, NULL, NULL, NULL, 'source','{"use":[{"nodeParent":"111111", "toArc":[114025]}], "ignore":[]}');
+INSERT INTO sector VALUES (5, 'sector2-1d', 2, NULL, NULL, NULL , 'distribution','{"use":[{"nodeParent":"113952", "toArc":[114146]}], "ignore":[]}');
 
 delete from inp_inlet;
 INSERT INTO inp_inlet VALUES ('113766', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL);
 INSERT INTO inp_inlet VALUES ('113952', 1.0000, 0.0000, 3.5000, 12.0000, 0.0000, NULL, NULL);
 
+UPDATE node SET epa_type='INLET' WHERE node_id IN ('113766', '113952');
 
 delete from inp_reservoir;
 INSERT INTO inp_reservoir  VALUES ('111111', NULL);
 INSERT INTO inp_reservoir  VALUES ('1097', NULL);
 INSERT INTO inp_reservoir  VALUES ('1101', NULL);
 
+update arc set sector_id=0, dma_id=0, dqa_id=0, presszone_id=0;
+update node set sector_id=0, dma_id=0, dqa_id=0,  presszone_id=0;
+update connec set sector_id=0, dma_id=0, dqa_id=0, presszone_id=0;
+
+INSERT INTO dma VALUES (0, 'Undefined', 0);
+INSERT INTO dqa VALUES (0, 'Undefined', 0);
+INSERT INTO sector VALUES (0, 'Undefined', 0);
+INSERT INTO presszone VALUES (0, 'Undefined',0);
+
+-- add constraints
+SELECT gw_fct_admin_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"ADD"}}$$);
+
+-- dynamic sectorization
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"SECTOR", "exploitation": "[1,2]", 
+"updateFeature":"TRUE", "updateMapZone":"1","geomParamUpdate":0.85}}}');
+
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DQA", "exploitation": "[1,2]", 
+"updateFeature":"TRUE", "updateMapZone":"2","geomParamUpdate":30}}}');
+
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"PRESSZONE","exploitation":"[1,2]",
+"updateFeature":"TRUE","updateMapZone":"2","geomParamUpdate":20}}}');
+
+SELECT gw_fct_grafanalytics_mapzones('{"data":{"parameters":{"grafClass":"DMA", "exploitation": "[1,2]", 
+"updateFeature":"TRUE", "updateMapZone":"2","geomParamUpdate":15}}}');
+
+SELECT gw_fct_grafanalytics_minsector('{"data":{"parameters":{"exploitation":"[1,2]", 
+"updateFeature":"TRUE", "updateMapZone":"2","geomParamUpdate":10}}}');
+
+
+
 -- lastprocess
 delete from link where link_id=197;
 delete from link where link_id=211;
 
+--select gw_fct_connect_to_network((select array_agg(connec_id)from connec where connec_id IN ('3076', '3177')), 'CONNEC');
+
+update connec set pjoint_id = exit_id, pjoint_type='VNODE' FROM link WHERE link.feature_id=connec_id;
+
+UPDATE connec SET label_rotation=24.5, label_x=3 WHERE connec_id='3014';
 
 INSERT INTO selector_sector (sector_id, cur_user)
 SELECT sector_id, current_user FROM sector
@@ -302,6 +397,33 @@ SELECT gw_fct_pg2epa_main($${
 
 UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'audit_project_user_control';
 
+--deprecated fields
+UPDATE arc SET _sys_length=NULL;
+
+
+-- adjustment of ischange
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1006';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1025';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1039';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1040';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1057';
+
+
+UPDATE node SET nodecat_id='TDN63-63 PN16' WHERE node_id='1044';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1063';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1067';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1069';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1044';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1063';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1067';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='1069';
+UPDATE node SET nodecat_id='REDUC_200-110 PN16' WHERE node_id='113873';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113880';
+UPDATE node SET nodecat_id='REDUC_160-110 PN16' WHERE node_id='113883';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113954';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113955';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='113994';
+UPDATE node SET nodecat_id='JUNCTION CHNGMAT' WHERE node_id='114016';
 
 UPDATE man_valve SET closed = TRUE WHERE node_id = '1115';
 UPDATE man_valve SET broken = TRUE WHERE node_id IN ('1112', '1093');
@@ -329,7 +451,7 @@ UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 11 where 
 UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 12 where columnname ='pjoint_type';
 UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 13 where columnname ='descript';
 UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 14 where columnname = 'annotation';
-UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 15 where columnname = 'observ';
+UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 15 where columnname = 'observ' AND formname <> 'v_edit_dimensions';
 UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 16 where columnname = 'lastupdate';
 UPDATE config_form_fields SET layoutname ='lyt_data_3' , layoutorder = 17 where columnname = 'lastupdate_user';
 UPDATE config_form_fields SET layoutname = 'lyt_data_3', layoutorder = 18 where columnname ='link';
@@ -345,7 +467,7 @@ UPDATE config_form_fields SET  hidden = true where columnname = 'function_type' 
 UPDATE config_form_fields SET  hidden = true where columnname = 'descript' AND formname LIKE '%_connec_%';
 UPDATE config_form_fields SET  hidden = true where columnname = 'annotation' AND formname LIKE '%_connec_%';
 
-UPDATE config_form_fields SET layoutname = 'lyt_bot_1' where columnname ='state';
+UPDATE config_form_fields SET layoutname = 'lyt_bot_1' where columnname ='state' AND formname <> 'v_edit_dimensions';
 UPDATE config_form_fields SET layoutname = 'lyt_bot_1' where columnname ='state_type';
 UPDATE config_form_fields SET layoutname = 'lyt_bot_1' where columnname ='sector_id';
 UPDATE config_form_fields SET layoutname = 'lyt_data_1',layoutorder = 997 where columnname ='hemisphere';
@@ -355,7 +477,7 @@ UPDATE config_form_fields SET layoutorder = 2 where columnname ='dma_id';
 UPDATE config_form_fields SET layoutname = 'lyt_data_2', layoutorder = 30 where columnname ='verified';
 UPDATE config_form_fields SET layoutname = 'lyt_data_2', layoutorder = 31 where columnname ='presszone_id';
 UPDATE config_form_fields SET layoutname = 'lyt_data_2', layoutorder = 32 where columnname ='dqa_id';
-UPDATE config_form_fields SET layoutname = 'lyt_data_2', layoutorder = 33 where columnname ='expl_id';
+UPDATE config_form_fields SET layoutname = 'lyt_data_2', layoutorder = 33 where columnname ='expl_id' AND formname <> 'v_edit_dimensions';
 UPDATE config_form_fields SET layoutname = 'lyt_data_1', layoutorder = 998 where columnname ='parent_id';
 
 
@@ -369,7 +491,7 @@ update config_form_fields SET widgettype = 'text' WHERE columnname  = 'macrosect
 
 UPDATE v_edit_node SET nodecat_id = 'CHK-VALVE100-PN16' WHERE node_id = '1092';
 
-INSERT INTO config_checkvalve (node_id, to_arc) VALUES ('1092', '2104');
+INSERT INTO config_mincut_checkvalve (node_id, to_arc) VALUES ('1092', '2104');
 
 UPDATE inp_connec SET demand  = 0.01;
 
@@ -426,6 +548,7 @@ UPDATE config_form_fields SET tooltip = 'name - Nombre específico del elemento'
 
 
 UPDATE ext_rtc_dma_period SET minc = null, maxc = null, pattern_volume = 32;
+UPDATE v_edit_node SET epa_type = 'NOT DEFINED' WHERE node_id = '1007';
 
 -- reconnect connecs
 DELETE FROM selector_psector;
@@ -455,14 +578,38 @@ UPDATE inp_junction SET demand = 0 WHERE demand = 16.000000;
 UPDATE inp_junction SET demand = 0 , pattern_id  = 'pattern_02' WHERE pattern_id = 'pattern_hydrant';
 
 UPDATE config_param_system SET value='TRUE' WHERE parameter='sys_raster_dem';
-
-INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_insert_elevation_from_dem', 'true', current_user)
-ON CONFLICT (parameter, cur_user) DO NOTHING;
-
-INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_update_elevation_from_dem', 'true', current_user)
+INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_upsert_elevation_from_dem', 'true', current_user)
 ON CONFLICT (parameter, cur_user) DO NOTHING;
 
 UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'qgis_form_docker' AND cur_user = current_user;
+
+UPDATE presszone SET head=0, stylesheet='{"color":[100,100,100], "featureColor":"100,100,100"}'  where presszone_id = '0';
+UPDATE presszone SET head=103.85, stylesheet='{"color":[251,181,174], "featureColor":"251,181,174"}'  where presszone_id = '1';
+UPDATE presszone SET head=75, stylesheet='{"color":[179,205,227], "featureColor":"179,205,227"}'  where presszone_id = '2';
+UPDATE presszone SET head=68.25, stylesheet='{"color":[204,235,197], "featureColor":"204,235,197"}'  where presszone_id = '3';
+UPDATE presszone SET head=30, stylesheet='{"color":[222,203,228], "featureColor":"222,203,228"}'  where presszone_id = '4';
+UPDATE presszone SET head=119.69, stylesheet='{"color":[254,217,166], "featureColor":"254,217,166"}'  where presszone_id = '5';
+UPDATE presszone SET head=81.5, stylesheet='{"color":[255,255,204], "featureColor":"255,255,204"}'  where presszone_id = '6';
+
+UPDATE dma SET stylesheet='{"color":[100,100,100], "featureColor":"100,100,100"}'  where dma_id = 0;
+UPDATE dma SET stylesheet='{"color":[251,181,174], "featureColor":"251,181,174"}'  where dma_id = 1;
+UPDATE dma SET stylesheet='{"color":[179,205,227], "featureColor":"179,205,227"}'  where dma_id = 2;
+UPDATE dma SET stylesheet='{"color":[204,235,197], "featureColor":"204,235,197"}'  where dma_id = 3;
+UPDATE dma SET stylesheet='{"color":[222,203,228], "featureColor":"222,203,228"}'  where dma_id = 4;
+UPDATE dma SET stylesheet='{"color":[255,255,204], "featureColor":"255,255,204"}'  where dma_id = 5;
+
+UPDATE dqa SET stylesheet='{"color":[100,100,100], "featureColor":"100,100,100"}'  where dqa_id = 0;
+UPDATE dqa SET stylesheet='{"color":[251,181,174], "featureColor":"251,181,174"}'  where dqa_id = 1;
+UPDATE dqa SET stylesheet='{"color":[179,205,227], "featureColor":"179,205,227"}'  where dqa_id = 2;
+UPDATE dqa SET stylesheet='{"color":[204,235,197], "featureColor":"204,235,197"}'  where dqa_id = 3;
+UPDATE dqa SET stylesheet='{"color":[222,203,228], "featureColor":"222,203,228"}'  where dqa_id = 4;
+
+UPDATE sector SET stylesheet='{"color":[100,100,100], "featureColor":"100,100,100"}'  where sector_id = 0;
+UPDATE sector SET stylesheet='{"color":[251,181,174], "featureColor":"251,181,174"}'  where sector_id = 1;
+UPDATE sector SET stylesheet='{"color":[179,205,227], "featureColor":"179,205,227"}'  where sector_id = 2;
+UPDATE sector SET stylesheet='{"color":[204,235,197], "featureColor":"204,235,197"}'  where sector_id = 3;
+UPDATE sector SET stylesheet='{"color":[222,203,228], "featureColor":"222,203,228"}'  where sector_id = 4;
+UPDATE sector SET stylesheet='{"color":[255,255,204], "featureColor":"255,255,204"}'  where sector_id = 5;
 
 UPDATE config_form_fields SET  layoutname = 'lyt_top_1' where columnname = 'arc_id'AND formname LIKE '%_arc_%';
 
@@ -503,6 +650,20 @@ UPDATE sys_param_user SET dv_querytext = replace (dv_querytext, ' gully_type', '
 UPDATE man_hydrant SET fire_code = concat('fcod-',node_id);
 
 
+INSERT INTO ext_district (district_id,name, muni_id,active)
+values(1,'Camps Blancs',1, true);
+INSERT INTO ext_district (district_id,name, muni_id,active)
+values(2,'Marianao',1, true);
+
+UPDATE node SET district_id =1 WHERE expl_id=1;
+UPDATE node SET district_id =2 WHERE expl_id=2;
+
+UPDATE arc SET district_id =1 WHERE expl_id=1;
+UPDATE arc SET district_id =2 WHERE expl_id=2;
+
+UPDATE connec SET district_id =1 WHERE expl_id=1;
+UPDATE connec SET district_id =2 WHERE expl_id=2;
+
 --arc
 UPDATE config_form_fields SET layoutname = 'lyt_none' where columnname = 'arc_id' and formname like '%ve_arc_%';
 UPDATE config_form_fields SET layoutname = 'lyt_none' where columnname = 'arc_id' and formname like '%v_edit_arc%';
@@ -530,3 +691,51 @@ UPDATE config_form_fields SET placeholder = 'Only when state is obsolete' where 
 UPDATE config_form_fields SET placeholder = 'Top floor of the building (ex: 3)' where columnname = 'top_floor' AND formname like '%ve_connec%';
 UPDATE config_form_fields SET placeholder = 'Optional: Arc_id of related arc' where columnname = 'arc_id' AND formname like '%ve_node%';
 UPDATE config_form_fields SET placeholder = 'Optional: Node_id of the parent node' where columnname = 'parent_id' AND formname like '%ve_node%';
+
+-- to clean trash must be executed 3 times
+SELECT gw_fct_setvnoderepair($${ "client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"parameters":{"tolerance":"0.01", "forceNodes":true}}}$$);
+SELECT gw_fct_setvnoderepair($${ "client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"parameters":{"tolerance":"0.01", "forceNodes":true}}}$$);
+SELECT gw_fct_setvnoderepair($${ "client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"parameters":{"tolerance":"0.01", "forceNodes":true}}}$$);
+
+INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1069',35.4,'2020-01-01 03:05:00');
+INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1069',34.4,'2020-01-01 03:10:00');
+INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1067',45.4,'2020-01-01 03:05:00');
+INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1067',44.4,'2020-01-01 03:10:00');
+
+INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (363,'2078',1.1,'2020-01-01 03:05:00');
+INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (363,'2078',0.9,'2020-01-01 03:10:00');
+INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (365,'2078',0.02,'2020-01-01 03:05:00');
+INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (365,'2078',0.03,'2020-01-01 03:10:00');
+
+-- 2020/12/07
+UPDATE sys_param_user SET vdefault ='{"reservoir":{"switch2Junction":["WTP", "WATERWELL", "SOURCE"]},
+"tank":{"distVirtualReservoir":0.01}, 
+"pressGroup":{"status":"ACTIVE", "forceStatus":"ACTIVE", "defaultCurve":"GP30"}, 
+"pumpStation":{"status":"CLOSED", "forceStatus":"CLOSED", "defaultCurve":"IM00"}, 
+"PRV":{"status":"ACTIVE", "forceStatus":"ACTIVE", "pressure":"30"}, 
+"PSV":{"status":"ACTIVE", "forceStatus":"ACTIVE", "pressure":"30"}
+}'
+WHERE id = 'inp_options_buildup_supply';
+
+UPDATE cat_feature SET parent_layer = 'v_edit_node' WHERE id = 'CLORINATHOR';
+UPDATE config_info_layer SET  tableinfo_id  =NULL;
+DELETE FROM config_info_layer_x_type where tableinfo_id = 'v_edit_om_visit';
+
+UPDATE config_param_system SET value = 'false' WHERE parameter = 'admin_utils_schema';
+
+UPDATE config_param_system SET value =
+'{"table":"exploitation", "selector":"selector_expl", "table_id":"expl_id",  "selector_id":"expl_id",  "label":"expl_id, '' - '', name", "orderBy":"expl_id", 
+"manageAll":true, "query_filter":"AND expl_id > 0", "typeaheadFilter":" AND lower(concat(expl_id, '' - '', name))"}'
+WHERE parameter  = 'basic_search_exploitation';
+
+UPDATE config_info_layer SET addparam = '{"forceWhenActive":true}' WHERE layer_id IN ('v_edit_dimensions','v_edit_om_visit');
+
+UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'manageConflict', 'false'::text) WHERE parameter = 'utils_grafanalytics_status';
+
+INSERT INTO presszone (presszone_id, name, expl_id, grafconfig) VALUES (11,'Conflict mapzone',1, '{"status":"useWhenConflict"}');
+INSERT INTO presszone (presszone_id, name, expl_id, grafconfig) VALUES (12,'Conflict mapzone',2, '{"status":"useWhenConflict"}');
+INSERT INTO dma (dma_id, name, expl_id, grafconfig) VALUES (11,'Conflict mapzone',1, '{"status":"useWhenConflict"}');
+INSERT INTO dma (dma_id, name, expl_id, grafconfig) VALUES (12,'Conflict mapzone',2, '{"status":"useWhenConflict"}');
+INSERT INTO dqa (dqa_id, name, expl_id, grafconfig) VALUES (11,'Conflict mapzone',1, '{"status":"useWhenConflict"}');
+INSERT INTO dqa (dqa_id, name, expl_id, grafconfig) VALUES (12,'Conflict mapzone',2, '{"status":"useWhenConflict"}');
+INSERT INTO sector (sector_id, name, grafconfig) VALUES (11,'Conflict mapzone', '{"status":"useWhenConflict"}');

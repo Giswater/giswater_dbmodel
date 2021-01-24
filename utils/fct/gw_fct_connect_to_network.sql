@@ -315,7 +315,7 @@ BEGIN
 	v_result_polygon = '{"geometryType":"", "features":[]}';
 
 	--  Return
-     RETURN gw_fct_json_create_return(('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+     RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 		     	'"setVisibleLayers":[]'||','||
@@ -324,7 +324,7 @@ BEGIN
 				'"polygon":'||v_result_polygon||'}'||
 				', "actions":{"hideForm":' || v_hide_form || '}'||
 		       '}'||
-	    '}')::json, 2124);
+	    '}')::json;
 
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;

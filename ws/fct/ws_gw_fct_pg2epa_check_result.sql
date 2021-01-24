@@ -12,9 +12,9 @@ $BODY$
 
 /*EXAMPLE
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_result($${"data":{"parameters":{"resultId":"gw_check_project","fid":227}}}$$) --when is called from go2epa_main from toolbox
-SELECT SCHEMA_NAME.gw_fct_pg2epa_check_result($${"data":{"parameters":{"resultId":"r1"}}}$$) -- when is called from toolbox
+SELECT SCHEMA_NAME.gw_fct_pg2epa_check_result($${"data":{"parameters":{"resultId":"test_20201016"}}}$$) -- when is called from toolbox
 
--- fid: 114, 159. Number 227 is passed by input parameters
+-- fid: 114, 159, 297. Number 227 is passed by input parameters
 
 */
 
@@ -110,7 +110,8 @@ BEGIN
 	-- delete old values on result table
 	DELETE FROM audit_check_data WHERE fid = 114 AND cur_user=current_user;
 	DELETE FROM audit_check_data WHERE id < 0;
-	DELETE FROM anl_node WHERE fid IN (159) AND cur_user=current_user;
+	DELETE FROM anl_node WHERE fid IN (159, 297) AND cur_user=current_user;
+	DELETE FROM anl_arc WHERE fid IN (297) AND cur_user=current_user;
 
 	-- get user parameters
 	SELECT row_to_json(row) FROM (SELECT inp_options_interval_from, inp_options_interval_to
@@ -198,7 +199,7 @@ BEGIN
 		END IF;
 
 
-		RAISE NOTICE '2 - Check pumps with 3-point curves (because of bug of EPANET this kind of curves are forbidden on the exportation)';
+		RAISE NOTICE '1 - Check pumps with 3-point curves (because of bug of EPANET this kind of curves are forbidden on the exportation)';
 		SELECT count(*) INTO v_count FROM (select curve_id, count(*) as ct from (select * from inp_curve_value join (select distinct curve_id FROM vi_curves JOIN v_edit_inp_pump
 				USING (curve_id))a using (curve_id)) b group by curve_id having count(*)=3)c;
 		IF v_count > 0 THEN
@@ -343,14 +344,13 @@ BEGIN
 			END IF;
 
 			-- check connec - hydrometer relation
-			SELECT count(*) INTO v_count FROM v_edit_connec JOIN vi_parent_arc USING (arc_id) WHERE connec_id NOT IN (SELECT connec_id FROM v_rtc_hydrometer);
+			SELECT count(*) INTO v_count FROM v_edit_connec c JOIN vi_parent_arc USING (arc_id) LEFT JOIN v_rtc_hydrometer h USING (connec_id) WHERE h.connec_id is null;
 
 			IF v_count > 0 THEN
 
 				DELETE FROM anl_connec WHERE fid = 160 and cur_user=current_user;
 				INSERT INTO anl_connec (fid, connec_id, connecat_id, the_geom)
-				SELECT 160, connec_id, connecat_id, the_geom FROM v_edit_connec WHERE connec_id NOT IN (SELECT connec_id FROM v_rtc_hydrometer);
-
+				SELECT 160, connec_id, connecat_id, the_geom FROM v_edit_connec LEFT JOIN v_rtc_hydrometer h USING (connec_id) WHERE h.connec_id is null;
 				INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 				VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' connec(s) without hydrometers. It means that vnode is generated but pattern is null and demand is null for that vnode.'));
 				INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
@@ -411,9 +411,34 @@ BEGIN
 				VALUES (v_fid, v_result_id, 1, concat('INFO: All pattern_volume values on ext_rtc_dma_period are filled.'));
 			END IF;
 		END IF;
-		
 
-		RAISE NOTICE '9 - Check for pattern method';
+		RAISE NOTICE '9 - Check for NOT DEFINED elements on temp table (297)';
+		INSERT INTO anl_node (fid, node_id, nodecat_id, the_geom, descript)
+		SELECT 297, node_id, nodecat_id, the_geom, 'epa_type NOT DEFINED' FROM temp_node WHERE  epa_type = 'NOT DEFINED';
+		
+		SELECT count(*) INTO v_count FROM anl_node WHERE fid = 297 AND cur_user = current_user;
+		IF  v_count > 0 THEN
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' nodes with epa_type NOT DEFINED on this exportation. If are disconnected, may be have been deleted, but please check it before continue.'));
+		ELSE
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 1, concat('INFO: All nodes have epa_type defined.'));
+		END IF;
+
+		INSERT INTO anl_arc (fid, arc_id, arccat_id, the_geom, descript)
+		SELECT 297, arc_id, arccat_id, the_geom, 'epa_type NOT DEFINED' FROM temp_arc WHERE  epa_type = 'NOT DEFINED';
+		
+		SELECT count(*) INTO v_count FROM temp_arc WHERE epa_type = 'NOT DEFINED';
+		IF  v_count > 0 THEN
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,' arcs with epa_type NOT DEFINED on this exportation. Please check it before continue.'));
+		ELSE
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 1, concat('INFO: All arcs have epa_type defined.'));
+		END IF;
+
+
+		RAISE NOTICE '10 - Check for pattern method';
 		IF v_patternmethod IN (41,43,51,53) THEN -- dma needs pattern
 			
 			-- check mandatory values for ext_rtc_dma_period table
@@ -476,6 +501,23 @@ BEGIN
 			END IF;
 		END IF;
 		
+		RAISE NOTICE '11 - Check for valve/shortipe diameter control';	
+
+		SELECT count(*) INTO v_count FROM temp_arc WHERE epa_type IN ('SHORTPIPE', 'VALVE') AND diameter IS NULL;
+		
+		IF  v_count > 0 THEN 
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 2, concat('WARNING: There are ', v_count , 'epanet shortpipe and valves without diameter. Neighbourg value have been setted. Please fill dint column on cat_node table'));
+		ELSE 
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 1, concat('INFO: There aren''t any shortpipe and valves without diameter defined on dint column in cat_node table'));
+		END IF;
+
+
+		RAISE NOTICE '12 - Info about roughness and diameter for shortpipes';	
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result_id, 1, concat('INFO: All roughness values used for shortpipes have been taken from neighbourg values'));
+
 	END IF;
 	
 	-- insert spacers for log
@@ -520,14 +562,14 @@ BEGIN
 	v_result_point := COALESCE(v_result_point, '{}'); 
 
 	--  Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
 		',"body":{"form":{}'||
 			',"data":{"options":'||v_options||','||
 				'"info":'||v_result_info||','||
 				'"point":'||v_result_point||','||
 				'"setVisibleLayers":[] }'||
 			'}'||
-		'}')::json, 2848);
+		'}')::json;
 
 	--  Exception handling
 	EXCEPTION WHEN OTHERS THEN

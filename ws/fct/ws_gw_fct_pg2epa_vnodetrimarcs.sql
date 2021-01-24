@@ -28,9 +28,14 @@ BEGIN
 	SET search_path = "SCHEMA_NAME", public;
 
 	RAISE NOTICE 'Starting pg2epa vnode trim arcs ';
-	TRUNCATE temp_go2epa;
+	DELETE FROM temp_go2epa;
 
-	RAISE NOTICE 'insert data on temp_table new arcs';
+	RAISE NOTICE '1 - arrange vnode';
+	EXECUTE 'SELECT gw_fct_setvnoderepair($${
+	"client":{"device":4, "infoType":1, "lang":"ES"},
+	"feature":{},"data":{"parameters":{"fid":227}}}$$)';
+	
+	RAISE NOTICE '2 - insert data on temp_table new arcs';
 	INSERT INTO temp_go2epa (arc_id, vnode_id, locate, elevation, depth)
 	SELECT  arc.arc_id, vnode_id, locate,
 	(n1.elevation - locate*(n1.elevation-n2.elevation))::numeric(12,3),
@@ -44,12 +49,12 @@ BEGIN
 		SELECT distinct on (vnode_id) concat('VN',vnode_id) as vnode_id, 
 		arc_id, 
 		case 	
-			when st_linelocatepoint (temp_arc.the_geom , vnode.the_geom) > 0.99 then 0.99 
-			when st_linelocatepoint (temp_arc.the_geom , vnode.the_geom) < 0.1 then 0.1
+			when st_linelocatepoint (temp_arc.the_geom , vnode.the_geom) > 0.9999 then 0.9999
+			when st_linelocatepoint (temp_arc.the_geom , vnode.the_geom) < 0.0001 then 0.0001
 			else (st_linelocatepoint (temp_arc.the_geom , vnode.the_geom))::numeric(12,4) end as locate
 		FROM temp_arc , v_edit_vnode AS vnode
 		JOIN link a ON vnode_id=exit_id::integer
-		WHERE st_dwithin ( temp_arc.the_geom, vnode.the_geom, 0.001) AND vnode.state > 0 AND temp_arc.arc_type != 'NODE2ARC' AND a.state > 0
+		WHERE st_dwithin ( temp_arc.the_geom, vnode.the_geom, 0.01) AND vnode.state > 0 AND temp_arc.arc_type != 'NODE2ARC' AND a.state > 0
 		union
 		SELECT  vnode_id, arc_id, locate
 		FROM (
@@ -84,7 +89,7 @@ BEGIN
 		LEFT JOIN connec ON concat('VN',pjoint_id)=vnode_id
 		WHERE vnode_id ilike 'VN%';
 
-	RAISE NOTICE 'update temp_table to work with next process';
+	RAISE NOTICE '3 - update temp_table to work with next process';
 	UPDATE temp_go2epa SET idmin = c.idmin FROM
 	(SELECT min(id) as idmin, arc_id FROM (
 		SELECT  a.id, a.arc_id as arc_id, a.vnode_id as node_1, (a.locate)::numeric(12,4) as locate_1 ,
@@ -96,7 +101,7 @@ BEGIN
 		WHERE temp_go2epa.arc_id = c.arc_id;
 
 		
-	RAISE NOTICE 'new arcs on temp_arc table';
+	RAISE NOTICE '4 - new arcs on temp_arc table';
 	INSERT INTO temp_arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, diameter, roughness, length, status, 
 	the_geom, flw_code, minorloss, addparam, arcparent)
 
@@ -133,7 +138,7 @@ BEGIN
 		ORDER BY temp_arc.arc_id, a.id;
 
 
-	RAISE NOTICE 'delete only trimmed arc on temp_arc table';
+	RAISE NOTICE '5 - delete only trimmed arc on temp_arc table';
 	-- step 1
 	UPDATE temp_arc SET epa_type ='TODELETE' 
 		FROM (SELECT DISTINCT arcparent AS arc_id FROM temp_arc WHERE arcparent !='') a
@@ -141,10 +146,10 @@ BEGIN
 	-- step 2
 	DELETE FROM temp_arc WHERE epa_type ='TODELETE';
 
-	RAISE NOTICE 'set minimum value of arcs';
+	RAISE NOTICE '6 - set minimum value of arcs';
 	UPDATE temp_arc SET length=0.01 WHERE length < 0.01;
 
-	RAISE NOTICE 'delete those repeated vnodes when more than one link is sharing same vnode';
+	RAISE NOTICE '7 - delete those repeated vnodes when more than one link is sharing same vnode';
 	-- step 1
 	UPDATE temp_node SET epa_type ='TODELETE' FROM (SELECT a.id FROM temp_node a, temp_node b WHERE a.id < b.id AND a.node_id = b.node_id)a WHERE temp_node.id = a.id;
 	-- step 2

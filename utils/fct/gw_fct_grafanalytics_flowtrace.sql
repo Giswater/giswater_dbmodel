@@ -102,10 +102,10 @@ BEGIN
 		-- close boundary conditions setting flag=1 for all nodes that fits on graf delimiters and closed valves
 		v_querytext  = 'UPDATE temp_anlgraf SET flag=1 WHERE 
 			node_1 IN('||v_text||' UNION
-			SELECT (a.node_id) FROM node a 	JOIN cat_node b ON nodecat_id=b.id JOIN node_type c ON c.id=b.nodetype_id 
+			SELECT (a.node_id) FROM node a 	JOIN cat_node b ON nodecat_id=b.id JOIN cat_feature_node c ON c.id=b.nodetype_id 
 			LEFT JOIN man_valve d ON a.node_id::integer=d.node_id::integer JOIN temp_anlgraf e ON a.node_id::integer=e.node_1::integer WHERE (graf_delimiter=''MINSECTOR'' AND closed=TRUE))
 			OR node_2 IN ('||v_text||' UNION
-			SELECT (a.node_id) FROM node a 	JOIN cat_node b ON nodecat_id=b.id JOIN node_type c ON c.id=b.nodetype_id 
+			SELECT (a.node_id) FROM node a 	JOIN cat_node b ON nodecat_id=b.id JOIN cat_feature_node c ON c.id=b.nodetype_id 
 			LEFT JOIN man_valve d ON a.node_id::integer=d.node_id::integer JOIN temp_anlgraf e ON a.node_id::integer=e.node_1::integer WHERE (graf_delimiter=''MINSECTOR'' AND closed=TRUE))';
 				
 		EXECUTE v_querytext;
@@ -178,11 +178,11 @@ BEGIN
 
 	
 	--  Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}, "data":{ "info":'||v_result_info||','||
 					  '"line":'||v_result_line||','||
 					  '"setVisibleLayers":[]'||
-					  '}}}')::json, 2772);
+					  '}}}')::json;
 
 	--  Exception handling
 	EXCEPTION WHEN OTHERS THEN

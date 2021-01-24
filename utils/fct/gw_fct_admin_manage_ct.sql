@@ -135,11 +135,11 @@ BEGIN
 
 
 		-- Insert unique on temp_table
-		DELETE FROM temp_table WHERE fid=138;
+		DELETE FROM temp_table WHERE fid=38;
 		
 		INSERT INTO temp_table (fid, text_column)
 		SELECT distinct on (conname)
-		138,
+		38,
 		concat(
 		'{"tablename":"',
 		conrelid::regclass,
@@ -156,11 +156,11 @@ BEGIN
 
 
 		-- Insert check on temp_table
-		DELETE FROM temp_table WHERE fid=139;
+		DELETE FROM temp_table WHERE fid=39;
 		
 		INSERT INTO temp_table (fid, text_column)
 		SELECT distinct on (conname)
-		139,
+		39,
 		concat(
 		'{"tablename":"',
 		conrelid::regclass,

@@ -94,7 +94,7 @@ BEGIN
 	
 		-- Node Catalog ID
 		IF (NEW.nodecat_id IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_node) = 0) THEN
+			IF ((SELECT COUNT(*) FROM cat_node WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
         		"data":{"message":"1006", "function":"1320","debug_msg":null}}$$);';
 			END IF;
@@ -106,7 +106,7 @@ BEGIN
 
 				-- get first value (last chance)
 				IF (NEW.nodecat_id IS NULL) THEN
-					NEW.nodecat_id := (SELECT id FROM cat_node LIMIT 1);
+					NEW.nodecat_id := (SELECT id FROM cat_node WHERE active IS TRUE LIMIT 1);
 				END IF;
 			END IF;
 			
@@ -127,7 +127,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
+			IF ((SELECT COUNT(*) FROM exploitation WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		       	"data":{"message":"1110", "function":"1320","debug_msg":null}}$$);';
 			END IF;
@@ -139,9 +139,9 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
+				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -278,9 +278,10 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.muni_id IS NULL) THEN
-				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
+				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+					AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -318,15 +319,8 @@ BEGIN
 
 		--check relation state - state_type
 		IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-			IF NEW.state IS NOT NULL THEN
-				v_sql = NEW.state;
-			ELSE
-				v_sql = 'null';
-			END IF;
-				
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3036", "function":"1320","debug_msg":"'||v_sql::text||'"}}$$);';
-
+				"data":{"message":"3036", "function":"1320","debug_msg":"'||NEW.state::text||'"}}$$);';
 		END IF;
 		
 		
@@ -363,6 +357,9 @@ BEGIN
 		--Builtdate
 		IF (NEW.builtdate IS NULL) THEN
 			NEW.builtdate :=(SELECT "value" FROM config_param_user WHERE "parameter"='edit_builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.builtdate IS NULL) AND (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE THEN
+				NEW.builtdate :=date(now());
+			END IF;
 		END IF;
 		
 		-- Verified
@@ -568,8 +565,8 @@ BEGIN
 
 		--insert tank into config_mincut_inlet
 		IF v_man_table='man_tank' THEN
-			INSERT INTO config_mincut_inlet(node_id, expl_id, active)
-			VALUES (NEW.node_id, NEW.expl_id, TRUE);
+			INSERT INTO config_mincut_inlet(node_id, expl_id)
+			VALUES (NEW.node_id, NEW.expl_id);
 		END IF;
 
 		-- man addfields insert

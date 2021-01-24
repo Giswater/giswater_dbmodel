@@ -71,16 +71,16 @@ BEGIN
 
 		IF v_units IS NULL THEN
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"2086", "function":"2440","debug_msg":null}}$$);'INTO v_audit_result;
+			"data":{"message":"2086", "function":"2510","debug_msg":null}}$$);'INTO v_audit_result;
 		END IF;
 	
 		-- control of price units (csv2)
-		SELECT csv2 INTO v_units FROM temp_csv WHERE cur_user=current_user AND fid = 234
-		AND csv2 IS NOT NULL AND csv2 NOT IN (SELECT id FROM plan_typevalue WHERE typevalue = 'price_units');
+		SELECT DISTINCT csv2 INTO v_units FROM temp_csv WHERE cur_user=current_user AND fid = 234
+		AND csv2 IS NOT NULL AND csv2 NOT IN (SELECT id FROM plan_typevalue WHERE typevalue = 'price_units') group by csv2;
 
 		IF v_units IS NOT NULL THEN
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"2088", "function":"2440","debug_msg":"'''||v_units||'''"}}$$);'INTO v_audit_result;
+			"data":{"message":"2088", "function":"2510","debug_msg":"'||v_units||'"}}$$);'INTO v_audit_result;
 		END IF;
 
 		-- control of price descript (csv3)
@@ -88,7 +88,7 @@ BEGIN
 
 		IF v_units IS NULL THEN
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"2090", "function":"2440","debug_msg":null}}$$);'INTO v_audit_result;
+			"data":{"message":"2090", "function":"2510","debug_msg":null}}$$);'INTO v_audit_result;
 		END IF;
 
 		-- control of null prices(csv5)
@@ -96,7 +96,7 @@ BEGIN
 
 		IF v_units IS NULL THEN
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"2092", "function":"2440","debug_msg":null}}$$);'INTO v_audit_result;
+			"data":{"message":"2092", "function":"2510","debug_msg":null}}$$);'INTO v_audit_result;
 		END IF;
 	
 		-- Insert into plan_price_cat table
@@ -113,6 +113,9 @@ BEGIN
 		-- update if price exists
 		UPDATE plan_price SET pricecat_id=v_label, price=csv5::numeric(12,4) FROM temp_csv WHERE cur_user=current_user AND fid = 234 AND plan_price.id=csv1;
 			
+		-- Delete values on temporal table
+		DELETE FROM temp_csv WHERE cur_user=current_user AND fid = 234;
+	
 		-- manage log (fid: 234)
 		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (234, v_result_id, concat('Reading values from temp_csv table -> Done'));
 		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (234, v_result_id, concat('Inserting values on plan_price table -> Done'));

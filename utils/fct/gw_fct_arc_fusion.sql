@@ -29,7 +29,7 @@ v_exists_node_id varchar;
 v_new_record SCHEMA_NAME.v_edit_arc;
 v_my_record1 SCHEMA_NAME.v_edit_arc;
 v_my_record2 SCHEMA_NAME.v_edit_arc;
-v_arc_geom geometry;
+v_arc_geom public.geometry;
 v_project_type text;
 rec_addfield1 record;
 rec_addfield2 record;
@@ -357,7 +357,7 @@ BEGIN
     v_hide_form := COALESCE(v_hide_form, true); 
 
 	--  Return
-    RETURN gw_fct_json_create_return(('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
+    RETURN ('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
              ',"data":{ "info":'||v_result_info||','||
                 '"setVisibleLayers":[]'||','||
@@ -366,7 +366,7 @@ BEGIN
                 '"polygon":'||v_result_polygon||'}'||
                 ', "actions":{"hideForm":' || v_hide_form || '}'||
                '}'
-        '}')::json, 2112);
+        '}')::json;
 
     EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;

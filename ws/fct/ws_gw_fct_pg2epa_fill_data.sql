@@ -74,7 +74,7 @@ BEGIN
 	FROM inp_inlet WHERE temp_node.node_id=inp_inlet.node_id;
 	
 	-- update child param for inp_valve
-	UPDATE temp_node SET addparam=concat('{"valv_type":"',valv_type,'", "pressure":"',pressure,'", "diameter":"',diameter,'", "flow":"',
+	UPDATE temp_node SET addparam=concat('{"valv_type":"',valv_type,'", "pressure":"',pressure,'", "diameter":"',custom_dint,'", "flow":"',
 	flow,'", "coef_loss":"',coef_loss,'", "curve_id":"',curve_id,'", "minorloss":"',minorloss,'", "status":"',status,
 	'", "to_arc":"',to_arc,'"}')
 	FROM inp_valve WHERE temp_node.node_id=inp_valve.node_id;
@@ -130,13 +130,13 @@ BEGIN
 	raise notice 'updating inp_shortpipe';
 
 	-- update addparam for inp_shortpipe (step 1)
-	UPDATE temp_node SET addparam=concat('{"minorloss":"',minorloss,'", "to_arc":"',to_arc,'", "status":"',status,'", "diameter":"',a.diameter,'", "roughness":"',a.roughness,'"}')
+	UPDATE temp_node SET addparam=concat('{"minorloss":"',minorloss,'", "to_arc":"',to_arc,'", "status":"',status,'", "diameter":"", "roughness":"',a.roughness,'"}')
 	FROM inp_shortpipe 
 	JOIN (SELECT node_1 as node_id, diameter, roughness FROM temp_arc) a USING (node_id)
 	WHERE temp_node.node_id=inp_shortpipe.node_id;
  
 	-- update addparam for inp_shortpipe (step 2)
-	UPDATE temp_node SET addparam=concat('{"minorloss":"',minorloss,'", "to_arc":"',to_arc,'", "status":"',status,'", "diameter":"',a.diameter,'", "roughness":"',a.roughness,'"}')
+	UPDATE temp_node SET addparam=concat('{"minorloss":"',minorloss,'", "to_arc":"',to_arc,'", "status":"',status,'", "diameter":"", "roughness":"',a.roughness,'"}')
 	FROM inp_shortpipe 
 	JOIN (SELECT node_2 as node_id, diameter, roughness FROM temp_arc) a USING (node_id)
 	WHERE temp_node.node_id=inp_shortpipe.node_id;

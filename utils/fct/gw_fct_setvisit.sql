@@ -130,21 +130,21 @@ BEGIN
 
 	-- setting users value default
 	-- om_visit_class_vdefault
-	IF (SELECT id FROM config_param_user WHERE parameter = 'om_visit_class_vdefault' AND cur_user=current_user) IS NOT NULL THEN
+	IF (SELECT parameter FROM config_param_user WHERE parameter = 'om_visit_class_vdefault' AND cur_user=current_user) IS NOT NULL THEN
 		UPDATE config_param_user SET value = v_class WHERE parameter = 'om_visit_class_vdefault' AND cur_user=current_user;
 	ELSE
 		INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('om_visit_class_vdefault', v_class, current_user);
 	END IF;
 
 	-- om_visit_extcode_vdefault
-	IF (SELECT id FROM config_param_user WHERE parameter = 'om_visit_extcode_vdefault' AND cur_user=current_user) IS NOT NULL THEN
+	IF (SELECT parameter FROM config_param_user WHERE parameter = 'om_visit_extcode_vdefault' AND cur_user=current_user) IS NOT NULL THEN
 		UPDATE config_param_user SET value = v_visitextcode WHERE parameter = 'om_visit_extcode_vdefault' AND cur_user=current_user;
 	ELSE
 		INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('om_visit_extcode_vdefault', v_visitextcode, current_user);
 	END IF;
 
 	-- om_visit_cat_vdefault
-	IF (SELECT id FROM config_param_user WHERE parameter = 'om_visit_cat_vdefault' AND cur_user=current_user) IS NOT NULL THEN
+	IF (SELECT parameter FROM config_param_user WHERE parameter = 'om_visit_cat_vdefault' AND cur_user=current_user) IS NOT NULL THEN
 		UPDATE config_param_user SET value = v_visitcat WHERE parameter = 'om_visit_cat_vdefault' AND cur_user=current_user;
 	ELSE
 		INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('om_visit_cat_vdefault', v_visitcat, current_user);
@@ -185,8 +185,8 @@ BEGIN
 		EXECUTE ('SELECT visit_id FROM ' || quote_ident(v_tablename) || ' WHERE visit_id = ' || quote_literal(v_id) || '') INTO v_ckeckchangeclass;
 		IF v_ckeckchangeclass IS NULL THEN
 			DELETE FROM om_visit_event WHERE visit_id = v_id;
-			INSERT INTO om_visit_event (parameter_id, visit_id) SELECT parameter_id, v_id 
-			FROM config_visit_class_x_parameter WHERE class_id=v_class and active IS TRUE;
+			INSERT INTO om_visit_event (parameter_id, visit_id) SELECT parameter_id, v_id FROM config_visit_parameter_action WHERE class_id=v_class
+			AND config_visit_parameter_action.active IS TRUE;
 			UPDATE om_visit SET class_id=v_class WHERE id = v_id;
 		END IF;
 		

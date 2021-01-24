@@ -22,12 +22,12 @@ SELECT SCHEMA_NAME.gw_fct_arc_divide($${
 */
 
 DECLARE
-v_node_geom geometry;
+v_node_geom public.geometry;
 v_arc_id varchar;
 v_code varchar;
-v_arc_geom geometry;
-v_line1 geometry;
-v_line2 geometry;
+v_arc_geom public.geometry;
+v_line1 public.geometry;
+v_line2 public.geometry;
 v_intersect_loc	double precision;
 v_project_type text;
 v_state_arc integer;
@@ -560,20 +560,19 @@ BEGIN
 
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
 						VALUES (212, 1,'Reconnect disconnected nodes on this alternative');
-						
-						-- reconnect nodes (update arc_id of disconnected nodes linked to old arc)
-						FOR rec_node IN SELECT node_id, the_geom FROM v_edit_node WHERE arc_id=v_arc_id AND state = 2
-						LOOP					
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1, concat('Update arc_id on disconnected node: ',rec_node.node_id));
-							
-							UPDATE node SET arc_id=(SELECT arc_id FROM v_edit_arc WHERE ST_DWithin(rec_node.the_geom, 
-							v_edit_arc.the_geom,0.001) AND arc_id != v_arc_id LIMIT 1) 
-							WHERE node_id=rec_node.node_id;
 
-							INSERT INTO audit_check_data (fid,  criticity, error_message)
-							VALUES (212, 1,concat('Update arc_id for disconnected node: ',rec_node.node_id,'.'));
-						END LOOP;
+						IF v_project_type='WS' THEN
+							-- reconnect nodes (update arc_id of disconnected nodes linked to old arc)
+							FOR rec_node IN SELECT node_id, the_geom FROM v_edit_node WHERE arc_id=v_arc_id AND state = 2
+							LOOP												
+								UPDATE node SET arc_id=(SELECT arc_id FROM v_edit_arc WHERE ST_DWithin(rec_node.the_geom, 
+								v_edit_arc.the_geom,0.001) AND arc_id != v_arc_id LIMIT 1) 
+								WHERE node_id=rec_node.node_id;
+
+								INSERT INTO audit_check_data (fid,  criticity, error_message)
+								VALUES (212, 1,concat('Update arc_id for disconnected node: ',rec_node.node_id,'.'));
+							END LOOP;
+						END IF;
 
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
 						VALUES (212, 1,'Update psector''s arc_id value for connec and gully setting null value to force trigger to get new arc_id as closest as possible');		
@@ -586,13 +585,13 @@ BEGIN
 
 							-- insert connec's on alternative in order to reconnect
 							INSERT INTO plan_psector_x_connec (psector_id, connec_id, arc_id, state, doable)
-							SELECT v_psector, connec_id, v_arc_id, 1,true FROM connec WHERE arc_id = v_arc_id
+							SELECT v_psector, connec_id, NULL, 1,false FROM connec WHERE arc_id = v_arc_id
 							ON CONFLICT DO NOTHING;
 
-							-- insert gullie's on alternative in order to reconnect
+							-- insert gully's on alternative in order to reconnect
 							IF v_project_type='UD' THEN
 								INSERT INTO plan_psector_x_gully (psector_id, gully_id, arc_id, state, doable)
-								SELECT v_psector, gully_id, v_arc_id, 1, true FROM gully WHERE arc_id = v_arc_id
+								SELECT v_psector, gully_id, NULL, 1, false FROM gully WHERE arc_id = v_arc_id
 								ON CONFLICT DO NOTHING;
 							END IF;
 							
@@ -617,10 +616,13 @@ BEGIN
 								
 								INSERT INTO audit_check_data (fid,  criticity, error_message)
 								VALUES (212, 1, 'Update psector_x_arc as doable for fictitious arcs.');
-							ELSE
-								UPDATE plan_psector_x_arc SET state=0 where arc_id=v_arc_id;
-							END IF;							
+							END IF;	
+
+							DELETE FROM plan_psector_x_arc WHERE arc_id=v_arc_id AND psector_id=v_psector;
+
+							UPDATE plan_psector_x_connec SET arc_id=NULL WHERE arc_id=v_arc_id AND psector_id=v_psector;				
 						END IF;
+
 
 						INSERT INTO audit_check_data (fid,  criticity, error_message)
 						VALUES (212, 1,concat('Insert old arc as downgraded into current psector: ',v_psector,'.'));

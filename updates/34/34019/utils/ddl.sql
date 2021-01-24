@@ -7,6 +7,13 @@ This version of Giswater is provided by Giswater Association
 
 set search_path = 'SCHEMA_NAME';
 
+ALTER TABLE inp_typevalue ENABLE TRIGGER gw_trg_typevalue_config_fk;
+
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"cat_element", "column":"geom1", "dataType":"numeric(12,3)", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"cat_element", "column":"geom2", "dataType":"numeric(12,3)", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"cat_element", "column":"isdoublegeom", "dataType":"boolean", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"element", "column":"pol_id", "dataType":"varchar(16)", "isUtils":"False"}}$$);
 
 /*
 2020/09/08
@@ -51,3 +58,4 @@ DROP FUNCTION IF EXISTS gw_setvisitmanager(json);
 DROP FUNCTION IF EXISTS gw_setvisitmanagerstart(json);
 DROP FUNCTION IF EXISTS gw_setvisitmanagerend(json);
 DROP FUNCTION IF EXISTS gw_fct_setvehicleload(json);
+

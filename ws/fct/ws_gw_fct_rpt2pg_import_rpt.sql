@@ -54,6 +54,7 @@ v_qtimestep text;
 v_qtolerance text;
 v_type_2 text;
 v_error_context text;
+v_ffactor text;
 
 BEGIN
 
@@ -76,7 +77,13 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (140, v_result_id, concat('IMPORT RPT FILE'));
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (140, v_result_id, concat('-----------------------------'));
 	
-	UPDATE temp_csv SET fid = v_fid;
+
+	IF v_path IS NOT NULL THEN
+		DELETE FROM temp_csv WHERE cur_user=current_user AND fid = v_fid;
+		EXECUTE 'SELECT gw_fct_utils_csv2pg_import_temp_data('||quote_literal(v_fid)||','||quote_literal(v_path)||' )';
+	END IF;
+
+	UPDATE temp_csv SET fid = v_fid WHERE fid IS NULL AND cur_user=current_user;
 	
 	--remove data from with the same result_id
 	FOR v_rpt IN SELECT tablename FROM config_fprocess WHERE fid=v_fid EXCEPT SELECT tablename FROM config_fprocess WHERE tablename='rpt_cat_result' LOOP
@@ -85,6 +92,12 @@ BEGIN
 	
 	v_hour=null;
 
+	v_ffactor = (SELECT value FROM config_param_user WHERE parameter = 'inp_report_f_factor' AND cur_user = current_user);
+
+	IF v_ffactor = 'NO' THEN
+		UPDATE temp_csv SET csv10=csv9, csv9=0 WHERE source='rpt_arc' AND fid = 140 AND cur_user=current_user;
+	END IF;
+	
 	-- rpt_node
 	DELETE FROM temp_csv WHERE source='rpt_node' AND (csv1='Node' or csv1='Elevation' or csv1='MINIMUM' or csv1='MAXIMUM' or csv1='DIFFERENTIAL' or csv1='AVERAGE');
 	UPDATE temp_csv SET csv6=null WHERE source='rpt_node' AND (csv6='Reservoir' OR csv6='Tank'); -- delete Reservoir AND tank word when quality is not enabled

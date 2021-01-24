@@ -47,7 +47,7 @@ v_activelayer text;
 v_visiblelayer text;
 v_zoomratio double precision; 
 v_device integer;  
-v_point geometry;
+v_point public.geometry;
 v_sensibility float;
 v_sensibility_f float;
 v_id varchar;
@@ -146,10 +146,13 @@ BEGIN
 	SELECT ST_SetSRID(ST_MakePoint(v_xcoord,v_ycoord),v_epsg) INTO v_point;
 	
 	-- Get feature
-	v_sql := 'SELECT layer_id, 0 as orderby, addparam->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' WHERE layer_id= '||quote_literal(v_activelayer)||' UNION
-              SELECT layer_id, orderby , addparam->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' WHERE layer_id = any('||quote_literal(v_visiblelayer)||'::text[]) UNION 
-              SELECT DISTINCT ON (layer_id) layer_id, orderby+100, addparam->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' JOIN cat_feature ON parent_layer=layer_id 
-              WHERE child_layer = any('||quote_literal(v_visiblelayer)||'::text[]) ORDER BY orderby';
+	v_sql := 'SELECT layer_id, 0 as orderby, addparam->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' WHERE layer_id = '||quote_literal(v_activelayer)||'::text 
+		AND (addparam->>''forceWhenActive'')::boolean IS TRUE
+		UNION
+		SELECT layer_id, orderby , addparam->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' WHERE layer_id = any('||quote_literal(v_visiblelayer)||'::text[]) 
+		UNION 
+		SELECT DISTINCT ON (layer_id) layer_id, orderby+100, addparam->>''geomType'' as geomtype FROM  '||quote_ident(v_config_layer)||' JOIN cat_feature ON parent_layer=layer_id 
+		WHERE child_layer = any('||quote_literal(v_visiblelayer)||'::text[]) ORDER BY orderby';
 
 	FOR v_layer IN EXECUTE v_sql     
 	LOOP
@@ -244,8 +247,8 @@ BEGIN
 	PERFORM gw_fct_debug(concat('{"data":{"msg":"Toolbar", "variables":"',v_toolbar,'"}}')::json);
 			
 	--   Call and return gw_fct_getinfofromid
-	RETURN gw_fct_json_create_return(gw_fct_getinfofromid(concat('{"client":',(p_data->>'client'),',"form":{"editable":"',v_iseditable, 
-	'"},"feature":{"tableName":"',v_layer.layer_id,'","id":"',v_id,'"},"data":{"toolBar":"'||v_toolbar||'","rolePermissions":"', v_role,'"}}')::json), 2580);
+	RETURN gw_fct_getinfofromid(concat('{"client":',(p_data->>'client'),',"form":{"editable":"',v_iseditable, 
+	'"},"feature":{"tableName":"',v_layer.layer_id,'","id":"',v_id,'"},"data":{"toolBar":"'||v_toolbar||'","rolePermissions":"', v_role,'"}}')::json);
 	
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN

@@ -76,6 +76,7 @@ v_fid integer;
 v_mainschema text;
 v_projectrole text;
 v_infotype text;
+v_qgis_project_type text;
 
 BEGIN 
 
@@ -93,13 +94,15 @@ BEGIN
 	v_osversion := (p_data ->> 'data')::json->> 'osVersion';
 	v_addschema := (p_data ->> 'data')::json->> 'addSchema';
 	v_mainschema := (p_data ->> 'data')::json->> 'mainSchema';
-	v_projectrole := (p_data ->> 'data')::json->> 'projecRole';
+	v_projectrole := (p_data ->> 'data')::json->> 'projectRole';
 	v_infotype := (p_data ->> 'data')::json->> 'infoType';
+	v_qgis_project_type := (p_data ->> 'data')::json->> 'projectType';
 
 	-- profilactic control of qgis variables
 	IF lower(v_mainschema) = 'none' OR v_mainschema = '' OR lower(v_mainschema) ='null' THEN v_mainschema = null; END IF;
 	IF lower(v_projectrole) = 'none' OR v_projectrole = '' OR lower(v_projectrole) ='null' THEN v_projectrole = null; END IF;
 	IF lower(v_infotype) = 'none' OR v_infotype = '' OR lower(v_infotype) ='null' THEN v_infotype = null; END IF;
+	IF lower(v_qgis_project_type) = 'none' OR v_qgis_project_type = '' OR lower(v_qgis_project_type) ='null' THEN v_qgis_project_type = null; END IF;
 
 	-- profilactic control of schema name
 	IF lower(v_addschema) = 'none' OR v_addschema = '' OR lower(v_addschema) ='null'
@@ -141,7 +144,7 @@ BEGIN
 	
 	-- Starting process
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (101, null, 4, 'AUDIT CHECK PROJECT');
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (101, null, 4, '-------------------------------------------------------------');
+	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (101, null, 4, '------------------------------');
 
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (101, null, 3, 'CRITICAL ERRORS');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (101, null, 3, '----------------------');
@@ -167,8 +170,7 @@ BEGIN
 	INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, concat ('PostGIS versión: ',(SELECT postgis_version())));
 	INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, concat ('QGIS versión: ', v_qgisversion));
 	INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, concat ('O/S versión: ', v_osversion));
-	INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, concat ('QGIS variables:  gwAddSchema:',quote_nullable(v_addschema),
-		',  gwMainSchema:',quote_nullable(v_mainschema),',  gwProjectRole:', quote_nullable(v_projectrole), ',  gwInfoType:',quote_nullable(v_infotype)));
+	INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, concat ('QGIS variables: gwProjectType:',quote_nullable(v_qgis_project_type),', gwInfoType:',quote_nullable(v_infotype),', gwProjectRole:',quote_nullable(v_projectrole),', gwMainSchema:',quote_nullable(v_mainschema),', gwAddSchema:',quote_nullable(v_addschema)));
 		
 	
 	-- Reset urn sequence
@@ -207,9 +209,11 @@ BEGIN
 	
 	--Set hydrology_selector when null values from user
 	IF v_project_type='UD' THEN
-		IF (SELECT hydrology_id FROM selector_inp_hydrology WHERE cur_user = current_user) IS NULL THEN
-			INSERT INTO selector_inp_hydrology (hydrology_id, cur_user) VALUES (1, current_user);
-		END IF;
+        IF (SELECT hydrology_id FROM cat_hydrology LIMIT 1) THEN
+            IF (SELECT hydrology_id FROM selector_inp_hydrology WHERE cur_user = current_user) IS NULL THEN
+                INSERT INTO selector_inp_hydrology (hydrology_id, cur_user) VALUES ((SELECT hydrology_id FROM cat_hydrology LIMIT 1), current_user);
+            END IF;
+        END IF;
 	END IF;
 
 	--Reset the rest of sequences
@@ -238,11 +242,6 @@ BEGIN
 			INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, v_errortext);
 		END IF;
 	END LOOP;
-
-
-	-- arrange vnode
-	UPDATE vnode set state=0 FROM link WHERE link.exit_type ='VNODE' and exit_id = vnode_id::text AND link.state=0;
-	UPDATE vnode set state=1 FROM link WHERE link.exit_type ='VNODE' and exit_id = vnode_id::text AND link.state=1;
 
 	-- manage mandatory values of config_param_user where feature is deprecated
 	IF 'role_admin' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
@@ -318,7 +317,6 @@ BEGIN
 		END IF;
 
 		IF v_psector_vdef IS NOT NULL THEN
-			INSERT INTO selector_psector (psector_id, cur_user) VALUES (v_psector_vdef, current_user) ON CONFLICT (psector_id, cur_user) DO NOTHING;
 			v_errortext=concat('Current psector: ',v_psector_vdef);
 			INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, v_errortext);
 		END IF;
@@ -347,6 +345,19 @@ BEGIN
 				WHERE fid=211 AND criticity < 4 AND error_message !='' AND cur_user=current_user OFFSET 6 ;
 			END IF;
 		END IF;
+
+		IF 'role_edit' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
+
+			-- arrange vnode
+			EXECUTE 'SELECT gw_fct_setvnoderepair($${
+			"client":{"device":4, "infoType":1, "lang":"ES"},
+			"feature":{},"data":{"parameters":{}}}$$)';
+			-- insert results 
+			INSERT INTO audit_check_data  (fid, criticity, error_message)
+			SELECT 101, criticity, replace(error_message,':', ' (DB OM):') FROM audit_check_data 
+			WHERE fid=296 AND criticity = 1 AND error_message !='';
+		END IF;
+		
 
 		IF 'role_epa' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, 'member')) THEN
 
@@ -468,26 +479,24 @@ BEGIN
 
 		--list missing layers with criticity 3 and 2
 
-		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,columns.column_name as pkey_field,
-		'''||v_srid||''' as srid,b.column_name as geom_field,''3'' as criticity, qgis_message, style as style_id, group_layer
+		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,columns.column_name as id,
+		'''||v_srid||''' as srid,b.column_name as field_the_geom,''3'' as criticity, qgis_message
 		FROM '||v_schemaname||'.audit_check_project 
 		JOIN information_schema.columns ON table_name = table_id 
 		AND columns.table_schema = '''||v_schemaname||''' and ordinal_position=1 
-		LEFT JOIN sys_table ON sys_table.id=audit_check_project.table_id
-		LEFT JOIN config_table ON sys_table.id = config_table.id
+		LEFT JOIN '||v_schemaname||'.sys_table ON sys_table.id=audit_check_project.table_id
 		INNER JOIN (SELECT column_name ,table_name FROM information_schema.columns
 		WHERE table_schema = '''||v_schemaname||''' AND udt_name = ''geometry'')b ON b.table_name=sys_table.id
 		WHERE criticity=3 and enabled IS NOT TRUE) a'
 		INTO v_result_layers_criticity3;
 
 
-		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,columns.column_name as pkey_field,
-		'''||v_srid||''' as srid,b.column_name as geom_field,''2'' as criticity, qgis_message, style as style_id, group_layer
+		EXECUTE 'SELECT json_agg(row_to_json(a)) FROM (SELECT table_id as layer,columns.column_name as id,
+		'''||v_srid||''' as srid,b.column_name as field_the_geom,''2'' as criticity, qgis_message
 		FROM '||v_schemaname||'.audit_check_project 
 		JOIN information_schema.columns ON table_name = table_id 
 		AND columns.table_schema = '''||v_schemaname||''' and ordinal_position=1 
-		LEFT JOIN sys_table ON sys_table.id=audit_check_project.table_id
-		LEFT JOIN config_table ON sys_table.id = config_table.id
+		LEFT JOIN '||v_schemaname||'.sys_table ON sys_table.id=audit_check_project.table_id
 		INNER JOIN (SELECT column_name ,table_name FROM information_schema.columns
 		WHERE table_schema = '''||v_schemaname||''' AND udt_name = ''geometry'')b ON b.table_name=sys_table.id
 		WHERE criticity=2 and enabled IS NOT TRUE) a'
@@ -569,8 +578,7 @@ BEGIN
 						'"line":'||v_result_line||','||
 						'"polygon":'||v_result_polygon||','||
 						'"missingLayers":'||v_missing_layers||'}'||
-				', "variables":{"hideForm":' || v_hidden_form || ', "setQgisLayers":' || v_qgis_layers_setpropierties||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
-				-- setQgisLayers: not used variable on python 3.4 because threath is operative to refresh_attributte of whole layers
+				', "actions":{"hideForm":' || v_hidden_form || ', "setQgisLayers":' || v_qgis_layers_setpropierties||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
 	ELSE
 		v_return= ('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'" '||
 			',"body":{"form":{}'||
@@ -579,8 +587,7 @@ BEGIN
 						'"line":{},'||
 						'"polygon":{},'||
 						'"missingLayers":{}}'||
-				', "variables":{"hideForm":true, "setQgisLayers":' || v_qgis_layers_setpropierties||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
-				-- setQgisLayers: not used variable on python 3.4 because threath is operative to refresh_attribute of whole layers
+				', "actions":{"hideForm":true, "setQgisLayers":' || v_qgis_layers_setpropierties||', "useGuideMap":'||v_qgis_init_guide_map||'}}}')::json;
 	END IF;
 		
 	--  Return	   

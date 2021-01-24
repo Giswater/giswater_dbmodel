@@ -114,13 +114,13 @@ BEGIN
 	v_result_point := COALESCE(v_result_point, '{}'); 
 
 	-- Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 				'"point":'||v_result_point||','||
 				'"setVisibleLayers":[]'||
 			'}}'||
-	    '}')::json, 2210);
+	    '}')::json;
 
    
 	EXCEPTION WHEN OTHERS THEN

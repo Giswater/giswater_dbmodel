@@ -112,6 +112,11 @@ BEGIN
 			v_selectionMode = 'keepPrevious';
 		END IF;
 
+		-- getting from v_expl_x_user variable to setup v_filterfrominput
+		IF v_selector = 'selector_expl' AND v_expl_x_user THEN
+			v_filterfrominput = concat (v_filterfrominput, ' AND expl_id IN (SELECT expl_id FROM config_user_x_expl WHERE username = current_user)');
+		END IF;
+
 		-- Manage filters from ids (only mincut)
 		IF v_selector = 'selector_mincut_result' THEN
 			v_selector_list = replace(replace(v_selector_list, '[', '('), ']', ')');

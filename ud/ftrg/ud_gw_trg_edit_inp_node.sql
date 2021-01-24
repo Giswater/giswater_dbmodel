@@ -29,27 +29,39 @@ BEGIN
         "data":{"message":"1030", "function":"1210","debug_msg":null}}$$);'; 
 
     ELSIF TG_OP = 'UPDATE' THEN
+
+	-- Update of topocontrol fields only when one if it has changed in order to prevent to be triggered the topocontrol without changes
+	IF  (NEW.top_elev <> OLD.top_elev) OR (NEW.custom_top_elev <> OLD.custom_top_elev) OR (NEW.ymax <> OLD.ymax) OR 
+		(NEW.custom_ymax <> OLD.custom_ymax) OR (NEW.elev <> OLD.elev)  OR (NEW.custom_elev <> OLD.custom_elev) OR
+		(NEW.top_elev IS NULL AND OLD.top_elev IS NOT NULL) OR (NEW.top_elev IS NOT NULL AND OLD.top_elev IS NULL) OR
+		(NEW.custom_top_elev IS NULL AND OLD.custom_top_elev IS NOT NULL) OR (NEW.custom_top_elev IS NOT NULL AND OLD.custom_top_elev IS NULL) OR
+		(NEW.ymax IS NULL AND OLD.ymax IS NOT NULL) OR (NEW.ymax IS NOT NULL AND OLD.ymax IS NULL) OR
+		(NEW.custom_ymax IS NULL AND OLD.custom_ymax IS NOT NULL) OR (NEW.custom_ymax IS NOT NULL AND OLD.custom_ymax IS NULL) OR
+		(NEW.elev IS NULL AND OLD.elev IS NOT NULL) OR (NEW.elev IS NOT NULL AND OLD.elev IS NULL) OR
+		(NEW.custom_elev IS NULL AND OLD.custom_elev IS NOT NULL) OR (NEW.custom_elev IS NOT NULL AND OLD.custom_elev IS NULL) THEN			
+			UPDATE	node SET top_elev=NEW.top_elev, custom_top_elev=NEW.custom_top_elev, ymax=NEW.ymax, custom_ymax=NEW.custom_ymax, elev=NEW.elev, custom_elev=NEW.custom_elev
+			WHERE node_id = OLD.node_id;
+	END IF;
 	
-		-- State
-		IF (NEW.state != OLD.state) THEN
-			UPDATE node SET state=NEW.state WHERE node_id = OLD.node_id;
-		END IF;
+	-- State
+	IF (NEW.state::text != OLD.state::text) THEN
+		UPDATE node SET state=NEW.state WHERE node_id = OLD.node_id;
+	END IF;
 		
-		-- The geom
-		IF st_equals(NEW.the_geom, OLD.the_geom) IS FALSE  THEN
-			UPDATE node SET the_geom=NEW.the_geom WHERE node_id = OLD.node_id;
-		END IF;
+	-- The geom
+	IF st_equals(NEW.the_geom, OLD.the_geom) IS FALSE  THEN
+		UPDATE node SET the_geom=NEW.the_geom WHERE node_id = OLD.node_id;
+	END IF;
 		
-		--update elevation from raster		
-		IF (SELECT upper(value) FROM config_param_system WHERE parameter='admin_raster_dem') = 'TRUE' AND (NEW.top_elev IS NULL) AND
-			(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_update_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
-			NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM v_ext_raster_dem WHERE id =
-				(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
-		END IF; 
+	--update elevation from raster		
+	IF (SELECT upper(value) FROM config_param_system WHERE parameter='admin_raster_dem') = 'TRUE' AND (NEW.top_elev IS NULL) AND
+		(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
+		NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM v_ext_raster_dem WHERE id =
+		(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
+	END IF; 
 
         UPDATE node 
-        SET custom_top_elev=NEW.custom_top_elev, custom_ymax=NEW.custom_ymax, custom_elev=NEW.custom_elev, nodecat_id=NEW.nodecat_id, sector_id=NEW.sector_id,  
-            annotation=NEW.annotation
+        SET nodecat_id=NEW.nodecat_id, sector_id=NEW.sector_id, annotation=NEW.annotation
         WHERE node_id=OLD.node_id;
 
         IF v_node_table = 'inp_junction' THEN

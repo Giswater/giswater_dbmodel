@@ -28,7 +28,6 @@ v_sys_statetopocontrol boolean;
 sys_y1_aux double precision;
 sys_y2_aux double precision;
 sys_length_aux double precision;
-is_reversed boolean;
 geom_slp_direction_bool boolean;
 connec_id_aux varchar;
 gully_id_aux varchar;
@@ -42,6 +41,9 @@ v_node_proximity double precision;
 v_arc_searchnodes_control boolean;
 v_arc_searchnodes double precision;
 v_user_dis_statetopocontrol boolean;
+v_node2 text;
+v_nodecat text;
+v_keepdepthvalues boolean;
 
 BEGIN 
 
@@ -53,12 +55,14 @@ BEGIN
 	SELECT value::boolean INTO geom_slp_direction_bool FROM config_param_system WHERE parameter='edit_slope_direction' ;
 	SELECT value::boolean INTO v_dsbl_error FROM config_param_system WHERE parameter='edit_topocontrol_disable_error' ;
    	SELECT value::boolean INTO v_samenode_init_end_control FROM config_param_system WHERE parameter='edit_arc_samenode_control' ;
-	SELECT value::boolean INTO v_nodeinsert_arcendpoint  FROM config_param_system WHERE parameter='edit_arc_insert_automatic_endpoint';
 	SELECT ((value::json)->>'activated') INTO v_arc_searchnodes_control FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 	
 	-- Get user variables
 	SELECT value::boolean INTO v_user_dis_statetopocontrol FROM config_param_user WHERE parameter='edit_disable_statetopocontrol' AND cur_user = current_user;
+	SELECT value::boolean INTO v_nodeinsert_arcendpoint FROM config_param_user WHERE parameter='edit_arc_insert_automatic_endpoint' AND cur_user = current_user;
+	SELECT value::boolean INTO v_keepdepthvalues FROM config_param_user WHERE parameter='edit_arc_keepdepthval_when_reverse_geom' AND cur_user = current_user;
+
 	
 	IF v_sys_statetopocontrol IS NOT TRUE OR v_user_dis_statetopocontrol IS TRUE THEN
 
@@ -159,7 +163,7 @@ BEGIN
 	
 	END IF;
     
-    	--  Control of start/end node
+    	--  Control of start/end node and depth variables
 	IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN	
 
 		-- Control of same node initial and final
@@ -171,12 +175,31 @@ BEGIN
 				INSERT INTO audit_log_data (fid, feature_id, log_message) VALUES (3, NEW.arc_id, 'Node_1 and Node_2 are the same');
 			END IF;
 		ELSE
-			-- Calculate system parameters
-			is_reversed= FALSE;
 
-			-- node_1 (sys_y1_aux and sys_elev1_aux)
+			-- node_1
 			SELECT * INTO nodeRecord1 FROM vu_node WHERE node_id = nodeRecord1.node_id;  -- vu_node is used because topology have been ckecked before and sys_* fields are needed
+			NEW.node_1 := nodeRecord1.node_id; 
 
+			-- node_2
+			SELECT * INTO nodeRecord2 FROM vu_node WHERE node_id = nodeRecord2.node_id;-- vu_node is used because topology have been ckecked before and sys_* fields are needed
+			NEW.node_2 := nodeRecord2.node_id;
+
+			-- the_geom
+			NEW.the_geom := ST_SetPoint(NEW.the_geom, 0, nodeRecord1.the_geom);
+			NEW.the_geom := ST_SetPoint(NEW.the_geom, ST_NumPoints(NEW.the_geom) - 1, nodeRecord2.the_geom);
+
+			-- calculate length
+			sys_length_aux:= ST_length(NEW.the_geom);
+		
+			IF NEW.custom_length IS NOT NULL THEN
+				sys_length_aux=NEW.custom_length;
+			END IF;
+			
+			IF sys_length_aux < 0.1 THEN 
+				sys_length_aux=0.1;
+			END IF;
+
+			-- calculate sys_elev_1 & sys_elev_2 when USE top_elevation values from node and depth values from arc
 			IF (nodeRecord1.elev IS NOT NULL OR nodeRecord1.custom_elev IS NOT NULL) THEN -- when elev is used on node only elev must be used on arc
 				sys_elev1_aux = nodeRecord1.sys_elev;
 				sys_y1_aux = null;
@@ -187,9 +210,6 @@ BEGIN
 				sys_elev1_aux := nodeRecord1.sys_top_elev - sys_y1_aux;
 			END IF;
 
-			-- node_2 (sys_y2_aux and sys_elev2_aux)
-			SELECT * INTO nodeRecord2 FROM vu_node WHERE node_id = nodeRecord2.node_id;-- vu_node is used because topology have been ckecked before and sys_* fields are needed
-			
 			IF (nodeRecord2.elev IS NOT NULL OR nodeRecord2.custom_elev IS NOT NULL) THEN -- when elev is used on node only elev must be used on arc
 				sys_elev2_aux = nodeRecord2.sys_elev;
 				sys_y2_aux = null;
@@ -200,7 +220,7 @@ BEGIN
 				sys_elev2_aux := nodeRecord2.sys_top_elev - sys_y2_aux;
 			END IF;
 
-
+			-- calculate sys_elev_1 & sys_elev_2 when USE elevation values from arc 
 			IF TG_OP  = 'INSERT' THEN
 
 				-- sys elev1
@@ -216,7 +236,9 @@ BEGIN
 				ELSIF NEW.elev1 IS NOT NULL THEN
 					sys_elev2_aux = NEW.elev2;
 				END IF;
-
+		
+				NEW.sys_elev1 := sys_elev1_aux;
+				NEW.sys_elev2 := sys_elev2_aux;
 			
 			ELSIF TG_OP = 'UPDATE' THEN
 
@@ -237,84 +259,100 @@ BEGIN
 				OR (NEW.elev2 IS NULL AND OLD.elev2 IS NOT NULL) OR (NEW.elev2 IS NOT NULL AND OLD.elev2 IS NULL) THEN
 					sys_elev2_aux = NEW.elev2;
 				END IF;
-			END IF;
-						   	
-			-- Update coordinates
-			NEW.the_geom := ST_SetPoint(NEW.the_geom, 0, nodeRecord1.the_geom);
-			NEW.the_geom := ST_SetPoint(NEW.the_geom, ST_NumPoints(NEW.the_geom) - 1, nodeRecord2.the_geom);
- 
-			IF (((sys_elev1_aux >= sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE)) OR ((sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS TRUE)) 
-			OR (geom_slp_direction_bool IS FALSE)) THEN
-				NEW.node_1 := nodeRecord1.node_id; 
-				NEW.node_2 := nodeRecord2.node_id;
-				NEW.sys_elev1 := sys_elev1_aux;
-				NEW.sys_elev2 := sys_elev2_aux;
 
-			ELSE 
-				-- Update conduit direction
-				-- Geometry
-				NEW.the_geom := ST_reverse(NEW.the_geom);
-
-				-- Node 1 & Node 2
-				NEW.node_1 := nodeRecord2.node_id;
-				NEW.node_2 := nodeRecord1.node_id;                             
-		
-				-- Node values
-				y_aux := NEW.y1;
-				NEW.y1 := NEW.y2;
-				NEW.y2 := y_aux;
-		
-				y_aux := NEW.custom_y1;
-				NEW.custom_y1 := NEW.custom_y2;
-				NEW.custom_y2 := y_aux;
-		
-				y_aux := NEW.elev1;
-				NEW.elev1 := NEW.elev2;
-				NEW.elev2 := y_aux;
-
-				y_aux := NEW.custom_elev1;
-				NEW.custom_elev1 := NEW.custom_elev2;
-				NEW.custom_elev2 := y_aux;
+				-- keep depth values when geometry is forced to reverse by custom operation
+				IF  geom_slp_direction_bool IS FALSE AND st_orderingequals(NEW.the_geom, OLD.the_geom) IS FALSE 
+				AND st_equals(NEW.the_geom, OLD.the_geom) IS TRUE AND v_keepdepthvalues IS NOT FALSE THEN
 	
-				NEW.sys_elev1 := sys_elev2_aux;
-				NEW.sys_elev2 := sys_elev1_aux;
-				is_reversed = TRUE;	
-			END IF;
-	
-			sys_length_aux:= ST_length(NEW.the_geom);
-		
+					-- Depth values for arc
+					y_aux := NEW.y1;
+					NEW.y1 := NEW.y2;
+					NEW.y2 := y_aux;
 			
-			IF NEW.custom_length IS NOT NULL THEN
-				sys_length_aux=NEW.custom_length;
-			END IF;
+					y_aux := NEW.custom_y1;
+					NEW.custom_y1 := NEW.custom_y2;
+					NEW.custom_y2 := y_aux;
 			
-			IF sys_length_aux < 0.1 THEN 
-				sys_length_aux=0.1;
+					y_aux := NEW.elev1;
+					NEW.elev1 := NEW.elev2;
+					NEW.elev2 := y_aux;
+
+					y_aux := NEW.custom_elev1;
+					NEW.custom_elev1 := NEW.custom_elev2;
+					NEW.custom_elev2 := y_aux;
+
+					y_aux := NEW.sys_elev1;
+					NEW.sys_elev1 := NEW.sys_elev2;
+					NEW.sys_elev2 := y_aux;
+				ELSE 
+
+					NEW.sys_elev1 := sys_elev1_aux;
+					NEW.sys_elev2 := sys_elev2_aux;
+				
+				END IF;
 			END IF;
+
+			-- update values when geometry is forced to reverse by geom_slp_direction_bool variable on true
+			IF geom_slp_direction_bool IS TRUE THEN
+
+				IF (sys_elev1_aux < sys_elev2_aux) AND (NEW.inverted_slope IS NOT TRUE) THEN
+					
+					-- Update conduit direction
+					-- Geometry
+					NEW.the_geom := ST_reverse(NEW.the_geom);
+
+					-- Node 1 & Node 2
+					NEW.node_1 := nodeRecord2.node_id;
+					NEW.node_2 := nodeRecord1.node_id;                             
 			
+					-- Depth values for arc
+					y_aux := NEW.y1;
+					NEW.y1 := NEW.y2;
+					NEW.y2 := y_aux;
+			
+					y_aux := NEW.custom_y1;
+					NEW.custom_y1 := NEW.custom_y2;
+					NEW.custom_y2 := y_aux;
+			
+					y_aux := NEW.elev1;
+					NEW.elev1 := NEW.elev2;
+					NEW.elev2 := y_aux;
+
+					y_aux := NEW.custom_elev1;
+					NEW.custom_elev1 := NEW.custom_elev2;
+					NEW.custom_elev2 := y_aux;
+
+					y_aux := NEW.sys_elev1;	
+					NEW.sys_elev1 := NEW.sys_elev2;
+					NEW.sys_elev2 := y_aux;
+				END IF;
+			END IF;
+
+			-- slope
 			NEW.sys_slope:= (NEW.sys_elev1-NEW.sys_elev2)/sys_length_aux;
 		END IF;
 		
 	-- Check auto insert end nodes
 	ELSIF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NULL) AND v_nodeinsert_arcendpoint THEN
 		IF TG_OP = 'INSERT' THEN
-			INSERT INTO node (node_id, sector_id, epa_type, nodecat_id, dma_id, the_geom) 
-			VALUES (
-			(SELECT nextval('urn_id_seq')),
-			(SELECT sector_id FROM sector WHERE (ST_endpoint(NEW.the_geom) @ sector.the_geom) LIMIT 1),
-			'JUNCTION'::text,
-			(SELECT "value" FROM config_param_user WHERE "parameter"='edit_nodecat_vdefault' AND "cur_user"="current_user"()),
-			(SELECT dma_id FROM dma WHERE (ST_endpoint(NEW.the_geom) @ dma.the_geom) LIMIT 1), 
-			ST_endpoint(NEW.the_geom)
-			);
 
-			INSERT INTO inp_junction (node_id) VALUES ((SELECT currval('urn_id_seq')));
-			INSERT INTO man_junction (node_id) VALUES ((SELECT currval('urn_id_seq')));
+			-- getting nodecat user's value
+			v_nodecat:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_nodecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			-- get first value (last chance)
+			IF (v_nodecat IS NULL) THEN
+				v_nodecat := (SELECT id FROM cat_node WHERE active IS TRUE LIMIT 1);
+			END IF;
 
-			-- Update coordinates
-			NEW.the_geom:= ST_SetPoint(NEW.the_geom, 0, nodeRecord1.the_geom);
+			-- Inserting new node
+			INSERT INTO v_edit_node (node_id, sector_id, state, state_type, dma_id, soilcat_id, workcat_id, buildercat_id, builtdate, nodecat_id, ownercat_id, muni_id,
+			postcode, district_id, expl_id, the_geom)
+			VALUES ((SELECT nextval('urn_id_seq')), NEW.sector_id, NEW.state, NEW.state_type, NEW.dma_id, NEW.soilcat_id, NEW.workcat_id, NEW.buildercat_id, NEW.builtdate, v_nodecat,
+			NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id, NEW.expl_id, st_endpoint(NEW.the_geom))
+			RETURNING node_id INTO v_node2;
+					
+			-- Update arc
 			NEW.node_1:= nodeRecord1.node_id; 
-			NEW.node_2:= (SELECT currval('urn_id_seq'));  			
+			NEW.node_2:= v_node2;
 		END IF;
 
 	-- Error, no existing nodes

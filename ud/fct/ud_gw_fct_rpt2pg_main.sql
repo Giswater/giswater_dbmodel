@@ -35,7 +35,8 @@ BEGIN
 	v_file  = (p_data ->>'data')::json->>'file';
 
 	RAISE NOTICE 'Starting rpt2pg process.';
-	TRUNCATE temp_csv;
+	
+	DELETE FROM temp_csv WHERE fid = 140 AND cur_user = current_user;
 
 	-- inserting file into temp table
 	INSERT INTO temp_csv (fid, cur_user, source, csv1, csv2, csv3, csv4, csv5, csv6, csv7, csv8, csv9, csv10, csv11, csv12, csv13, csv14, csv15, csv16, csv17, csv18, csv19, csv20, csv40)

@@ -17,6 +17,7 @@ v_count integer;
 v_widgettype text;
 v_message json;
 v_variables text;
+rec_feature text;
 
 BEGIN	
 
@@ -25,15 +26,41 @@ BEGIN
 	
 	v_configtable:= TG_ARGV[0];	 -- not used yet. Ready to enhance this trigger control
 
-	IF (SELECT value FROM config_param_user WHERE cur_user = current_user AND parameter  = 'config_control') THEN
+	IF (SELECT value::boolean FROM config_param_system WHERE parameter='admin_config_control_trigger') IS TRUE THEN
 
 		IF v_configtable = 'sys_param_user' THEN 
+		
+		ELSIF v_configtable IN ('man_type_category', 'man_type_fluid', 'man_type_function', 'man_type_location') THEN 
+			v_querytext='SELECT * FROM '||v_configtable||';';
+
+			--add parenthesis if new definition of featurecat doesn't have it
+	 		IF NEW.featurecat_id NOT ILIKE '{%}' AND NEW.featurecat_id IS NOT NULL THEN
+				EXECUTE 'UPDATE '||v_configtable||' SET featurecat_id = concat(''{'','||quote_literal(NEW.featurecat_id)||',''}'') WHERE id = '||NEW.id||';';
+			END IF;
 			
+			--check if all featurecat are present on table cat_feature
+			IF NEW.featurecat_id IS NOT NULL THEN
+				IF NEW.featurecat_id NOT ILIKE '{%}' THEN
+					NEW.featurecat_id = concat('{',NEW.featurecat_id,'}');
+					raise notice 'CHANGE,%',NEW.featurecat_id;
+				END IF;
+
+				FOREACH rec_feature IN array(NEW.featurecat_id::text[]) LOOP
+					IF rec_feature NOT IN (SELECT id FROM cat_feature) THEN
+						v_variables = concat('table: ',v_configtable,', featurecat: ',rec_feature);
+						v_message = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3172",
+						"function":"2816", "debug":null, "variables":"',v_variables,'"}}');
+						PERFORM gw_fct_getmessage(v_message);
+					END IF;
+				END LOOP;
+
+			END IF;
+
 		ELSIF v_configtable = 'config_form_fields' THEN 
 		
 			IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
 
-				v_variables = concat('formname: ',NEW.formname,', column_id: ',NEW.column_id,', dv_querytext_filterc: ',NEW.dv_querytext_filterc);
+				v_variables = concat('formname: ',NEW.formname,', columnname: ',NEW.columnname,', dv_querytext_filterc: ',NEW.dv_querytext_filterc);
 
 				-- check dv_querytext restrictions
 				IF (NEW.widgettype = 'combo' OR NEW.widgettype = 'typeahead') THEN
@@ -47,20 +74,34 @@ BEGIN
 					--check that when dv_querytextfilterc exists dv_parent_id also
 					IF NEW.dv_querytext_filterc IS NOT NULL THEN
 
+						--check if dv_parent_id is not null
 						IF NEW.dv_parent_id IS NULL THEN
 							v_message = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3102", "function":"2816",
 							"debug":null, "variables":"',v_variables,'"}}');
-							SELECT gw_fct_getmessage(v_message);
+							PERFORM gw_fct_getmessage(v_message);
+							
 						ELSE
-							EXECUTE 'SELECT column_id FROM config_form_fields WHERE column_id = '||quote_literal(NEW.dv_parent_id)||' AND formname = '||
-							quote_literal(NEW.formname)
-								INTO v_widgettype;
+							--check if dv_parent_id is correct (another existing columnname)
+							EXECUTE 'SELECT columnname FROM config_form_fields WHERE columnname = '||quote_literal(NEW.dv_parent_id)||' AND formname = '||
+							quote_literal(NEW.formname)||'' INTO v_widgettype;
 
 							IF v_widgettype IS NULL THEN
 								v_message = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3104",
-								function":"2816", "debug":null, "variables":"',v_variables,'"}}');
-								SELECT gw_fct_getmessage(v_message);					
+								"function":"2816", "debug":null, "variables":"',v_variables,'"}}');
+								PERFORM gw_fct_getmessage(v_message);
 							END IF;	
+						END IF;
+					END IF;
+
+					--check isparent/dv_parent_id
+					IF NEW.isparent IS TRUE THEN
+						--count if dv_parent_id exists before set isparent=TRUE
+						SELECT count(*) FROM config_form_fields WHERE formname=NEW.formname AND dv_parent_id=NEW.columnname INTO v_count;
+
+						IF v_count = 0 THEN
+							v_message = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3168",
+							"function":"2816", "debug":null, "variables":"',v_variables,'"}}');
+							PERFORM gw_fct_getmessage(v_message);
 						END IF;
 					END IF;
 				END IF;
@@ -70,14 +111,14 @@ BEGIN
 
 					-- isautoupdate is FALSE
 					IF NEW.isautoupdate = TRUE THEN
-						SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+						PERFORM gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 						"data":{"message":"3096", "function":"2816","debug":null}}$$);	
 					END IF;
 		
-					--query text HAS SAME id THAN idval (with the exception of streetname and streename2
+					--query text HAS SAME id THAN idval (with the exception of streetname and streename2)
 					IF NEW.dv_querytext IS NOT NULL THEN
-	
-						IF NEW.column_id = 'streetname' OR NEW.column_id  ='streename2' THEN
+
+						IF NEW.columnname = 'streetname' OR NEW.columnname = 'streetname2' THEN
 							-- do nothing (with the exception of streetname and streename2
 						ELSE
 							EXECUTE 'SELECT count(*) FROM( ' ||NEW.dv_querytext|| ')a WHERE id::text != idval::text' INTO v_count;
@@ -85,9 +126,25 @@ BEGIN
 							IF v_count > 0 THEN
 								v_message = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3100",
 								"function":"2816", "debug":null, "variables":"',v_variables,'"}}');
-								SELECT gw_fct_getmessage(v_message);						
+								PERFORM gw_fct_getmessage(v_message);						
 							END IF;
 						END IF;
+					END IF;
+				END IF;
+
+			ELSIF TG_OP = 'UPDATE' THEN
+
+				IF NEW.dv_parent_id IS NULL THEN
+					-- check if related isparent is TRUE when setting dv_parent_id to NULL
+					IF (SELECT isparent FROM config_form_fields WHERE formname=NEW.formname AND columnname=OLD.dv_parent_id) IS TRUE THEN
+						--only if there're no more fields related to the parent
+						SELECT count(*) FROM config_form_fields WHERE formname=NEW.formname AND dv_parent_id=OLD.dv_parent_id INTO v_count;
+							IF v_count = 1 THEN
+								
+								v_message = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3170",
+								"function":"2816", "debug":null, "variables":"',v_variables,'"}}');
+								PERFORM gw_fct_getmessage(v_message);
+							END IF;
 					END IF;
 				END IF;
 			END IF;
@@ -105,3 +162,4 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+

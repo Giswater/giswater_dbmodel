@@ -50,9 +50,9 @@ BEGIN
 	DELETE FROM rpt_inp_pattern_value WHERE result_id=result_id_var;	
 
 	-- save previous values to set hydrometer selector
-	DELETE FROM temp_table WHERE fid=199 AND cur_user=current_user;
+	DELETE FROM temp_table WHERE fid=357 AND cur_user=current_user;
 	INSERT INTO temp_table (fid, text_column)
-	SELECT 199, (array_agg(state_id)) FROM selector_state WHERE cur_user=current_user;
+	SELECT 357, (array_agg(state_id)) FROM selector_hydrometer WHERE cur_user=current_user;
 
 	-- reset selector
 	INSERT INTO selector_hydrometer SELECT id, current_user FROM ext_rtc_hydrometer_state
@@ -103,7 +103,7 @@ BEGIN
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18) 
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
-				   FROM vi_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text)
+				   FROM vi_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text) JOIN v_edit_link ON exit_id::integer = vnode_id
 			UNION
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
@@ -129,7 +129,7 @@ BEGIN
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18) 
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
-				   FROM v_rtc_period_nodepattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text)
+				   FROM v_rtc_period_nodepattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text) JOIN v_edit_link ON exit_id::integer = vnode_id
 			UNION
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
@@ -152,7 +152,7 @@ BEGIN
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18) 
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
-				   FROM v_rtc_period_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text)
+				   FROM v_rtc_period_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text) JOIN v_edit_link ON exit_id::integer = vnode_id
 			UNION
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
@@ -196,7 +196,7 @@ BEGIN
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18) 
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
-				   FROM v_rtc_period_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text)
+				   FROM v_rtc_period_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text) JOIN v_edit_link ON exit_id::integer = vnode_id
 			UNION
 			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
@@ -273,7 +273,7 @@ BEGIN
 			INSERT INTO rpt_inp_pattern_value (
 				   result_id, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18) 
-			SELECT result_id_var, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
+			SELECT 1, dma_id, pattern_id, idrow, factor_1, factor_2, factor_3, factor_4, factor_5, factor_6, factor_7, factor_8, factor_9, factor_10, 
 				   factor_11, factor_12, factor_13, factor_14, factor_15, factor_16, factor_17, factor_18 
 				   FROM v_rtc_period_pjointpattern JOIN vnode ON pattern_id=concat('VN',vnode_id::text) JOIN link ON exit_id::integer = vnode_id AND exit_type = 'VNODE' JOIN connec ON link.feature_id = connec_id
 			UNION
@@ -372,9 +372,10 @@ BEGIN
 			FROM inp_pattern_value WHERE pattern_id IN (SELECT pattern_id FROM temp_node);
 	END IF;
 
-	-- restore state selector
-	INSERT INTO selector_state (state_id, cur_user)
-	select unnest(text_column::integer[]), current_user from temp_table where fid=199 and cur_user=current_user
+	-- restore hydrometer selector
+	DELETE FROM selector_hydrometer WHERE cur_user = current_user;
+	INSERT INTO selector_hydrometer (state_id, cur_user)
+	select unnest(text_column::integer[]), current_user from temp_table where fid=357 and cur_user=current_user
 	ON CONFLICT (state_id, cur_user) DO NOTHING;
 
 	UPDATE rpt_inp_node SET pattern_id = null WHERE demand = 0;

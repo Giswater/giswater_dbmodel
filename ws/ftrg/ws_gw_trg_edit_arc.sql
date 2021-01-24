@@ -28,7 +28,6 @@ v_featurecat text;
 v_streetaxis text;
 v_streetaxis2 text;
 
-
 BEGIN
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
@@ -60,7 +59,7 @@ BEGIN
 
 		-- Arc catalog ID
 		IF (NEW.arccat_id IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_arc) = 0) THEN
+			IF ((SELECT COUNT(*) FROM cat_arc WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 				"data":{"message":"1020", "function":"1302","debug_msg":null}}$$);';
 			END IF; 
@@ -73,7 +72,7 @@ BEGIN
 
 				-- get first value (last chance)
 				IF (NEW.arccat_id IS NULL) THEN
-					NEW.arccat_id := (SELECT id FROM cat_arc LIMIT 1);
+					NEW.arccat_id := (SELECT id FROM cat_arc WHERE active IS TRUE LIMIT 1);
 				END IF;    
 			END IF;
 
@@ -99,7 +98,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
+			IF ((SELECT COUNT(*) FROM exploitation WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		       	"data":{"message":"1110", "function":"1302","debug_msg":null}}$$);';
 			END IF;
@@ -111,9 +110,9 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
+				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -243,9 +242,10 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.muni_id IS NULL) THEN
-				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
+				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) AND active IS TRUE ;
 				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+					AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -282,13 +282,8 @@ BEGIN
 
 			--check relation state - state_type
 		IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-			IF NEW.state IS NOT NULL THEN
-				v_sql = NEW.state;
-			ELSE
-				v_sql = 'null';
-			END IF;
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3036", "function":"1318","debug_msg":"'||v_sql::text||'"}}$$);';
+					"data":{"message":"3036", "function":"1318","debug_msg":"'||NEW.state::text||'"}}$$);';
 		END IF;
 
 		--Inventory	
@@ -324,6 +319,9 @@ BEGIN
 		-- Builtdate
 		IF (NEW.builtdate IS NULL) THEN
 			NEW.builtdate :=(SELECT "value" FROM config_param_user WHERE "parameter"='edit_builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.builtdate IS NULL) AND (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE THEN
+				NEW.builtdate :=date(now());
+			END IF;
 		END IF;
 		
 		-- Verified
@@ -440,17 +438,22 @@ BEGIN
 
 		-- epa type
 		IF (NEW.epa_type != OLD.epa_type) THEN    
+
+			-- delete from old inp table
 			IF (OLD.epa_type = 'PIPE') THEN
-				v_inp_table:= 'inp_pipe';            
-				v_sql:= 'DELETE FROM '||v_inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
-				EXECUTE v_sql;
+				v_inp_table:= 'inp_pipe';
+			ELSIF (OLD.epa_type = 'VIRTUALVALVE') THEN
+				v_inp_table:= 'inp_virtualvalve';
 			END IF;
+			v_sql:= 'DELETE FROM '||v_inp_table||' WHERE arc_id = '||quote_literal(OLD.arc_id);
+			EXECUTE v_sql;
 			v_inp_table := NULL;
 
+			-- insert into new inp table
 			IF (NEW.epa_type = 'PIPE') THEN
-				v_inp_table:= 'inp_pipe';   
-				v_sql:= 'INSERT INTO '||v_inp_table||' (arc_id) VALUES ('||quote_literal(NEW.arc_id)||')';
-				EXECUTE v_sql;
+				INSERT INTO inp_pipe VALUES (NEW.arc_id);
+			ELSIF (NEW.epa_type = 'VIRTUALVALVE') THEN
+				INSERT INTO inp_virtualvalve (arc_id, status, valv_type) VALUES (NEW.arc_id, 'ACTIVE', 'FCV');
 			END IF;
 		END IF;
 	
@@ -465,6 +468,9 @@ BEGIN
 			IF NEW.state = 1 AND OLD.state=2 THEN
 				DELETE FROM plan_psector_x_arc WHERE arc_id=NEW.arc_id;					
 			END IF;			
+			IF NEW.state=0 THEN
+				UPDATE arc SET node_1=NULL, node_2=NULL WHERE arc_id = OLD.arc_id;
+			END IF;
 		END IF;
 		
 		-- State_type

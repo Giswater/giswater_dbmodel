@@ -194,6 +194,7 @@ DROP VIEW IF EXISTS ve_gully;
 DROP VIEW IF EXISTS v_gully;
 DROP VIEW IF EXISTS vu_gully;
 
+
 --change type of description columns
 ALTER TABLE node ALTER COLUMN observ TYPE text;
 ALTER TABLE node ALTER COLUMN descript TYPE text;
@@ -211,7 +212,6 @@ ALTER TABLE gully ALTER COLUMN observ TYPE text;
 ALTER TABLE gully ALTER COLUMN descript TYPE text;
 ALTER TABLE gully ALTER COLUMN annotation TYPE text;
 ALTER TABLE gully ALTER COLUMN comment TYPE text;
-
 
 -- CREACIO DE LES VU
 --------------------
@@ -2697,7 +2697,8 @@ CREATE OR REPLACE VIEW v_edit_man_netelement AS
    FROM v_node
 	 JOIN man_netelement ON man_netelement.node_id::text = v_node.node_id::text;
 
-
+SELECT gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{},
+"data":{"filterFields":{}, "pageInfo":{}, "multi_create":"True" }}$$);
 
 	 CREATE OR REPLACE VIEW ve_pol_netgully AS 
  SELECT man_netgully.pol_id,

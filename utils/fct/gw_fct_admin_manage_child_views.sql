@@ -5,9 +5,9 @@ This version of Giswater is provided by Giswater Association
 */
 
 --FUNCTION CODE: 2716
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_admin_manage_child_views(p_data json);
+
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_admin_manage_child_views(p_data json)
-  RETURNS json AS
+  RETURNS void AS
 $BODY$
 
 /*EXAMPLE
@@ -46,10 +46,7 @@ v_action text;
 v_childview text;
 v_tableversion text = 'sys_version';
 v_columntype text = 'project_type';
-v_return_status text = 'Failed';
-v_return_msg text = 'Process finished with some errors';
-v_error_context text;
-
+	
 BEGIN
 
 	-- search path
@@ -65,7 +62,7 @@ BEGIN
 
 	IF v_cat_feature IS NULL THEN
 
-		v_cat_feature = (SELECT id FROM cat_feature LIMIT 1);
+		v_cat_feature = (SELECT id FROM cat_feature WHERE active IS TRUE LIMIT 1);
 
 	END IF;
 
@@ -84,9 +81,6 @@ BEGIN
 			PERFORM gw_fct_debug(concat('{"data":{"msg":"Deleted layer: ", "variables":"',v_childview,'"}}')::json);
 
 		END LOOP;
-
-		v_return_status = 'Accepted';
-		v_return_msg = 'Process finished successfully';
 
 	ELSE 
 		--if the view should be created for all the features loop over the cat_features
@@ -230,10 +224,6 @@ BEGIN
 					"feature":{"catFeature":"'||v_cat_feature||'"}, 
 					"data":{"filterFields":{}, "pageInfo":{}, "view_name":"'||v_viewname||'", "feature_type":"'||v_feature_type||'" }}$$);';
 				END IF;
-
-				v_return_status = 'Accepted';
-				v_return_msg = 'Process finished successfully';
-
 			END LOOP;
 			
 		ELSIF v_multi_create IS NOT TRUE AND v_project_type IS NOT NULL THEN 
@@ -352,8 +342,7 @@ BEGIN
 				"man_fields":"'||v_man_fields||'","a_param":"null","ct_param":"null","id_param":"null","datatype":"null"}}';
 
 				PERFORM gw_fct_admin_manage_child_views_view(v_data_view);
-				v_return_status = 'Accepted';
-				v_return_msg = 'Process finished successfully';
+
 				END IF;
 
 			IF 	v_viewname NOT IN (SELECT formname FROM config_form_fields) THEN
@@ -368,30 +357,10 @@ BEGIN
 			EXECUTE 'CREATE TRIGGER gw_trg_edit_'||v_feature_type||'_'||lower(replace(replace(replace(v_cat_feature, ' ','_'),'-','_'),'.','_'))||'
 			INSTEAD OF INSERT OR UPDATE OR DELETE ON '||v_schemaname||'.'||v_viewname||'
 			FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_edit_'||v_feature_type||'('''||v_cat_feature||''');';
-
-			ELSE
-				v_return_status = 'Accepted';
-				v_return_msg = 'View already exist';
-				
+			
 			END IF;
 		END IF;
-
-		PERFORM gw_fct_admin_role_permissions();
 	END IF;
-
-	
-
-	--  Return
-	RETURN ('{"status":"'||v_return_status||'", "message":{"level":0, "text":"'||v_return_msg||'"} '||
-		',"body":{"form":{}'||
-		',"data":{}}'||
-		'}')::json;
-
-
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-
 
 END;
 $BODY$

@@ -102,7 +102,8 @@ BEGIN
 		v_tablename = v_parameter_selector->>'selector';
 		v_columnname = v_parameter_selector->>'selector_id'; 
 
-		v_id = (SELECT expl_id FROM exploitation e, ext_municipality m WHERE st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) AND muni_id::text = v_id::text limit 1);
+		v_id = (SELECT expl_id FROM exploitation e, ext_municipality m 
+			WHERE e.active IS TRUE AND st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) AND muni_id::text = v_id::text limit 1);
 		EXECUTE 'DELETE FROM selector_expl WHERE cur_user = current_user';
 		EXECUTE 'INSERT INTO selector_expl (expl_id, cur_user) VALUES('|| v_id ||', '''|| current_user ||''')';	
 	END IF;
@@ -134,13 +135,25 @@ BEGIN
 	FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2 
 	FROM (SELECT st_collect(the_geom) as the_geom FROM v_edit_arc) b) a;
 
+	/*set expl as vdefault if only one value on selector. In spite expl_vdefault is a hidden value, user can enable this variable if he needs it when working on more than
+	one exploitation in order to choose what is the default (remember default value has priority over spatial intersection)*/ 
+	IF (SELECT count (*) FROM selector_expl WHERE cur_user = current_user) = 1 THEN
+	
+		v_expl = (SELECT expl_id FROM selector_expl WHERE cur_user = current_user);
+		
+		INSERT INTO config_param_user(parameter, value, cur_user)
+		VALUES ('edit_exploitation_vdefault', v_expl, current_user) ON CONFLICT (parameter, cur_user) 
+		DO UPDATE SET value = v_expl WHERE config_param_user.parameter = 'edit_exploitation_vdefault' AND config_param_user.cur_user = current_user;
+	ELSE -- delete if more than one value on selector
+		DELETE FROM config_param_user WHERE parameter = 'edit_exploitation_vdefault' AND cur_user = current_user;
+	END IF;
+
 	-- control nulls
 	v_layermanager = COALESCE (v_layermanager, '{}');
 
 	-- Return
 	v_return = concat('{"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{"currentTab":"', v_tabname,'"}, "feature":{}, "data":{"geometry":',v_geometry,', "selectorType":"',v_selectortype,'"}, "layermanager":'||v_layermanager||'}');
 	RETURN gw_fct_getselectors(v_return);
-
 	
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN

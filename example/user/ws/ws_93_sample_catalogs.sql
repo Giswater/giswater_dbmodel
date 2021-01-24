@@ -84,6 +84,7 @@ INSERT INTO cat_element VALUES ('COVER40X40', 'COVER', 'FD', '40x40 cm', 'Cover 
 INSERT INTO cat_element VALUES ('REGISTER40X40', 'REGISTER', 'CONCRET', '40x40 cm', 'Register concret 40x40', 'c:\\users\users\catalog.pdf', NULL, NULL, NULL, 'register_40x40.svg', true);
 INSERT INTO cat_element VALUES ('REGISTER60X60', 'REGISTER', 'CONCRET', '60x60 cm', 'Register concret 60x60', 'c:\\users\users\catalog.pdf', NULL, NULL, NULL, 'register_60x60.svg', true);
 INSERT INTO cat_element VALUES ('VREGISTER200X200', 'REGISTER', 'BRICK+IRON', '200x200 cm', 'Vertical register concret/Iron', 'c:\\users\users\catalog.pdf', NULL, NULL, NULL, 'v_register.svg', true);
+INSERT INTO cat_element VALUES ('HYDRANT_PLATE', 'HYDRANT_PLATE', 'N/I', '50x60 cm', 'Generic hidrant plate', 'c:\\users\users\catalog.pdf', NULL, NULL, NULL, 'hdyrant_plate.svg', true);
 
 UPDATE cat_feature SET active = false WHERE id = 'CLORINATHOR' OR id = 'FL_CONTR_VALVE' OR id = 'GEN_PURP_VALVE' OR id = 'PR_SUSTA.VALVE' OR id = 'PR_BREAK.VALVE' 
 OR id = 'VALVE_REGISTER' OR id = 'TAP' OR id = 'ADAPTATION' OR id = 'BYPASS_REGISTER' OR id = 'CONTROLREGISTER' OR id = 'THROTTLE_VALVE';
@@ -177,6 +178,13 @@ INSERT INTO cat_pavement VALUES ('Asphalt', NULL, NULL,'0.10','P_ASPHALT-10');
 INSERT INTO cat_pavement VALUES ('pavement1', NULL, NULL,'0.12','P_ASPHALT-10');
 INSERT INTO cat_pavement VALUES ('pavement2', NULL, NULL,'0.08','P_ASPHALT-10');
 
+INSERT INTO presszone VALUES ('High-Expl_01', 'High-Expl_01', '1');
+INSERT INTO presszone VALUES ('Medium-Expl_01', 'Medium-Expl_01', '1');
+INSERT INTO presszone VALUES ('Low-Expl_01', 'Low-Expl_01', '1');
+INSERT INTO presszone VALUES ('High-Expl_02', 'High-Expl_02', '2');
+INSERT INTO presszone VALUES ('Medium-Expl_02', 'Medium-Expl_02', '2');
+INSERT INTO presszone VALUES ('Low-Expl_02', 'Low-Expl_02', '2');
+
 
 INSERT INTO cat_soil VALUES ('soil1', 'soil 1', NULL, 7.00, 0.25, 0.60, 'S_EXC', 'S_REB', 'S_TRANS', 'S_TRENCH');
 INSERT INTO cat_soil VALUES ('soil2', 'soil 2', NULL, 7.00, 0.20, 0.25, 'S_EXC', 'S_REB', 'S_TRANS', 'S_TRENCH');
@@ -191,34 +199,34 @@ INSERT INTO cat_work VALUES ('work4', 'Description work4', NULL, NULL, NULL, '20
 -- ----------------------------
 -- Records of man_type_category
 -- ----------------------------
-INSERT INTO man_type_category VALUES (1, 'St. Category', 'NODE');
-INSERT INTO man_type_category VALUES (2, 'St. Category', 'ARC');
-INSERT INTO man_type_category VALUES (3, 'St. Category', 'CONNEC');
-INSERT INTO man_type_category VALUES (4, 'St. Category', 'ELEMENT');
+INSERT INTO man_type_category VALUES (1, 'Standard Category', 'NODE');
+INSERT INTO man_type_category VALUES (2, 'Standard Category', 'ARC');
+INSERT INTO man_type_category VALUES (3, 'Standard Category', 'CONNEC');
+INSERT INTO man_type_category VALUES (4, 'Standard Category', 'ELEMENT');
 
 -- ----------------------------
 -- Records of man_type_fluid
 -- ----------------------------
-INSERT INTO man_type_fluid VALUES (1, 'St. Fluid', 'NODE');
-INSERT INTO man_type_fluid VALUES (2, 'St. Fluid', 'ARC');
-INSERT INTO man_type_fluid VALUES (3, 'St. Fluid', 'CONNEC');
-INSERT INTO man_type_fluid VALUES (4, 'St. Fluid', 'ELEMENT');
+INSERT INTO man_type_fluid VALUES (1, 'Standard Fluid', 'NODE');
+INSERT INTO man_type_fluid VALUES (2, 'Standard Fluid', 'ARC');
+INSERT INTO man_type_fluid VALUES (3, 'Standard Fluid', 'CONNEC');
+INSERT INTO man_type_fluid VALUES (4, 'Standard Fluid', 'ELEMENT');
 
 -- ----------------------------
 -- Records of man_type_location
 -- ----------------------------
-INSERT INTO man_type_location VALUES (1, 'St. Location', 'NODE');
-INSERT INTO man_type_location VALUES (2, 'St. Location', 'ARC');
-INSERT INTO man_type_location VALUES (3, 'St. Location', 'CONNEC');
-INSERT INTO man_type_location VALUES (4, 'St. Location', 'ELEMENT');
+INSERT INTO man_type_location VALUES (1, 'Standard Location', 'NODE');
+INSERT INTO man_type_location VALUES (2, 'Standard Location', 'ARC');
+INSERT INTO man_type_location VALUES (3, 'Standard Location', 'CONNEC');
+INSERT INTO man_type_location VALUES (4, 'Standard Location', 'ELEMENT');
 
 -- ----------------------------
 -- Records of man_type_function
 -- ----------------------------
-INSERT INTO man_type_function VALUES (1, 'St. Function', 'NODE');
-INSERT INTO man_type_function VALUES (2, 'St. Function', 'ARC');
-INSERT INTO man_type_function VALUES (3, 'St. Function', 'CONNEC');
-INSERT INTO man_type_function VALUES (4, 'St. Function', 'ELEMENT');
+INSERT INTO man_type_function VALUES (1, 'Standard Function', 'NODE');
+INSERT INTO man_type_function VALUES (2, 'Standard Function', 'ARC');
+INSERT INTO man_type_function VALUES (3, 'Standard Function', 'CONNEC');
+INSERT INTO man_type_function VALUES (4, 'Standard Function', 'ELEMENT');
 
 
 
@@ -262,3 +270,5 @@ UPDATE cat_feature SET shortcut_key='Alt+Y' WHERE id = 'WATERWELL';
 UPDATE cat_feature SET shortcut_key='Alt+M' WHERE id = 'WJOIN';
 UPDATE cat_feature SET shortcut_key='P' WHERE id = 'WTP';
 UPDATE cat_feature SET shortcut_key='X' WHERE id = 'X';
+
+UPDATE cat_node SET dint = dnom::integer WHERE dint IS NULL AND dnom IS NULL;

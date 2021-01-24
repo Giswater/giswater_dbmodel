@@ -22,6 +22,9 @@ select distinct(sector_id) from SCHEMA_NAME.arc where expl_id=1
 
 select * from exploitation order by 1
 
+
+ SELECT gw_fct_grafanalytics_minsector($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"exploitation":"[1]", "usePsectors":"false", "updateFeature":"false", "updateMinsectorGeom":"2", "geomParamUpdate":"10"}}}$$);
+
 SELECT SCHEMA_NAME.gw_fct_grafanalytics_minsector('{"data":{"parameters":{"arc":"2002", "checkQualityData": true, "usePsectors":"TRUE", "updateFeature":"TRUE", "updateMinsectorGeom":2, "geomParamUpdate":10}}}')
 
 delete from SCHEMA_NAME.audit_log_data;
@@ -34,6 +37,7 @@ SELECT * FROM SCHEMA_NAME.audit_log_data WHERE fid=134 AND cur_user=current_user
 SELECT distinct(minsector_id) FROM SCHEMA_NAME.v_edit_arc
 
 --fid: 125,134
+
 
 MAIN
 ----
@@ -81,6 +85,7 @@ v_concavehull float = 0.85;
 v_error_context text;
 v_checkdata boolean;
 v_maxmsector integer = 0;
+v_returnerror boolean = false;
 
 BEGIN
 
@@ -140,19 +145,7 @@ BEGIN
 	-- Starting process
 	INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid, concat('MINSECTOR DYNAMIC SECTORITZATION'));
 	INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid, concat('---------------------------------------------------'));
-	IF v_usepsectors THEN
-		SELECT count(*) INTO v_count FROM selector_psector WHERE cur_user = current_user;
-		INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid,
-		concat('INFO: Plan psector strategy is enabled. The number of psectors used on this analysis is ', v_count));
-	ELSE 
-		INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid,
-		concat('INFO: All psectors have been disabled to execute this analysis'));
-	END IF;
-		
-	-- reset selectors
-	DELETE FROM selector_state WHERE cur_user=current_user;
-	INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
-
+	
 	-- use masterplan
 	IF v_usepsectors IS NOT TRUE THEN
 		DELETE FROM selector_psector WHERE cur_user=current_user;
@@ -160,9 +153,33 @@ BEGIN
 
 	-- reset exploitation
 	IF v_expl IS NOT NULL THEN
-		DELETE FROM selector_expl WHERE cur_user=current_user;
-		INSERT INTO selector_expl (expl_id, cur_user) SELECT expl_id, current_user FROM exploitation JOIN (SELECT (json_array_elements_text(v_expl))::integer AS expl_id)a USING (expl_id) ;
+		
+		IF substring(v_expl::text,0,2)='[' THEN
+			DELETE FROM selector_expl WHERE cur_user=current_user;
+			INSERT INTO selector_expl (expl_id, cur_user) SELECT expl_id, current_user FROM exploitation JOIN (SELECT (json_array_elements_text(v_expl))::integer AS expl_id)a USING (expl_id) ;
+		ELSE
+			INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid,
+			concat('ERROR: Please entry exploitation id''s as tooltip shows using []'));
+			DELETE FROM selector_expl WHERE cur_user=current_user;  
+			v_returnerror = true;
+			 --dissabling all:
+			v_updatemapzgeom = 0;
+	
+		END IF;
 	END IF;
+
+	IF v_usepsectors THEN
+		SELECT count(*) INTO v_count FROM selector_psector WHERE cur_user = current_user;
+		INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid,
+		concat('INFO: Plan psector strategy is enabled. The number of psectors used on this analysis is ', v_count));
+	ELSIF v_usepsectors IS FALSE AND v_returnerror IS FALSE THEN
+		INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid,
+		concat('INFO: All psectors have been disabled to execute this analysis'));
+	END IF;
+		
+	-- reset selectors
+	DELETE FROM selector_state WHERE cur_user=current_user;
+	INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
 
 	-- create graf
 	IF v_maxmsector > 0 THEN
@@ -230,7 +247,7 @@ BEGIN
 		-- insert arc results into audit table
 		INSERT INTO anl_arc (fid, arccat_id, arc_id, the_geom, descript)
 		SELECT DISTINCT ON (arc_id) 134, arccat_id, a.arc_id, the_geom, v_arc::text
-		FROM (SELECT arc_id, max(water) as water FROM temp_anlgraf WHERE water=1 GROUP by arc_id) a JOIN v_edit_arc b ON a.arc_id=b.arc_id;
+		FROM (SELECT arc_id, max(water) as water FROM temp_anlgraf WHERE water=1 GROUP by arc_id) a JOIN arc b ON a.arc_id=b.arc_id;
 		GET DIAGNOSTICS v_affectedrow =row_count;
 
 		SELECT count(*) INTO v_row1 FROM anl_arc WHERE fid = 134 AND cur_user =current_user;
@@ -243,13 +260,13 @@ BEGIN
 	INSERT INTO anl_node (fid, nodecat_id, node_id, the_geom, descript)
 	SELECT DISTINCT ON (node_id) 134, nodecat_id, b.node_id, the_geom, arc_id FROM (SELECT node_1 as node_id FROM
 	(SELECT node_1,water FROM temp_anlgraf UNION SELECT node_2,water FROM temp_anlgraf)a
-	GROUP BY node_1, water HAVING water=1)b JOIN v_edit_node c ON c.node_id=b.node_id;
+	GROUP BY node_1, water HAVING water=1)b JOIN node c ON c.node_id=b.node_id;
 
 	-- insert node delimiters into audit table
 	INSERT INTO anl_node (fid, nodecat_id, node_id, the_geom, descript)
 	SELECT DISTINCT ON (node_id) 134, nodecat_id, b.node_id, the_geom, 0 FROM
 	(SELECT node_1 as node_id FROM (SELECT node_1,water FROM temp_anlgraf UNION ALL SELECT node_2,water FROM temp_anlgraf)a
-	GROUP BY node_1, water HAVING water=1 AND count(node_1)=2)b JOIN v_edit_node c ON c.node_id=b.node_id;
+	GROUP BY node_1, water HAVING water=1 AND count(node_1)=2)b JOIN node c ON c.node_id=b.node_id;
 	-- NOTE: node delimiter are inserted two times in table, as node from minsector trace and as node delimiter
 	
 	IF v_updatefeature THEN 
@@ -265,10 +282,10 @@ BEGIN
 		WHERE fid=134 AND a.node_id=node.node_id AND a.descript::integer =0 AND graf_delimiter!='NONE' AND cur_user=current_user;
 			
 		-- update non graf nodes (not connected) using arc_id parent on v_edit_node (not used node table because the exploitation filter).
-		UPDATE v_edit_node SET minsector_id = a.minsector_id FROM arc a WHERE a.arc_id=v_edit_node.arc_id;
+		UPDATE node SET minsector_id = a.minsector_id FROM v_edit_arc a WHERE a.arc_id=node.arc_id;
 	
 		-- used v_edit_connec to the exploitation filter. Row before is not neeeded because on table anl_* is data filtered by the process...
-		UPDATE v_edit_connec SET minsector_id = a.minsector_id FROM arc a WHERE a.arc_id=v_edit_connec.arc_id;
+		UPDATE connec SET minsector_id = a.minsector_id FROM v_edit_arc a WHERE a.arc_id=connec.arc_id;
 
 		-- insert into minsector table
 		DELETE FROM minsector WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user=current_user);
@@ -280,7 +297,7 @@ BEGIN
 		INSERT INTO audit_check_data (fid, error_message)
 		VALUES (v_fid, concat('WARNING: Minsector attribute (minsector_id) on arc/node/connec features have been updated by this process'));
 		
-	ELSE
+	ELSIF v_updatefeature IS FALSE and v_returnerror IS FALSE THEN
 		-- message
 		INSERT INTO audit_check_data (fid, error_message)
 		VALUES (v_fid, concat('INFO: Minsector attribute (minsector_id) on arc/node/connec features keeps same value previous function. Nothing have been updated by this process'));
@@ -381,7 +398,7 @@ BEGIN
 	v_result_polygon := COALESCE(v_result_polygon, '{}');
 	
 	--  Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Mapzones dynamic analysis done succesfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 				'"setVisibleLayers":["'||v_visible_layer||'"],'||
@@ -389,7 +406,7 @@ BEGIN
 				'"line":'||v_result_line||','||
 				'"polygon":'||v_result_polygon||'}'||
 		       '}'||
-	    '}')::json, 2706);
+	    '}')::json;
 
 	--  Exception handling
 	EXCEPTION WHEN OTHERS THEN

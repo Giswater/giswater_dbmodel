@@ -133,7 +133,7 @@ BEGIN
 
 	-- Set api version
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''admin_version'') row'
-		INTO v_version;
+        INTO v_version;
 
 	-- Get project type
 	SELECT project_type INTO v_projecttype FROM sys_version LIMIT 1;
@@ -151,7 +151,7 @@ BEGIN
 	ELSE
 		IF (select schemaname from pg_tables WHERE schemaname = v_addschema LIMIT 1) IS NULL THEN
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3132", "function":"2618","debug_msg":null}}$$)';
+            "data":{"message":"3132", "function":"2618","debug_msg":null}}$$)';
 			-- todo: send message to response
 		END IF;
 	END IF;
@@ -187,7 +187,7 @@ BEGIN
 		v_idarg := v_combo->>'id';
 		v_name := v_combo->>'name';
 		v_edittext := ((p_data->>'data')::json)->>'net_code';
-		v_textarg := concat(v_edittext->>'text' ,'%');
+		v_textarg := concat('%',v_edittext->>'text' ,'%');
 
 		-- built first part of query
 		IF v_searchtype = 'all' THEN -- feature search is for the whole system
@@ -222,7 +222,7 @@ BEGIN
 			CONCAT (search_field, '' : '', cat_id) AS display_name, sys_idname
 			FROM ('||(v_querytext)||')b
 			WHERE CONCAT (search_field, '' : '', cat_id) ILIKE ' || quote_literal(v_textarg) || ' 
-			ORDER BY length(search_field::text) asc LIMIT 10) a'
+			ORDER BY search_field LIMIT 10) a'
 			INTO v_response;
 		ELSE 
 			-- Get values type combo    
@@ -230,7 +230,7 @@ BEGIN
 			CONCAT (search_field, '' : '', cat_id) AS display_name, sys_idname, '||quote_literal(v_searchtype)::text||'  as search_type
 			FROM ('||(v_querytext)||')b
 			WHERE CONCAT (search_field, '' : '', cat_id) ILIKE ' || quote_literal(v_textarg) || ' AND sys_table_id = '||quote_literal(v_idarg)||'
-			ORDER BY length(search_field::text) asc LIMIT 10) a'
+			ORDER BY search_field LIMIT 10) a'
 			INTO v_response;
 		END IF;
 
@@ -291,7 +291,7 @@ BEGIN
 		v_idarg := v_combo->>'id';
 		v_name := v_combo->>'name';
 		v_edittext := ((p_data->>'data')::json)->>'hydro_search';
-		v_textarg := concat(v_edittext->>'text' ,'%');
+		v_textarg := concat('%', v_edittext->>'text' ,'%');
 
 		-- Fix exploitation vdefault
 		DELETE FROM config_param_user WHERE parameter='basic_search_exploitation_vdefault' AND cur_user=current_user;
@@ -306,9 +306,10 @@ BEGIN
 			JOIN connec ON (connec.connec_id = '||quote_ident(v_hydro_layer)||'.'||quote_ident(v_hydro_connec_field)||')
 			WHERE '||quote_ident(v_hydro_layer)||'.'||quote_ident(v_exploitation_display_field)||' = '||quote_literal(v_name)||'
 					AND concat ('||quote_ident(v_hydro_search_field_1)||','' - '','||quote_ident(v_hydro_search_field_2)||','' - '','||quote_ident(v_hydro_search_field_3)||')
-					ILIKE '||quote_literal(v_textarg)||' order by length('||quote_ident(v_hydro_search_field_1)||') asc
+					ILIKE '||quote_literal(v_textarg)||'
 					LIMIT 10) a'
 			INTO v_response; 
+
 	-- Workcat tab
 	ELSIF v_tab = 'workcat' THEN
 
@@ -430,9 +431,9 @@ BEGIN
 	v_response := COALESCE(v_response, '{}');
 
 	-- Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted"' || ', "version":'|| v_version ||
-		', "data":' || v_response ||      
-		'}')::json, 2618);
+	RETURN ('{"status":"Accepted"' || ', "version":'|| v_version ||
+        ', "data":' || v_response ||      
+        '}')::json;
 
 	-- exception handling
 	EXCEPTION WHEN OTHERS THEN 

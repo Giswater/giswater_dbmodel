@@ -32,6 +32,7 @@ BEGIN
 	v_file  = (p_data ->>'data')::json->>'file';
 
 	RAISE NOTICE 'Starting rpt2pg process.';
+	
 	TRUNCATE temp_csv;
 
 	-- inserting file into temp table

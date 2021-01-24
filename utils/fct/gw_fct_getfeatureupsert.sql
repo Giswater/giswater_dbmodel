@@ -111,7 +111,7 @@ v_type text;
 v_active_feature text;
 v_promixity_buffer double precision;
 v_sys_raster_dem boolean=false;
-v_edit_insert_elevation_from_dem boolean=false;
+v_edit_upsert_elevation_from_dem boolean=false;
 v_noderecord1 record;
 v_noderecord2 record;
 v_input json;
@@ -135,6 +135,8 @@ v_isdqaborder boolean = false; -- For those arcs that are on the border of mapzo
 v_isdmaborder boolean = false; -- For those arcs that are on the border of mapzones againts two dma (one each node)
 v_issectorborder boolean = false; -- For those arcs that are on the border of mapzones againts two sectors (one each node)
 v_dqa_id integer;
+v_arc_insert_automatic_endpoint boolean;
+
 
 BEGIN
 
@@ -169,7 +171,8 @@ BEGIN
 	SELECT (value)::boolean INTO v_sys_raster_dem FROM config_param_system WHERE parameter='admin_raster_dem';
 
 	-- get user parameters
-	SELECT (value)::boolean INTO v_edit_insert_elevation_from_dem FROM config_param_user WHERE parameter='edit_insert_elevation_from_dem' AND cur_user = current_user;
+	SELECT (value)::boolean INTO v_edit_upsert_elevation_from_dem FROM config_param_user WHERE parameter='edit_upsert_elevation_from_dem' AND cur_user = current_user;
+	SELECT (value)::boolean INTO v_arc_insert_automatic_endpoint FROM config_param_user WHERE parameter='edit_arc_insert_automatic_endpoint' AND cur_user = current_user;
 
 	-- get tablename and formname
 	-- Common
@@ -187,10 +190,6 @@ BEGIN
 
 	EXECUTE v_active_feature INTO v_catfeature;
 
-	-- profilactic control when is not feature
-	IF v_catfeature.feature_type IS NULL THEN
-		v_catfeature.feature_type = '';
-	END IF;
 
 	--  Starting control process
 	----------------------------
@@ -211,7 +210,7 @@ BEGIN
 		END IF;
 
 		-- topology control (enabled without state topocontrol. Does not make sense to activate this because in this phase of workflow
-		IF v_topocontrol IS TRUE THEN 
+		IF v_topocontrol IS TRUE AND v_catfeature.feature_type IS NOT NULL THEN 
 	
 			IF upper(v_catfeature.feature_type) ='NODE' THEN
 			
@@ -306,9 +305,15 @@ BEGIN
 					
 				--Error, no existing nodes
 				ELSIF ((v_noderecord1.node_id IS NULL) OR (v_noderecord2.node_id IS NULL)) AND (v_arc_searchnodes_control IS TRUE) THEN
-					v_message = (SELECT concat('Error[1042]:',error_message, '[node_1]:',v_noderecord1.node_id,'[node_2]:',v_noderecord2.node_id,'. ',hint_message) 
-					FROM sys_message WHERE id=1042);
-					v_status = false;
+
+					-- if only dosenot exits node 2 and insert_automatic_endpoint
+					IF ((v_noderecord1.node_id IS NOT NULL) AND (v_noderecord2.node_id IS NULL)) AND v_arc_insert_automatic_endpoint THEN
+
+					ELSE
+						v_message = (SELECT concat('Error[1042]:',error_message, '[node_1]:',v_noderecord1.node_id,'[node_2]:',v_noderecord2.node_id,'. ',hint_message) 
+						FROM sys_message WHERE id=1042);
+						v_status = false;
+					END IF;
 				END IF;
 	
 				--getting 1st approach of gis length
@@ -334,7 +339,7 @@ BEGIN
 		IF upper(v_catfeature.feature_type) = 'NODE' THEN
 			SELECT value INTO v_sector_id FROM config_param_user WHERE parameter = 'edit_sector_vdefault' and cur_user = current_user;
 			SELECT value INTO v_dma_id FROM config_param_user WHERE parameter = 'edit_dma_vdefault' and cur_user = current_user;
-			SELECT value INTO v_expl_id FROM config_param_user WHERE parameter = 'edit_explitation_vdefault' and cur_user = current_user;
+			SELECT value INTO v_expl_id FROM config_param_user WHERE parameter = 'edit_exploitation_vdefault' and cur_user = current_user;
 			SELECT value INTO v_muni_id FROM config_param_user WHERE parameter = 'edit_municipality_vdefault' and cur_user = current_user;
 			SELECT value INTO v_presszone_id FROM config_param_user WHERE parameter = 'edit_presszone_vdefault' and cur_user = current_user;
 		END IF;
@@ -376,7 +381,7 @@ BEGIN
 		IF v_expl_id IS NULL THEN
 			SELECT count(*) into count_aux FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001);
 			IF count_aux = 1 THEN
-				v_expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001) LIMIT 1);
+				v_expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001)  AND active=true LIMIT 1);
 			ELSE
 				v_expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer) 
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
@@ -390,15 +395,8 @@ BEGIN
 		v_macrosector_id := (SELECT macrosector_id FROM sector WHERE sector_id=v_sector_id);
 	
 		-- Municipality 
-		v_muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(p_reduced_geometry, ext_municipality.the_geom,0.001) LIMIT 1); 
-		
-		-- upsert parent expl_id values for user
-		DELETE FROM config_param_user WHERE parameter = 'edit_exploitation_vdefault' AND cur_user = current_user;
-		INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_exploitation_vdefault', v_expl_id, current_user);
-	
-		-- upsert parent muni_id values for user
-		DELETE FROM config_param_user WHERE parameter = 'edit_municipality_vdefault' AND cur_user = current_user;
-		INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_municipality_vdefault', v_muni_id, current_user);
+		v_muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(p_reduced_geometry, ext_municipality.the_geom,0.001) 
+		AND active IS TRUE LIMIT 1); 
 
 	ELSIF p_tg_op ='UPDATE' OR p_tg_op ='SELECT' THEN
 
@@ -421,13 +419,11 @@ BEGIN
 		-- Call the function of feature fields generation
 		v_formtype = 'form_feature';	
 		v_querytext = 'SELECT gw_fct_getformfields( '||quote_literal(v_formname)||','||quote_literal(v_formtype)||','||quote_literal(v_tabname)||','||quote_literal(v_tablename)||','||quote_literal(p_idname)||','||
-		quote_literal(p_id)||','||quote_literal(p_columntype)||','||quote_literal(p_tg_op)||','||'''text'''||','||p_device||','''||COALESCE(v_values_array, '{}')||''' )'; 	
-
+		quote_literal(p_id)||','||quote_literal(p_columntype)||','||quote_literal(p_tg_op)||','||'''text'''||','||p_device||','||quote_literal(v_values_array)||' )'; 		
 		RAISE NOTICE 'v_querytext %', v_querytext;
-		
 		SELECT gw_fct_getformfields(v_formname , v_formtype , v_tabname , v_tablename , p_idname , p_id , p_columntype, p_tg_op, NULL, p_device , v_values_array)
 		INTO v_fields_array;
-			
+
 	ELSE	
 		PERFORM gw_fct_debug(concat('{"data":{"msg":"--> Configuration fields are NOT defined on layoutorder table. System values are used <--", "variables":""}}')::json);
 	
@@ -447,6 +443,7 @@ BEGIN
 			null AS widgetfunction, 
 			null AS linkedaction, 
 			FALSE AS isautoupdate,
+			FALSE AS ismandatory, 
 			''lyt_data_1'' AS layoutname, 
 			null as widgetcontrols,
 			FALSE as hidden
@@ -497,12 +494,12 @@ BEGIN
 		SELECT (a->>'vdef'), (a->>'param') INTO v_catalog, v_catalogtype FROM json_array_elements(v_values_array) AS a 
 			WHERE (a->>'param') = 'arccat_id' OR (a->>'param') = 'nodecat_id' OR (a->>'param') = 'connecat_id' OR (a->>'param') = 'gratecat_id';
 
-		IF v_project_type ='WS' AND v_catfeature.feature_type != '' THEN 
+		IF v_project_type ='WS' AND v_catfeature.feature_type IS NOT NULL THEN 
 			EXECUTE 'SELECT pnom::integer, dnom::integer, matcat_id FROM cat_'||lower(v_catfeature.feature_type)||' WHERE id=$1'
 				USING v_catalog
 				INTO v_pnom, v_dnom, v_matcat_id;
 				
-		ELSIF v_project_type ='UD' AND v_catfeature.feature_type != '' THEN 
+		ELSIF v_project_type ='UD' AND v_catfeature.feature_type IS NOT NULL THEN 
 			IF (v_catfeature.feature_type) ='GULLY' THEN
 				EXECUTE 'SELECT matcat_id FROM cat_grate WHERE id=$1'
 					USING v_catalog
@@ -519,7 +516,7 @@ BEGIN
 	v_node2 = COALESCE (v_node2, '');
 	
 	-- gettingf minvalue & maxvalues for widgetcontrols
-	IF v_project_type = 'UD' THEN
+	IF v_project_type = 'UD' AND v_catfeature.feature_type IS NOT NULL THEN
 
 		v_input = '{"client":{"device":4,"infoType":1,"lang":"es"}, "feature":{"featureType":"'||v_catfeature.feature_type||'", "id":"'||p_id||'"}, "data":{"tgOp":"'||
 		p_tg_op||'", "node1":"'||v_node1||'", "node2":"'||v_node2||'"}}';
@@ -582,7 +579,7 @@ BEGIN
 
 				-- elevation from raster
 				WHEN 'elevation', 'top_elev' THEN 
-					IF v_sys_raster_dem AND v_edit_insert_elevation_from_dem THEN
+					IF v_sys_raster_dem AND v_edit_upsert_elevation_from_dem THEN
 						field_value = (SELECT ST_Value(rast,1, p_reduced_geometry, true) FROM v_ext_raster_dem WHERE 
 						id = (SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1))::numeric (12,3);
 					ELSE
@@ -603,24 +600,51 @@ BEGIN
 				WHEN 'matcat_id' THEN	
 					field_value = v_matcat_id;
 				WHEN concat(lower(v_catfeature.feature_type),'cat_id') THEN	
-					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a 
-					WHERE (a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), 'cat_vdefault');
-
+					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
+					WHERE a->>'parameter' = concat('feat_', lower(v_catfeature.id), '_vdefault');
+				WHEN 'connecat_id' THEN	
+					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
+					WHERE a->>'parameter' = concat('feat_', lower(v_catfeature.id), '_vdefault');
+					raise notice '--->>>%-->%', lower(v_catfeature.id), field_value;
 
 				-- *_type
-				WHEN 'fluid_type' THEN	
-					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a 
-					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_fluid_vdefault'));
-				WHEN 'function_type' THEN	
-					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a 
-					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_function_vdefault'));
-				WHEN 'location_type' THEN	
-					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a 
-					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_location_vdefault'));
 				WHEN 'category_type' THEN	
-					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a 
-					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_category_vdefault'));
+					IF (SELECT (a->>'vdef') FROM json_array_elements(v_values_array) AS a
+					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = 'edit_feature_category_vdefault'))=v_catfeature.id THEN
+						SELECT value INTO field_value FROM config_param_user WHERE parameter = 'edit_featureval_category_vdefault' and cur_user=current_user;
+					ELSE
+						SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
+						WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_category_vdefault'));
+					END IF;
 					
+					
+				WHEN 'fluid_type' THEN
+					IF (SELECT (a->>'vdef') FROM json_array_elements(v_values_array) AS a
+					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = 'edit_feature_fluid_vdefault'))=v_catfeature.id THEN
+						SELECT value INTO field_value FROM config_param_user WHERE parameter = 'edit_featureval_fluid_vdefault' and cur_user=current_user;
+					ELSE
+						SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
+						WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_fluid_vdefault'));
+					END IF;
+					
+				WHEN 'function_type' THEN	
+					IF (SELECT (a->>'vdef') FROM json_array_elements(v_values_array) AS a
+					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = 'edit_feature_function_vdefault'))=v_catfeature.id THEN
+						SELECT value INTO field_value FROM config_param_user WHERE parameter = 'edit_featureval_function_vdefault' and cur_user=current_user;
+					ELSE
+						SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
+						WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_function_vdefault'));
+					END IF;
+
+				WHEN 'location_type' THEN	
+					IF (SELECT (a->>'vdef') FROM json_array_elements(v_values_array) AS a
+					WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = 'edit_feature_location_vdefault'))=v_catfeature.id THEN
+						SELECT value INTO field_value FROM config_param_user WHERE parameter = 'edit_featureval_location_vdefault' and cur_user=current_user;
+					ELSE
+						SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
+						WHERE ((a->>'param') = (aux_json->>'columnname') AND a->>'parameter' = concat('edit_', lower(v_catfeature.feature_type), '_location_vdefault'));
+					END IF;
+			    
 				-- state type
 				WHEN 'state_type' THEN
 					-- getting parent value
@@ -635,7 +659,15 @@ BEGIN
 					WHERE cur_user=current_user AND parameter = concat(''edit_statetype_'','||v_state_value||',''_vdefault'')';
 					
 					EXECUTE v_querytext INTO field_value;
-							
+				
+				-- builtdate
+				WHEN 'builtdate' THEN
+					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a WHERE (a->>'param') = (aux_json->>'columnname'); 
+					--if using automatic current builtdate and vdefault is null, set value to now
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE AND field_value IS NULL  THEN
+						EXECUTE 'SELECT date(now())' INTO field_value;
+					END IF;
+
 				-- rest (including addfields)
 				ELSE SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a WHERE (a->>'param') = (aux_json->>'columnname'); 
 				END CASE;
@@ -679,8 +711,10 @@ BEGIN
 			
 			-- setting widgetcontrols
 			IF (aux_json->>'datatype')='double' OR (aux_json->>'datatype')='integer' OR (aux_json->>'datatype')='numeric' THEN 
-				v_widgetcontrols = gw_fct_json_object_set_key ((aux_json->>'widgetcontrols')::json, 'maxMinValues' ,(v_widgetvalues->>(aux_json->>'columnname'))::json);
-				v_fields_array[array_index] := gw_fct_json_object_set_key (v_fields_array[array_index], 'widgetcontrols', v_widgetcontrols);
+				IF v_widgetvalues IS NOT NULL THEN
+					v_widgetcontrols = gw_fct_json_object_set_key ((aux_json->>'widgetcontrols')::json, 'maxMinValues' ,(v_widgetvalues->>(aux_json->>'columnname'))::json);
+					v_fields_array[array_index] := gw_fct_json_object_set_key (v_fields_array[array_index], 'widgetcontrols', v_widgetcontrols);
+				END IF;
 			END IF;
 			
 			-- force enabled widget of mapzones for nodes headers (insert or update)

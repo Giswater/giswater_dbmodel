@@ -129,11 +129,14 @@ v_parentfields text;
 v_status text ='Accepted';
 v_childtype text;
 v_errcontext text;
-v_toggledition boolean;
 v_islayer boolean;
 v_addschema text;
 v_return json;
 v_flag boolean = false;
+v_isgrafdelimiter boolean  = false;
+v_isepatoarc boolean  = false;
+v_nodetype text;
+v_isarcdivide boolean = true;
 
 BEGIN
 
@@ -188,11 +191,43 @@ BEGIN
 	SELECT project_type INTO v_project_type FROM sys_version LIMIT 1;
 
 	-- check layer if it's child layer 
-        IF (SELECT child_layer FROM cat_feature WHERE child_layer=v_tablename)IS NOT NULL THEN
+    IF (SELECT child_layer FROM cat_feature WHERE child_layer=v_tablename)IS NOT NULL THEN
 		v_table_parent := (SELECT parent_layer FROM cat_feature WHERE child_layer=v_tablename);	
-	ELSE 
+
+		--check if is delimiter
+		IF upper(v_project_type) = 'WS' AND v_table_parent='v_edit_node' THEN
+			IF (SELECT upper(graf_delimiter) FROM cat_feature_node JOIN cat_feature USING (id)
+				WHERE child_layer=v_tablename) IN ('DMA','PRESSZONE') THEN
+				v_isgrafdelimiter = TRUE;
+			ELSIF (SELECT upper(epa_default) FROM cat_feature_node JOIN cat_feature USING (id)
+				WHERE child_layer=v_tablename) IN ('PUMP', 'VALVE', 'SHORTPIPE') THEN
+					v_isepatoarc = TRUE;
+			END IF;
+		END IF;
+
+		IF (SELECT isarcdivide FROM cat_feature_node JOIN cat_feature USING (id) WHERE child_layer=v_tablename) IS FALSE THEN
+				v_isarcdivide = FALSE;
+		END IF;
+	ELSE
 		-- tablename is used as table parent.
 		v_table_parent = v_tablename;
+		IF v_id IS NOT NULL THEN 
+		
+			IF upper(v_project_type) = 'WS' AND v_table_parent='v_edit_node' THEN
+			
+				EXECUTE 'SELECT nodetype_id FROM '||v_table_parent||' WHERE node_id = '||quote_literal(v_id)||';'
+				INTO v_nodetype;
+				IF (SELECT isarcdivide FROM cat_feature_node WHERE id=v_nodetype) IS FALSE THEN
+					v_isarcdivide = FALSE;
+				END IF;
+				
+				IF (SELECT upper(graf_delimiter) FROM cat_feature_node WHERE id=v_nodetype) IN ('DMA','PRESSZONE') THEN
+					v_isgrafdelimiter = TRUE;
+				ELSIF (SELECT upper(epa_type) FROM node WHERE node_id = v_id) IN ('PUMP', 'VALVE', 'SHORTPIPE') THEN
+					v_isepatoarc = TRUE;
+				END IF;
+			END IF;
+		END IF;
 	END IF;
 
 	-- get tableparent fields
@@ -318,19 +353,79 @@ BEGIN
 
 	-- Get tabs for form
 	--------------------------------
-        EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", tabactions as tabActions 
-		FROM config_form_tabs WHERE formname = $1) a'
-            INTO form_tabs
-            USING v_tablename;
+		IF v_isgrafdelimiter OR upper(v_project_type) != 'WS' THEN
+	       EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+			with ordinality arr(item_object, position) where formname =$1
+			and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+			config_form_tabs WHERE formname =$1)a'
+			INTO form_tabs
+	        USING v_tablename;
+	    ELSIF v_isepatoarc THEN
+	    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+			with ordinality arr(item_object, position) where formname =$1
+			and item_object->>''actionName'' != ''actionMapZone'' and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+			config_form_tabs WHERE formname =$1)a'
+			INTO form_tabs
+	        USING v_tablename;
+	    ELSIF v_isarcdivide THEN
+	        EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+			with ordinality arr(item_object, position) where formname =$1
+			and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' 
+			and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+			config_form_tabs WHERE formname =$1)a'
+			 INTO form_tabs
+	         USING v_tablename;
+	    ELSE
+	    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+			with ordinality arr(item_object, position) where formname =$1
+			and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' group by tabname) b,
+			config_form_tabs WHERE formname =$1)a'
+			 INTO form_tabs
+	         USING v_tablename;
+	    END IF;
 
 	-- IF form_tabs is null and layer it's child layer it's child layer --> parent form_tabs is used
         IF v_linkpath IS NULL AND v_table_parent IS NOT NULL THEN
-        
-		-- Get form_tabs
-		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
-		tabactions as tabActions FROM config_form_tabs WHERE formname = $1) a'
-			INTO form_tabs
-			USING v_table_parent;	
+        	
+        	IF v_isgrafdelimiter OR upper(v_project_type) != 'WS' THEN
+			-- Get form_tabs
+				EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+				with ordinality arr(item_object, position) where formname =$1
+				and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
+				config_form_tabs WHERE formname =$1)a'
+				INTO form_tabs
+				USING v_table_parent;
+			ELSIF v_isepatoarc THEN
+				EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+				with ordinality arr(item_object, position) where formname =$1
+				and item_object->>''actionName'' != ''actionMapZone'' and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
+				config_form_tabs WHERE formname =$1)a'
+				INTO form_tabs
+		        USING v_table_parent;
+		    ELSIF v_isarcdivide THEN
+		    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+				with ordinality arr(item_object, position) where formname =$1
+				and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' 
+				and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
+				config_form_tabs WHERE formname =$1)a'
+				INTO form_tabs
+		        USING v_table_parent;
+			ELSE
+		    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+				with ordinality arr(item_object, position) where formname =$1
+				and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' group by tabname) b,
+				config_form_tabs WHERE formname =$1)a'
+				INTO form_tabs
+		        USING v_table_parent;
+		    END IF;
 	END IF;
 
 	-- Getting actions and layer manager
@@ -564,11 +659,9 @@ BEGIN
 
 	-- Feature info
 	v_featureinfo := json_build_object('permissions',v_permissions,'tableName',v_tablename,'idName',v_idname,'id',v_id,
-		'featureType',v_featuretype, 'childType', v_childtype, 'tableParent',v_table_parent,
+		'featureType',v_featuretype, 'childType', v_childtype, 'tableParent',v_table_parent, 'schemaName', v_schemaname,
 		'geometry', v_geometry, 'zoomCanvasMargin',concat('{"mts":"',v_canvasmargin,'"}')::json, 'vdefaultValues',v_vdefault_array);
 
-	-- Get toggledition parameter
-	EXECUTE 'SELECT value::boolean FROM config_param_user WHERE parameter = ''qgis_toggledition_forceopen''' INTO v_toggledition;
 
 	v_tablename:= (to_json(v_tablename));
 	v_table_parent:= (to_json(v_table_parent));
@@ -592,13 +685,11 @@ BEGIN
 	v_parentfields := COALESCE(v_parentfields, '{}');
 	v_fields := COALESCE(v_fields, '{}');
 	v_message := COALESCE(v_message, '{}');
-	v_toggledition := COALESCE(v_toggledition, FALSE);
 
 	--    Return
 	-----------------------
-	RETURN gw_fct_json_create_return(('{"status":"'||v_status||'", "message":'||v_message||', "apiVersion":' || v_version ||
+	RETURN ('{"status":"'||v_status||'", "message":'||v_message||', "apiVersion":' || v_version ||
 	      ',"body":{"form":' || v_forminfo ||
-		     ', "toggledition":'|| v_toggledition ||
 		     ', "feature":'|| v_featureinfo ||
 		      ',"data":{"linkPath":' || v_linkpath ||
 		      	      ',"editable":' || v_editable ||
@@ -606,7 +697,7 @@ BEGIN
 			      ',"fields":' || v_fields || 
 			      '}'||
 			'}'||
-		'}')::json, 2582);
+		'}')::json;
 
 	-- Exception handling
 	-- EXCEPTION WHEN OTHERS THEN

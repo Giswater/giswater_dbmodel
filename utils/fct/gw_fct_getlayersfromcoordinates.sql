@@ -24,7 +24,7 @@ SELECT SCHEMA_NAME.gw_fct_getlayersfromcoordinates($${
 
 DECLARE
 
-v_point geometry;
+v_point public.geometry;
 v_sensibility float;
 v_sensibility_f float;
 v_ids json[];
@@ -216,12 +216,12 @@ BEGIN
 	fields := COALESCE(fields, '[]');    
 
 	-- Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "version":'||v_version||
+	RETURN ('{"status":"Accepted", "version":'||v_version||
              ',"body":{"message":{"level":1, "text":"This is a test message"}'||
 			',"form":{}'||
 			',"feature":{}'||
 			',"data":{"layersNames":' || fields ||'}}'||
-	    '}')::json, 2590);
+	    '}')::json;
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN 

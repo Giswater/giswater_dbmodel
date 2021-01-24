@@ -44,6 +44,7 @@ v_vdefault boolean;
 v_delnetwork boolean;
 v_removedemand boolean;
 v_fid integer = 227;
+v_error_context text;
 	
 BEGIN
 
@@ -71,6 +72,10 @@ BEGIN
 	-- delete audit table
 	DELETE FROM audit_check_data WHERE fid = v_fid AND cur_user=current_user;
 	DELETE FROM audit_log_data WHERE fid = v_fid AND cur_user=current_user;
+
+	-- force only state 1 selector
+	DELETE FROM selector_state WHERE cur_user=current_user;
+	INSERT INTO selector_state (state_id, cur_user) VALUES (1, current_user);
 	
 	-- setting variables
 	v_input = concat('{"data":{"parameters":{"resultId":"',v_result,'", "fid":227}}}')::json;
@@ -97,34 +102,25 @@ BEGIN
 	END IF;
 
 	-- check consistency for user options 
-	SELECT gw_fct_pg2epa_check_options(v_input)
-		INTO v_return;
+	SELECT gw_fct_pg2epa_check_options(v_input) INTO v_return;
 	IF v_return->>'status' = 'Failed' THEN
 		--v_return = replace(v_return::text, 'Failed', 'Accepted');
 		RETURN v_return;
 	END IF;
-
-	IF v_usenetworkgeom IS TRUE THEN
-
-		-- delete rpt_* tables keeping rpt_inp_tables
-		DELETE FROM rpt_arc WHERE result_id = v_result;
-		DELETE FROM rpt_node WHERE result_id = v_result;
-		DELETE FROM rpt_energy_usage WHERE result_id = v_result;
-		DELETE FROM rpt_hydraulic_status WHERE result_id = v_result;
-		DELETE FROM rpt_node WHERE result_id = v_result;	
-		DELETE FROM rpt_inp_pattern_value WHERE result_id = v_result;
-	ELSE 
 	
-		RAISE NOTICE '1 - check system data';
+	RAISE NOTICE '1 - Upsert on rpt_cat_table and set selectors';
+	DELETE FROM rpt_cat_result WHERE result_id=v_result;
+	INSERT INTO rpt_cat_result (result_id, inpoptions) VALUES (v_result, v_inpoptions);
+	DELETE FROM selector_inp_result WHERE cur_user=current_user;
+	INSERT INTO selector_inp_result (result_id, cur_user) VALUES (v_result, current_user);
+
+	-- when existing network is used (check on go2epa dialog)
+	IF v_usenetworkgeom IS NOT TRUE THEN
+	
+		RAISE NOTICE '2 - check system data';
 		IF v_checkdata THEN
 			PERFORM gw_fct_pg2epa_check_data(v_input);
 		END IF;
-			
-		RAISE NOTICE '2 - Upsert on rpt_cat_table and set selectors';
-		DELETE FROM rpt_cat_result WHERE result_id=v_result;
-		INSERT INTO rpt_cat_result (result_id, inpoptions) VALUES (v_result, v_inpoptions);
-		DELETE FROM selector_inp_result WHERE cur_user=current_user;
-		INSERT INTO selector_inp_result (result_id, cur_user) VALUES (v_result, current_user);
 
 		RAISE NOTICE '3 - Fill inprpt tables';
 		PERFORM gw_fct_pg2epa_fill_data(v_result);
@@ -186,19 +182,24 @@ BEGIN
 	RAISE NOTICE '14 - Setting dscenarios';
 	PERFORM gw_fct_pg2epa_dscenario(v_result);
 	
-	RAISE NOTICE '15 - Setting valve status';
-	PERFORM gw_fct_pg2epa_valve_status(v_result);
+	-- when existing network is not used (check on go2epa dialog)
+	IF v_usenetworkgeom IS NOT TRUE THEN
+
+		RAISE NOTICE '15 - Setting valve status';
+		PERFORM gw_fct_pg2epa_valve_status(v_result);
 		
-	RAISE NOTICE '16 - Advanced settings';
-	IF v_advancedsettings THEN
-		PERFORM gw_fct_pg2epa_advancedsettings(v_result);
-	END IF;
+		RAISE NOTICE '16 - Advanced settings';
+		IF v_advancedsettings THEN
+			PERFORM gw_fct_pg2epa_advancedsettings(v_result);
+		END IF;
 	
-	RAISE NOTICE '17 - Check result network';
-	IF v_checknetwork THEN
-		PERFORM gw_fct_pg2epa_check_network(v_input);	
+		RAISE NOTICE '17 - Check result network';
+		IF v_checknetwork THEN
+			PERFORM gw_fct_pg2epa_check_network(v_input);	
+		END IF;
 	END IF;
-		
+
+	-- when delete network is enabled (variable of inp_options_debug)
 	IF v_delnetwork THEN
 		RAISE NOTICE '18 - Delete disconnected arcs with associated nodes';
 		INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) SELECT v_fid, arc_id, arc_type, '18 - Delete disconnected arcs with associated nodes'
@@ -220,6 +221,16 @@ BEGIN
 		DELETE FROM temp_arc WHERE arc_id IN (SELECT arc_id FROM anl_arc WHERE fid = 103 AND cur_user=current_user);
 	END IF;
 
+	-- update values from inp_*_importinp tables
+	UPDATE temp_arc t SET status = b.status, diameter = b.diameter, epa_type ='VALVE',
+	addparam = concat('{"valv_type":"',valv_type,'", "coef_loss":"',coef_loss,'", "curve_id":"',curve_id,'", "flow":"',flow,'", "pressure":"',pressure,'", "status":"',b.status,'", "minorloss":"',b.minorloss,'"}')
+	FROM inp_valve_importinp b WHERE t.arc_id = b.arc_id;
+
+	UPDATE temp_arc t SET status = b.status, epa_type ='PUMP',
+	addparam = concat('{"power":"',power,'", "speed":"',speed,'", "curve_id":"',curve_id,'", "pattern":"',pattern,'", "energyparam":"',energyparam,'", "status":"',b.status,'", "energyvalue":"',b.energyvalue,'"}')
+	FROM inp_pump_importinp b WHERE t.arc_id = b.arc_id;
+
+	-- when is forced to remove demand on disconnected nodes (variable of inp_options_debug)
 	IF v_removedemand THEN
 		RAISE NOTICE '21 Set demand = 0 for dry nodes';
 		UPDATE temp_node n SET demand = 0 FROM anl_node a WHERE fid = 132 AND cur_user = current_user AND a.node_id = n.node_id;
@@ -229,20 +240,29 @@ BEGIN
 	SELECT gw_fct_pg2epa_check_result(v_input) INTO v_return ;
 
 	RAISE NOTICE '23 - Profilactic last control';
+	
 	-- arcs without nodes
-	INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) SELECT v_fid, arc_id, arc_type, '23 - Profilactic last delete'
-	FROM temp_arc WHERE node_1 NOT IN (SELECT node_id FROM temp_node);
-	INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) SELECT v_fid, arc_id, arc_type, '23 - Profilactic last delete'
-	FROM temp_arc WHERE node_2 NOT IN (SELECT node_id FROM temp_node);
-	DELETE FROM temp_arc WHERE node_1 NOT IN (SELECT node_id FROM temp_node);
-	DELETE FROM temp_arc WHERE node_2 NOT IN (SELECT node_id FROM temp_node);
-
+	INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) 
+	SELECT v_fid, arc_id, arc_type, '23 - Profilactic last delete' FROM temp_arc JOIN temp_node ON node_1=node_id WHERE temp_node.node_id is null;
+	INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) 
+	SELECT v_fid, arc_id, arc_type, '23 - Profilactic last delete' FROM temp_arc JOIN temp_node ON node_2=node_id WHERE temp_node.node_id is null;
+	
+	DELETE FROM temp_arc WHERE id IN (SELECT a.id FROM temp_arc a JOIN temp_node ON node_1=node_id WHERE temp_node.node_id is null);
+	DELETE FROM temp_arc WHERE id IN (SELECT a.id FROM temp_arc a JOIN temp_node ON node_2=node_id WHERE temp_node.node_id is null);
+	
 	-- nodes without arcs
-	INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) SELECT v_fid, node_id, node_type, '23 - Profilactic last delete'
-	FROM temp_node WHERE node_id NOT IN (SELECT node_1 FROM temp_arc UNION SELECT node_2 FROM temp_arc);
-	DELETE FROM temp_node WHERE node_id NOT IN (SELECT node_1 FROM temp_arc UNION SELECT node_2 FROM temp_arc);
+	INSERT INTO audit_log_data (fid, feature_id, feature_type, log_message) 
+	SELECT v_fid, node_id, node_type, '23 - Profilactic last delete' FROM temp_node 
+	WHERE id IN (SELECT id FROM temp_node LEFT JOIN (SELECT node_1 as node_id FROM temp_arc UNION SELECT node_2 FROM temp_arc) a USING (node_id) WHERE a.node_id is null);
+	
+	DELETE FROM temp_node 
+	WHERE id IN (SELECT id FROM temp_node LEFT JOIN (SELECT node_1 as node_id FROM temp_arc UNION SELECT node_2 FROM temp_arc) a USING (node_id) WHERE a.node_id is null);
 
-	-- values without value
+	-- update shortpipe/valve diameter USING neighbourg
+	UPDATE temp_arc SET diameter = dint FROM (SELECT node_1 as n, diameter dint FROM temp_arc UNION SELECT node_2, diameter FROM temp_arc)t WHERE t.dint IS NOT NULL AND t.n = node_1 AND epa_type IN ('SHORTPIPE', 'VALVE') AND diameter IS NULL;
+	UPDATE temp_arc SET diameter = dint FROM (SELECT node_1 as n, diameter dint FROM temp_arc UNION SELECT node_2, diameter FROM temp_arc)t WHERE t.dint IS NOT NULL AND t.n = node_2 AND epa_type IN ('SHORTPIPE', 'VALVE') AND diameter IS NULL;
+
+	-- other null values
 	UPDATE temp_arc SET minorloss = 0 WHERE minorloss IS NULL;
 	UPDATE temp_arc SET status = 'OPEN' WHERE status IS NULL OR status = '';
 
@@ -256,18 +276,22 @@ BEGIN
 	SELECT result_id, arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, diameter, roughness, length, status, the_geom, expl_id, flw_code, minorloss, addparam, arcparent 
 	FROM temp_arc;
 
-	RAISE NOTICE '25 - Create the inp file structure';	
+	RAISE NOTICE '25 - Getting inp file';	
 	SELECT gw_fct_pg2epa_export_inp(v_result, null) INTO v_file;
-	
-	-- manage return message
+
+	-- manage return
 	v_body = gw_fct_json_object_set_key((v_return->>'body')::json, 'file', v_file);
 	v_return = gw_fct_json_object_set_key(v_return, 'body', v_body);
-	v_return =  gw_fct_json_object_set_key (v_return, 'continue', false);                                
-	v_return =  gw_fct_json_object_set_key (v_return, 'steps', 0);
 	v_return = replace(v_return::text, '"message":{"level":1, "text":"Data quality analysis done succesfully"}', 
 	'"message":{"level":1, "text":"Inp export done succesfully"}')::json;
 
 	RETURN v_return;
+
+	-- Exception handling
+	EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

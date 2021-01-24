@@ -16,7 +16,7 @@ DECLARE
     v_new_value_param text;
     v_query_text text;
     visit_table text;
-    v_visit_type integer;
+    v_visit_type integer;    
     
 BEGIN
 
@@ -24,9 +24,9 @@ BEGIN
     visit_class:= TG_ARGV[0];
 
     visit_table=(SELECT lower(feature_type) FROM config_visit_class WHERE id=visit_class);
-
+    
     --INFO: v_visit_type=1 (planned) v_visit_type=2(unexpected/incidencia)	
-    v_visit_type=(SELECT visit_type FROM om_visit_class WHERE id=visit_class);
+    v_visit_type=(SELECT visit_type FROM config_visit_class WHERE id=visit_class);
 
 
     IF TG_OP = 'INSERT' THEN
@@ -62,11 +62,11 @@ BEGIN
 
 
 	-- Get related parameters(events) from visit_class
-	v_query_text='	SELECT * FROM config_visit_parameter
+	v_query_text='	SELECT * FROM config_visit_parameter 
 			JOIN config_visit_class_x_parameter on config_visit_class_x_parameter.parameter_id=config_visit_parameter.id
 			JOIN config_visit_class ON config_visit_class.id=config_visit_class_x_parameter.class_id
 			WHERE config_visit_class.id='||visit_class||' AND config_visit_class.ismultievent is true 
-			AND config_visit_parameter.active IS TRUE AND config_visit_class_x_parameter.active IS TRUE';
+			AND config_visit_class_x_parameter.active IS TRUE AND config_visit_parameter.active IS TRUE';
 
 	FOR v_parameters IN EXECUTE v_query_text
         LOOP
@@ -107,11 +107,11 @@ BEGIN
 	END IF;
 
    	-- Get related parameters(events) from visit_class
-	v_query_text='	SELECT * FROM config_visit_parameter
+	v_query_text='	SELECT * FROM config_visit_parameter 
 			JOIN config_visit_class_x_parameter on config_visit_class_x_parameter.parameter_id=config_visit_parameter.id
 			JOIN config_visit_class ON config_visit_class.id=config_visit_class_x_parameter.class_id
 			WHERE config_visit_class.id='||visit_class||' AND config_visit_class.ismultievent is true
-			AND config_visit_parameter.active IS TRUE AND config_visit_class_x_parameter.active IS TRUE';
+			AND config_visit_class_x_parameter.active IS TRUE AND config_visit_parameter.active IS TRUE';
 
 	FOR v_parameters IN EXECUTE v_query_text 
 	LOOP
@@ -128,8 +128,7 @@ BEGIN
     ELSIF TG_OP = 'DELETE' THEN
             DELETE FROM om_visit CASCADE WHERE id = OLD.visit_id ;
 
-     --PERFORM gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"message":"3", "function":"XXX","debug_msg":null, "variables":null}}$$)
-
+    --  PERFORM audit_function(3); 
         RETURN NULL;
     
     END IF;
@@ -138,4 +137,3 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-

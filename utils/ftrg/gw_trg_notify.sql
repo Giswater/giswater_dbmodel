@@ -59,21 +59,19 @@ BEGIN
 
 
 		IF v_enabled = 'true'  THEN
-
 			--transform notifications with layer name as input parameters
 			IF v_featuretype != '[]' THEN
 				
-
 				--loop over input featureType in order to capture the layers related to feature type
 				FOR rec_layers IN SELECT * FROM json_array_elements_text(v_featuretype::json) LOOP
 					--select only child and parent layers of active features
 					EXECUTE 'SELECT json_agg(child_layer) FROM cat_feature where active IS TRUE
 					AND lower(feature_type) = '''||(rec_layers)||''''
 					INTO v_child_layer;
-					
-					EXECUTE ' SELECT  json_agg(DISTINCT parent_layer) FROM cat_feature WHERE lower(feature_type) = '''||(rec_layers)||''' and parent_layer is not null'
+						
+					EXECUTE ' SELECT  json_agg(DISTINCT parent_layer) FROM cat_feature WHERE lower(feature_type) = '''||(rec_layers)||''''
 					INTO v_parent_layer;
-	
+
 					--concatenate the notification out of parameters
 					--concatenation for arc,node,connec,gully which have child layers
 					IF v_parent_layer IS NOT NULL THEN
@@ -103,11 +101,10 @@ BEGIN
 
 							END IF;
 						END IF;
+
 					ELSE 
-					
 						--remove parenthesis from the feature_types
-						v_featuretype_replaced = concat('"',rec_layers,'"');
-						
+						v_featuretype_replaced = replace(replace(v_featuretype,'[',''),']','');
 						--concatenation for other layers
 						IF v_channel = 'desktop' THEN
 							IF v_notification_data_desktop IS NOT NULL AND v_notification_data_desktop!=v_featuretype_replaced THEN

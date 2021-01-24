@@ -42,14 +42,15 @@ BEGIN
     IF TG_OP = 'INSERT' THEN
 
      	
-       	IF v_isutils IS FALSE OR v_isutils IS NULL THEN	
+       	IF v_isutils IS FALSE THEN	
        		--get muni and expl_id value if its null
             IF NEW.muni_id IS NULL THEN
-				NEW.muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+				NEW.muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+				AND active IS TRUE LIMIT 1);
 			END IF;
 			
 			IF NEW.expl_id IS NULL THEN
-					NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id := (SELECT expl_id FROM exploitation WHERE active IS TRUE AND ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
 			END IF;
 
 			INSERT INTO ext_address( id, muni_id, postcode, streetaxis_id, postnumber, plot_id, the_geom, expl_id)
@@ -59,7 +60,7 @@ BEGIN
     		--get muni value if its null
     		IF NEW.muni_id IS NULL THEN
 				 EXECUTE 'SELECT muni_id FROM '||v_schema_utils||'.municipality 
-				 WHERE ST_DWithin($1, municipality.the_geom,0.001) LIMIT 1'
+				 WHERE active IS TRUE AND ST_DWithin($1, municipality.the_geom,0.001) LIMIT 1'
 				 USING NEW.the_geom
 				 INTO NEW.muni_id;
 			END IF;
@@ -68,7 +69,7 @@ BEGIN
     		IF v_project_type = 'WS' THEN
     			--get expl_id value if its null
     			IF NEW.expl_id IS NULL THEN
-				 	EXECUTE 'SELECT expl_id FROM exploitation WHERE ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
+				 	EXECUTE 'SELECT expl_id FROM exploitation WHERE active IS TRUE AND ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
 				 	USING NEW.the_geom
 					INTO v_ws_expl_id;
 				END IF;
@@ -76,7 +77,7 @@ BEGIN
 				--get expl_id value of the oposite schema
 	    		IF v_ud_schema IS NOT NULL THEN
 					EXECUTE 'SELECT expl_id FROM '||v_ud_schema||'.exploitation 
-					WHERE ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
+					WHERE active IS TRUE AND ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
 					USING NEW.the_geom
 					INTO v_ud_expl_id;
 				END IF;
@@ -84,7 +85,7 @@ BEGIN
 	    	ELSIF  v_project_type = 'UD' THEN
 	    		--get expl_id value if its null
 	    		IF NEW.expl_id IS NULL THEN
-				 	EXECUTE 'SELECT expl_id FROM exploitation WHERE ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
+				 	EXECUTE 'SELECT expl_id FROM exploitation WHERE active IS TRUE AND ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
 				 	USING NEW.the_geom
 					INTO v_ud_expl_id;
 				END IF;
@@ -92,7 +93,7 @@ BEGIN
 				--get expl_id value of the oposite schema
 	    		IF v_ws_schema IS NOT NULL THEN
 					EXECUTE 'SELECT expl_id FROM '||v_ws_schema||'.exploitation 
-					WHERE ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
+					WHERE active IS TRUE AND ST_DWithin($1, exploitation.the_geom,0.001) LIMIT 1'
 					USING NEW.the_geom
 					INTO v_ws_expl_id;
 				END IF;
@@ -111,7 +112,7 @@ BEGIN
           
     ELSIF TG_OP = 'UPDATE' THEN
 
-		IF v_isutils IS FALSE OR v_isutils IS NULL THEN				
+		IF v_isutils IS FALSE THEN				
 			UPDATE ext_address 
 			SET id=NEW.id, muni_id=NEW.muni_id, postcode=NEW.postcode, streetaxis_id=NEW.streetaxis_id, 
 			postnumber=NEW.postnumber, plot_id=NEW.plot_id, the_geom=NEW.the_geom, expl_id=NEW.expl_id
@@ -134,7 +135,7 @@ BEGIN
 
 	ELSIF TG_OP = 'DELETE' THEN  		
 
-		IF v_isutils IS FALSE OR v_isutils IS NULL THEN	
+		IF v_isutils IS FALSE THEN	
 			DELETE FROM ext_address WHERE id=OLD.id;
 		ELSE
 			EXECUTE 'DELETE FROM '||v_schema_utils||'.address WHERE id=$1'

@@ -5,36 +5,44 @@ This version of Giswater is provided by Giswater Association
 */
 
 --FUNCTION CODE: 2496
-
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_repair_arc();
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_arc_repair(p_data json) RETURNS json AS
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_arc_repair(p_data json)
+  RETURNS json AS
 $BODY$
 
 /*EXAMPLE
+SELECT SCHEMA_NAME.gw_fct_arc_repair()
 
 -- fid: 103, 104
 
-SELECT SCHEMA_NAME.gw_fct_arc_repair($${
+-- MODE 1: individual
+SELECT gw_fct_arc_repair($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "form":{}, "feature":{"tableName":"v_edit_arc",
 "featureType":"ARC", "id":["2094"]},
 "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"previousSelection",
 "parameters":{}}}$$);
 
+-- MODE 2: massive using id as array
+SELECT gw_fct_arc_repair($${"client":{"device":4, "infoType":1,"lang":"ES"},"feature":{"id":
+"SELECT array_to_json(array_agg(arc_id::text)) FROM arc WHERE expl_id='||v_expl||' AND (node_1 IS NULL OR node_2 IS NULL)"},
+"data":{}}$$);';
 
+-- MODE 3: massive usign pure SQL
+SELECT gw_fct_arc_repair(concat('
+{"client":{"device":4, "infoType":1, "lang":"ES"},"form":{}, "feature":{"tableName":"v_edit_arc","featureType":"ARC", "id":["',arc_id,'"]},
+"data":{"filterFields":{}, "pageInfo":{}, "parameters":{}}}')::json) FROM arc WHERE expl_id=v_expl AND (node_1 IS NULL OR node_2 IS NULL);
 */
 
 DECLARE
  
-arcrec text;
+arcrec Record;
 v_count integer;
 v_count_partial integer=0;
 v_result text;
 v_version text;
 v_projecttype text;
 v_saveondatabase boolean;
-v_feature_text text;
-v_feature_array text[];
 
 v_id json;
 v_selectionmode text;
@@ -48,16 +56,6 @@ BEGIN
 
 	SET search_path= 'SCHEMA_NAME','public';
 
-	-- Get parameters from input json
-	v_feature_text = ((p_data ->>'feature')::json->>'id'::text);
-
-    IF v_feature_text ILIKE '[%]' THEN
-		v_feature_array = ARRAY(SELECT json_array_elements_text(v_feature_text::json)); 		
-    ELSE 
-		EXECUTE v_feature_text INTO v_feature_text;
-		v_feature_array = ARRAY(SELECT json_array_elements_text(v_feature_text::json)); 
-    END IF;
-    
 	-- Delete previous log results
 	DELETE FROM anl_arc WHERE fid=118 AND cur_user=current_user;
 	DELETE FROM anl_arc WHERE fid=103 AND cur_user=current_user;
@@ -75,6 +73,7 @@ BEGIN
     
 	-- Set config parameter
 	UPDATE config_param_system SET value=TRUE WHERE parameter='edit_topocontrol_disable_error' ;
+
 
 	-- execute
 	IF v_array='()' OR v_array IS NULL THEN
@@ -106,6 +105,8 @@ BEGIN
 	INSERT INTO audit_check_data (fid, error_message) VALUES (118, concat ('Repaired arcs: arc_id --> ', 
 	(SELECT array_agg(arc_id) FROM (SELECT arc_id FROM anl_arc WHERE fid=118 AND cur_user=current_user)a )));
 	
+		
+
 	-- Set config parameter
 	UPDATE config_param_system SET value=FALSE WHERE parameter='edit_topocontrol_disable_error' ;
 	
@@ -135,14 +136,15 @@ BEGIN
 	v_result_point := COALESCE(v_result_point, '{}'); 
 	v_result_line := COALESCE(v_result_line, '{}'); 
 	
-	--  Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
+--  Return
+    RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||
-			'}}'||
-	    '}')::json, 2496);
+				'"line":'||v_result_line||','||
+				'"setVisibleLayers":[]'||
+		       '}}'||
+	    '}')::json;
     
 END;  
 $BODY$

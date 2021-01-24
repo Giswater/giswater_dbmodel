@@ -45,7 +45,7 @@ BEGIN
 	SET search_path = "SCHEMA_NAME", public;
 
 	--Delete previous
-	TRUNCATE temp_csv;
+	DELETE FROM temp_csv WHERE cur_user=current_user AND fid = v_fid;
 
 	-- get parameters to put on header
 	SELECT result_id INTO result_id_aux FROM selector_inp_result where cur_user=current_user;
@@ -61,16 +61,18 @@ BEGIN
 
 	--writing the header
 	INSERT INTO temp_csv (source, csv1,fid) VALUES ('header','[TITLE]',v_fid);
-	INSERT INTO temp_csv (source, csv1,fid) VALUES ('header',';INP file created by Giswater, the water management open source tool',v_fid);
+	INSERT INTO temp_csv (source, csv1,fid) VALUES ('header',concat(';Created by Giswater'),v_fid);
+	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Giswater version: ',(SELECT giswater FROM sys_version ORDER BY id DESC LIMIT 1), v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Project name: ',title_aux, v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Result name: ',p_result_id,v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Export mode: ', v_networkmodeval, v_fid );
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Demand type: ', v_demandtypeval, v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Pattern method: ', v_patternmethodval, v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Valve mode: ', v_valvemodeval, v_fid);
+	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Default values: ',
+	(SELECT value FROM config_param_user WHERE parameter = 'inp_options_vdefault' AND cur_user = current_user), v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';Datetime: ',left((date_trunc('second'::text, now()))::text, 19),v_fid);
 	INSERT INTO temp_csv (source, csv1,csv2,fid) VALUES ('header',';User: ',current_user, v_fid);
-	INSERT INTO temp_csv (csv1,fid) VALUES (NULL,v_fid);
 
 	--node
 	FOR rec_table IN SELECT * FROM config_fprocess WHERE fid=v_fid order by orderby
@@ -85,8 +87,8 @@ BEGIN
 			num_column = 2;
 		ELSE 
 			INSERT INTO temp_csv (fid,csv1,csv2,csv3,csv4,csv5,csv6,csv7,csv8,csv9,csv10,csv11,csv12,csv13)
-			SELECT v_fid,rpad(concat(';',c1),20),rpad(c2,20),rpad(c3,20),rpad(c4,20),rpad(c5,20),rpad(c6,20),rpad(c7,20),rpad(c8,20),rpad(c9,20),rpad(c10,20),
-			rpad(c11,20),rpad(c12,20),rpad(c13,20)
+			SELECT v_fid,rpad(concat(';',c1),22),rpad(c2,22),rpad(c3,22),rpad(c4,22),rpad(c5,22),rpad(c6,22),rpad(c7,22),rpad(c8,22),rpad(c9,22),rpad(c10,22),
+			rpad(c11,22),rpad(c12,22),rpad(c13,22)
 			FROM crosstab('SELECT table_name::text,  data_type::text, column_name::text FROM information_schema.columns WHERE table_schema =''SCHEMA_NAME'' and table_name='''||
 			rec_table.tablename||'''::text') 
 			AS rpt(table_name text, c1 text, c2 text, c3 text, c4 text, c5 text, c6 text, c7 text, c8 text, c9 text, c10 text, c11 text, c12 text, c13 text);
@@ -100,9 +102,9 @@ BEGIN
 		FOR num_col_rec IN 1..num_column
 		LOOP
 			IF num_col_rec=1 then
-				EXECUTE 'UPDATE temp_csv set csv1=rpad('';-------'',20) WHERE id='||id_last||';';
+				EXECUTE 'UPDATE temp_csv set csv1=rpad('';----------'',22) WHERE id='||id_last||';';
 			ELSE
-				EXECUTE 'UPDATE temp_csv SET csv'||num_col_rec||'=rpad(''-------'',20) WHERE id='||id_last||';';
+				EXECUTE 'UPDATE temp_csv SET csv'||num_col_rec||'=rpad(''----------'',22) WHERE id='||id_last||';';
 			END IF;
 		END LOOP;
 
@@ -120,7 +122,7 @@ BEGIN
 			FOR num_col_rec IN 1..num_column::integer
 			LOOP
 				IF num_col_rec < num_column::integer THEN
-					EXECUTE 'UPDATE temp_csv SET csv'||num_col_rec||'=rpad(csv'||num_col_rec||',20) WHERE source='''||rec_table.tablename||''';';
+					EXECUTE 'UPDATE temp_csv SET csv'||num_col_rec||'=rpad(csv'||num_col_rec||',22) WHERE source='''||rec_table.tablename||''';';
 				END IF;
 			END LOOP;
 		END IF;
@@ -133,19 +135,28 @@ BEGIN
 	END IF;
 
 	-- build return
-	select (array_to_json(array_agg(row_to_json(row))))::json  -- spacer-19 it's used because a rare bug reading epanet when spacer=20 on target [PATTERNS]????
+	select (array_to_json(array_agg(row_to_json(row))))::json 
 	into v_return 
-		from ( select text from
-		(select id, concat(rpad(csv1,18), ' ', csv2)as text from temp_csv where fid  = 141 and cur_user = current_user and source is null
+		from ( select text from (
+			select id, concat(rpad(csv1,20), ' ', rpad(csv2,20), ' ', rpad(csv3,20), ' ', rpad(csv4,20), ' ', rpad(csv5,20), ' ', rpad(csv6,20), ' ', rpad(csv7,20), ' ', 
+			rpad(csv8,20), ' ' , rpad(csv9,20), ' ', rpad(csv10,20), ' ', rpad(csv11,20), ' ', rpad(csv12,20)) 
+			as text from temp_csv where fid = 141 and cur_user = current_user and source is null
 		union
-		select id, concat(rpad(csv1,18), ' ', csv2)as text from temp_csv where fid  = 141 and cur_user = current_user and source in ('header')
+			select id, concat(rpad(csv1,22), ' ', csv2)as text from temp_csv where fid  = 141 and cur_user = current_user and source in ('header')
 		union
-		select id, csv1 as text from temp_csv where fid  = 141 and cur_user = current_user and source in ('vi_controls','vi_rules', 'vi_backdrop')
+			select id, csv1 as text from temp_csv where fid  = 141 and cur_user = current_user and source in ('vi_controls','vi_rules', 'vi_backdrop')
 		union
-		select id, concat(rpad(csv1,18),' ',rpad(csv2,18),' ', rpad(csv3,18),' ',rpad(csv4,18),' ',rpad(csv5,18),' ',rpad(csv6,18),' ',rpad(csv7,18),' ',
-		rpad(csv8,18),' ',rpad(csv9,18),' ',rpad(csv10,18),' ',rpad(csv11,18),' ',rpad(csv12,18),' ',rpad(csv13,18),' ',rpad(csv14,18),' ',rpad(csv15,18),' ',
-		rpad(csv15,18),' ',rpad(csv16,18),' ',rpad(csv17,18),' ', rpad(csv18,18), ' ', rpad(csv19,18),' ',rpad(csv20,18)) as text
-		from temp_csv where source not in ('header','vi_controls','vi_rules', 'vi_backdrop')
+			-- spacer-19 it's used because a rare bug reading epanet when spacer=20 on target [PATTERNS]????
+			select id, concat(rpad(csv1,19),' ',rpad(coalesce(csv2,''),19),' ', rpad(coalesce(csv3,''),19),' ',rpad(coalesce(csv4,''),19),' ',rpad(coalesce(csv5,''),19),
+			' ',rpad(coalesce(csv6,''),19),	' ',rpad(coalesce(csv7,''),19),' ',rpad(coalesce(csv8,''),19),' ',rpad(coalesce(csv9,''),19),' ',rpad(coalesce(csv10,''),19),
+			' ',rpad(coalesce(csv11,''),19),' ',rpad(coalesce(csv12,''),19),' ',rpad(csv13,19),' ',rpad(csv14,19)) as text
+			from temp_csv where fid  = 141 and cur_user = current_user and source in ('vi_patterns')
+		union
+			select id, concat(rpad(csv1,20),' ',rpad(coalesce(csv2,''),20),' ', rpad(coalesce(csv3,''),20),' ',rpad(coalesce(csv4,''),20),' ',rpad(coalesce(csv5,''),20),
+			' ',rpad(coalesce(csv6,''),20),	' ',rpad(coalesce(csv7,''),20),' ',rpad(coalesce(csv8,''),20),' ',rpad(coalesce(csv9,''),20),' ',rpad(coalesce(csv10,''),20),
+			' ',rpad(coalesce(csv11,''),20),' ',rpad(coalesce(csv12,''),20),' ',rpad(csv13,20),' ',rpad(csv14,20),' ',rpad(csv15,20),' ', rpad(csv15,20),' ',
+			rpad(csv16,20),	' ',rpad(csv17,20),' ', rpad(csv20,20), ' ', rpad(csv19,20),' ',rpad(csv20,20)) as text
+			from temp_csv where fid  = 141 and cur_user = current_user and source not in ('header','vi_controls','vi_rules', 'vi_backdrop','vi_patterns')
 		order by id)a )row;
 	
 	RETURN v_return;

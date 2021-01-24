@@ -132,7 +132,7 @@ BEGIN
 			dv_orderby_id AS "orderById", dv_isnullvalue AS "isNullValue", stylesheet, widgetcontrols
 			FROM config_form_fields 
 			LEFT JOIN typevalue a ON a.id = widgetfunction AND a.typevalue = ''widgetfunction_typevalue''
-			LEFT JOIN typevalue b ON b.id = widgettype AND a.typevalue = ''widgettype_typevalue''
+			LEFT JOIN typevalue b ON b.id = widgettype AND b.typevalue = ''widgettype_typevalue''
 			
 			WHERE formname = $1 AND formtype= $2 '||v_clause||' ORDER BY orderby) a'
 				INTO fields_array

@@ -14,11 +14,11 @@ $BODY$
 /*
 SELECT SCHEMA_NAME.gw_fct_mincut_result_overlap($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"form":{},"data":{"step":"check", "result":5}}$$)
+"form":{},"data":{"status":"check", "mincutId":5}}$$)
 
 SELECT SCHEMA_NAME.gw_fct_mincut_result_overlap($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"form":{}, "data":{"step":"continue", "result":333}}$$)
+"form":{}, "data":{"status":"continue", "mincutId":333}}$$)
 
 -- fid: 131,216
 
@@ -40,18 +40,17 @@ v_conflictarray integer[];
 v_id integer;
 v_querytext text;
 v_addaffconnecs integer;
-v_step text;
+v_status text;
 v_mincutid integer;
 v_result json;
 v_result_info json;
 v_result_point json;
 v_result_line json;
 v_result_pol json;
-v_visiblelayer text;
+v_visiblelayer text = '"v_om_mincut_arc", "v_om_mincut_node", "v_om_mincut_connec", "v_anl_mincut_init_point"';
 v_error_context text;
 v_signal text;
 v_geometry text;
-v_mincutdetails text;
 v_numarcs int4;
 v_length  float;
 v_volume float;
@@ -63,6 +62,8 @@ v_qmlpolygonpath text;
 v_qmllinepath text;
 v_qmlpointpath text;
 v_version record;
+v_selected text;
+v_arc_id text;
 
 
 BEGIN
@@ -71,9 +72,8 @@ BEGIN
 	SET search_path = "SCHEMA_NAME", public;
 
 	-- get input data 
-	v_step :=  ((p_data ->>'data')::json->>'step')::text;
-	v_mincutid :=  ((p_data ->>'data')::json->>'result')::integer;
-	v_visiblelayer := '"v_om_mincut_arc", "v_om_mincut_node", "v_om_mincut_connec", "v_anl_mincut_init_point"';
+	v_status :=  ((p_data ->>'data')::json->>'status')::text;
+	v_mincutid :=  ((p_data ->>'data')::json->>'mincutId')::integer;
 
 	-- Reset temporal tables
 	DELETE FROM audit_check_data WHERE fid = 216 and cur_user=current_user;
@@ -90,12 +90,30 @@ BEGIN
 	
 	-- Starting process
 	INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('MINCUT ANALYSIS'));
-	INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('--------------------------------------'));
+	INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('------------------------'));
 	INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Minimun cut have been checked looking for overlaps againts other mincuts'));
 
+	SELECT count(*) INTO v_count FROM selector_hydrometer JOIN ext_rtc_hydrometer_state ON state_id = id WHERE cur_user = current_user AND is_operative IS TRUE;
+	SELECT array_agg(a.c) INTO v_selected FROM (SELECT concat(state_id,'-',name) as c FROM selector_hydrometer 
+	JOIN ext_rtc_hydrometer_state ON state_id = id WHERE cur_user = current_user AND is_operative IS TRUE order by state_id) a;
+
+	-- log for hydrometer's state
+	IF v_count = 0 THEN
+		INSERT INTO audit_check_data (fid, error_message)
+		VALUES (216, concat ('WARNING: There are not values selected for hydrometer''s state with is_operative True. As result no hydrometer have been attached to this mincut'));
+	ELSIF v_count = 1 THEN
+		INSERT INTO audit_check_data (fid, error_message)
+		VALUES (216, concat ('INFO: There is one value for hydrometer''s state selected with is_operative True: ',v_selected,'.'));
+	ELSIF v_count > 1 THEN
+		INSERT INTO audit_check_data (fid, error_message)
+		VALUES (216, concat ('INFO: There are more than one hydrometer''s state selected with is_operative True: ', v_selected,'.'));
+	END IF;
+		
 	SELECT * INTO v_mincutrec FROM om_mincut WHERE id = v_mincutid;
 
-	IF v_step  = 'check' THEN
+	SELECT anl_feature_id INTO v_arc_id FROM om_mincut WHERE id = v_mincutid;
+	
+	IF v_status  = 'check' THEN
 
 		-- it's not possible to up this deletion because this values are used in case of ste = 'continue'
 		DELETE FROM anl_arc WHERE fid=131 and cur_user=current_user;
@@ -105,8 +123,8 @@ BEGIN
 		SELECT count(*) INTO v_count FROM om_mincut_arc WHERE result_id = v_mincutid;
 	    
 		-- timedate overlap control
-		FOR v_rec IN SELECT * FROM om_mincut
-		WHERE (forecast_start, forecast_end) OVERLAPS (v_mincutrec.forecast_start, v_mincutrec.forecast_end) AND id::text != v_mincutid::text
+		FOR v_rec IN SELECT * FROM om_mincut WHERE mincut_class=1 AND v_count>0
+		AND (forecast_start, forecast_end) OVERLAPS (v_mincutrec.forecast_start, v_mincutrec.forecast_end) AND id::text != v_mincutid::text
 		LOOP
 			-- if exist timedate overlap
 			IF v_rec.id IS NOT NULL THEN
@@ -309,10 +327,11 @@ BEGIN
 		-- mincut details
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'Mincut stats');
-		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '-----------------');
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '--------------');
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Minsector (arc_id): ', v_arc_id));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of arcs: ', (v_mincutrec.output->>'arcs')::json->>'number'));
-		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length'));
-		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume'));
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length', ' mts'));
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume', ' m3'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of connecs affected: ', (v_mincutrec.output->>'connecs')::json->>'number'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total of hydrometers affected: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'total'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Hydrometers classification: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'classified'));
@@ -351,7 +370,7 @@ BEGIN
 		FROM (SELECT arc_id, descript, the_geom
 		FROM  anl_arc WHERE cur_user="current_user"() AND fid=216) row) features;
 		v_result := COALESCE(v_result, '{}'); 
-		v_result_line = concat ('{"geometryType":"LineString", "layerName":"Overlap affected arcs", "qmlPath":"',v_qmllinepath,'", "features":',v_result, '}'); 
+		v_result_line = concat ('{"geometryType":"LineString", "layerName":"Other mincuts which overlaps", "qmlPath":"',v_qmllinepath,'", "features":',v_result, '}'); 
 
 		-- polygon
 		SELECT jsonb_agg(features.feature) INTO v_result
@@ -364,7 +383,7 @@ BEGIN
 		FROM (SELECT pol_id, descript, the_geom
 		FROM  anl_polygon WHERE cur_user="current_user"() AND fid=216) row) features;
 		v_result := COALESCE(v_result, '{}'); 
-		v_result_pol = concat ('{"geometryType":"MultiPolygon", "layerName":"Other mincuts which overlaps", "qmlPath":"',v_qmlpolygonpath,'", "features":',v_result, '}'); 
+		v_result_pol = concat ('{"geometryType":"MultiPolygon", "layerName":"Overlap affected arcs", "qmlPath":"',v_qmlpolygonpath,'", "features":',v_result, '}'); 
 
 		-- geometry (the boundary of mincut using arcs and valves)
 		EXECUTE ' SELECT st_astext(st_envelope(st_extent(st_buffer(the_geom,20)))) FROM (SELECT the_geom FROM om_mincut_arc WHERE result_id='||v_mincutid||
@@ -380,7 +399,7 @@ BEGIN
 		v_message := COALESCE(v_message, ''); 
 
 		--  Return
-		RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{'||v_message||'}, "version":"'||v_version.giswater||'"'||
+		RETURN ('{"status":"Accepted", "message":{'||v_message||'}, "version":"'||v_version.giswater||'"'||
 			',"body":{"form":{}'||
 			',"data":{ "info":'||v_result_info||','||
 				'"geometry":"'||v_geometry||'",'|| 			
@@ -388,15 +407,15 @@ BEGIN
 				'"line":'||v_result_line||','||
 				'"polygon":'||v_result_pol||','||
 				'"setVisibleLayers":['||v_visiblelayer||']}'||
-			', "actions":{"overlap":"' || v_signal || '"}}}')::json, 2244);
+			', "actions":{"overlap":"' || v_signal || '"}}}')::json;
 		
-	ELSIF v_step  = 'continue' THEN
-	
+	ELSIF v_status  = 'continue' THEN
+
 		-- update mincut details
 		INSERT INTO om_mincut_arc (arc_id, result_id, the_geom)	
 		SELECT arc_id, v_mincutid, the_geom FROM anl_arc WHERE fid = 131 AND cur_user = current_user AND result_id = '-2'
 		ON CONFLICT (arc_id, result_id) DO NOTHING;
-	
+
 		INSERT INTO om_mincut_connec (connec_id, result_id, the_geom)
 		SELECT connec_id, v_mincutid, the_geom FROM anl_connec WHERE fid = 131 AND cur_user = current_user AND result_id = '-2'
 		ON CONFLICT (connec_id, result_id) DO NOTHING;
@@ -428,10 +447,9 @@ BEGIN
 				
 		IF v_priority IS NULL THEN v_priority='{}'; END IF;
 	
-		v_mincutdetails = (concat('"arcs":{"number":"',v_numarcs,'", "length":"',v_length,'", "volume":"', 
-		v_volume, '"}, "connecs":{"number":"',v_numconnecs,'","hydrometers":{"total":"',v_numhydrometer,'","classified":',v_priority,'}}'));
+		v_output = (concat('{"minsector_id":"',v_arc_id,'","arcs":{"number":"',v_numarcs,'", "length":"',v_length,'", "volume":"', 
+		v_volume, '"}, "connecs":{"number":"',v_numconnecs,'","hydrometers":{"total":"',v_numhydrometer,'","classified":',v_priority,'}}}'));
 
-		v_output = concat ('{', v_mincutdetails , '}');
 			
 		--update output results and gettin it
 		UPDATE om_mincut SET output = v_output WHERE id = v_mincutid;
@@ -441,10 +459,11 @@ BEGIN
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'WARNING: Mincut have been executed with conflicts. All additional affetations have been joined to present mincut');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '');
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'Mincut stats (with additional affectations)');
-		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '----------------------------------------------------------');
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, '-----------------------------------------------');
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Minsector (arc_id): ', v_arc_id));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of arcs: ', (v_mincutrec.output->>'arcs')::json->>'number'));
-		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length'));
-		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume'));
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length', ' mts'));
+		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume', ' m3'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of connecs affected: ', (v_mincutrec.output->>'connecs')::json->>'number'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total of hydrometers affected: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'total'));
 		INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Hydrometers classification: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'classified'));
@@ -467,13 +486,13 @@ BEGIN
 		v_geometry := COALESCE(v_geometry, '{}'); 
 	
 		-- return
-		RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version.giswater||'"'||
+		RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version.giswater||'"'||
 			',"body":{"form":{}'||
 			',"data":{ "info":'||v_result_info||','||
 				  '"geometry":"'||v_geometry||'",'|| 			
 				  '"setVisibleLayers":['||v_visiblelayer||']'||
 			'}}'||
-			'}')::json, 2244);
+			'}')::json;
 	END IF;
 
 	EXCEPTION WHEN OTHERS THEN

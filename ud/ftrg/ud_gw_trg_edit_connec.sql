@@ -48,6 +48,13 @@ BEGIN
 		IF (SELECT matcat_id FROM cat_connec WHERE id = NEW.connecat_id) IS NOT NULL THEN
 			v_matfromcat = true;
 		END IF;
+
+		IF NEW.arc_id IS NOT NULL AND NEW.expl_id IS NOT NULL THEN
+			IF (SELECT expl_id FROM arc WHERE arc_id = NEW.arc_id) != NEW.expl_id THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3144", "function":"1204","debug_msg":"'||NEW.arc_id::text||'"}}$$);';
+			END IF;
+		END IF;
 		
 	END IF;
         
@@ -66,19 +73,19 @@ BEGIN
 		ELSIF (NEW.connec_type IS NULL) THEN
 			  NEW.connec_type:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_connectype_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			IF (NEW.connec_type IS NULL) THEN
-				NEW.connec_type:=(SELECT id FROM cat_feature_connec LIMIT 1);
+				NEW.connec_type:=(SELECT id FROM cat_feature_connec JOIN cat_feature USING (id) WHERE active IS TRUE LIMIT 1);
 			END IF;
 		END IF;
         
 		-- connec Catalog ID
 		IF (NEW.connecat_id IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_connec) = 0) THEN
+			IF ((SELECT COUNT(*) FROM cat_connec WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 				"data":{"message":"1022", "function":"1204","debug_msg":null}}$$);';
 			END IF;
 				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			IF (NEW.connecat_id IS NULL) THEN
-				NEW.connecat_id:=(SELECT id FROM cat_connec LIMIT 1);
+				NEW.connecat_id:=(SELECT id FROM cat_connec WHERE active IS TRUE LIMIT 1);
 			END IF;
 		END IF;
 		
@@ -86,7 +93,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
+			IF ((SELECT COUNT(*) FROM exploitation WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 		       	"data":{"message":"1110", "function":"1204","debug_msg":null}}$$);';
 			END IF;
@@ -98,9 +105,9 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
+				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -197,9 +204,10 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.muni_id IS NULL) THEN
-				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
+				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) AND active IS TRUE ;
 				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+					AND active IS TRUE  LIMIT 1);
 				ELSE
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -241,13 +249,8 @@ BEGIN
 
 		--check relation state - state_type
 		IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-			IF NEW.state IS NOT NULL THEN
-				v_sql = NEW.state;
-			ELSE
-				v_sql = 'null';
-			END IF;
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3036", "function":"1204","debug_msg":"'||v_sql::text||'"}}$$);'; 
+			"data":{"message":"3036", "function":"1204","debug_msg":"'||NEW.state::text||'"}}$$);'; 
 		END IF;		
 
 		-- Workcat_id
@@ -269,6 +272,9 @@ BEGIN
 		--Builtdate
 		IF (NEW.builtdate IS NULL) THEN
 			NEW.builtdate :=(SELECT "value" FROM config_param_user WHERE "parameter"='edit_builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.builtdate IS NULL) AND (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE THEN
+				NEW.builtdate :=date(now());
+			END IF;
 		END IF;
 
 		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature WHERE id=NEW.connec_type;
@@ -436,17 +442,26 @@ BEGIN
 		END IF;
 		
 		-- Reconnect arc_id
-		IF (NEW.arc_id != OLD.arc_id OR OLD.arc_id IS NULL) AND NEW.arc_id IS NOT NULL THEN  -- case when arc_id comes from connec table
-			UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
-			IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN			
-				EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
-				"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';	
-			ELSIF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connec_automatic_link' AND cur_user=current_user LIMIT 1) IS TRUE THEN
-				EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
-				"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';	
+		IF (NEW.arc_id != OLD.arc_id) OR (NEW.arc_id IS NOT NULL AND OLD.arc_id IS NULL) OR (NEW.arc_id IS NULL AND OLD.arc_id IS NOT NULL) THEN
+		
+			-- when arc_id comes from plan psector tables
+			IF (OLD.arc_id IN (SELECT arc_id FROM plan_psector_x_connec WHERE connec_id=NEW.connec_id)) THEN
+				UPDATE plan_psector_x_connec SET arc_id = NEW.arc_id WHERE connec_id=OLD.connec_id AND arc_id = OLD.arc_id;
+			ELSE
+				-- when arc_id comes from connec table			
+				UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
+				
+				IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
+
+					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
+					"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
+				
+				ELSIF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connec_automatic_link' AND cur_user=current_user LIMIT 1) IS TRUE THEN
+
+					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
+					"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
+				END IF;			
 			END IF;
-		ELSIF (OLD.arc_id != (SELECT arc_id FROM connec WHERE connec_id=NEW.connec_id)) THEN -- case when arc_id comes from plan psector tables
-			UPDATE plan_psector_x_connec SET arc_id= NEW.arc_id WHERE connec_id=NEW.connec_id AND arc_id = OLD.arc_id;		
 		END IF;
 		
 		-- State_type
@@ -461,12 +476,9 @@ BEGIN
 					END IF;
 				END IF;
 			END IF;
-			-- Control of automatic downgrade of associated link/vnode
-			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_downgrade_link'
-			AND cur_user=current_user LIMIT 1) IS TRUE THEN	
-				UPDATE link SET state=0 WHERE feature_id=OLD.connec_id;
-				UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
-			END IF;
+			-- Automatic downgrade of associated link/vnode
+			UPDATE link SET state=0 WHERE feature_id=OLD.connec_id;
+			UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
 			
 		END IF;
 

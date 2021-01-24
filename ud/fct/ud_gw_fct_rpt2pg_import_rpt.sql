@@ -38,14 +38,19 @@ v_version text;
 v_path text;
 v_result_id text;
 v_error_context text;
+v_epaversion text;
 
 BEGIN
 
 	--  Search path
 	SET search_path = "SCHEMA_NAME", public;
 
+
 	-- get system parameters
 	SELECT giswater  INTO v_version FROM sys_version order by 1 desc limit 1;
+
+	-- get user parameters
+	SELECT value INTO v_epaversion FROM config_param_user WHERE cur_user = current_user AND parameter = 'inp_options_epaversion';
 
 	-- get input data
 	v_result_id := ((p_data ->>'data')::json->>'resultId')::text;
@@ -58,6 +63,13 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (140, v_result_id, concat('IMPORT RPT FILE'));
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (140, v_result_id, concat('-----------------------------'));
 	
+	-- use the copy function of postgres to import from file in case of file must be provided as a parameter
+	IF v_path IS NOT NULL THEN
+		DELETE FROM temp_csv WHERE cur_user=current_user AND fid = v_fid;
+		EXECUTE 'COPY temp_csv (csv1, csv2, csv3, csv4, csv5, csv6, csv7, csv8, csv9, csv10, csv11, csv12) FROM '||quote_literal(v_path)||' WITH (NULL '''', FORMAT TEXT)';
+		UPDATE temp_csv SET fid = v_fid WHERE fid IS NULL AND cur_user=current_user;
+	END IF;
+	
 	--remove data from with the same result_id
 	FOR rpt_rec IN SELECT tablename FROM config_fprocess WHERE fid=v_fid EXCEPT SELECT tablename FROM config_fprocess WHERE tablename='rpt_cat_result'
 	LOOP
@@ -65,7 +77,7 @@ BEGIN
 	END LOOP;
 
 
-	FOR rpt_rec IN SELECT * FROM temp_csv order by id
+	FOR rpt_rec IN SELECT * FROM temp_csv WHERE cur_user=current_user AND fid = v_fid order by id
 	LOOP
 
 		IF (SELECT tablename FROM config_fprocess WHERE target=concat(rpt_rec.csv1,' ',rpt_rec.csv2) AND fid=v_fid) IS NOT NULL THEN
@@ -75,13 +87,13 @@ BEGIN
 		END IF;	
 						
 		IF type_aux='rpt_cat_result' THEN
-			UPDATE rpt_cat_result set flow_units=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Flow Units%' and result_id=v_result_id;
-			UPDATE rpt_cat_result set rain_runof=rpt_rec.csv3 WHERE rpt_rec.csv1 ilike 'Rainfall/Runoff%' and result_id=v_result_id;
-			UPDATE rpt_cat_result set snowmelt=rpt_rec.csv3 WHERE rpt_rec.csv1 ilike 'Snowmelt%' and result_id=v_result_id;
-			UPDATE rpt_cat_result set groundw=rpt_rec.csv3 WHERE rpt_rec.csv1 ilike 'Groundwater%' and result_id=v_result_id;
-			UPDATE rpt_cat_result set flow_rout=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3) ilike 'Flow Routing ...........%' and result_id=v_result_id;
-			UPDATE rpt_cat_result set pond_all=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Ponding Allowed%' and result_id=v_result_id;
-			UPDATE rpt_cat_result set water_q=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Water Quality%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set flow_units=SUBSTRING(rpt_rec.csv4,1,3) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Flow Units%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set rain_runof=SUBSTRING(rpt_rec.csv3,1,3) WHERE rpt_rec.csv1 ilike 'Rainfall/Runoff%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set snowmelt=SUBSTRING(rpt_rec.csv3,1,3) WHERE rpt_rec.csv1 ilike 'Snowmelt%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set groundw=SUBSTRING(rpt_rec.csv3,1,3) WHERE rpt_rec.csv1 ilike 'Groundwater%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set flow_rout=SUBSTRING(rpt_rec.csv4,1,3) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3) ilike 'Flow Routing ...........%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set pond_all=SUBSTRING(rpt_rec.csv4,1,3) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Ponding Allowed%' and result_id=v_result_id;
+			UPDATE rpt_cat_result set water_q=SUBSTRING(rpt_rec.csv4,1,3) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Water Quality%' and result_id=v_result_id;
 			UPDATE rpt_cat_result set infil_m=rpt_rec.csv4 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Infiltration Method%' and result_id=v_result_id;
 			UPDATE rpt_cat_result set flowrout_m=rpt_rec.csv5 WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2,' ',rpt_rec.csv3) ilike 'Flow Routing Method%' and result_id=v_result_id;
 			UPDATE rpt_cat_result set start_date=concat(rpt_rec.csv4,' ',rpt_rec.csv5) WHERE concat(rpt_rec.csv1,' ',rpt_rec.csv2) ilike 'Starting Date%' and result_id=v_result_id;
@@ -128,13 +140,17 @@ BEGIN
 			IF v_result_id NOT IN (SELECT result_id FROM rpt_runoff_quant) then
 				INSERT INTO rpt_runoff_quant(result_id) VALUES (v_result_id);
 			END IF;
-	
-			UPDATE rpt_runoff_quant set total_prec=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Total';
-			UPDATE rpt_runoff_quant set evap_loss=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Evaporation';
-			UPDATE rpt_runoff_quant set infil_loss=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Infiltration';
-			UPDATE rpt_runoff_quant set surf_runof=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Surface';
-			UPDATE rpt_runoff_quant set finals_sto=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Final';
-			UPDATE rpt_runoff_quant set cont_error=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Continuity';
+			
+			IF (rpt_rec.csv4 ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$') THEN
+				UPDATE rpt_runoff_quant set total_prec=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Total';
+				UPDATE rpt_runoff_quant set evap_loss=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Evaporation';
+				UPDATE rpt_runoff_quant set infil_loss=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Infiltration';
+				UPDATE rpt_runoff_quant set surf_runof=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Surface';
+			END IF;
+			IF (rpt_rec.csv5 ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$') THEN
+				UPDATE rpt_runoff_quant set finals_sto=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Final';
+				UPDATE rpt_runoff_quant set cont_error=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Continuity';
+			END IF;
 
 		ELSIF type_aux='rpt_flowrouting_cont' then 			 
 			IF v_result_id NOT IN (SELECT result_id FROM rpt_flowrouting_cont) then
@@ -174,10 +190,21 @@ BEGIN
 			rpt_rec.csv6,' ',rpt_rec.csv7));
 
 		ELSIF rpt_rec.csv1 IN (SELECT subc_id FROM inp_subcatchment) AND type_aux='rpt_subcathrunoff_sum' then 
-			INSERT INTO rpt_subcathrunoff_sum(result_id, subc_id, tot_precip, tot_runon, tot_evap, tot_infil,tot_runoff, tot_runofl, peak_runof, runoff_coe, vxmax, vymax, depth, vel, vhmax) 
-			VALUES (v_result_id,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
-			rpt_rec.csv7::numeric,rpt_rec.csv8::numeric,rpt_rec.csv9::numeric,rpt_rec.csv10::numeric,rpt_rec.csv11::numeric,rpt_rec.csv12::numeric,
-			rpt_rec.csv13::numeric,rpt_rec.csv14::numeric);
+
+			IF v_epaversion = '5.1' then
+
+				INSERT INTO rpt_subcathrunoff_sum(result_id, subc_id, tot_precip, tot_runon, tot_evap, tot_infil, tot_runoff, tot_runofl, peak_runof, runoff_coe, vxmax, vymax, depth, vel, vhmax) 
+				VALUES (v_result_id, rpt_rec.csv1, rpt_rec.csv2::numeric, rpt_rec.csv3::numeric, rpt_rec.csv4::numeric, rpt_rec.csv5::numeric, rpt_rec.csv8::numeric,
+				rpt_rec.csv9::numeric,rpt_rec.csv10::numeric,rpt_rec.csv11::numeric,rpt_rec.csv12::numeric,rpt_rec.csv13::numeric,rpt_rec.csv14::numeric,
+				rpt_rec.csv15::numeric,rpt_rec.csv16::numeric);
+
+			ELSE
+				INSERT INTO rpt_subcathrunoff_sum(result_id, subc_id, tot_precip, tot_runon, tot_evap, tot_infil,tot_runoff, tot_runofl, peak_runof, runoff_coe, vxmax, vymax, depth, vel, vhmax) 
+				VALUES (v_result_id,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
+				rpt_rec.csv7::numeric,rpt_rec.csv8::numeric,rpt_rec.csv9::numeric,rpt_rec.csv10::numeric,rpt_rec.csv11::numeric,rpt_rec.csv12::numeric,
+				rpt_rec.csv13::numeric,rpt_rec.csv14::numeric);
+
+			END IF;
 
 		ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node) AND type_aux='rpt_nodedepth_sum' then
 			INSERT INTO rpt_nodedepth_sum(result_id, node_id, swnod_type, aver_depth, max_depth, max_hgl,time_days, time_hour)
@@ -204,11 +231,22 @@ BEGIN
 			VALUES  (v_result_id,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric);
 		
 		ELSIF rpt_rec.csv1 IN (SELECT node_id FROM rpt_inp_node WHERE epa_type='STORAGE') AND type_aux='rpt_storagevol_sum' then
-			INSERT INTO rpt_storagevol_sum(result_id, node_id, aver_vol, avg_full, ei_loss, max_vol,
-			max_full, time_days, time_hour, max_out)
-			VALUES (v_result_id,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
-			rpt_rec.csv7,rpt_rec.csv8,rpt_rec.csv9::numeric);
 
+			IF v_epaversion = '5.1' then
+
+				INSERT INTO rpt_storagevol_sum(result_id, node_id, aver_vol, avg_full, ei_loss, max_vol,
+				max_full, time_days, time_hour, max_out)
+				VALUES (v_result_id, rpt_rec.csv1, rpt_rec.csv2::numeric, rpt_rec.csv3::numeric, (rpt_rec.csv4::numeric + rpt_rec.csv5::numeric), rpt_rec.csv6::numeric,
+				rpt_rec.csv7::numeric, rpt_rec.csv8, rpt_rec.csv9, rpt_rec.csv10::numeric);
+
+			ELSE
+				INSERT INTO rpt_storagevol_sum(result_id, node_id, aver_vol, avg_full, ei_loss, max_vol,
+				max_full, time_days, time_hour, max_out)
+				VALUES (v_result_id,rpt_rec.csv1,rpt_rec.csv2::numeric,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,
+				rpt_rec.csv7,rpt_rec.csv8,rpt_rec.csv9::numeric);
+
+			END IF;
+				
 		ELSIF rpt_rec.csv1 IN (SELECT arc_id FROM rpt_inp_arc) AND type_aux='rpt_arcflow_sum' then
 			CASE WHEN rpt_rec.csv6='>50.00' THEN rpt_rec.csv6='50.00'; else end case;
 			INSERT INTO rpt_arcflow_sum(result_id, arc_id, arc_type, max_flow, time_days, time_hour, max_veloc, 

@@ -16,6 +16,7 @@ DECLARE
 
 v_code_autofill_bool boolean;
 v_doublegeometry boolean;
+v_insert_double_geom boolean;
 v_length float;
 v_width float;
 v_rotation float;
@@ -37,6 +38,7 @@ v_x float;
 v_y float;
 v_new_pol_id varchar(16);
 v_srid integer;
+v_project_type text;
 
 v_feature text;
 v_tablefeature text;
@@ -46,32 +48,27 @@ BEGIN
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
 	-- get values
-	v_unitsfactor = (SELECT value::float FROM config_param_user WHERE "parameter"='edit_element_doublegeom' AND cur_user=current_user);
+	SELECT ((value::json)->>'activated')::boolean INTO v_insert_double_geom FROM config_param_system WHERE parameter='edit_element_doublegeom';
+	SELECT ((value::json)->>'value')::float INTO v_unitsfactor FROM config_param_system WHERE parameter='edit_element_doublegeom';
+
 	IF v_unitsfactor IS NULL THEN
 		v_unitsfactor = 1;
 	END IF;
 
-	v_srid = (SELECT epsg FROM version limit 1);
+	v_srid = (SELECT epsg FROM sys_version limit 1);
+	v_project_type = (SELECT project_type FROM sys_version limit 1);
 
 	-- get associated feature
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-		v_feature = (SELECT node_id FROM v_edit_node WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));
+		SELECT node_id, 'node'::text INTO v_feature, v_tablefeature FROM v_edit_node WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 		IF v_feature IS NULL THEN
-			v_feature = (SELECT arc_id FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));
+			SELECT connec_id, 'connec'::text INTO v_feature, v_tablefeature FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 			IF v_feature IS NULL THEN
-				v_feature = (SELECT connec_id FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));		
-				IF v_feature IS NULL THEN
-					v_feature = (SELECT gully_id FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.001));				
-					IF v_feature IS NULL THEN
-						v_tablefeature = 'gully';
-					END IF;
-				ELSE
-					v_tablefeature = 'connec';
+				SELECT arc_id, 'arc'::text INTO v_feature, v_tablefeature FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);		
+				IF v_feature IS NULL AND v_project_type='UD' THEN
+					SELECT gully_id, 'gully'::text INTO v_feature, v_tablefeature FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 				END IF;
-			ELSE
-				v_tablefeature = 'arc';
 			END IF;
-		v_tablefeature = 'node';
 		END IF;
 	END IF;
  	
@@ -83,12 +80,6 @@ BEGIN
 			PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
 			NEW.element_id:= (SELECT nextval('urn_id_seq'));
 		END IF;
-
-		-- update element_x_feature table
-		IF v_tablefeature IS NOT NULL THEN
-			EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_tablefeature'_id, element_id) VALUES ('||v_feature||','||NEW.element_id||')';
-		END IF;
-		
 
 		-- Cat element
 		IF (NEW.elementcat_id IS NULL) THEN
@@ -114,7 +105,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			NEW.expl_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_exploitation_vdefault' AND "cur_user"="current_user"());
 			IF (NEW.expl_id IS NULL) THEN
-				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+				NEW.expl_id := (SELECT expl_id FROM exploitation WHERE active IS TRUE AND ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
 				IF (NEW.expl_id IS NULL) THEN
 					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
        				 "data":{"message":"2012", "function":"1114","debug_msg":"'||NEW.element_id||'"}}$$);';
@@ -168,14 +159,22 @@ BEGIN
 		v_doublegeometry = (SELECT isdoublegeom FROM cat_element WHERE id = NEW.elementcat_id);
 
 		-- double geometry
-		IF v_doublegeometry AND NEW.elementcat_id IS NOT NULL THEN
+		IF v_insert_double_geom AND v_doublegeometry AND NEW.elementcat_id IS NOT NULL THEN
 
 			v_length = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
 			v_width = (SELECT geom2 FROM cat_element WHERE id=NEW.elementcat_id);
 
-			IF v_length*v_width IS NULL THEN
+			IF v_length IS NULL OR v_length = 0 THEN
 			
 				RAISE EXCEPTION 'Null values on geom1 or geom2 fields. Check your catalog before continue';
+
+			ELSIF v_length IS NOT NULL AND (v_width IS NULL OR v_width = 0) THEN
+
+				-- get element dimensions to generate CIRCULARE geometry									
+				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
+				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
+				INSERT INTO polygon(sys_type, the_geom, pol_id) VALUES ('ELEMENT', St_Multi(ST_buffer(NEW.the_geom, v_length*0.01*v_unitsfactor/2)),v_new_pol_id);
+			
 				
 			ELSIF v_length*v_width != 0 THEN
  
@@ -226,6 +225,12 @@ BEGIN
 		NEW.function_type, NEW.category_type, NEW.location_type, NEW.workcat_id, NEW.workcat_id_end, NEW.buildercat_id, NEW.builtdate, NEW.enddate, 
 		NEW.ownercat_id, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.label_x, NEW.label_y, NEW.label_rotation, NEW.publish, 
 		NEW.inventory, NEW.undelete, NEW.expl_id, NEW.num_elements, v_new_pol_id);
+
+		-- update element_x_feature table
+		IF v_tablefeature IS NOT NULL AND v_feature IS NOT NULL THEN
+			EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_tablefeature||'_id, element_id) VALUES ('||v_feature||','||NEW.element_id||') ON CONFLICT 
+			('||v_tablefeature||'_id, element_id) DO NOTHING';
+		END IF;
 			
 		RETURN NEW;			
 
@@ -240,17 +245,47 @@ BEGIN
 		lastupdate=now(), lastupdate_user=current_user
 		WHERE element_id=OLD.element_id;
 
+		--set rotation field
+		WITH index_query AS(
+		SELECT ST_Distance(the_geom, NEW.the_geom) as distance, the_geom FROM arc WHERE state=1 ORDER BY the_geom <-> NEW.the_geom LIMIT 10)
+		SELECT St_linelocatepoint(the_geom, St_closestpoint(the_geom, NEW.the_geom)), the_geom INTO v_linelocatepoint, v_thegeom FROM index_query ORDER BY distance LIMIT 1;
+		IF v_linelocatepoint < 0.01 THEN
+			v_rotation = st_azimuth (st_startpoint(v_thegeom), st_lineinterpolatepoint(v_thegeom,0.01));
+		ELSIF v_linelocatepoint > 0.99 THEN
+			v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,0.98), st_lineinterpolatepoint(v_thegeom,0.99));
+		ELSE
+			v_rotation = st_azimuth (st_lineinterpolatepoint(v_thegeom,v_linelocatepoint), st_lineinterpolatepoint(v_thegeom,v_linelocatepoint+0.01));
+		END IF;
+
+		NEW.rotation = v_rotation*180/pi();
+		v_rotation = -(v_rotation - pi()/2);
+
 
 		v_doublegeometry = (SELECT isdoublegeom FROM cat_element WHERE id = NEW.elementcat_id);
 
 		-- double geometry catalog update
-		IF v_doublegeometry AND NEW.elementcat_id != OLD.elementcat_id THEN
+		IF v_insert_double_geom AND v_doublegeometry AND (NEW.elementcat_id != OLD.elementcat_id OR NEW.the_geom::text <> OLD.the_geom::text) THEN
 
 			v_length = (SELECT geom1 FROM cat_element WHERE id=NEW.elementcat_id);
 			v_width = (SELECT geom2 FROM cat_element WHERE id=NEW.elementcat_id);
 
-			IF v_length*v_width IS NULL THEN
+			IF v_length IS NULL OR v_length = 0 THEN
 					RAISE EXCEPTION 'Null values on geom1 or geom2 fields. Check your catalog before continue';
+
+			ELSIF v_length IS NOT NULL AND (v_width IS NULL OR v_width = 0) THEN
+
+				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
+				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
+
+				-- get element dimensions to generate CIRCULARE geometry
+				IF (SELECT pol_id FROM element WHERE element_id = NEW.element_id) IS NULL THEN
+					INSERT INTO polygon(sys_type, the_geom, pol_id) VALUES 
+					('ELEMENT', St_multi(ST_buffer(NEW.the_geom, v_length*0.01*v_unitsfactor/2)),v_new_pol_id);
+					UPDATE element SET pol_id=v_new_pol_id WHERE element_id = NEW.element_id;
+				ELSE									
+					UPDATE polygon SET the_geom = St_multi(ST_buffer(NEW.the_geom, v_length*0.01*v_unitsfactor/2)) 
+					WHERE pol_id = (SELECT pol_id FROM element WHERE element_id = NEW.element_id);
+				END IF;
 				
 			ELSIF v_length*v_width != 0 THEN
 
@@ -288,7 +323,7 @@ BEGIN
 				PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
 				v_new_pol_id:= (SELECT nextval('urn_id_seq'));
 
-				IF (SELECT pol_id FROM gully WHERE gully_id = NEW.gully_id) IS NULL THEN
+				IF (SELECT pol_id FROM element WHERE element_id = NEW.element_id) IS NULL THEN
 					INSERT INTO polygon(sys_type, the_geom,pol_id) VALUES ('ELEMENT', v_the_geom_pol,v_new_pol_id);
 					UPDATE element SET pol_id=v_new_pol_id WHERE element_id = NEW.element_id;
 

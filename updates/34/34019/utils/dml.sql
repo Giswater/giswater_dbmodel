@@ -17,12 +17,6 @@ VALUES (2994, 'gw_fct_vnode_repair', 'utils', 'function')ON CONFLICT (id) DO NOT
 
 INSERT INTO config_toolbox VALUES (2496, 'Arc repair', TRUE, '{"featureType":["arc"]}', NULL, NULL, TRUE);
 
-INSERT INTO sys_param_user(id, formname, descript, sys_role, label, isenabled, layoutorder, project_type, isparent, 
-isautoupdate, datatype, widgettype, ismandatory, layoutname, iseditable, isdeprecated, vdefault)
-VALUES ('edit_element_doublegeom', 'config', 'If value, overwrites trigger element value to create double geometry in case elementcat_id is defined with this attribute',
-'role_edit', 'Doublegeometry value for element:', TRUE, 11, 'utils', FALSE, FALSE, 'boolean', 'check', FALSE, 'lyt_inventory',
-TRUE, FALSE, 2) ON CONFLICT (id) DO NOTHING;
-
 INSERT INTO sys_function (id, function_name, project_type, function_type) 
 VALUES (2996, 'gw_trg_edit_element_pol', 'utils', 'function')ON CONFLICT (id) DO NOTHING;
 
@@ -39,7 +33,6 @@ FROM sys_addfields WHERE sys_param_user.id = concat(param_name,'_','_vdefault');
 
 --update addfields vdefault
 UPDATE config_param_user SET parameter = concat('edit_', parameter) FROM sys_param_user WHERE sys_param_user.id = concat('edit_',parameter);
-
 
 UPDATE config_param_user SET parameter = concat('edit_addfield_',config_param_user.parameter ) 
 FROM sys_addfields WHERE config_param_user.parameter = concat(param_name,'_',lower(cat_feature_id),'_vdefault');

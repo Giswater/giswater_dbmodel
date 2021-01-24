@@ -12,10 +12,25 @@ RETURNS json AS
 $BODY$
 
 /*
-SELECT gw_fct_setmincut('{"data":{"valveUnaccess":{"status":false}, "mincutId":"3", "arcId":"2001"}}');
+-- Button networkMincut on mincut dialog
+SELECT gw_fct_setmincut('{"data":{"action":"mincutNetwork", "arcId":"2001", "mincutId":"3"}}');
 
-SELECT gw_fct_setmincut('{"data":{"valveUnaccess":{"status":true, "nodeId":1001}, "mincutId":"3"}}');
+-- Button valveUnaccess on mincut dialog
+SELECT gw_fct_setmincut('{"data":{"action":"mincutValveUnaccess", "nodeId":1001, "mincutId":"3"}}');
 
+-- Button Accept on mincut dialog
+SELECT gw_fct_setmincut('{"data":{"action":"mincutAccept", "mincutClass":1, "mincutId":"3", "status":"check"}}');
+
+-- Button Accept on mincut conflict dialog
+SELECT gw_fct_setmincut('{"data":{"action":"mincutAccept", "mincutClass":1, "mincutId":"3", "status":"continue"}}');
+
+-- Button Accept when is mincutClass = 2
+SELECT gw_fct_setmincut('{"data":{"action":"mincutAccept", "mincutClass":2, "mincutId":"3"}}');
+
+-- Button Accept when is mincutClass = 3
+SELECT gw_fct_setmincut('{"data":{"action":"mincutAccept", "mincutClass":3, "mincutId":"3"}}');
+
+fid = 216
 
 */
 
@@ -27,25 +42,58 @@ v_node integer;
 v_mincut integer;
 v_status boolean;
 v_valveunaccess json;
+v_action text;
+v_mincut_class integer;
+v_version text;
+v_error_context text;
+
 
 BEGIN
 
 	-- Search path
 	SET search_path = "SCHEMA_NAME", public;
+	
+	SELECT giswater INTO v_version FROM sys_version order by id desc limit 1;
+
+	-- delete previous
+	DELETE FROM audit_check_data WHERE fid = 216 and cur_user=current_user;
+
 	-- get input parameters
-	v_mincut :=	 ((p_data ->>'data')::json->>'mincutId')::integer;	
-	v_arc :=	 ((p_data ->>'data')::json->>'arcId')::integer;
-	v_valveunaccess := ((p_data ->>'data')::json->>'valveUnaccess')::json;
-	v_status := v_valveunaccess->>'status';
-	v_node := v_valveunaccess->>'nodeId';
+	v_action := (p_data ->>'data')::json->>'action';
+	v_mincut := ((p_data ->>'data')::json->>'mincutId')::integer;	
+	v_mincut_class := ((p_data ->>'data')::json->>'mincutClass')::integer;	
+	v_node := ((p_data ->>'data')::json->>'nodeId')::integer;
+	v_arc := ((p_data ->>'data')::json->>'arcId')::integer;
+	
+	IF v_action = 'mincutNetwork' THEN
 
-	-- execute process
-	IF v_status THEN
-		RETURN gw_fct_json_create_return(gw_fct_mincut_valve_unaccess(v_node::text, v_mincut, current_user), 2980);
-	ELSE	
-		RETURN gw_fct_json_create_return(gw_fct_mincut(v_arc::text, 'arc'::text, v_mincut), 2980);
+		RETURN gw_fct_mincut(v_arc::text, 'arc'::text, v_mincut);
+		
+	ELSIF v_action = 'mincutValveUnaccess' THEN
+
+		RETURN gw_fct_mincut_valve_unaccess(p_data);
+
+	ELSIF v_action = 'mincutAccept' THEN
+		
+		IF v_mincut_class = 1 THEN
+		
+			RETURN gw_fct_mincut_result_overlap(p_data);
+
+		ELSIF v_mincut_class IN (2, 3) THEN
+        
+            UPDATE om_mincut SET mincut_class = v_mincut_class WHERE id=v_mincut;
+		
+			RETURN gw_fct_mincut_connec(p_data);
+		
+		END IF;
+			
 	END IF;
-
+	
+	--  Exception handling
+	EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;  
+	RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_error_context) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

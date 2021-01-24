@@ -48,6 +48,8 @@ aux_json_child json;
 v_device integer;
 v_formname text;
 v_tabadmin json;
+v_formgroupbox json[];
+v_formgroupbox_json json;
 v_querytext json;
 v_epaversion text;
 v_orderby text;
@@ -96,9 +98,9 @@ BEGIN
 		-- Get all parameters from audit_cat param_user
 		EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (
 			SELECT label, sys_param_user.id as widgetname, value , datatype, widgettype, layoutorder, layoutname,
-			(CASE WHEN iseditable IS NULL OR iseditable IS TRUE THEN ''True'' ELSE ''False'' END) AS iseditable,
+			(CASE WHEN iseditable IS NULL OR iseditable IS TRUE THEN True ELSE False END) AS iseditable,
 			row_number()over(ORDER BY layoutname, layoutorder) AS orderby, isparent, sys_role, project_type, widgetcontrols,
-			(CASE WHEN value IS NOT NULL AND value != ''false'' THEN ''True'' ELSE ''False'' END) AS checked, placeholder, descript AS tooltip, 
+			(CASE WHEN value IS NOT NULL AND value != ''false'' THEN True ELSE False END) AS checked, placeholder, descript AS tooltip, 
 			dv_parent_id, dv_querytext, dv_querytext_filterc, dv_orderby_id, dv_isnullvalue	
 			FROM sys_param_user LEFT JOIN (SELECT * FROM config_param_user WHERE cur_user=current_user) a ON a.parameter=sys_param_user.id 
 			WHERE sys_role IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member''))
@@ -290,7 +292,7 @@ BEGIN
 			-- Get fields for admin enabled
 			EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (SELECT label, parameter AS widgetname, parameter as widgetname, concat(''admin_'',parameter), value, 
 				widgettype, datatype, layoutname, layoutorder, row_number() over (order by layoutname, layoutorder) as orderby, descript as tooltip,
-				(CASE WHEN iseditable IS NULL OR iseditable IS TRUE THEN ''True'' ELSE ''False'' END) AS iseditable,
+				(CASE WHEN iseditable IS NULL OR iseditable IS TRUE THEN True ELSE False END) AS iseditable,
 				placeholder
 				FROM config_param_system WHERE isenabled=TRUE AND layoutname IS NOT NULL AND layoutorder IS NOT NULL AND (project_type =''utils'' or project_type='||quote_literal(lower(v_project_type))||') ORDER BY orderby) a'
 				INTO fields_array;
@@ -321,16 +323,27 @@ BEGIN
 	--  Finish the construction of v_formtabs
     v_formtabs := v_formtabs ||']';
 
+	--  Construction of groupbox - formlayouts
+    EXECUTE 'SELECT (array_agg(row_to_json(a))) FROM (SELECT layoutname AS "layout", label FROM config_form_groupbox WHERE formname=$1 AND layoutname IN 
+			(SELECT layoutname FROM sys_param_user WHERE sys_role IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member''))
+			UNION SELECT layoutname FROM config_param_system WHERE ''role_admin'' IN (SELECT rolname FROM pg_roles WHERE  pg_has_role( current_user, oid, ''member'')))
+		ORDER BY layoutname) a'
+		INTO v_formgroupbox
+		USING v_formname;
+
+	v_formgroupbox_json := array_to_json(v_formgroupbox);
 
 	-- Check null
     v_version := COALESCE(v_version, '[]');
     v_formtabs := COALESCE(v_formtabs, '[]'); 
+    v_formgroupbox_json := COALESCE(v_formgroupbox_json, '[]'); 
 
 	-- Return
     RETURN ('{"status":"Accepted", "version":'||v_version||
              ',"body":{"message":{"level":1, "text":"This is a test message"}'||
 			',"form":{"formName":"", "formLabel":"", "formText":""'|| 
 				',"formTabs":'||v_formtabs||
+				',"formGroupBox":'||v_formgroupbox_json||
 				',"formActions":[]}'||
 			',"feature":{}'||
 			',"data":{}}'||

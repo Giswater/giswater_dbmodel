@@ -19,15 +19,15 @@ The main characterisitics mapping from SWMM to GW are:
 */
 
 
-
 DECLARE 
-	v_view text;
-	v_epsg integer;
-	v_epatype text;
-	v_catalog text;
-	v_linkoffsets text;
-	v_y1 float;
-	v_y2 float;
+v_view text;
+v_epsg integer;
+v_epatype text;
+v_catalog text;
+v_linkoffsets text;
+v_y1 float;
+v_y2 float;
+
 BEGIN
 
     --Get schema name
@@ -70,21 +70,21 @@ BEGIN
 				
 		ELSIF v_view='vi_subcatchments' THEN 
 
-			INSERT INTO subcatchment (subc_id, rg_id, outlet_id, area, imperv, width, slope, clength, snow_id, sector_id) 
+			INSERT INTO inp_subcatchment (subc_id, rg_id, outlet_id, area, imperv, width, slope, clength, snow_id, sector_id) 
 			VALUES (NEW.subc_id, NEW.rg_id, NEW.outlet_id, NEW.area, NEW.imperv, NEW.width, NEW.slope, NEW.clength, NEW.snow_id, 1);
 
 		ELSIF v_view='vi_subareas' THEN
-			UPDATE subcatchment SET nimp=NEW.nimp, nperv=NEW.nperv, simp=NEW.simp, sperv=NEW.sperv, zero=NEW.zero, routeto=NEW.routeto, rted=NEW.rted WHERE subc_id=NEW.subc_id;
+			UPDATE inp_subcatchment SET nimp=NEW.nimp, nperv=NEW.nperv, simp=NEW.simp, sperv=NEW.sperv, zero=NEW.zero, routeto=NEW.routeto, rted=NEW.rted WHERE subc_id=NEW.subc_id;
 			
 		ELSIF v_view='vi_infiltration' THEN 
 			IF (SELECT value FROM config_param_user WHERE cur_user=current_user AND parameter='inp_options_infiltration') like 'CURVE_NUMBER' THEN
-				UPDATE subcatchment SET curveno=NEW.other1::numeric, conduct_2=NEW.other2::numeric, drytime_2=NEW.other3::numeric 
+				UPDATE inp_subcatchment SET curveno=NEW.other1::numeric, conduct_2=NEW.other2::numeric, drytime_2=NEW.other3::numeric 
 				WHERE subc_id=NEW.subc_id;
 			ELSIF (SELECT value FROM config_param_user WHERE cur_user=current_user AND parameter='inp_options_infiltration') like 'GREEN_AMPT' THEN
-				UPDATE subcatchment SET suction=NEW.other1::numeric , conduct=NEW.other2::numeric  , initdef=NEW.other3::numeric
+				UPDATE inp_subcatchment SET suction=NEW.other1::numeric , conduct=NEW.other2::numeric  , initdef=NEW.other3::numeric
 				WHERE subc_id=NEW.subc_id;
 			ELSIF (SELECT value FROM config_param_user WHERE cur_user=current_user AND parameter='inp_options_infiltration') like '%HORTON' THEN
-				UPDATE subcatchment SET maxrate=NEW.other1::numeric, minrate=NEW.other2::numeric , decay=NEW.other3::numeric, drytime=NEW.other4::numeric, maxinfil=NEW.other5::numeric
+				UPDATE inp_subcatchment SET maxrate=NEW.other1::numeric, minrate=NEW.other2::numeric , decay=NEW.other3::numeric, drytime=NEW.other4::numeric, maxinfil=NEW.other5::numeric
 				WHERE subc_id=NEW.subc_id;
 			END IF;
 			
@@ -107,10 +107,7 @@ BEGIN
 			UPDATE inp_groundwater set fl_eq_lat=split_part(NEW.fl_eq_lat,';',2),fl_eq_deep=split_part(NEW.fl_eq_deep,';',2) WHERE subc_id=NEW.subc_id;
 			
 		ELSIF v_view='vi_junction' THEN
-			INSERT INTO node (node_id, elev, ymax,node_type,nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
-			VALUES (NEW.node_id, NEW.elev, NEW.ymax,'EPAMANH','EPAMANH-CAT','JUNCTION',1,1,1,1,2);
-			INSERT INTO man_manhole (node_id) VALUES (NEW.node_id);
-			INSERT INTO inp_junction(node_id, y0, ysur, apond) VALUES (NEW.node_id, NEW.y0, NEW.ysur, NEW.apond);
+			-- code is improved using directy gw_fct_import_swmm_inp function			
 			
 		ELSIF v_view='vi_outfalls' THEN
 			INSERT INTO node (node_id, elev,node_type,nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
@@ -167,21 +164,7 @@ BEGIN
 			
 		ELSIF v_view='vi_conduits' THEN 
 
-			v_linkoffsets = (SELECT value FROM config_param_user WHERE parameter='inp_options_link_offsets' AND cur_user=current_user);
-
-			IF v_linkoffsets ='ELEVATION' THEN
-				INSERT INTO arc (arc_id, node_1,node_2, sys_elev1, sys_elev2, custom_length, arc_type, epa_type, matcat_id, sector_id, dma_id, expl_id, state, state_type) 
-				VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, NEW.z1, NEW.z2, NEW.length, 'EPACOND', 'CONDUIT', NEW.n, 1, 1, 1, 1, 2);
-			ELSE
-				v_y1 = (SELECT ymax FROM node WHERE node_id=NEW.node_1 LIMIT 1)-NEW.z1;
-				v_y2 = (SELECT ymax FROM node WHERE node_id=NEW.node_1 LIMIT 1)-NEW.z1;
-				INSERT INTO arc (arc_id, node_1,node_2, sys_elev1, sys_elev2, custom_length, arc_type, epa_type, matcat_id, sector_id, dma_id, expl_id, state, state_type) 
-				VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, v_y1, v_y2, NEW.length, 'EPACOND', 'CONDUIT', NEW.n, 1, 1, 1, 1, 2);
-			END IF;
-
-			INSERT INTO man_conduit(arc_id) VALUES (NEW.arc_id);
-			INSERT INTO inp_conduit (arc_id,custom_n, q0, qmax) VALUES (NEW.arc_id,NEW.n, NEW.q0, NEW.qmax); 
-			
+			-- code is improved using directy gw_fct_import_swmm_inp function			
 			
 		ELSIF v_view='vi_pumps' THEN 
 			INSERT INTO arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
@@ -221,13 +204,15 @@ BEGIN
 				v_catalog = concat(NEW.shape::varchar(9),'-',NEW.other1::varchar(12));
 				UPDATE arc SET arccat_id=v_catalog WHERE arc_id=NEW.arc_id;
 				INSERT INTO inp_conduit (arc_id) VALUES (NEW.arc_id);
-				INSERT INTO cat_arc (id, shape, tsect_id) VALUES (v_catalog, NEW.shape::varchar(16), NEW.other1::varchar(16)) ON CONFLICT (id) DO nothing;
+				INSERT INTO cat_arc (id, shape, tsect_id) 
+				VALUES (v_catalog, NEW.shape::varchar(16), NEW.other1::varchar(16)) ON CONFLICT (id) DO nothing;
 								
 			ELSIF NEW.shape='CUSTOM' THEN
 				v_catalog = concat(NEW.shape::varchar(9),'-',NEW.other1::varchar(5),'-', NEW.other2::varchar(12));
 				UPDATE arc SET arccat_id=v_catalog WHERE arc_id=NEW.arc_id;
 				UPDATE inp_conduit SET barrels=NEW.other5::smallint WHERE arc_id=NEW.arc_id;
-				INSERT INTO cat_arc (id, shape, geom1, curve_id) VALUES (v_catalog, NEW.shape::varchar(16), NEW.other1::float, NEW.other1::varchar(16)) ON CONFLICT (id) DO nothing;				
+				INSERT INTO cat_arc (id, shape, geom1, curve_id) 
+				VALUES (v_catalog, NEW.shape::varchar(16), NEW.other1::float, NEW.other2::varchar(16)) ON CONFLICT (id) DO nothing;				
 			ELSE
 				v_epatype= (SELECT epa_type FROM arc WHERE arc_id=NEW.arc_id);
 				IF v_epatype='CONDUIT' THEN
@@ -246,8 +231,11 @@ BEGIN
 			UPDATE inp_conduit SET kentry=NEW.kentry,kexit=NEW.kexit, kavg=NEW.kavg, flap=NEW.flap, seepage=NEW.seepage WHERE arc_id=NEW.arc_id;
 			
 		ELSIF v_view='vi_transects' THEN 
-			INSERT INTO inp_transects_id (id) SELECT split_part(NEW.text,' ',1) WHERE split_part(NEW.text,' ',1)  NOT IN (SELECT id from inp_transects_id);
-			INSERT INTO inp_transects (tsect_id,text) VALUES (split_part(NEW.text,' ',1),NEW.text);
+			INSERT INTO inp_transects (id) SELECT split_part(NEW.text,' ',1) WHERE split_part(NEW.text,' ',1)  NOT IN (SELECT id from inp_transects);
+			IF split_part(NEW.text,' ',1)='X1' THEN
+				INSERT INTO inp_transects (id) SELECT split_part(NEW.text,' ',2) WHERE split_part(NEW.text,' ',2)  NOT IN (SELECT id from inp_transects);			
+			END IF;
+			INSERT INTO inp_transects_value (tsect_id,text) VALUES (split_part(NEW.text,' ',1),NEW.text);
 			
 		ELSIF v_view='vi_controls' THEN
 			INSERT INTO inp_controls_importinp (text) VALUES (NEW.text);
@@ -324,22 +312,25 @@ BEGIN
 			
 		ELSIF v_view='vi_timeseries' THEN 
 			IF NEW.other1 ilike 'FILE' THEN
-				IF NEW.timser_id NOT IN (SELECT id FROM inp_timser_id) THEN
-					INSERT INTO inp_timser_id(id,times_type) VALUES (NEW.timser_id,'FILE') ;
+				IF NEW.timser_id NOT IN (SELECT id FROM inp_timeseries) THEN
+					INSERT INTO inp_timeseries(id,times_type) VALUES (NEW.timser_id,'FILE') ;
 				END IF;
-				INSERT INTO inp_timeseries (timser_id,fname) VALUES (NEW.timser_id, NEW.other2);
+				INSERT INTO inp_timeseries_value (timser_id,fname) VALUES (NEW.timser_id, NEW.other2);
 				
 			ELSIF  NEW.other1 ilike '%:%'  THEN
-				IF NEW.timser_id NOT IN (SELECT id FROM inp_timser_id) THEN
-					INSERT INTO inp_timser_id(id,times_type) VALUES (NEW.timser_id,'RELATIVE');
+				IF NEW.timser_id NOT IN (SELECT id FROM inp_timeseries) THEN
+					INSERT INTO inp_timeseries(id,times_type) VALUES (NEW.timser_id,'RELATIVE');
 				END IF;
-				INSERT INTO inp_timeseries (timser_id, "time", value)  VALUES (NEW.timser_id, NEW.other1, NEW.other2::numeric);
-				
-			ELSE
-				IF NEW.timser_id NOT IN (SELECT id FROM inp_timser_id) THEN
-					INSERT INTO inp_timser_id(id,times_type) VALUES (NEW.timser_id,'ABSOLUTE');
+				IF (SELECT times_type FROM inp_timeseries WHERE id = NEW.timser_id) = 'ABSOLUTE' THEN
+					INSERT INTO inp_timeseries_value (timser_id, date, hour, value) VALUES (NEW.timser_id, '', NEW.other1, NEW.other2::numeric);				
+				ELSE
+					INSERT INTO inp_timeseries_value (timser_id, "time", value)  VALUES (NEW.timser_id, NEW.other1, NEW.other2::numeric);
+				END IF;				
+			ELSE	
+				IF NEW.timser_id NOT IN (SELECT id FROM inp_timeseries) THEN
+					INSERT INTO inp_timeseries(id,times_type) VALUES (NEW.timser_id,'ABSOLUTE');
 				END IF;
-				INSERT INTO inp_timeseries (timser_id, date, hour, value) VALUES (NEW.timser_id, NEW.other1::date, NEW.other2, NEW.other3::numeric);
+				INSERT INTO inp_timeseries_value (timser_id, date, hour, value) VALUES (NEW.timser_id, NEW.other1::date, NEW.other2, NEW.other3::numeric);
 			END IF;
 			
 		ELSIF v_view='vi_lid_controls' THEN 

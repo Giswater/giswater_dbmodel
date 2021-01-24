@@ -197,7 +197,7 @@ BEGIN
 	
 		v_data = '{"client":{"device":4, "infoType":1, "lang":"ES"},"data":{"formName": "'||v_tablename||'"}}';
 		
-		SELECT gw_fct_getfeatureupsert(v_data) INTO v_filter_values;
+		SELECT gw_fct_getfiltervaluesvdef(v_data) INTO v_filter_values;
 
 		RAISE NOTICE 'gw_fct_getlist - Init Values setted by default %', v_filter_values;
 
@@ -258,14 +258,14 @@ BEGIN
 			INTO v_the_geom;
 
 		--  get querytext
-		EXECUTE concat('SELECT query_text, listtype FROM config_form_list WHERE tablename = $1 AND device = $2', v_attribute_filter)
-			INTO v_query_result, v_listtype
+		EXECUTE concat('SELECT query_text, vdefault, listtype FROM config_form_list WHERE tablename = $1 AND device = $2', v_attribute_filter)
+			INTO v_query_result, v_default, v_listtype
 			USING v_tablename, v_device;
 
 		-- if v_device is not configured on config_form_list table
 		IF v_query_result IS NULL THEN
-			EXECUTE concat('SELECT query_text, listtype FROM config_form_list WHERE tablename = $1 LIMIT 1', v_attribute_filter)
-				INTO v_query_result, v_listtype
+			EXECUTE concat('SELECT query_text, vdefault, listtype FROM config_form_list WHERE tablename = $1 LIMIT 1', v_attribute_filter)
+				INTO v_query_result, v_default, v_listtype
 				USING v_tablename;
 		END IF;	
 
@@ -438,13 +438,13 @@ BEGIN
 	-- adding the widget of list
 	v_i = cardinality(v_filter_fields) ;
 	
-	EXECUTE 'SELECT listclass FROM config_form_list WHERE tablename = $1 LIMIT 1'
+	EXECUTE 'SELECT listclass FROM config_api_list WHERE tablename = $1 '||v_attribute_filter||' LIMIT 1'
 		INTO v_listclass
 		USING v_tablename;
 
 	-- setting new element
 	IF v_device = 4 THEN
-		v_filter_fields[v_i+1] := json_build_object('widgettype',v_listclass,'datatype','icon','columnname','fileList','orderby', v_i+3, 'position','body', 'value', SCHEMA_NAME);
+		v_filter_fields[v_i+1] := json_build_object('widgettype',v_listclass,'datatype','icon','columnname','fileList','orderby', v_i+3, 'position','body', 'value', v_result_list);
 	ELSE
 		v_filter_fields[v_i+1] := json_build_object('type',v_listclass,'dataType','icon','name','fileList','orderby', v_i+3, 'position','body', 'value', v_result_list);
 	END IF;
@@ -455,7 +455,11 @@ BEGIN
 
 	FOREACH aux_json IN ARRAY v_footer_fields
 	LOOP
-		v_filter_fields[v_i+2] := json_build_object('type','button','label', aux_json->>'label' ,'widgetAction',  aux_json->>'widgetfunction', 'position','footer');
+		IF v_device IN (1,2,3) THEN
+			v_filter_fields[v_i+2] := json_build_object('type',aux_json->>'type','label', aux_json->>'label' ,'widgetAction',  aux_json->>'widgetAction', 'position',aux_json->>'position');
+		ELSE
+			v_filter_fields[v_i+2] := json_build_object('widgettype',aux_json->>'widgettype','label', aux_json->>'label' ,'widgetfunction',  aux_json->>'widgetfunction', 'layoutname',aux_json->>'layoutname', 'layoutorder',aux_json->>'layoutorder');
+		END IF;
 		v_i=v_i+1;
 
 	END LOOP;

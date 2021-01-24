@@ -14,26 +14,16 @@ UPDATE sys_foreignkey SET target_table='ext_cat_raster' WHERE target_table='cat_
 
 UPDATE sys_function SET function_type = 'function' WHERE function_type IN ('api function','Function to manage messages');
 
-INSERT INTO sys_function VALUES (2866, 'gw_fct_get_combochilds', 'utils', 'function',null, null, 'Function to manage combos', 'role_basic', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2868, 'gw_fct_getinsertformdisabled', 'utils', 'function',null, null, 'Function to manage disabled forms', 'role_basic', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2870, 'gw_fct_setselectors', 'utils', 'function',null, null, 'Function to manage selectors', 'role_basic', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2872, 'gw_fct_get_filtervaluesvdef', 'utils', 'function',null, null, 'Function to manage vdefault of filters', 'role_basic', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2874, 'gw_fct_getcolumnsfromid', 'utils', 'function',null, null, 'Function to manage colmuns from id', 'role_basic', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2876, 'gw_api_getunexpected', 'utils', 'function',null, null, 'Function to manage unspected visits', 'role_om', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2878, 'gw_fct_getvisitsfromfeature', 'utils', 'function',null, null, 'Function to manage visit from feature', 'role_om', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2880, 'gw_fct_setdimensioning', 'utils', 'function',null, null, 'Function to manage dimensioning', 'role_edit', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2882, 'gw_api_setvisitmanager', 'utils', 'function',null, null, 'Function to manage visit manager', 'role_om', FALSE)
-ON CONFLICT (id) DO NOTHING;
-INSERT INTO sys_function VALUES (2884, 'gw_fct_import_omvisitlot', 'utils', 'function',null, null, 'Function to manage lots', 'role_om', FALSE)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2866, 'gw_fct_get_combochilds', 'utils', 'function',null, null, 'Function to manage combos', 'role_basic', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2868, 'gw_fct_getinsertformdisabled', 'utils', 'function',null, null, 'Function to manage disabled forms', 'role_basic', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2870, 'gw_fct_setselectors', 'utils', 'function',null, null, 'Function to manage selectors', 'role_basic', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2872, 'gw_fct_get_filtervaluesvdef', 'utils', 'function',null, null, 'Function to manage vdefault of filters', 'role_basic', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2874, 'gw_fct_getcolumnsfromid', 'utils', 'function',null, null, 'Function to manage colmuns from id', 'role_basic', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2876, 'gw_api_getunexpected', 'utils', 'function',null, null, 'Function to manage unspected visits', 'role_om', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2878, 'gw_fct_getvisitsfromfeature', 'utils', 'function',null, null, 'Function to manage visit from feature', 'role_om', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2880, 'gw_fct_setdimensioning', 'utils', 'function',null, null, 'Function to manage dimensioning', 'role_edit', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2882, 'gw_api_setvisitmanager', 'utils', 'function',null, null, 'Function to manage visit manager', 'role_om', FALSE) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_function VALUES (2884, 'gw_fct_import_omvisitlot', 'utils', 'function',null, null, 'Function to manage lots', 'role_om', FALSE) ON CONFLICT (id) DO NOTHING;
 
 DELETE FROM sys_function WHERE function_name IN('gw_fct_node_replace','gw_fct_getinsertform_vdef','gw_fct_getfiltervaluesvdef','audit_function');
 
@@ -85,6 +75,9 @@ UPDATE sys_foreignkey SET target_table = 'sys_message', target_field = 'message_
 ALTER TABLE sys_foreignkey DISABLE TRIGGER gw_trg_typevalue_config_fk;
 
 UPDATE sys_foreignkey SET typevalue_table = 'config_typevalue' WHERE typevalue_table ='config_api_typevalue';
+
+ALTER TABLE sys_foreignkey ENABLE TRIGGER gw_trg_typevalue_config_fk;
+
 
 INSERT INTO config_typevalue(typevalue, id, idval) VALUES ('widgetfunction_typevalue', 'open_url', 'open_url');
 

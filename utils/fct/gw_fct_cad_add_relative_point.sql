@@ -15,12 +15,12 @@ $BODY$
 
 DECLARE
 
-v_geom geometry;
+v_geom public.geometry;
 v_percent float;
-v_point geometry;
-v_point1 geometry;
-v_point2 geometry;
-v_point_result geometry;
+v_point public.geometry;
+v_point1 public.geometry;
+v_point2 public.geometry;
+v_point_result public.geometry;
 v_angle float;
 v_xcoord float;
 v_ycoord float;
@@ -93,11 +93,11 @@ BEGIN
 
     -- delete previous registers if user selection is enabled
     IF del_previous_bool IS TRUE THEN 
-	DELETE FROM temp_table WHERE fid=127 and cur_user=current_user;
+	DELETE FROM temp_table WHERE fid=27 and cur_user=current_user;
     END IF;
     
     -- Insert into temporal table the values
-    INSERT INTO temp_table (fid, geom_point)  VALUES (127, v_point_result);
+    INSERT INTO temp_table (fid, geom_point)  VALUES (27, v_point_result);
 
 	RETURN v_point_result;
         

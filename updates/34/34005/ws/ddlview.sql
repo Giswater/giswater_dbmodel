@@ -60,7 +60,6 @@ DROP VIEW IF EXISTS v_edit_inp_valve;
 DROP VIEW IF EXISTS vp_basic_arc;
 DROP VIEW IF EXISTS vi_parent_dma;
 DROP VIEW IF EXISTS vi_parent_arc;
-DROP VIEW IF EXISTS v_edit_arc;
 DROP VIEW IF EXISTS ve_arc;
 
 DROP VIEW IF EXISTS v_edit_man_varc;
@@ -79,6 +78,7 @@ DROP VIEW IF EXISTS v_plan_arc;
 DROP VIEW IF EXISTS v_plan_aux_arc_cost;
 DROP VIEW IF EXISTS v_plan_aux_arc_ml;
 DROP VIEW IF EXISTS v_ui_arc_x_node;
+DROP VIEW IF EXISTS v_edit_arc;
 DROP VIEW IF EXISTS v_arc;
 DROP VIEW IF EXISTS vu_arc;
 
@@ -169,6 +169,7 @@ ALTER TABLE connec ALTER COLUMN observ TYPE text;
 ALTER TABLE connec ALTER COLUMN descript TYPE text;
 ALTER TABLE connec ALTER COLUMN annotation TYPE text;
 ALTER TABLE connec ALTER COLUMN comment TYPE text;
+
 
 -- CREACIO DE LES VU
 --------------------
@@ -2192,9 +2193,6 @@ CREATE OR REPLACE VIEW v_ui_plan_node_cost AS
 	 JOIN cat_node ON cat_node.id::text = node.nodecat_id::text
 	 JOIN v_price_compost ON cat_node.cost::text = v_price_compost.id::text
 	 JOIN v_plan_node ON node.node_id::text = v_plan_node.node_id::text;
-
-ALTER TABLE v_ui_plan_node_cost
-  OWNER TO postgres;
 
 
 

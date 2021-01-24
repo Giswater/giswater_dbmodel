@@ -110,23 +110,23 @@ UPDATE config_fprocess SET fid2 = 239 WHERE fid2 = 12;
 INSERT INTO sys_param_user
 VALUES ('qgis_layers_set_propierties','config','If true, qgis starts setting all layers with appropiate settigs from config_form_fields', 'role_basic', NULL, 
 'QGIS set layer properties', NULL, NULL, true, 8, 'utils', false, NULL, NULL, NULL, 
-false, 'boolean', 'check', true, NULL, true, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL)
-ON conflict (id) DO NOTHING;
+false, 'boolean', 'check', true, NULL, true, 'lyt_other', NULL, NULL, NULL, NULL, NULL, false, NULL)
+ON CONFLICT (id) DO UPDATE SET layoutorder=EXCLUDED.layoutorder;
 
 
 
 UPDATE sys_table SET id='sys_fprocess' WHERE id='sys_fprocess_cat';
-INSERT INTO sys_table VALUES ('ext_cat_hydrometer_priority', NULL, 'role_edit', 0);
-INSERT INTO sys_table VALUES ('ext_cat_hydrometer_type', NULL, 'role_edit', 0);
-INSERT INTO sys_table VALUES ('om_team_x_vehicle', 'Relation between teams and their vehicles', 'role_om', 0);
-INSERT INTO sys_table VALUES ('ext_cat_vehicle', 'External catalog of vehicles', 'role_om', 0);
-INSERT INTO sys_table VALUES ('om_vehicle_x_parameters', 'Relation between vehicles and their parameters', 'role_om', 0);
-INSERT INTO sys_table VALUES ('doc_x_workcat', 'Contains the information of document related to workcat', 'role_basic', 0);
-INSERT INTO sys_table VALUES ('temp_go2epa', NULL, 'role_epa', 0);
-INSERT INTO sys_table VALUES ('temp_arc', NULL, 'role_edit', 0);
-INSERT INTO sys_table VALUES ('temp_node', NULL, 'role_edit', 0);
-INSERT INTO sys_table VALUES ('config_form_actions', NULL, 'role_admin', 0);
-INSERT INTO sys_table VALUES ('config_toolbox', 'Catalog and configuration of toolbox functions', 'role_admin', 0);
+INSERT INTO sys_table VALUES ('ext_cat_hydrometer_priority', NULL, 'role_edit', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('ext_cat_hydrometer_type', NULL, 'role_edit', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('om_team_x_vehicle', 'Relation between teams and their vehicles', 'role_om', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('ext_cat_vehicle', 'External catalog of vehicles', 'role_om', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('om_vehicle_x_parameters', 'Relation between vehicles and their parameters', 'role_om', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('doc_x_workcat', 'Contains the information of document related to workcat', 'role_basic', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('temp_go2epa', NULL, 'role_epa', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('temp_arc', NULL, 'role_edit', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('temp_node', NULL, 'role_edit', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('config_form_actions', NULL, 'role_admin', 0) ON CONFLICT (id) DO NOTHING;
+INSERT INTO sys_table VALUES ('config_toolbox', 'Catalog and configuration of toolbox functions', 'role_admin', 0) ON CONFLICT (id) DO NOTHING;
 DELETE FROM sys_table WHERE id='config';
 DELETE FROM sys_table WHERE id='config_api_message';
 DELETE FROM sys_table WHERE id='config_api_visit_x_featuretable';

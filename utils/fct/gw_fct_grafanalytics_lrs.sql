@@ -25,7 +25,7 @@ SELECT SCHEMA_NAME.gw_fct_grafanalytics_lrs('{"data":{"parameters":{"exploitatio
 */
 
 DECLARE
-v_acc_value numeric(12,3);
+v_acc_value numeric;
 v_affectedrows numeric; 
 v_feature record;
 v_expl json;
@@ -76,9 +76,9 @@ BEGIN
 	v_expl=json_agg(v_expl);	
 
 	-- get variables (from config_param_system)
-	v_costfield = (SELECT (value::json->>'arc')::json->>'costField' FROM config_param_system WHERE parameter='grafanalytics_lrs_graf');
-	v_valuefield = (SELECT (value::json->>'nodeChild')::json->>'valueField' FROM config_param_system WHERE parameter='grafanalytics_lrs_feature');
-	v_headerfield = (SELECT (value::json->>'nodeChild')::json->>'headerField' FROM config_param_system WHERE parameter='grafanalytics_lrs_feature');
+	v_costfield = (SELECT (value::json->>'arc')::json->>'costField' FROM config_param_system WHERE parameter='utils_grafanalytics_lrs_graf');
+	v_valuefield = (SELECT (value::json->>'nodeChild')::json->>'valueField' FROM config_param_system WHERE parameter='utils_grafanalytics_lrs_feature');
+	v_headerfield = (SELECT (value::json->>'nodeChild')::json->>'headerField' FROM config_param_system WHERE parameter='utils_grafanalytics_lrs_feature');
 	
 	-- setting cost field when has not configure value
 	IF v_costfield IS NULL THEN
@@ -102,9 +102,10 @@ BEGIN
 	INSERT INTO audit_check_data (fid, error_message) VALUES (v_fid, concat('---------------------------------------------------'));
 	
 	-- reset tables (graf & audit_log)
-	TRUNCATE temp_anlgraf;
+	DELETE FROM temp_anlgraf;
 	DELETE FROM audit_log_data WHERE fid=v_fid AND cur_user=current_user;
 	DELETE FROM anl_node WHERE fid=v_fid AND cur_user=current_user;
+	--DELETE FROM anl_node;
 	DELETE FROM anl_arc WHERE fid=v_fid AND cur_user=current_user;
 	DELETE FROM audit_check_data WHERE fid=v_fid AND cur_user=current_user;
 
@@ -364,14 +365,14 @@ BEGIN
 
 
 	--return definition for v_audit_check_result
-	RETURN  gw_fct_json_create_return(('{"status":"Accepted", "message":{"priority":1, "text":"LRS process done successfully"}, "version":"'||v_version||'"'||
+	RETURN  ('{"status":"Accepted", "message":{"priority":1, "text":"LRS process done successfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||','||
 				'"point":'||v_result_point||','||
 				'"line":'||v_result_line||','||
 				'"polygon":'||v_result_polygon||'}'||
 		       '}'||
-	    '}')::json, 2826);
+	    '}')::json;
 
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;

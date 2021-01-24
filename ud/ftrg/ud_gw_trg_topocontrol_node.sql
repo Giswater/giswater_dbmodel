@@ -23,7 +23,8 @@ v_y double precision;
 v_pol varchar;
 v_topelev double precision;
 v_arc record;
-v_arcrecordtb record;
+v_arcrecord "SCHEMA_NAME".v_edit_arc;
+v_arcrecordtb "SCHEMA_NAME".arc;
 v_node_proximity_control boolean;
 v_node_proximity double precision;
 v_dsbl_error boolean;
@@ -74,7 +75,7 @@ BEGIN
 						EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 						"data":{"message":"1097", "function":"1334","debug_msg":"'||NEW.node_id||'"}}$$);';	
 					ELSE
-						INSERT INTO audit_log_data (fid, feature_id, log_message)
+						INSERT INTO aSCHEMA_NAMEit_log_data (fid, feature_id, log_message)
 						VALUES (4, NEW.node_id, 'Node with state 1 over another node with state=1 it is not allowed');
 					END IF;
 				END IF;		
@@ -92,7 +93,7 @@ BEGIN
 						EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 						"data":{"message":"1096", "function":"1334","debug_msg":"'||NEW.node_id||'"}}$$);';	
 					ELSE
-						INSERT INTO audit_log_data (fid, feature_id, log_message) VALUES (4,
+						INSERT INTO aSCHEMA_NAMEit_log_data (fid, feature_id, log_message) VALUES (4,
 						NEW.node_id, 'Node with state 2 over another node with state=2 on same alternative it is not allowed');
 					END IF;
 				END IF;		
@@ -121,6 +122,7 @@ BEGIN
 							UPDATE arc SET node_2=NEW.node_id WHERE arc_id=v_arc.arc_id AND node_2=v_node.node_id;
 						END IF;
 					ELSE
+						--RAISE EXCEPTION 'AGHSASHASH %', v_arc.arc_id;
 						-- getting values to create new 'fictius' arc
 						SELECT * INTO v_arcrecordtb FROM arc WHERE arc_id = v_arc.arc_id::text;
 							
@@ -132,7 +134,7 @@ BEGIN
 						v_arcrecordtb.state_type := (SELECT value::smallint FROM config_param_system WHERE parameter='plan_statetype_ficticius' LIMIT 1);
 
 						-- set temporary values for config variables in order to enable the insert of arc in spite of due a 'bug' of postgres it seems that does not recognize the new node inserted
-						UPDATE config_param_user SET value=TRUE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;				
+						UPDATE config_param_user SET value=TRUE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;	
 
 						-- Insert new records into arc table
 						INSERT INTO arc SELECT v_arcrecordtb.*;
@@ -143,7 +145,7 @@ BEGIN
 						ELSE
 							v_arcrecordtb.node_2 = NEW.node_id;
 						END IF;
-					
+											
 						UPDATE arc SET node_1=v_arcrecordtb.node_1, node_2=v_arcrecordtb.node_2 WHERE arc_id = v_arcrecordtb.arc_id;
 
 						-- restore temporary value for edit_disable_statetopocontrol variable
@@ -203,7 +205,7 @@ BEGIN
 			
 			-- Updating expl / dma
 			IF (NEW.the_geom IS DISTINCT FROM OLD.the_geom)THEN   
-				NEW.expl_id:= (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);          
+				NEW.expl_id:= (SELECT expl_id FROM exploitation WHERE active IS TRUE AND ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);          
 				NEW.dma_id := (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) LIMIT 1);
 				NEW.sector_id:= (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) LIMIT 1);          				
 			END IF;
@@ -234,7 +236,7 @@ BEGIN
 				SELECT * INTO v_noderecord1 FROM node WHERE node.node_id = v_arcrec.node_1;
 				SELECT * INTO v_noderecord2 FROM node WHERE node.node_id = v_arcrec.node_2;
 		
-				-- Control de lineas de longitud 0
+				-- Control de lineas de longitSCHEMA_NAME 0
 				IF (v_noderecord1.node_id IS NOT NULL) AND (v_noderecord2.node_id IS NOT NULL) AND st_equals(NEW.the_geom, OLD.the_geom) IS FALSE THEN
 		
 					-- Update arc node coordinates, node_id and direction

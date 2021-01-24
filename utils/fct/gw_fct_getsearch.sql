@@ -245,9 +245,9 @@ BEGIN
 		SELECT ((value::json)->>'sys_id_field') INTO v_search_muni_id_field FROM config_param_system WHERE parameter='basic_search_muni';
 		SELECT ((value::json)->>'sys_search_field') INTO v_search_muni_search_field FROM config_param_system WHERE parameter='basic_search_muni';
 		SELECT ((value::json)->>'sys_geom_field') INTO v_search_muni_geom_field FROM config_param_system WHERE parameter='basic_search_muni';
-		
-		-- Get municipality vdefault
-		SELECT value::integer INTO v_search_vdef FROM config_param_user WHERE parameter='basic_search_municipality_vdefault' AND cur_user=current_user;
+
+		-- get muni default from map
+		v_search_vdef = (SELECT muni_id FROM ext_municipality m, v_edit_exploitation e WHERE st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) limit 1);
 		
 		-- Init combo json
 		SELECT * INTO rec_fields FROM config_form_fields WHERE formname='search' AND columnname='add_muni';
@@ -257,7 +257,7 @@ BEGIN
 
 		-- Get Ids for type combo
 		EXECUTE 'SELECT array_to_json(array_agg(id)) FROM (SELECT '||quote_ident(v_search_muni_id_field)||' AS id FROM '||quote_ident(v_search_muni_table) ||
-		' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
+		' WHERE active IS TRUE ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
 		
 		comboType := gw_fct_json_object_set_key(comboType, 'comboIds', combo_json);
 
@@ -270,12 +270,12 @@ BEGIN
 
 		-- Get name for type combo
 		EXECUTE 'SELECT array_to_json(array_agg(idval)) FROM (SELECT '||quote_ident(v_search_muni_search_field)||' AS idval FROM '||quote_ident(v_search_muni_table) ||
-		' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
+		' WHERE active IS TRUE ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
 		comboType := gw_fct_json_object_set_key(comboType, 'comboNames', combo_json);
 
 		-- Get geom for combo
 		EXECUTE 'SELECT array_to_json(array_agg(st_astext(st_envelope(geom)))) FROM (SELECT '||quote_ident(v_search_muni_geom_field)||' AS geom FROM '||
-		quote_ident(v_search_muni_table) ||' ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
+		quote_ident(v_search_muni_table) ||' WHERE active IS TRUE ORDER BY '||quote_ident(v_search_muni_search_field)||') a' INTO combo_json;
 		comboType := gw_fct_json_object_set_key(comboType, 'comboGeometry', combo_json);
 
 		-- Create street search field
@@ -515,8 +515,8 @@ BEGIN
 	END IF;
 
 	--Exception handling
-	--EXCEPTION WHEN OTHERS THEN 
-	--RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	EXCEPTION WHEN OTHERS THEN 
+	RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
 
 END;
 $BODY$

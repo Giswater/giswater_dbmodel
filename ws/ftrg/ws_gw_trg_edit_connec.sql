@@ -62,6 +62,13 @@ BEGIN
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
 		v_streetaxis = (SELECT id FROM ext_streetaxis WHERE muni_id = NEW.muni_id AND name = NEW.streetname LIMIT 1);
 		v_streetaxis2 = (SELECT id FROM ext_streetaxis WHERE muni_id = NEW.muni_id AND name = NEW.streetname2 LIMIT 1);
+		
+		IF NEW.arc_id IS NOT NULL AND NEW.expl_id IS NOT NULL THEN
+			IF (SELECT expl_id FROM arc WHERE arc_id = NEW.arc_id) != NEW.expl_id THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3144", "function":"1304","debug_msg":"'||NEW.arc_id::text||'"}}$$);';
+			END IF;
+		END IF;
 	END IF;
 	
 	-- Control insertions ID
@@ -75,7 +82,7 @@ BEGIN
 
 		-- connec Catalog ID
 		IF (NEW.connecat_id IS NULL) THEN
-			IF ((SELECT COUNT(*) FROM cat_connec) = 0) THEN
+			IF ((SELECT COUNT(*) FROM cat_connec WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 			  "data":{"message":"1022", "function":"1304","debug_msg":null, "variables":null}}$$);';
 			END IF;
@@ -87,7 +94,7 @@ BEGIN
 
 				-- get first value (last chance)
 				IF (NEW.connecat_id IS NULL) THEN
-					NEW.connecat_id := (SELECT id FROM cat_connec LIMIT 1);
+					NEW.connecat_id := (SELECT id FROM cat_connec WHERE active IS TRUE LIMIT 1);
 				END IF;
 			END IF;
 
@@ -101,7 +108,7 @@ BEGIN
 		IF (NEW.expl_id IS NULL) THEN
 			
 			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM exploitation) = 0) THEN
+			IF ((SELECT COUNT(*) FROM exploitation WHERE active IS TRUE) = 0) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 			"data":{"message":"1110", "function":"1304","debug_msg":null}}$$);';
 			END IF;
@@ -113,9 +120,9 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.expl_id IS NULL) THEN
-				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001);
+				SELECT count(*)into v_count FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE;
 				IF v_count = 1 THEN
-					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) LIMIT 1);
+					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -240,9 +247,10 @@ BEGIN
 			
 			-- getting value from geometry of mapzone
 			IF (NEW.muni_id IS NULL) THEN
-				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001);
+				SELECT count(*)into v_count FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) AND active IS TRUE ;
 				IF v_count = 1 THEN
-					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) LIMIT 1);
+					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001) 
+					AND active IS TRUE LIMIT 1);
 				ELSE
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
@@ -279,14 +287,8 @@ BEGIN
 			
 		--check relation state - state_type
 		IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
-			IF NEW.state IS NOT NULL THEN
-				v_sql = NEW.state;
-			ELSE
-				v_sql = 'null';
-			END IF;
-			
 			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"3036", "function":"1318","debug_msg":"'||v_sql::text||'"}}$$);';
+				"data":{"message":"3036", "function":"1318","debug_msg":"'||NEW.state::text||'"}}$$);';
 		END IF;
 
 		--Inventory	
@@ -314,6 +316,9 @@ BEGIN
 		--Builtdate
 		IF (NEW.builtdate IS NULL) THEN
 			NEW.builtdate :=(SELECT "value" FROM config_param_user WHERE "parameter"='edit_builtdate_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			IF (NEW.builtdate IS NULL) AND (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE THEN
+				NEW.builtdate :=date(now());
+			END IF;
 		END IF;
 		
 		-- Verified
@@ -502,6 +507,9 @@ BEGIN
 			END LOOP;
 		END IF;		
 
+		-- inp connec insert
+		INSERT INTO inp_connec (connec_id) VALUES (NEW.connec_id);
+
 		RETURN NEW;
 
 	
@@ -533,9 +541,11 @@ BEGIN
 		-- Reconnect arc_id
 		IF (NEW.arc_id != OLD.arc_id) OR (NEW.arc_id IS NOT NULL AND OLD.arc_id IS NULL) OR (NEW.arc_id IS NULL AND OLD.arc_id IS NOT NULL) THEN
 
-			-- when arc_id comes from connec table
-			IF OLD.arc_id NOT IN (SELECT arc_id FROM plan_psector_x_connec WHERE connec_id=NEW.connec_id) THEN 
-			
+			-- when arc_id comes from plan psector tables
+			IF (OLD.arc_id IN (SELECT arc_id FROM plan_psector_x_connec WHERE connec_id=NEW.connec_id)) THEN
+				UPDATE plan_psector_x_connec SET arc_id = NEW.arc_id WHERE connec_id=OLD.connec_id AND arc_id = OLD.arc_id;		
+			ELSE
+				-- when arc_id comes from connec table
 				UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
 				
 				IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
@@ -548,10 +558,6 @@ BEGIN
 					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
 					"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
 				END IF;
-
-			-- when arc_id comes from plan psector tables
-			ELSIF (OLD.arc_id IN (SELECT arc_id FROM plan_psector_x_connec WHERE connec_id=NEW.connec_id)) THEN
-				UPDATE plan_psector_x_connec SET arc_id = NEW.arc_id WHERE connec_id=OLD.connec_id AND arc_id = OLD.arc_id;		
 			END IF;
 		END IF;
 
@@ -564,7 +570,7 @@ BEGIN
 				= 'plan_psector_vdefault'::text AND config_param_user.cur_user::name = "current_user"() LIMIT 1), 1, true);
 			END IF;
 			IF NEW.state = 1 AND OLD.state=2 THEN
-				DELETE FROM plan_psector_x_connec WHERE connec_id=NEW.connec_id;					
+				DELETE FROM plan_psector_x_connec WHERE connec_id=NEW.connec_id;
 			END IF;
 			UPDATE connec SET state=NEW.state WHERE connec_id = OLD.connec_id;
 			
@@ -578,17 +584,15 @@ BEGIN
 					NEW.state_type=(SELECT id from value_state_type WHERE state=0 LIMIT 1);
 					IF NEW.state_type IS NULL THEN
 						EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-      	 				 "data":{"message":"2110", "function":"1318","debug_msg":null}}$$);';
+						"data":{"message":"2110", "function":"1318","debug_msg":null}}$$);';
 					END IF;
 				END IF;
 			END IF;
 
-			-- Control of automatic downgrade of associated link/vnode
-			IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_connect_downgrade_link'
-			AND cur_user=current_user LIMIT 1) IS TRUE THEN	
-				UPDATE link SET state=0 WHERE feature_id=OLD.connec_id;
-				UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
-			END IF;
+			-- Automatic downgrade of associated link/vnode
+			UPDATE link SET state=0 WHERE feature_id=OLD.connec_id;
+			UPDATE vnode SET state=0 WHERE vnode_id=(SELECT exit_id FROM link WHERE feature_id=OLD.connec_id LIMIT 1)::integer;
+
 		END IF;
 		
 		--check relation state - state_type
@@ -600,7 +604,7 @@ BEGIN
 				UPDATE connec SET state_type=NEW.state_type WHERE connec_id = OLD.connec_id;
 			END IF;
 		END IF;			
-       	
+
 		-- rotation
 		IF NEW.rotation != OLD.rotation THEN
 			UPDATE connec SET rotation=NEW.rotation WHERE connec_id = OLD.connec_id;
@@ -695,10 +699,10 @@ BEGIN
 					END IF;
 				
 				END LOOP;
-		    END IF;   
+		END IF;
 
-        RETURN NEW;
-    
+		RETURN NEW;
+
 
 	ELSIF TG_OP = 'DELETE' THEN
 	
@@ -725,10 +729,10 @@ BEGIN
 				DELETE FROM vnode WHERE vnode_id=v_record_link.exit_id::integer;
 			END IF;
 		END LOOP;
-        
+
 		--Delete addfields
-  		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id  and parameter_id in 
-  		(SELECT id FROM sys_addfields WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.connec_type);
+		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id  and parameter_id in 
+		(SELECT id FROM sys_addfields WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.connec_type);
 
 		RETURN NULL;
 

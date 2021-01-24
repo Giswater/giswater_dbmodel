@@ -48,8 +48,8 @@ BEGIN
 	SELECT project_type, giswater  INTO v_project_type, v_version FROM sys_version order by 1 desc limit 1;
 	
 	-- dissable temporary trigger to manage control_config
-	UPDATE config_param_user SET value=FALSE WHERE cur_user = current_user AND parameter  = 'config_control';
-		
+	UPDATE config_param_system SET value = 'FALSE'  WHERE parameter='admin_config_control_trigger';
+
 	-- get input parameters
 	v_cat_feature = ((p_data ->>'feature')::json->>'catFeature')::text;
 	v_view_name = ((p_data ->>'data')::json->>'view_name')::text;
@@ -67,19 +67,20 @@ BEGIN
 	END IF;
 
 	IF v_view_name NOT IN (SELECT tableinfo_id FROM config_info_layer_x_type) THEN
-		INSERT INTO config_info_layer_x_type(tableinfo_id, infotype_id, tableinfotype_id) VALUES (v_view_name,1,v_view_name);
+		INSERT INTO config_info_layer_x_type(tableinfo_id, infotype_id, tableinfotype_id) VALUES (v_view_name,1,v_view_name)
+		ON CONFLICT (tableinfo_id, infotype_id) DO NOTHING;
 	END IF;
 
 	--select list of fields different than id from config_form_fields
-	EXECUTE 'SELECT DISTINCT string_agg(column_name::text,'' ,'')
+	EXECUTE 'SELECT DISTINCT string_agg(column_name::text,'' ,'') FROM (SELECT column_name
 	FROM information_schema.columns WHERE table_name=''config_form_fields'' and table_schema='''||v_schemaname||'''
-	AND column_name!=''id'';'
+	AND column_name!=''id'' ORDER BY ordinal_position)a;'
 	INTO v_config_fields;
 	
 	--select list of fields different than id and formname from config_form_fields
-	EXECUTE 'SELECT DISTINCT string_agg(concat(column_name)::text,'' ,'')
+	EXECUTE 'SELECT DISTINCT string_agg(concat(column_name)::text,'' ,'') FROM (SELECT column_name
 	FROM information_schema.columns WHERE table_name=''config_form_fields'' and table_schema='''||v_schemaname||'''
-	AND column_name!=''id'' AND column_name!=''formname'';'
+	AND column_name!=''id'' AND column_name!=''formname'' ORDER BY ordinal_position)a;'
 	INTO v_insert_fields;
 
 	--insert configuration copied from the parent view config
@@ -94,10 +95,10 @@ BEGIN
 	END LOOP;
 
 	--update configuration of man_type fields setting featurecat related to the view
-	EXECUTE 'UPDATE config_form_fields SET dv_querytext = concat(dv_querytext, ''OR featurecat_id = '''||quote_literal(v_cat_feature)||''''')
+	EXECUTE 'UPDATE config_form_fields SET dv_querytext = concat(dv_querytext, '' OR '''||quote_literal(v_cat_feature)||''' = ANY(featurecat_id::text[])'')
 	WHERE formname = '''||v_view_name||'''
 	and (columnname =''location_type'' OR columnname =''fluid_type'' OR columnname =''function_type'' OR columnname =''category_type'')
-	AND dv_querytext NOT ILIKE ''%OR%'';';
+	AND dv_querytext NOT ILIKE ''% OR%'';';
 
 	--select columns from man_* table without repeating the identifier
 	v_man_fields = 'SELECT DISTINCT column_name::text, data_type::text, numeric_precision, numeric_scale
@@ -174,7 +175,7 @@ BEGIN
 	END LOOP;
 
 	-- enable trigger to manage control_config
-	UPDATE config_param_user SET value=TRUE WHERE cur_user = current_user AND parameter  = 'config_control';
+	UPDATE config_param_system SET value = 'TRUE'  WHERE parameter='admin_config_control_trigger';
 	
 END;
 $BODY$

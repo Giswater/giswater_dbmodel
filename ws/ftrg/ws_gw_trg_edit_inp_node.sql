@@ -6,7 +6,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION NODE: 1310
 
-
 -----------------------------
 -- TRIGGERS EDITING VIEWS FOR NODE
 -----------------------------
@@ -37,9 +36,19 @@ BEGIN
         RETURN NEW;
 
     ELSIF TG_OP = 'UPDATE' THEN
+
+	-- elevation
+	IF (NEW.elevation != OLD.elevation) OR (NEW.elevation IS NULL AND OLD.elevation IS NOT NULL) OR (NEW.elevation IS NOT NULL AND OLD.elevation IS NULL) THEN
+		UPDATE node SET elevation=NEW.elevation WHERE node_id = OLD.node_id;
+	END IF;
+
+	-- depth
+	IF (NEW.depth != OLD.depth) OR (NEW.depth IS NULL AND OLD.depth IS NOT NULL) OR (NEW.depth IS NOT NULL AND OLD.depth IS NULL) THEN
+		UPDATE node SET depth=NEW.depth WHERE node_id = OLD.node_id;
+	END IF;
 	
 	-- State
-	IF (NEW.state != OLD.state) THEN
+	IF (NEW.state::text != OLD.state::text) THEN
 		UPDATE node SET state=NEW.state WHERE node_id = OLD.node_id;
 	END IF;
 
@@ -50,8 +59,8 @@ BEGIN
 		UPDATE node SET the_geom=NEW.the_geom WHERE node_id = OLD.node_id;
 			
 		-- Parent id
-        SELECT concat('man_',lower(system_id)), pol_id INTO v_tablename, v_pol_id FROM polygon JOIN cat_feature ON cat_feature.id=polygon.sys_type
-        WHERE ST_DWithin(NEW.the_geom, polygon.the_geom, 0.001) LIMIT 1;
+		SELECT concat('man_',lower(system_id)), pol_id INTO v_tablename, v_pol_id FROM polygon JOIN cat_feature ON cat_feature.id=polygon.sys_type
+		WHERE ST_DWithin(NEW.the_geom, polygon.the_geom, 0.001) LIMIT 1;
 	
 		IF v_pol_id IS NOT NULL THEN
 			v_sql:= 'SELECT node_id FROM '||v_tablename||' WHERE pol_id::integer='||v_pol_id||' LIMIT 1';
@@ -61,7 +70,7 @@ BEGIN
 			
 		--update elevation from raster
 		IF (SELECT upper(value) FROM config_param_system WHERE parameter='admin_raster_dem') = 'TRUE' AND (NEW.elevation IS NULL) AND
-		(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_update_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
+		(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_upsert_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
 			NEW.elevation = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM v_ext_raster_dem WHERE id =
 				(SELECT id FROM v_ext_raster_dem WHERE
 				st_dwithin (ST_MakeEnvelope(
@@ -93,7 +102,7 @@ BEGIN
             UPDATE inp_pump SET power=NEW.power, curve_id=NEW.curve_id, speed=NEW.speed, pattern=NEW.pattern, to_arc=NEW.to_arc, status=NEW.status , pump_type=NEW.pump_type WHERE node_id=OLD.node_id;
         ELSIF v_node_table = 'inp_valve' THEN     
             UPDATE inp_valve SET valv_type=NEW.valv_type, pressure=NEW.pressure, flow=NEW.flow, coef_loss=NEW.coef_loss, curve_id=NEW.curve_id,
-            minorloss=NEW.minorloss, to_arc=NEW.to_arc, status=NEW.status WHERE node_id=OLD.node_id;
+            minorloss=NEW.minorloss, to_arc=NEW.to_arc, status=NEW.status, custom_dint=NEW.custom_dint WHERE node_id=OLD.node_id;
         ELSIF v_node_table = 'inp_shortpipe' THEN     
             UPDATE inp_shortpipe SET minorloss=NEW.minorloss, to_arc=NEW.to_arc, status=NEW.status WHERE node_id=OLD.node_id;  
         ELSIF v_node_table = 'inp_inlet' THEN     
@@ -103,12 +112,9 @@ BEGIN
 
 
         UPDATE node 
-        SET elevation=NEW.elevation, "depth"=NEW."depth", nodecat_id=NEW.nodecat_id, sector_id=NEW.sector_id, "state"=NEW."state", 
-            annotation=NEW.annotation
+        SET sector_id=NEW.sector_id, annotation=NEW.annotation
         WHERE node_id=OLD.node_id;
 
-        EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-        "data":{"message":"2", "function":"1310","debug_msg":null}}$$);';
         RETURN NEW;
         
     ELSIF TG_OP = 'DELETE' THEN

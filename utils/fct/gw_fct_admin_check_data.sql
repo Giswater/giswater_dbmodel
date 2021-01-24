@@ -69,8 +69,118 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (195, null, 1, '-------');
 
 
-	--CHECK CHILD VIEWS FOR ACTIVE FEATURES
+	--CHECK VALUES ON OBLIGATORY CAT_FEATURE_* FIELDS
 
+	--check if all features have value on field active
+	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature WHERE active IS NULL;
+
+	IF v_count > 0 THEN
+		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "active". Features - ',v_feature_list::text,'.');
+
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
+	ELSE
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All features have value on field "active"');
+	END IF;
+
+	--check if all features have value on field code_autofill
+	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature WHERE code_autofill IS NULL;
+
+	IF v_count > 0 THEN
+		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "code_autofill". Features - ',v_feature_list::text,'.');
+
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
+	ELSE
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All features have value on field "code_autofill"');
+	END IF;
+
+	--check if all nodes have value on field num_arcs
+	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE num_arcs IS NULL;
+
+	IF v_count > 0 THEN
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "num_arcs". Features - ',v_feature_list::text,'.');
+
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
+	ELSE
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "num_arcs"');
+	END IF;
+
+	--check if all nodes have value on field isarcdivide
+	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE isarcdivide IS NULL;
+
+	IF v_count > 0 THEN
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isarcdivide". Features - ',v_feature_list::text,'.');
+
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
+	ELSE
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "isarcdivide"');
+	END IF;
+
+	IF v_project_type = 'WS' THEN
+		--check if all nodes have value on field isarcdivide
+		SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE graf_delimiter IS NULL;
+
+		IF v_count > 0 THEN
+			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "graf_delimiter". Features - ',v_feature_list::text,'.');
+
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
+			VALUES (195, 3, v_errortext);
+		ELSE
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
+			VALUES (195, 1, 'INFO: All nodes have value on field "graf_delimiter"');
+		END IF;
+	END IF;
+
+	IF v_project_type = 'UD' THEN
+		--check if all nodes have value on field isexitupperintro
+		SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE isexitupperintro IS NULL;
+
+		IF v_count > 0 THEN
+			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isexitupperintro". Features - ',v_feature_list::text,'.');
+
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
+			VALUES (195, 3, v_errortext);
+		ELSE
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
+			VALUES (195, 1, 'INFO: All nodes have value on field "isexitupperintro"');
+		END IF;
+	END IF;
+	
+	--check if all nodes have value on field choose_hemisphere
+	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE choose_hemisphere IS NULL;
+
+	IF v_count > 0 THEN
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "choose_hemisphere". Features - ',v_feature_list::text,'.');
+
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
+	ELSE
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "choose_hemisphere"');
+	END IF;
+
+	--check if all nodes have value on field isprofilesurface
+	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE isprofilesurface IS NULL;
+
+	IF v_count > 0 THEN
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isprofilesurface". Features - ',v_feature_list::text,'.');
+
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
+	ELSE
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All nodes have value on field "isprofilesurface"');
+	END IF;
+	
+
+	--CHECK CHILD VIEWS FOR ACTIVE FEATURES
 	--list active cat_feature
 	v_querytext = 'SELECT * FROM cat_feature WHERE active IS TRUE;';
 	FOR rec IN EXECUTE v_querytext LOOP
@@ -103,8 +213,8 @@ BEGIN
 				IF v_count > 0 THEN
 					v_errortext=concat('WARNING: There is/are ',v_count,' active addfields that may not be present on the view ',rec.child_layer,'. Addfields: ',v_param_list::text,'.');
 
-					INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-					VALUES (195, 2, v_errortext, v_count);
+					INSERT INTO audit_check_data (fid,  criticity, error_message)
+					VALUES (195, 2, v_errortext);
 
 				END IF;
 		
@@ -127,11 +237,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' active features which views names are not present in cat_feature table. Features - ',v_feature_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3, v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All active features have child view name in cat_feature table', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All active features have child view name in cat_feature table');
 	END IF;
 
 	--check if all views with active cat_feature have a definition in config_api_tableinfo_x_infotype
@@ -141,11 +251,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext=concat('ERROR: There is/are ',v_count,' active features which views are not defined in config_api_tableinfo_x_infotype. Undefined views: ',v_view_list::text,'.');
 
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3, v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All active features have child view defined in config_api_tableinfo_x_infotype', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All active features have child view defined in config_api_tableinfo_x_infotype');
 	END IF;
 
 
@@ -156,11 +266,11 @@ BEGIN
 	IF v_count > 0 THEN
 		v_errortext = concat('ERROR: There is/are ',v_count,' active features which views are not defined in config_form_fields. Undefined views: ',v_view_list,'.');
 		
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3,v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3,v_errortext );
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All active features have child view defined in config_form_fields',0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All active features have child view defined in config_form_fields');
 	END IF;
 
 	--check if all ve_node_*,ve_arc_* etc views created in schema are related to any feature in cat_feature
@@ -172,7 +282,7 @@ BEGIN
 
 		IF position(rec.table_name IN v_querytext) = 0 THEN
 			v_errortext=concat('WARNING: View ',rec.table_name,' is defined in a DB but is not related to any feature in cat_feature.');
-			INSERT INTO audit_check_data (fid,  criticity, error_message, count)
+			INSERT INTO audit_check_data (fid,  criticity, error_message)
 			VALUES (195, 2, v_errortext);
 		END IF;
 	END LOOP;
@@ -184,11 +294,11 @@ BEGIN
 
 	IF v_count > 0 THEN
 		v_errortext =  concat('ERROR: There is/are ',v_count,' feature form fields in config_form_fields that don''t have data type. Fields: ',v_view_list,'.');
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3,v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3,v_errortext);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All feature form fields have defined data type.', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All feature form fields have defined data type.');
 	END IF;
 
 	--check if all the fields has defined widgettype 
@@ -196,11 +306,11 @@ BEGIN
 
 	IF v_count > 0 THEN
 		v_errortext = concat('ERROR: There is/are ',v_count,' feature form fields in config_form_fields that don''t have widget type. Fields: ',v_view_list,'.');
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3,v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3,v_errortext);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All feature form fields have defined widget type.',0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All feature form fields have defined widget type.');
 	END IF;
 
 	--check if all the fields defined as combo or typeahead have dv_querytext defined
@@ -209,11 +319,11 @@ BEGIN
 
 	IF v_count > 0 THEN
 		v_errortext = concat('ERROR: There is/are ',v_count,' feature form fields in config_form_fields that are combo or typeahead but don''t have dv_querytext defined. Fields: ',v_view_list,'.');
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3, v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All feature form fields with widget type combo or typeahead have dv_querytext defined.',0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All feature form fields with widget type combo or typeahead have dv_querytext defined.');
 	END IF;
 
 	--check if all addfields are defined in config_form_fields
@@ -226,8 +336,8 @@ BEGIN
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All addfields are defined in config_form_fields.', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All addfields are defined in config_form_fields.');
 	END IF;
 
 	--check if definitions has duplicated layoutorder for different layouts -
@@ -236,8 +346,8 @@ BEGIN
 
 	IF v_field_array IS NOT NULL THEN
 		v_errortext=concat('ERROR: There is/are form names with duplicated layout order defined in config_form_fields: ');
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 3, v_errortext, v_count);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 3, v_errortext);
 
 		FOREACH rec_fields IN ARRAY(v_field_array)
 		LOOP
@@ -245,8 +355,8 @@ BEGIN
 			VALUES (195, 3, rec_fields); --replace(replace(rec_fields::text,'("',''),'")',''));
 		END LOOP;
 	ELSE
-		INSERT INTO audit_check_data (fid,  criticity, error_message, count)
-		VALUES (195, 1, 'INFO: All fields defined in config_form_fields have unduplicated order.', 0);
+		INSERT INTO audit_check_data (fid,  criticity, error_message)
+		VALUES (195, 1, 'INFO: All fields defined in config_form_fields have unduplicated order.');
 	END IF;
 
 	-- get results
@@ -265,7 +375,7 @@ BEGIN
 	v_result_info := COALESCE(v_result_info, '{}'); 
 
 	-- Return
-	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
+	RETURN ('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
 			 ',"body":{"form":{}'||
 			 ',"data":{ "info":'||v_result_info||','||
 				'"setVisibleLayers":[]'||','||
@@ -273,7 +383,7 @@ BEGIN
 				'"line":{"geometryType":"", "values":[]}'||','||
 				'"polygon":{"geometryType":"", "values":[]}'||
 			   '}}'||
-		'}')::json, 2776);
+		'}')::json;
 
 END;
 $BODY$
