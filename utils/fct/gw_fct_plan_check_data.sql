@@ -41,7 +41,7 @@ v_query text;
 BEGIN 
 
 	-- init function
-	SET search_path=SCHEMA_NAME, public;
+	SET search_path="SCHEMA_NAME", public;
 	v_return:=0;
 	v_global_count:=0;
 
