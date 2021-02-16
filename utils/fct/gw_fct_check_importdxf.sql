@@ -65,7 +65,7 @@ BEGIN
 		VALUES ('DXF_JUN', 'JUNCTION', 'NODE','v_edit_node', TRUE) ON CONFLICT DO NOTHING;
 		--create child view
 		PERFORM gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{},
-		"feature":{"catFeature":"DXF_JUN"}, "data":{"filterFields":{}, "pageInfo":{}, "multi_create":"False" }}$$);
+		"feature":{"catFeature":"DXF_JUN"}, "data":{"filterFields":{}, "pageInfo":{}, "action":"SINGLE-CREATE" }}$$);
 
 		IF v_project_type = 'WS' THEN
 			INSERT INTO cat_feature_node(id, type, epa_default, man_table, epa_table, choose_hemisphere,

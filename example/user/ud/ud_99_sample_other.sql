@@ -111,11 +111,8 @@ SELECT gw_fct_audit_check_project($${"client":{"device":4, "infoType":1, "lang":
 SELECT 	gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{"catFeature":"CONDUIT"},
  "data":{"filterFields":{}, "pageInfo":{}, "action":"MULTI-DELETE"  }}$$);
 
-UPDATE config_param_system SET value='FALSE' WHERE parameter='admin_config_control_trigger';
 SELECT 	gw_fct_admin_manage_child_views($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{"catFeature":"CONDUIT"},
- "data":{"filterFields":{}, "pageInfo":{}, "multi_create":"TRUE" }}$$);
-UPDATE config_param_system SET value='TRUE' WHERE parameter='admin_config_control_trigger';
-
+ "data":{"filterFields":{}, "pageInfo":{}, "action":"MULTI-CREATE" }}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"CHAMBER"},
 "data":{"action":"CREATE", "multi_create":"false", "parameters":{"columnname":"chamber_param_1", "datatype":"string", 
