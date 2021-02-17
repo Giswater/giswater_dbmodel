@@ -15,7 +15,7 @@ DECLARE
 BEGIN
 
 --	Set search path to local schema
-	SET search_path = SCHEMA_NAME, public;
+	SET search_path = "SCHEMA_NAME", public;
 
     IF (TG_OP = 'INSERT') THEN
         v_new_data := row_to_json(NEW.*);
