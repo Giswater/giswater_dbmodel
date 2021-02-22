@@ -6,15 +6,15 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2456
 
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_pg2epa_dscenario (result_id_var character varying)  
+CREATE OR REPLACE FUNCTION ws_sample.gw_fct_pg2epa_dscenario (result_id_var character varying)  
 RETURNS integer AS 
 $BODY$
 
 /*
-SELECT SCHEMA_NAME.gw_fct_pg2epa_dscenario('calaf_diag')
-SELECT SCHEMA_NAME.gw_fct_pg2epa_main($${"data":{ "resultId":"test_bgeo_b1", "useNetworkGeom":"false"}}$$)
+SELECT ws_sample.gw_fct_pg2epa_dscenario('calaf_diag')
+SELECT ws_sample.gw_fct_pg2epa_main($${"data":{ "resultId":"test_bgeo_b1", "useNetworkGeom":"false"}}$$)
 
-SELECT * FROM SCHEMA_NAME.temp_node WHERE node_id = 'VN257816';
+SELECT * FROM ws_sample.temp_node WHERE node_id = 'VN257816';
 */
 
 DECLARE
@@ -25,7 +25,7 @@ v_patternmethod integer;
 BEGIN
 
 	--  Search path
-	SET search_path = "SCHEMA_NAME", public;
+	SET search_path = "ws_sample", public;
 
 	RAISE NOTICE 'Starting pg2epa for filling demand scenario';
 
@@ -42,7 +42,7 @@ BEGIN
 			-- moving to temp_node in order to do not lose base demand (because EPANET does)
 			INSERT INTO temp_demand (feature_id, demand, pattern_id)
 			SELECT DISTINCT ON (feature_id) feature_id, n.demand, n.pattern_id 
-			FROM temp_node n, inp_demand d WHERE n.node_id = d.feature_id AND n.demand > 0 AND dscenario_id IN (SELECT dscenario_id FROM selector_inp_demand where cur_user=current_user);
+			FROM temp_node n, inp_demand d WHERE n.node_id = d.feature_id  AND dscenario_id IN (SELECT dscenario_id FROM selector_inp_demand where cur_user=current_user);
 		END IF;
 		
 		-- move patterns used demands scenario table
