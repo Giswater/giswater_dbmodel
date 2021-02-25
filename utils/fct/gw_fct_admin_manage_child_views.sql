@@ -136,9 +136,10 @@ BEGIN
 		PERFORM gw_fct_debug(concat('{"data":{"msg":"Deleted layer: ", "variables":"',v_childview,'"}}')::json);
 			
 		-- create new view with all columns from parent/man/addfields
-		PERFORM gw_fct_admin_manage_child_views(concat('{"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, 
-		        "feature":{"catFeature":"',v_cat_feature,'"},"data":{"filterFields":{}, "pageInfo":{}, 
-				"action":"SINGLE-CREATE" }}'::json));
+		v_query = concat('{"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{"catFeature":"',v_cat_feature,
+		'"},"data":{"filterFields":{}, "pageInfo":{}, "action":"SINGLE-CREATE"}}');			
+
+		PERFORM gw_fct_admin_manage_child_views(v_query);
 					
 		-- insert into config_form_fields new column values coyping from parent
 		INSERT INTO config_form_fields 
