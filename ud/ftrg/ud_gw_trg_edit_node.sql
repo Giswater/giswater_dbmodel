@@ -35,6 +35,7 @@ v_streetaxis text;
 v_streetaxis2 text;
 v_matfromcat boolean = false;
 v_sys_type text;
+v_force_delete boolean;
 
 
 BEGIN
@@ -775,11 +776,11 @@ BEGIN
 				END IF;
 			
 			END LOOP;
-	    END IF;       
+		END IF;       
 	    		
-        RETURN NEW;
+		RETURN NEW;
 			
-    ELSIF TG_OP = 'DELETE' THEN
+	ELSIF TG_OP = 'DELETE' THEN
 
 		EXECUTE 'SELECT gw_fct_check_delete($${"client":{"device":4, "infoType":1, "lang":"ES"},
 		"feature":{"id":"'||OLD.node_id||'","featureType":"NODE"}, "data":{}}$$)';
@@ -789,9 +790,16 @@ BEGIN
 		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_storage WHERE node_id=OLD.node_id );
 		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_wwtp WHERE node_id=OLD.node_id );
 		DELETE FROM polygon WHERE pol_id IN (SELECT pol_id FROM man_netgully WHERE node_id=OLD.node_id );
-		
+
+		-- force plan_psector_force_delete
+		SELECT value INTO v_force_delete FROM config_param_user WHERE parameter = 'plan_psector_force_delete' and cur_user = current_user;
+		UPDATE config_param_user SET value = 'true' WHERE parameter = 'plan_psector_force_delete' and cur_user = current_user;
+ 	
 		-- delete from note table
 		DELETE FROM node WHERE node_id = OLD.node_id;
+
+		-- restore plan_psector_force_delete
+		UPDATE config_param_user SET value = v_force_delete WHERE parameter = 'plan_psector_force_delete' and cur_user = current_user;
 
 		--Delete addfields (after or before deletion of node, doesn't matter)
 		DELETE FROM man_addfields_value WHERE feature_id = OLD.node_id;
