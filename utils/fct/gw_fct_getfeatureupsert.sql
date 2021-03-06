@@ -259,9 +259,9 @@ BEGIN
 						v_sector_id = v_noderecord2.sector_id;
 					ELSIF v_noderecord2.sector_id = 0 THEN
 						v_sector_id = v_noderecord1.sector_id;
-					ELSIF v_noderecord1.presszone_id::text != v_noderecord2.presszone_id::text THEN
-						v_issectorborder = v_noderecord1.presszone_id;
-						v_sector_id = true;	
+					ELSIF v_noderecord1.sector_id::text != v_noderecord2.sector_id::text THEN
+						v_sector_id = v_noderecord1.sector_id;
+						v_issectorborder = true;	
 					END IF;
 
 					-- getting dma_id by heritage from nodes
