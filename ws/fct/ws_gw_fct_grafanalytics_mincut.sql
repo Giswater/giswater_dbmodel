@@ -90,6 +90,9 @@ BEGIN
 		
 	ELSIF v_mincutstep = 2 THEN 
 
+		-- setup graf reset water flag
+		UPDATE temp_anlgraf SET water=0;
+
 		-- setup graf opening proposable valves closed on step1
 		UPDATE temp_anlgraf SET flag=0
 		FROM om_mincut_valve WHERE result_id=v_mincutid AND ((unaccess = FALSE AND broken = FALSE))
