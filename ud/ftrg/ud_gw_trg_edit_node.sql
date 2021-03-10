@@ -73,10 +73,8 @@ BEGIN
 	IF TG_OP = 'INSERT' THEN
 
 		-- Node ID
-		IF (NEW.node_id IS NULL) OR (NEW.node_id~E'^\\d+$' IS FALSE) THEN
-			PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
-			NEW.node_id:= (SELECT nextval('urn_id_seq'));
-		END IF;
+		PERFORM setval('urn_id_seq', gw_fct_setvalurn(),true);
+		NEW.node_id:= (SELECT nextval('urn_id_seq'));
 
 		-- Node type
 		IF (NEW.node_type IS NULL) THEN
