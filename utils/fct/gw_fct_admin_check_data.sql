@@ -75,7 +75,7 @@ BEGIN
 	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature WHERE active IS NULL;
 
 	IF v_count > 0 THEN
-		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "active". Features - ',v_feature_list::text,'.');
+		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "active" from cat_feature. Features - ',v_feature_list::text,'.');
 
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
@@ -88,7 +88,7 @@ BEGIN
 	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature WHERE code_autofill IS NULL;
 
 	IF v_count > 0 THEN
-		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "code_autofill". Features - ',v_feature_list::text,'.');
+		v_errortext=concat('ERROR: There is/are ',v_count,' features without value on field "code_autofill" from cat_feature. Features - ',v_feature_list::text,'.');
 
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
@@ -101,7 +101,7 @@ BEGIN
 	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE num_arcs IS NULL;
 
 	IF v_count > 0 THEN
-		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "num_arcs". Features - ',v_feature_list::text,'.');
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "num_arcs" from cat_feature_node. Features - ',v_feature_list::text,'.');
 
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
@@ -114,7 +114,7 @@ BEGIN
 	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE isarcdivide IS NULL;
 
 	IF v_count > 0 THEN
-		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isarcdivide". Features - ',v_feature_list::text,'.');
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isarcdivide" from cat_feature_node. Features - ',v_feature_list::text,'.');
 
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
@@ -128,7 +128,7 @@ BEGIN
 		SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE graf_delimiter IS NULL;
 
 		IF v_count > 0 THEN
-			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "graf_delimiter". Features - ',v_feature_list::text,'.');
+			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "graf_delimiter" from cat_feature_node. Features - ',v_feature_list::text,'.');
 
 			INSERT INTO audit_check_data (fid,  criticity, error_message)
 			VALUES (195, 3, v_errortext);
@@ -143,7 +143,7 @@ BEGIN
 		SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE isexitupperintro IS NULL;
 
 		IF v_count > 0 THEN
-			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isexitupperintro". Features - ',v_feature_list::text,'.');
+			v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isexitupperintro" from cat_feature_node. Features - ',v_feature_list::text,'.');
 
 			INSERT INTO audit_check_data (fid,  criticity, error_message)
 			VALUES (195, 3, v_errortext);
@@ -157,8 +157,8 @@ BEGIN
 	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE choose_hemisphere IS NULL;
 
 	IF v_count > 0 THEN
-		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "choose_hemisphere". Features - ',v_feature_list::text,'.');
 
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "choose_hemisphere" from cat_feature_node. Features - ',v_feature_list::text,'.');
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
 	ELSE
@@ -170,7 +170,7 @@ BEGIN
 	SELECT count(*), string_agg(id,', ')  INTO v_count,v_feature_list FROM cat_feature_node WHERE isprofilesurface IS NULL;
 
 	IF v_count > 0 THEN
-		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isprofilesurface". Features - ',v_feature_list::text,'.');
+		v_errortext=concat('ERROR: There is/are ',v_count,' nodes without value on field "isprofilesurface" from cat_feature_node. Features - ',v_feature_list::text,'.');
 
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (195, 3, v_errortext);
