@@ -188,6 +188,25 @@ BEGIN
 		VALUES (206, 1, 'INFO: New nodes inserted with nodecat_id: DXF_JUN_CAT, node_type: DXF_JUN.');	
 		INSERT INTO audit_check_data (fid,  criticity, error_message)
 		VALUES (206, 1, concat('INFO: Arcs from dxf inserted with arc_type: ',v_arc_type,'.'));
+				       
+	--update node_1 and node_2 
+	EXECUTE 'UPDATE arc
+	SET node_1=t4.nd1,
+		node_2=t4.nd2
+	FROM
+	(
+		SELECT t3.arc_id,t3.nd1,t3bis.nd2 FROM
+		(
+		SELECT t2.arc_id,node_id nd1 FROM node t1,arc t2
+		WHERE st_intersects(st_buffer(t1.the_geom,0.1), st_startpoint(t2.the_geom))
+		AND t2.node_1 IS NULL) AS t3,
+					(
+		SELECT t2.arc_id,node_id nd2 FROM node t1,arc t2
+		WHERE st_intersects(st_buffer(t1.the_geom,0.1), st_endpoint(t2.the_geom))
+		AND t2.node_2 IS NULL) AS t3bis		
+		WHERE t3.arc_id=t3bis.arc_id
+							   ) AS t4
+	WHERE arc.arc_id=t4.arc_id;';
 
 	-- get results
 	-- info
