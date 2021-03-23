@@ -22,7 +22,7 @@ UPDATE sys_table set sys_sequence='plan_psector_x_gully_id_seq', sys_sequence_fi
 UPDATE config_form_fields SET iseditable = true WHERE formname = 'v_edit_arc' AND columnname = 'arc_type';
 
 -- 2021/03/08
-UPDATE config_form_fields set widgetcontrols = '{"setQgisMultiline":false}' WHERE widgetcontrols IS NULL;
 UPDATE config_form_fields set widgettype = 'text' WHERE widgettype = 'spinbox';
+UPDATE config_form_fields set widgetcontrols = '{"setQgisMultiline":false}' WHERE widgetcontrols IS NULL AND formtype = 'form_feature' AND widgettype = 'text';
 UPDATE config_form_fields SET formname = 'inp_timeseries'WHERE formname = 'inp_timser_id';
 
