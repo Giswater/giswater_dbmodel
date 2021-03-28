@@ -288,9 +288,9 @@ BEGIN
 		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature WHERE id=NEW.node_type;
 		
 		--Copy id to code field
-			IF (NEW.code IS NULL AND v_code_autofill_bool IS TRUE) THEN 
-				NEW.code=NEW.node_id;
-			END IF;		
+		IF (v_code_autofill_bool IS TRUE) THEN 
+			NEW.code=NEW.node_id;
+		END IF;		
 
 		-- Workcat_id
 		IF (NEW.workcat_id IS NULL) THEN
