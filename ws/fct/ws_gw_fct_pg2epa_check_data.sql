@@ -97,7 +97,7 @@ BEGIN
 		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom) SELECT 107, node_id, nodecat_id, ''Orphan node'',
 		the_geom FROM ', v_querytext);
 		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (v_fid, 3, concat('ERROR(107): There is/are ',v_count,' node''s orphan. Giswater filters may prevent shown this nodes if they are JUNCTION as well as will be disabled the exportation.'));
+		VALUES (v_fid, 2, concat('WARNING): There is/are ',v_count,' node''s orphan. Giswater filters may prevent export, if they are JUNCTION will be disabled on the exportation.'));
 	ELSE
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (v_fid, 1, 'INFO: No node(s) orphan found.');
@@ -308,19 +308,35 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, 'INFO: Valve type checked. No mandatory values missed.');
 	END IF;
 	
-	RAISE NOTICE '13 - Valve status & others';					
+	RAISE NOTICE '13 - Valve status, to_arc, coef_loss, pressure';					
 	SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE status IS NULL;
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 3, concat(
-		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory columns for valve (valv_type, status, to_arc).'));
+		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory column status).'));
 		v_count=0;
 	ELSE
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1, 'INFO: Valve status checked. No mandatory values missed.');
 	END IF;
 
+	-- valve to_arc
+	IF (SELECT value FROM config_param_system WHERE parameter = 'epa_shutoffvalve') = 'VALVE' THEN
+		SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE to_arc IS NULL AND valv_type != 'TCV';
+	ELSE 
+		SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE to_arc IS NULL;
+	END IF;
+	IF v_count > 0 THEN
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 3, concat(
+		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory column to_arc).'));
+		v_count=0;
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 1, 'INFO: Valve to_arc values checked. No mandatory values missed.');
+	END IF;
 
+	-- valve pressure
 	SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE ((valv_type='PBV' OR valv_type='PRV' OR valv_type='PSV') AND (pressure IS NULL));
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
@@ -332,6 +348,7 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, 'INFO: PBC-PRV-PSV valves checked. No mandatory values missed.');
 	END IF;				
 
+	-- curve_id
 	SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE ((valv_type='GPV') AND (curve_id IS NULL));
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
@@ -343,7 +360,8 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, 'INFO: GPV valves checked. No mandatory values missed.');
 	END IF;	
 
-	SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE ((valv_type='TCV'));
+	-- coef_loss
+	SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE valv_type='TCV' AND coef_loss IS NULL;
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 3, concat('ERROR: There is/are ',v_count,' TCV valve(s) with null values at least on mandatory column for Losses Valves.'));
@@ -353,6 +371,7 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, 'INFO: TCV valves checked. No mandatory values missed.');
 	END IF;				
 
+	-- flow
 	SELECT count(*) INTO v_count FROM v_edit_inp_valve WHERE ((valv_type='FCV') AND (flow IS NULL));
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
@@ -446,7 +465,7 @@ BEGIN
 		INSERT INTO anl_arc (fid, arc_id, arccat_id, the_geom, descript)
 		SELECT 230, arc_id, arccat_id , the_geom, concat('Length: ', (st_length(the_geom))::numeric (12,3)) FROM v_edit_inp_pipe where st_length(the_geom) < 0.05;
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-		VALUES (v_fid, v_result_id, 3, concat('WARNING: There is/are ',v_count,
+		VALUES (v_fid, v_result_id, 2, concat('WARNING: There is/are ',v_count,
 		' pipe(s) with length less than 0.05 meters. Check it before continue.'));
 		v_count=0;
 		
@@ -606,6 +625,21 @@ BEGIN
 		VALUES (v_fid, v_result_id , 1,  '295','INFO: Epa type for arc features checked. No inconsistencies aganints epa table found.');
 	END IF;	
 	
+	-- check connecs <-> inp_connecs
+	SELECT c1-c2 INTO v_count FROM (SELECT count(*) as c1, null AS c2 FROM connec UNION SELECT null, count(*) FROM inp_connec)a1
+	WHERE c1 > c2
+	IF v_count > 0 THEN
+		INSERT INTO audit_check_data (fid, result_id, criticity, table_id, error_message)
+		VALUES (v_fid, v_result_id, 3, '295',concat(
+		'WARNING: There were ',v_count,' missed inp rows on inp_connec. They have been automatic inserted'));
+		INSERT INTO inp_connec SELECT connec_id FROM connec ON CONFLICT (connec_id) DO NOTHING;		
+		v_count=0;
+	ELSE
+		INSERT INTO audit_check_data (fid, result_id, criticity, table_id, error_message)
+		VALUES (v_fid, v_result_id , 1,  '295','INFO: Epa type for arc features checked. No inconsistencies aganints epa table found.');
+	END IF;	
+
+
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (225, v_result_id, 4, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (225, v_result_id, 3, '');
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (225, v_result_id, 2, '');
