@@ -97,7 +97,7 @@ BEGIN
 		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom) SELECT 107, node_id, nodecat_id, ''Orphan node'',
 		the_geom FROM ', v_querytext);
 		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (v_fid, 2, concat('WARNING): There is/are ',v_count,' node''s orphan. Giswater filters may prevent export, if they are JUNCTION will be disabled on the exportation.'));
+		VALUES (v_fid, 2, concat('WARNING: There is/are ',v_count,' node''s orphan. Giswater filters may prevent export, if they are JUNCTION will be disabled on the exportation.'));
 	ELSE
 		INSERT INTO audit_check_data (fid, criticity, error_message)
 		VALUES (v_fid, 1, 'INFO: No node(s) orphan found.');
@@ -311,7 +311,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 3, concat(
-		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory column status).'));
+		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory column status.'));
 		v_count=0;
 	ELSE
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
@@ -327,7 +327,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 3, concat(
-		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory column to_arc).'));
+		'ERROR: There is/are ',v_count,' valve(s) with null values at least on mandatory column to_arc.'));
 		v_count=0;
 	ELSE
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
