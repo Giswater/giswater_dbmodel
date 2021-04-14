@@ -3,3 +3,5 @@
 - Change on delete restrict by on delete cascade on cat_feature fk
 - Enhance vi_curves when export tank curves
 - Enhance review tables functionality
+- Enhance links when planned connects, enabling to connect also connec, gullies and node
+- New checks (fid 371 and 372) to control missed matcat_id on cat_arc table and wrong topology for arc table
