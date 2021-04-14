@@ -438,7 +438,7 @@ BEGIN
 	-- adding the widget of list
 	v_i = cardinality(v_filter_fields) ;
 	
-	EXECUTE 'SELECT listclass FROM config_api_list WHERE tablename = $1 '||v_attribute_filter||' LIMIT 1'
+	EXECUTE 'SELECT listclass FROM config_form_list WHERE tablename = $1 LIMIT 1'
 		INTO v_listclass
 		USING v_tablename;
 
