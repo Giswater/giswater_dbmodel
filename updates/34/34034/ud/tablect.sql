@@ -9,7 +9,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 -- 2021/03/22
-ALTER TABLE cat_feature_gully DROP CONSTRAINT cat_feature_gully_fkey;
+ALTER TABLE cat_feature_gully DROP CONSTRAINT IF EXISTS cat_feature_gully_fkey;
 
 ALTER TABLE cat_feature_gully ADD CONSTRAINT cat_feature_gully_fkey FOREIGN KEY (id)
 REFERENCES cat_feature (id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE CASCADE;
