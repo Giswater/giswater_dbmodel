@@ -132,8 +132,8 @@ BEGIN
 	SELECT string_agg(connec_id,',') INTO v_feature_list FROM plan_psector_x_connec WHERE psector_id=v_old_psector_id AND (state=0 OR (state=1 and doable = false));
 
 	IF v_feature_list IS NOT NULL THEN
-		INSERT INTO plan_psector_x_connec(connec_id, psector_id, state, doable, descript,link_geom, vnode_geom) 
-		SELECT connec_id, v_new_psector_id, state, doable, descript,link_geom, vnode_geom FROM plan_psector_x_connec 
+		INSERT INTO plan_psector_x_connec(connec_id, psector_id, state, doable, descript,link_geom) 
+		SELECT connec_id, v_new_psector_id, state, doable, descript,link_geom FROM plan_psector_x_connec 
 		WHERE psector_id=v_old_psector_id AND (state=0 OR (state=1 and doable = false));
 
 		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (153, v_result_id, concat('Copied connecs with state 0: ', v_feature_list ));
@@ -143,8 +143,8 @@ BEGIN
 	IF v_project_type='UD' THEN
 		SELECT string_agg(gully_id,',') INTO v_feature_list FROM plan_psector_x_gully WHERE psector_id=v_old_psector_id AND (state=0 OR (state=1 and doable = false));
 		IF v_feature_list IS NOT NULL THEN
-			INSERT INTO plan_psector_x_gully(gully_id, psector_id, state, doable, descript,link_geom, vnode_geom) 
-			SELECT gully_id, v_new_psector_id, state, doable, descript,link_geom, vnode_geom FROM plan_psector_x_gully 
+			INSERT INTO plan_psector_x_gully(gully_id, psector_id, state, doable, descript,link_geom) 
+			SELECT gully_id, v_new_psector_id, state, doable, descript,link_geom FROM plan_psector_x_gully 
 			WHERE psector_id=v_old_psector_id AND (state=0 OR (state=1 and doable = false));
 	
 			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (153, v_result_id, concat('Copied gullies with state 0: ', v_feature_list ));
