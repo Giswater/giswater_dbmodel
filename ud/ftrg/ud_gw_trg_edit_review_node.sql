@@ -11,27 +11,26 @@ CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_trg_edit_review_node()  RETURNS trig
 $BODY$
 
 DECLARE
-	rev_node_top_elev_tol double precision;
-	rev_node_ymax_tol double precision;
-	tol_filter_bool boolean;
-	review_status_aux smallint;
-	rec_node record;
-	status_new integer;
+	v_rev_node_top_elev_tol double precision;
+	v_rev_node_ymax_tol double precision;
+	v_tol_filter_bool boolean;
+	v_review_status smallint;
 
+	rec_node record;
 
 BEGIN
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
 	-- getting tolerance parameters
-	rev_node_top_elev_tol :=(SELECT "value" FROM config_param_system WHERE "parameter"='rev_node_top_elev_tol');
-	rev_node_ymax_tol :=(SELECT "value" FROM config_param_system WHERE "parameter"='rev_node_ymax_tol');		
-
+	v_rev_node_top_elev_tol :=(SELECT "value" FROM config_param_system WHERE "parameter"='rev_node_top_elev_tol');
+	v_rev_node_ymax_tol :=(SELECT "value" FROM config_param_system WHERE "parameter"='rev_node_ymax_tol');		
+	
 
 	--getting original values
 	SELECT node_id, top_elev, ymax, node.node_type, nodecat_id, node.matcat_id, annotation, observ, expl_id, the_geom INTO rec_node 
 	FROM node JOIN cat_node ON id=node.nodecat_id WHERE node_id=NEW.node_id;
-	
+
 
 	-- starting process
     IF TG_OP = 'INSERT' THEN
@@ -72,47 +71,51 @@ BEGIN
 		RETURN NEW;
 	
     ELSIF TG_OP = 'UPDATE' THEN
-	
 		-- update values on review table
 		UPDATE review_node SET top_elev=NEW.top_elev, ymax=NEW.ymax, node_type=NEW.node_type, matcat_id=NEW.matcat_id, nodecat_id=NEW.nodecat_id,
 		 annotation=NEW.annotation, observ=NEW.observ, expl_id=NEW.expl_id, the_geom=NEW.the_geom, field_checked=NEW.field_checked
 		WHERE node_id=NEW.node_id;
 
-		SELECT review_status_id INTO status_new FROM review_audit_node WHERE node_id=NEW.node_id;
 		
 		--looking for insert/update/delete values on audit table
-		IF 	abs(rec_node.top_elev-NEW.top_elev)>rev_node_top_elev_tol OR  (rec_node.top_elev IS NULL AND NEW.top_elev IS NOT NULL) OR
-			abs(rec_node.ymax-NEW.ymax)>rev_node_ymax_tol OR  (rec_node.ymax IS NULL AND NEW.ymax IS NOT NULL) OR
+		IF 	abs(rec_node.top_elev-NEW.top_elev)>v_rev_node_top_elev_tol OR  (rec_node.top_elev IS NULL AND NEW.top_elev IS NOT NULL) OR
+			abs(rec_node.ymax-NEW.ymax)>v_rev_node_ymax_tol OR  (rec_node.ymax IS NULL AND NEW.ymax IS NOT NULL) OR
 			rec_node.matcat_id!= NEW.matcat_id OR  (rec_node.matcat_id IS NULL AND NEW.matcat_id IS NOT NULL) OR
 			rec_node.nodecat_id!= NEW.nodecat_id OR  (rec_node.nodecat_id IS NULL AND NEW.nodecat_id IS NOT NULL) OR
 			rec_node.annotation != NEW.annotation	OR  (rec_node.annotation IS NULL AND NEW.annotation IS NOT NULL) OR
 			rec_node.observ != NEW.observ	OR  (rec_node.observ IS NULL AND NEW.observ IS NOT NULL) OR
 			rec_node.the_geom::text<>NEW.the_geom::text THEN
-			tol_filter_bool=TRUE;
+			v_tol_filter_bool=TRUE;
 		ELSE
-			tol_filter_bool=FALSE;
+			v_tol_filter_bool=FALSE;
 		END IF;
 		
 		-- if user finish review visit
 		IF (NEW.field_checked is TRUE) THEN
 			
 			-- updating review_status parameter value
-			IF status_new=1 THEN
-				review_status_aux=1;
-			ELSIF (tol_filter_bool is TRUE) AND (NEW.the_geom::text<>OLD.the_geom::text) THEN
-				review_status_aux=2;
-			ELSIF (tol_filter_bool is TRUE) AND (NEW.the_geom::text=OLD.the_geom::text) THEN
-				review_status_aux=3;
-			ELSIF (tol_filter_bool is FALSE) THEN
-				review_status_aux=0;	
+			-- new element, re-updated after its insert
+			IF (SELECT count(node_id) FROM node WHERE node_id=NEW.node_id)=0 THEN
+				v_review_status=1;
+			-- only data changes
+			ELSIF (v_tol_filter_bool is TRUE) AND ST_OrderingEquals(NEW.the_geom::text, rec_node.the_geom::text) is TRUE THEN
+				v_review_status=3;
+			-- geometry changes	
+			ELSIF (v_tol_filter_bool is TRUE) AND ST_OrderingEquals(NEW.the_geom::text, rec_node.the_geom::text) is FALSE THEN
+				v_review_status=2;
+			-- changes under tolerance
+			ELSIF (v_tol_filter_bool is FALSE) THEN
+				v_review_status=0;	
 			END IF;
+
 		
 			-- upserting values on review_audit_node node table	
 			IF EXISTS (SELECT node_id FROM review_audit_node WHERE node_id=NEW.node_id) THEN					
 				UPDATE review_audit_node SET old_top_elev=rec_node.top_elev, new_top_elev=NEW.top_elev, old_ymax=rec_node.ymax, new_ymax=NEW.ymax, 
 				old_node_type=rec_node.node_type, new_node_type=NEW.node_type, old_matcat_id=rec_node.matcat_id, new_matcat_id=NEW.matcat_id, 
 				old_nodecat_id=rec_node.nodecat_id, new_nodecat_id=NEW.nodecat_id, old_annotation=rec_node.annotation, new_annotation=NEW.annotation, 
-				old_observ=rec_node.observ, new_observ=NEW.observ,expl_id=NEW.expl_id, the_geom=NEW.the_geom, review_status_id=review_status_aux, field_date=now(), field_user=current_user
+				old_observ=rec_node.observ, new_observ=NEW.observ,expl_id=NEW.expl_id, the_geom=NEW.the_geom, review_status_id=v_review_status, 
+				field_date=now(), field_user=current_user
        			WHERE node_id=NEW.node_id;
 
 			ELSE
@@ -122,7 +125,8 @@ BEGIN
 				new_nodecat_id, old_annotation, new_annotation, old_observ, new_observ, expl_id, the_geom, review_status_id, field_date, field_user)
 				VALUES (NEW.node_id, rec_node.top_elev, NEW.top_elev, rec_node.ymax, NEW.ymax, rec_node.node_type, NEW.node_type, rec_node.matcat_id,
 				NEW.matcat_id, rec_node.nodecat_id, NEW.nodecat_id, rec_node.annotation, NEW.annotation, rec_node.observ, NEW.observ, NEW.expl_id, 
-				NEW.the_geom, review_status_aux, now(), current_user);
+				NEW.the_geom, v_review_status, now(), current_user);
+
 			END IF;
 				
 		END IF;
