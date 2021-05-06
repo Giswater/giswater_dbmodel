@@ -39,6 +39,7 @@ CREATE TABLE review_arc
 
 ALTER TABLE review_audit_arc DROP CONSTRAINT review_audit_arc_pkey;
 ALTER TABLE review_audit_arc RENAME TO _review_audit_arc2_;
+ALTER SEQUENCE review_audit_arc_id_seq RENAME TO review_audit_arc_id_seq_old;
 
 
 CREATE TABLE review_audit_arc
@@ -102,6 +103,7 @@ CREATE TABLE review_gully
 
 ALTER TABLE review_audit_gully DROP CONSTRAINT review_audit_gully_pkey;
 ALTER TABLE review_audit_gully RENAME TO _review_audit_gully2_;
+ALTER SEQUENCE review_audit_gully_id_seq RENAME TO review_audit_gully_id_seq_old;
 
 
 CREATE TABLE review_audit_gully
@@ -169,6 +171,7 @@ CREATE TABLE review_node
 
 ALTER TABLE review_audit_node DROP CONSTRAINT review_audit_node_pkey;
 ALTER TABLE review_audit_node RENAME TO _review_audit_node2_;
+ALTER SEQUENCE review_audit_node_id_seq RENAME TO review_audit_node_id_seq_old;
 
 CREATE TABLE review_audit_node
 (
@@ -224,6 +227,7 @@ CREATE TABLE review_connec
 
 ALTER TABLE review_audit_connec DROP CONSTRAINT review_audit_connec_pkey;
 ALTER TABLE review_audit_connec RENAME TO _review_audit_connec2_;
+ALTER SEQUENCE review_audit_connec_id_seq RENAME TO review_audit_connec_id_seq_old;
 
 CREATE TABLE review_audit_connec
 (
