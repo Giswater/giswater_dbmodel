@@ -389,9 +389,11 @@ BEGIN
 		--visitcat
 		v_visitcat = (SELECT value FROM config_param_user WHERE parameter = 'om_visit_cat_vdefault' AND cur_user=current_user)::integer;
 		--code
-		EXECUTE 'SELECT feature_type FROM config_visit_class WHERE id = '||v_visitclass INTO v_check_code;
-		IF v_check_code IS NOT NULL THEN
-			EXECUTE 'SELECT code FROM '||v_featuretablename||' WHERE ' || (v_featuretype) || '_id = '||v_featureid||'::text' INTO v_code;
+		IF v_featureid IS NOT NULL THEN
+			EXECUTE 'SELECT feature_type FROM config_visit_class WHERE id = '||v_visitclass INTO v_check_code;
+			IF v_check_code IS NOT NULL THEN
+				EXECUTE 'SELECT code FROM '||v_featuretablename||' WHERE ' || (v_featuretype) || '_id = '||v_featureid||'::text' INTO v_code;
+			END IF;
 		END IF;
 		
 
