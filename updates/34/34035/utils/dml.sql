@@ -62,4 +62,4 @@ true) ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 DELETE FROM sys_function WHERE id=2878 AND function_name='gw_fct_getvisitsfromfeature';
 
 -- 2021/05/12
-INSERT INTO sys_function (id, function_name, project_type, function_type, sys_role) VALUES (3034, 'gw_fct_pg2epa_repair_epatype', 'utils', 'function', 'role_epa');
+INSERT INTO sys_function (id, function_name, project_type, function_type, sys_role) VALUES (3034, 'gw_fct_pg2epa_autorepair_epatype', 'utils', 'function', 'role_epa');
