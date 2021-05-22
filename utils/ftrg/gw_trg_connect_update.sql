@@ -8,6 +8,12 @@ This version of Giswater is provided by Giswater Association
 
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_connect_update() RETURNS trigger LANGUAGE plpgsql AS $$
+
+/*
+This trigger updates mapzone connect columns ( if that connecs are connected) and redraw link geometry if end connect geometry is also updated
+As updateable links only must be class 2 (wich geometry is stored on link table, it is not need to work with v_edit_link, and as a result this trigger works with table link)
+*/
+
 DECLARE 
 
 linkrec Record; 
@@ -30,7 +36,6 @@ BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
     v_featuretype:= TG_ARGV[0];
-	
 
 	v_move_polgeom = (SELECT value FROM config_param_user WHERE parameter='edit_gully_autoupdate_polgeom' AND cur_user=current_user);
 
@@ -68,29 +73,41 @@ BEGIN
 			IF v_link.feature_type='CONNEC' THEN
 				IF v_autoupdate_dma IS FALSE THEN
 					-- update connec, mandatory to use v_edit_connec because it's identified and managed when arc_id comes from plan psector tables
-					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id WHERE connec_id=v_link.feature_id;
+					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE connec_id=v_link.feature_id;
 				ELSE
-					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id WHERE connec_id=v_link.feature_id;
+					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE connec_id=v_link.feature_id;
 				END IF;
 							
-				IF v_projectype = 'WS' THEN
-
-					-- update presszone
-					UPDATE v_edit_connec SET presszone_id=NEW.presszone_id, dqa_id=NEW.dqa_id, minsector_id=NEW.minsector_id WHERE connec_id=v_link.feature_id;
-				END IF;
 			
 			ELSIF v_link.feature_type='GULLY' THEN
 				IF v_autoupdate_dma IS FALSE THEN
 					-- update gully, mandatory to use v_edit_gully because it's identified and managed when arc_id comes from plan psector tables
-					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id WHERE gully_id=v_link.feature_id;
+					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE gully_id=v_link.feature_id;
 				ELSE
-					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id WHERE gully_id=v_link.feature_id;
+					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE gully_id=v_link.feature_id;
 				END IF;
 				
 			END IF;
 			
 		END LOOP;
-	
+
+		IF v_projectype = 'WS' AND NEW.arc_id IS NOT NULL THEN
+			-- update fields that inherit values from arc
+			UPDATE v_edit_connec SET presszone_id=a.presszone_id, dqa_id=a.dqa_id, minsector_id=a.minsector_id
+			FROM arc a WHERE a.arc_id = NEW.arc_id;
+		END IF;
+
+		-- update fields that inherit values from arc
+		UPDATE v_edit_connec SET fluid_type = a.fluid_type FROM arc a WHERE a.arc_id = NEW.arc_id;
+		
+		IF v_projectype = 'UD' AND NEW.arc_id IS NOT NULL THEN
+			UPDATE v_edit_gully SET fluid_type = a.fluid_type FROM arc a WHERE a.arc_id = NEW.arc_id;
+		END IF;
+
 	ELSIF v_featuretype='gully' THEN
 	
 		-- Updating polygon geometry in case of exists it
@@ -126,16 +143,20 @@ BEGIN
 		LOOP
 			IF v_link.feature_type='CONNEC' THEN
 				IF v_autoupdate_dma IS FALSE THEN			
-					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id WHERE connec_id=v_link.feature_id;
+					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE connec_id=v_link.feature_id;
 				ELSE
-					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id WHERE connec_id=v_link.feature_id;
+					UPDATE v_edit_connec SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE connec_id=v_link.feature_id;
 				END IF;
 			
 			ELSIF v_link.feature_type='GULLY' THEN
 				IF v_autoupdate_dma IS FALSE THEN		
-					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id WHERE gully_id=v_link.feature_id;
+					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE gully_id=v_link.feature_id;
 				ELSE
-					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id WHERE gully_id=v_link.feature_id;
+					UPDATE v_edit_gully SET arc_id=NEW.arc_id, expl_id=NEW.expl_id, dma_id= NEW.dma_id, sector_id=NEW.sector_id, pjoint_id=NEW.pjoint_id, pjoint_type=NEW.pjoint_type
+					WHERE gully_id=v_link.feature_id;
 				END IF;
 				
 			END IF;

@@ -547,7 +547,7 @@ BEGIN
 				-- when arc_id comes from connec table
 				UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
 				
-				IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' LIMIT 1) IS NOT NULL THEN
+				IF (SELECT link_id FROM link WHERE feature_id=NEW.connec_id AND feature_type='CONNEC' AND exit_type ='VNODE' LIMIT 1) IS NOT NULL THEN
 
 					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
 					"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
@@ -556,6 +556,14 @@ BEGIN
 
 					EXECUTE 'SELECT gw_fct_connect_to_network($${"client":{"device":4, "infoType":1, "lang":"ES"},
 					"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC"}}$$)';
+				ELSE
+					IF NEW.arc_id IS NOT NULL THEN
+						NEW.fluid_type = (SELECT fluid_type FROM arc WHERE arc_id = NEW.arc_id);
+						NEW.dma_id = (SELECT dma_id FROM arc WHERE arc_id = NEW.arc_id);
+						NEW.presszone_id = (SELECT presszone_id FROM arc WHERE arc_id = NEW.arc_id);
+						NEW.sector_id = (SELECT sector_id FROM arc WHERE arc_id = NEW.arc_id);
+						NEW.dqa_id = (SELECT dqa_id FROM arc WHERE arc_id = NEW.arc_id);
+					END IF;
 				END IF;
 			END IF;
 		END IF;
