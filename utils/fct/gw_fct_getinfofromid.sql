@@ -137,16 +137,13 @@ v_isgrafdelimiter boolean  = false;
 v_isepatoarc boolean  = false;
 v_nodetype text;
 v_isarcdivide boolean = true;
+v_sourcetable text;
 
 BEGIN
 
-	--  Get,check and set parameteres
-	----------------------------
-	
 	-- Set search path to local schema
 	SET search_path = "SCHEMA_NAME", public;
 	v_schemaname := 'SCHEMA_NAME';
-
 
 	-- input parameters
 	v_device := (p_data ->> 'client')::json->> 'device';
@@ -183,7 +180,7 @@ BEGIN
 		v_id = NULL;
 	END IF;
 	
-	-- Get values from config
+	-- get values from config
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''admin_version'') row'
 		INTO v_version;
 		
@@ -241,22 +238,20 @@ BEGIN
 	v_parentfields = replace (v_parentfields::text, '{', '[');
 	v_parentfields = replace (v_parentfields::text, '}', ']');
 
-	--      Get form (if exists) for the layer 
-	------------------------------------------
-        -- to build json
-        EXECUTE 'SELECT row_to_json(row) FROM (SELECT formtemplate AS template, headertext AS "headerText"
-            FROM config_info_layer WHERE layer_id = $1 LIMIT 1) row'
-            INTO v_forminfo
-            USING v_tablename; 
+	-- get form (if exists) for the layer 
+	EXECUTE 'SELECT row_to_json(row) FROM (SELECT formtemplate AS template, headertext AS "headerText"
+		FROM config_info_layer WHERE layer_id = $1 LIMIT 1) row'
+		INTO v_forminfo
+		USING v_tablename; 
 
-        -- IF v_forminfo is null and it's layer it's child layer --> parent form info is used
-        IF v_forminfo IS NULL AND v_table_parent IS NOT NULL THEN
+	-- IF v_forminfo is null and it's layer it's child layer --> parent form info is used
+	IF v_forminfo IS NULL AND v_table_parent IS NOT NULL THEN
 
-		EXECUTE 'SELECT row_to_json(row) FROM (SELECT formtemplate AS template , headertext AS "headerText"
-			FROM config_info_layer WHERE layer_id = $1 LIMIT 1) row'
-			INTO v_forminfo
-			USING v_table_parent; 
-        END IF;
+	EXECUTE 'SELECT row_to_json(row) FROM (SELECT formtemplate AS template , headertext AS "headerText"
+		FROM config_info_layer WHERE layer_id = $1 LIMIT 1) row'
+		INTO v_forminfo
+		USING v_table_parent; 
+	END IF;
             
 	RAISE NOTICE 'Form number: %', v_forminfo;
 
@@ -281,12 +276,21 @@ BEGIN
 
 	-- Control NULL's
 	v_vdefault_array := COALESCE(v_vdefault_array, '[]'); 
-	
+
+	-- getting source table in order to enhance performance
+	IF v_tablename LIKE 'v_edit_%' THEN v_sourcetable = replace (v_tablename, 'v_edit_', '');
+	ELSIF v_tablename LIKE 've_node_%' THEN v_sourcetable = 'node';
+	ELSIF v_tablename LIKE 've_arc_%' THEN v_sourcetable = 'arc';
+	ELSIF v_tablename LIKE 've_connec_%' THEN v_sourcetable = 'node';
+	ELSIF v_tablename LIKE 've_gully_%' THEN v_sourcetable = 'gully';
+	ELSE v_sourcetable = v_tablename;
+	END IF;
+
 	-- Get id column
 	EXECUTE 'SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = $1::regclass AND i.indisprimary'
 		INTO v_idname
-		USING v_tablename;
-	
+		USING v_sourcetable;
+
 	-- For views it suposse pk is the first column
 	IF v_idname ISNULL THEN
 		EXECUTE '
@@ -295,7 +299,7 @@ BEGIN
 		AND s.nspname = $2
 		ORDER BY a.attnum LIMIT 1'
 		INTO v_idname
-		USING v_tablename, v_schemaname;
+		USING v_sourcetable, v_schemaname;
 	END IF;
 
 	-- Get id column type
@@ -308,33 +312,62 @@ BEGIN
 		AND t.relname = $2 
 		AND s.nspname = $1
 		ORDER BY a.attnum'
-			USING v_schemaname, v_tablename, v_idname
+			USING v_schemaname, v_sourcetable, v_idname
 			INTO column_type;
 
 	-- Get geometry_column
-	------------------------------------------
-        EXECUTE 'SELECT attname FROM pg_attribute a        
-            JOIN pg_class t on a.attrelid = t.oid
-            JOIN pg_namespace s on t.relnamespace = s.oid
-            WHERE a.attnum > 0 
-            AND NOT a.attisdropped
-            AND t.relname = $1
-            AND s.nspname = $2
-            AND left (pg_catalog.format_type(a.atttypid, a.atttypmod), 8)=''geometry''
-            ORDER BY a.attnum
-			LIMIT 1'
-            INTO v_the_geom
-            USING v_tablename, v_schemaname;
-           
+	EXECUTE 'SELECT attname FROM pg_attribute a        
+	    JOIN pg_class t on a.attrelid = t.oid
+	    JOIN pg_namespace s on t.relnamespace = s.oid
+	    WHERE a.attnum > 0 
+	    AND NOT a.attisdropped
+	    AND t.relname = $1
+	    AND s.nspname = $2
+	    AND left (pg_catalog.format_type(a.atttypid, a.atttypmod), 8)=''geometry''
+	    ORDER BY a.attnum
+		LIMIT 1'
+		INTO v_the_geom
+		USING v_sourcetable, v_schemaname;
+
 	-- Get geometry (to feature response)
-	------------------------------------------
 	IF v_the_geom IS NOT NULL AND v_id IS NOT NULL THEN
-		EXECUTE 'SELECT row_to_json(row) FROM (SELECT St_AsText('||quote_ident(v_the_geom)||') FROM '||quote_ident(v_tablename)||' WHERE '||quote_ident(v_idname)||' = CAST('||quote_nullable(v_id)||' AS '||(column_type)||'))row'
+		EXECUTE 'SELECT row_to_json(row) FROM (SELECT St_AsText('||quote_ident(v_the_geom)||') FROM '||quote_ident(v_sourcetable)||' WHERE '||quote_ident(v_idname)||' = CAST('||quote_nullable(v_id)||' AS '||(column_type)||'))row'
 		INTO v_geometry;
+	END IF;
+
+	IF v_tablename != v_sourcetable THEN
+
+		-- Get id column for tablename
+		EXECUTE 'SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) WHERE  i.indrelid = $1::regclass AND i.indisprimary'
+			INTO v_idname
+			USING v_tablename;
+
+		-- For views it suposse pk is the first column
+		IF v_idname ISNULL THEN
+			EXECUTE '
+			SELECT a.attname FROM pg_attribute a   JOIN pg_class t on a.attrelid = t.oid  JOIN pg_namespace s on t.relnamespace = s.oid WHERE a.attnum > 0   AND NOT a.attisdropped
+			AND t.relname = $1 
+			AND s.nspname = $2
+			ORDER BY a.attnum LIMIT 1'
+			INTO v_idname
+			USING v_tablename, v_schemaname;
+		END IF;
+
+		-- Get id column type
+		EXECUTE 'SELECT pg_catalog.format_type(a.atttypid, a.atttypmod) FROM pg_attribute a
+			JOIN pg_class t on a.attrelid = t.oid
+			JOIN pg_namespace s on t.relnamespace = s.oid
+			WHERE a.attnum > 0 
+			AND NOT a.attisdropped
+			AND a.attname = $3
+			AND t.relname = $2 
+			AND s.nspname = $1
+			ORDER BY a.attnum'
+				USING v_schemaname, v_tablename, v_idname
+				INTO column_type;
 	END IF;
 	
 	-- Get link (if exists) for the layer
-	------------------------------------------
 	link_id_aux := (SELECT link_id FROM config_info_layer WHERE layer_id=v_tablename);
 
 	IF  link_id_aux IS NOT NULL THEN 
@@ -352,98 +385,95 @@ BEGIN
 	END IF;
 
 	-- Get tabs for form
-	--------------------------------
+	IF v_isgrafdelimiter OR upper(v_project_type) != 'WS' THEN
+	   EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+		b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+		with ordinality arr(item_object, position) where formname =$1
+		and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+		config_form_tabs WHERE formname =$1)a'
+		INTO form_tabs
+		USING v_tablename;
+	ELSIF v_isepatoarc THEN
+		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+		b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+		with ordinality arr(item_object, position) where formname =$1
+		and item_object->>''actionName'' != ''actionMapZone'' and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+		config_form_tabs WHERE formname =$1)a'
+		INTO form_tabs
+		USING v_tablename;
+	ELSIF v_isarcdivide THEN
+		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+		b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+		with ordinality arr(item_object, position) where formname =$1
+		and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' 
+		and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+		config_form_tabs WHERE formname =$1)a'
+		 INTO form_tabs
+		 USING v_tablename;
+	ELSE
+		EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+		b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
+		with ordinality arr(item_object, position) where formname =$1
+		and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' group by tabname) b,
+		config_form_tabs WHERE formname =$1)a'
+		 INTO form_tabs
+		 USING v_tablename;
+	END IF;
+
+	-- IF form_tabs is null and layer it's child layer it's child layer --> parent form_tabs is used
+	IF v_linkpath IS NULL AND v_table_parent IS NOT NULL THEN
+		
 		IF v_isgrafdelimiter OR upper(v_project_type) != 'WS' THEN
-	       EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+		-- Get form_tabs
+			EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
 			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
 			with ordinality arr(item_object, position) where formname =$1
-			and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+			and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
 			config_form_tabs WHERE formname =$1)a'
 			INTO form_tabs
-	        USING v_tablename;
-	    ELSIF v_isepatoarc THEN
-	    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			USING v_table_parent;
+		ELSIF v_isepatoarc THEN
+			EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
 			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
 			with ordinality arr(item_object, position) where formname =$1
-			and item_object->>''actionName'' != ''actionMapZone'' and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+			and item_object->>''actionName'' != ''actionMapZone'' and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
 			config_form_tabs WHERE formname =$1)a'
 			INTO form_tabs
-	        USING v_tablename;
-	    ELSIF v_isarcdivide THEN
-	        EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			USING v_table_parent;
+		ELSIF v_isarcdivide THEN
+			EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
 			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
 			with ordinality arr(item_object, position) where formname =$1
 			and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' 
-			and item_object->>''actionName'' != ''actionGetArcId'' group by tabname) b,
+			and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
 			config_form_tabs WHERE formname =$1)a'
-			 INTO form_tabs
-	         USING v_tablename;
-	    ELSE
-	    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
+			INTO form_tabs
+			USING v_table_parent;
+		ELSE
+			EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
 			b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
 			with ordinality arr(item_object, position) where formname =$1
 			and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' group by tabname) b,
 			config_form_tabs WHERE formname =$1)a'
-			 INTO form_tabs
-	         USING v_tablename;
-	    END IF;
-
-	-- IF form_tabs is null and layer it's child layer it's child layer --> parent form_tabs is used
-        IF v_linkpath IS NULL AND v_table_parent IS NOT NULL THEN
-        	
-        	IF v_isgrafdelimiter OR upper(v_project_type) != 'WS' THEN
-			-- Get form_tabs
-				EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
-				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
-				with ordinality arr(item_object, position) where formname =$1
-				and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
-				config_form_tabs WHERE formname =$1)a'
-				INTO form_tabs
-				USING v_table_parent;
-			ELSIF v_isepatoarc THEN
-				EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
-				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
-				with ordinality arr(item_object, position) where formname =$1
-				and item_object->>''actionName'' != ''actionMapZone'' and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
-				config_form_tabs WHERE formname =$1)a'
-				INTO form_tabs
-		        USING v_table_parent;
-		    ELSIF v_isarcdivide THEN
-		    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
-				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
-				with ordinality arr(item_object, position) where formname =$1
-				and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' 
-				and item_object->>''actionName'' != ''actionGetArcId''group by tabname) b,
-				config_form_tabs WHERE formname =$1)a'
-				INTO form_tabs
-		        USING v_table_parent;
-			ELSE
-		    	EXECUTE 'SELECT array_agg(row_to_json(a)) FROM (SELECT DISTINCT ON (tabname) tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabfunction as "tabFunction", 
-				b.tab as tabActions  FROM (SELECT json_agg(item_object) as tab FROM config_form_tabs, jsonb_array_elements(tabactions::jsonb) 
-				with ordinality arr(item_object, position) where formname =$1
-				and item_object->>''actionName'' != ''actionSetToArc'' and item_object->>''actionName'' != ''actionMapZone'' group by tabname) b,
-				config_form_tabs WHERE formname =$1)a'
-				INTO form_tabs
-		        USING v_table_parent;
-		    END IF;
+			INTO form_tabs
+			USING v_table_parent;
+		END IF;
 	END IF;
 
 	-- Getting actions and layer manager
-	------------------------------------------
-        EXECUTE 'SELECT actions,  layermanager FROM config_form WHERE formname = $1 AND projecttype='||quote_literal(LOWER(v_project_type))
-		INTO v_formactions, v_layermanager
-		USING v_tablename;
+	EXECUTE 'SELECT actions,  layermanager FROM config_form WHERE formname = $1 AND projecttype='||quote_literal(LOWER(v_project_type))
+	INTO v_formactions, v_layermanager
+	USING v_tablename;
 
 	-- IF actions and tooltip are null's and layer it's child layer --> parent form_tabs is used
-        IF v_formactions IS NULL AND v_table_parent IS NOT NULL THEN
-		EXECUTE 'SELECT actions,  layermanager FROM config_form WHERE formname = $1 AND projecttype='||quote_literal(LOWER(v_project_type))
-			INTO v_formactions, v_layermanager
-			USING v_table_parent;
-		END IF;
+	IF v_formactions IS NULL AND v_table_parent IS NOT NULL THEN
+	EXECUTE 'SELECT actions,  layermanager FROM config_form WHERE formname = $1 AND projecttype='||quote_literal(LOWER(v_project_type))
+		INTO v_formactions, v_layermanager
+		USING v_table_parent;
+	END IF;
 
 	-- Check if it is parent table 
-	-------------------------------------
-        IF v_tablename IN (SELECT layer_id FROM config_info_layer WHERE is_parent IS TRUE) AND v_toolbar !='epa' AND v_id IS NOT NULL THEN
+	IF v_tablename IN (SELECT layer_id FROM config_info_layer WHERE is_parent IS TRUE) AND v_toolbar !='epa' AND v_id IS NOT NULL THEN
 
 		parent_child_relation:=true;
 
@@ -451,9 +481,7 @@ BEGIN
 		EXECUTE 'SELECT tableparent_id from config_info_layer WHERE layer_id=$1'
 			INTO tableparent_id_arg
 			USING v_tablename;
-                
-		raise notice'Parent-Child. Table parent: %' , tableparent_id_arg;
-
+				
 		-- Identify tableinfotype_id		
 		EXECUTE' SELECT tableinfotype_id FROM cat_feature
 			JOIN config_info_layer_x_type ON child_layer=tableinfo_id
@@ -461,8 +489,6 @@ BEGIN
 			AND infotype_id=$2'
 			INTO v_tablename
 			USING v_id, v_infotype;
-
-		raise notice'Parent-Child. Table child: %, v_infotype: %' , v_tablename, v_infotype;
 
 	-- parent, and epa toolbar
 	ELSIF v_tablename IN (SELECT layer_id FROM config_info_layer WHERE is_parent IS TRUE) AND v_toolbar ='epa' THEN
@@ -526,7 +552,6 @@ BEGIN
 	v_childtype := COALESCE(v_childtype, ''); 
 	
 	-- Propierties of info layer's
-	------------------------------
 	IF v_tablename IS NULL THEN 
 
 		v_message='{"level":2, "text":"The API is bad configured. Please take a look on table config layers (config_info_layer_x_type or config_info_layer)", "results":0}';
@@ -534,14 +559,12 @@ BEGIN
 	ELSIF v_tablename IS NOT NULL THEN 
 
 		-- Check generic
-		-------------------
 		IF v_forminfo ISNULL THEN
 			v_forminfo := json_build_object('formName','Generic','template','info_generic');
 			formid_arg := 'F16';
 		END IF;
 
 		-- Add default tab
-		---------------------
 		form_tabs_json := array_to_json(form_tabs);
 	
 		-- Form info
@@ -578,7 +601,6 @@ BEGIN
 		END IF;
 
 		-- Get editability
-		------------------------
 		IF v_editable IS FALSE THEN 
 			v_editable := FALSE;
 		ELSE
@@ -588,7 +610,6 @@ BEGIN
 		END IF;
 	
 		--  Get if field's table are configured on config_info_layer_field
-		------------------------------------------------------------------
 		IF (SELECT distinct formname from config_form_fields WHERE formname=v_tablename) IS NOT NULL THEN 
 			v_configtabledefined  = TRUE;
 		ELSE 
@@ -606,10 +627,7 @@ BEGIN
 			v_formtype := 'default';
 		END IF;
 
-
-
 		-- call fields function
-		-------------------
 		IF v_editable THEN
 
 			-- getting id from URN
@@ -662,12 +680,10 @@ BEGIN
 		'featureType',v_featuretype, 'childType', v_childtype, 'tableParent',v_table_parent, 'schemaName', v_schemaname,
 		'geometry', v_geometry, 'zoomCanvasMargin',concat('{"mts":"',v_canvasmargin,'"}')::json, 'vdefaultValues',v_vdefault_array);
 
-
 	v_tablename:= (to_json(v_tablename));
 	v_table_parent:= (to_json(v_table_parent));
 
-	--    Hydrometer 'id' fix
-	------------------------
+	-- Hydrometer 'id' fix
 	IF v_idname = 'sys_hydrometer_id' THEN
 		v_idname = 'hydrometer_id';
 	END IF;
@@ -677,8 +693,7 @@ BEGIN
 		v_message='{"level":0, "text":"No feature found", "results":0}';
 	END IF;
 
-    	--    Control NULL's
-	----------------------
+    -- Control NULL's
 	v_forminfo := COALESCE(v_forminfo, '{}');
 	v_featureinfo := COALESCE(v_featureinfo, '{}');
 	v_linkpath := COALESCE(v_linkpath, '{}');
@@ -686,8 +701,7 @@ BEGIN
 	v_fields := COALESCE(v_fields, '{}');
 	v_message := COALESCE(v_message, '{}');
 
-	--    Return
-	-----------------------
+	-- Return
 	RETURN ('{"status":"'||v_status||'", "message":'||v_message||', "apiVersion":' || v_version ||
 	      ',"body":{"form":' || v_forminfo ||
 		     ', "feature":'|| v_featureinfo ||
