@@ -9,6 +9,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 --2021/05/17
+DROP VIEW IF EXISTS v_plan_psector;
 CREATE OR REPLACE VIEW v_plan_psector AS 
  SELECT plan_psector.psector_id,
     plan_psector.name,
