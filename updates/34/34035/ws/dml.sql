@@ -183,3 +183,6 @@ ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
 --2021/05/13
 UPDATE sys_table SET sys_role='role_edit' WHERE id='inp_connec';
+
+--2021/06/03
+UPDATE sys_table SET sys_role='role_om' WHERE id='temp_arc';
