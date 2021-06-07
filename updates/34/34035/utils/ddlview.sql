@@ -216,7 +216,7 @@ CREATE OR REPLACE VIEW v_price_x_catsoil AS
      JOIN v_price_compost price_m3exc ON cat_soil.m3exc_cost::text = price_m3exc.id::text
      JOIN v_price_compost price_m3fill ON cat_soil.m3fill_cost::text = price_m3fill.id::text
      JOIN v_price_compost price_m3excess ON cat_soil.m3excess_cost::text = price_m3excess.id::text
-     LEFT JOIN v_price_compost price_m2trenchl ON cat_soil.m2trenchl_cost::text = price_m2trenchl.id::text
+     LEFT JOIN v_price_compost price_m2trenchl ON cat_soil.m2trenchl_cost::text = price_m2trenchl.id::text;
 
 
 --2021/06/07
