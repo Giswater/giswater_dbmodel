@@ -63,3 +63,9 @@ DELETE FROM sys_function WHERE id=2878 AND function_name='gw_fct_getvisitsfromfe
 
 -- 2021/05/12
 INSERT INTO sys_function (id, function_name, project_type, function_type, sys_role) VALUES (3034, 'gw_fct_pg2epa_autorepair_epatype', 'utils', 'function', 'role_epa');
+
+-- 2021/06/07
+UPDATE config_form_fields SET dv_querytext_filterc=NULL WHERE dv_querytext_filterc=' AND id ';
+UPDATE config_form_fields SET dv_parent_id='muni_id' WHERE columnname='streetname' AND formname='v_om_mincut';
+UPDATE config_form_fields SET dv_querytext_filterc=' AND m.name' WHERE dv_querytext_filterc='AND m.name';
+UPDATE config_form_fields SET dv_querytext_filterc=' AND m.muni_id' WHERE dv_querytext_filterc='AND m.muni_id';
