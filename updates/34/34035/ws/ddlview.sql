@@ -356,3 +356,20 @@ SELECT connec_id AS nid,
 connectype_id AS custom_type
 FROM connec
 JOIN cat_connec ON id=connecat_id;
+
+-- 2021/06/09
+CREATE OR REPLACE VIEW v_om_mincut_hydrometer AS 
+ SELECT om_mincut_hydrometer.id,
+    om_mincut_hydrometer.result_id,
+    om_mincut.work_order,
+    om_mincut_hydrometer.hydrometer_id,
+    ext_rtc_hydrometer.code AS hydrometer_customer_code,
+    rtc_hydrometer_x_connec.connec_id,
+    connec.code AS connec_code
+   FROM selector_mincut_result,
+    om_mincut_hydrometer
+     JOIN ext_rtc_hydrometer ON om_mincut_hydrometer.hydrometer_id = ext_rtc_hydrometer.id
+     JOIN rtc_hydrometer_x_connec ON om_mincut_hydrometer.hydrometer_id::text = rtc_hydrometer_x_connec.hydrometer_id::text
+     JOIN connec ON rtc_hydrometer_x_connec.connec_id=connec.connec_id
+     JOIN om_mincut ON om_mincut_hydrometer.result_id = om_mincut.id
+  WHERE selector_mincut_result.result_id::text = om_mincut_hydrometer.result_id::text AND selector_mincut_result.cur_user = "current_user"()::text;
