@@ -137,7 +137,10 @@ v_isdmaborder boolean = false; -- For those arcs that are on the border of mapzo
 v_issectorborder boolean = false; -- For those arcs that are on the border of mapzones againts two sectors (one each node)
 v_dqa_id integer;
 v_arc_insert_automatic_endpoint boolean;
-
+v_querystring text;
+v_current_id text;
+v_new_id text; 
+v_selected_idval text;
 
 BEGIN
 
@@ -706,10 +709,42 @@ BEGIN
 		
 			-- setting values
 			IF (aux_json->>'widgettype')='combo' THEN 
+				--check if selected id is on combo list
+				IF field_value::text not in  (select a from json_array_elements_text(json_extract_path(v_fields_array[array_index],'comboIds'))a) AND field_value IS NOT NULL then
+					--find dvquerytext for combo
+					v_querystring = concat('SELECT dv_querytext FROM config_form_fields WHERE 
+					columnname::text = (',quote_literal(v_fields_array[array_index]),'::json->>''columnname'')::text
+					and formname = ',quote_literal(p_table_id),';');
+					EXECUTE v_querystring INTO v_querytext;
+					
+					v_querytext = replace(v_querytext,'AND active IS TRUE','');
+
+					--select values for missing id
+					v_querystring = concat('SELECT id, idval FROM (',v_querytext,')a
+					WHERE id::text = ',quote_literal(field_value),'');
+					EXECUTE v_querystring INTO v_selected_id,v_selected_idval;
+					
+					v_current_id =json_extract_path_text(v_fields_array[array_index],'comboIds');
+		
+					select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
+					--remove current combo Ids from return json
+					v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboIds'::text;
+					v_new_id = '['||v_new_id || ','|| quote_ident(v_selected_id)||']';
+					--add new combo Ids to return json
+					v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboIds',v_new_id::json);
+
+					v_current_id =json_extract_path_text(v_fields_array[array_index],'comboNames');
+					select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
+					--remove current combo names from return json
+					v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboNames'::text;
+					v_new_id = '['||v_new_id || ','|| quote_ident(v_selected_idval)||']';
+					--add new combo names to return json
+					v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);
+				END IF;
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'selectedId', COALESCE(field_value, ''));
 			ELSE 
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'value', COALESCE(field_value, ''));
-			END IF;	
+			END IF;
 			
 			-- setting widgetcontrols
 			IF (aux_json->>'datatype')='double' OR (aux_json->>'datatype')='integer' OR (aux_json->>'datatype')='numeric' THEN 
