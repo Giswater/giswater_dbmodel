@@ -1,3 +1,6 @@
 3.4.035
 ************
 - Allow obsolete features on Element tab
+- Add connec_code to v_om_mincut_hydrometer, don't set hydrometer_id to integer and fill config_form_tableview
+- Manage unactive catalog values
+- Enhance profilactic control for v_edit_cad layers
