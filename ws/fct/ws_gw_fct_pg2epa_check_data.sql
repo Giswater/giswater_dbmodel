@@ -18,7 +18,7 @@ SELECT SCHEMA_NAME.gw_fct_pg2epa_main($${"data":{ "resultId":"test_bgeo_b1", "us
 
 
 -- fid: main: 225
-		other: 107,164,165,166,167,169,170,171,188,198,227,229,230,292,293,294,295,371 
+		other: 107,164,165,166,167,169,170,171,188,198,227,229,230,292,293,294,295,371,379
 
 */
 
@@ -647,7 +647,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO audit_check_data (fid, result_id, criticity, table_id, error_message)
 		VALUES (v_fid, v_result_id, 3, '371',concat(
-		'ERROR-371: There were ',v_count,' rows with missed matcat_id on cat_arc table. Fix it before continue'));
+		'ERROR: There is/are ',v_count,' row(s) with missed matcat_id on cat_arc table. Fix it before continue'));
 		v_count=0;
 	ELSE
 		INSERT INTO audit_check_data (fid, result_id, criticity, table_id, error_message)
@@ -655,17 +655,16 @@ BEGIN
 	END IF;	
 
 	RAISE NOTICE '26 - Topological nodes with epa_type NOT DEFINED (379)';
-	v_querytext = 'SELECT n.node_id, nodecat_id, the_geom FROM (SELECT node_1 node_id FROM v_edit_arc UNION SELECT node_2 FROM v_edit_arc)a 
-		       LEFT JOIN  (SELECT node_id, nodecat_id, the_geom FROM v_edit_node WHERE epa_type = ''NOT DEFINED'') n USING (node_id) WHERE n.node_id IS NOT NULL';
+	v_querytext =  'SELECT DISTINCT ON (node_id) n.node_id, nodecat_id, the_geom FROM selector_sector s, (SELECT node_1 node_id, sector_id FROM v_edit_arc 
+					UNION SELECT node_2, sector_id FROM v_edit_arc)a LEFT JOIN  (SELECT node_id, nodecat_id, the_geom FROM v_edit_node WHERE epa_type = ''NOT DEFINED'') n 
+					USING (node_id) WHERE n.node_id IS NOT NULL AND s.sector_id = a.sector_id AND cur_user = current_user';
 	
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 	IF v_count > 0 THEN
-		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom) SELECT 379, node_id, nodecat_id, ''NOT DEFINED nodes
-		acting as node_1 or node_2 of arcs'', the_geom FROM (', v_querytext,')a');
+		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom) SELECT 379, node_id, nodecat_id, ''NOT DEFINED nodes acting as node_1 or node_2 of arcs'',
+		the_geom FROM (', v_querytext,')a');
 		INSERT INTO audit_check_data (fid,  criticity, result_id, error_message)
-		VALUES (v_fid, 2, '379' ,concat('ERROR-379: There is/are ',v_count,' node(s) with epa_type NOT DEFINED acting as node_1 or node_2 of arcs. Please, check your data before continue.'));
-		INSERT INTO audit_check_data (fid, criticity, error_message)
-		VALUES (v_fid, 2, concat('SELECT * FROM anl_node WHERE fid = 379 AND cur_user=current_user'));
+		VALUES (v_fid, 3, '379' ,concat('ERROR: There is/are ',v_count,' node(s) with epa_type NOT DEFINED acting as node_1 or node_2 of arcs. Please, check your data before continue.'));
 	ELSE
 		INSERT INTO audit_check_data (fid, criticity, result_id, error_message)
 	VALUES (v_fid, 1, '379','INFO: No nodes with epa_type NOT DEFINED acting as node_1 or node_2 of arcs found.');
@@ -696,7 +695,7 @@ BEGIN
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
 	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript,fid, the_geom
-	FROM  anl_node WHERE cur_user="current_user"() AND fid IN (107, 164, 165, 166, 167, 170, 171, 187, 198, 292, 293, 294)) row) features;
+	FROM  anl_node WHERE cur_user="current_user"() AND fid IN (107, 164, 165, 166, 167, 170, 171, 187, 198, 292, 293, 294, 379)) row) features;
 
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point", "qmlPath":"',v_qmlpointpath,'", "features":',v_result, '}'); 
