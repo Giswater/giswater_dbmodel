@@ -717,7 +717,7 @@ BEGIN
 					and formname = ',quote_literal(p_table_id),';');
 					EXECUTE v_querystring INTO v_querytext;
 					
-					v_querytext = replace(v_querytext,'AND active IS TRUE','');
+					v_querytext = replace(lower(v_querytext),'active is true','1=1');
 
 					--select values for missing id
 					v_querystring = concat('SELECT id, idval FROM (',v_querytext,')a
