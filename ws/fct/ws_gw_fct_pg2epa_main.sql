@@ -46,6 +46,7 @@ v_removedemand boolean;
 v_fid integer = 227;
 v_error_context text;
 v_breakpipes boolean;
+v_count integer;
 	
 BEGIN
 
@@ -70,6 +71,12 @@ BEGIN
 	v_delnetwork = (SELECT value::json->>'delDisconnNetwork' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
 	v_removedemand = (SELECT value::json->>'removeDemandOnDryNodes' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
 	v_breakpipes = (SELECT (value::json->>'breakPipes')::json->>'status' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
+
+	-- check sector selector
+	SELECT count(*) INTO v_count FROM selector_sector WHERE cur_user = current_user;
+	IF v_count = 0 THEN
+		RETURN ('{"status":"Failed","message":{"level":1, "text":"There is any sector selected. Please select at least one"}}')::json;
+	END IF;
 
 	-- delete audit table
 	DELETE FROM audit_check_data WHERE fid = v_fid AND cur_user=current_user;
