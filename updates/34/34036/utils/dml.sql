@@ -10,3 +10,11 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 --2021/06/21
 UPDATE sys_param_user SET formname='hidden' WHERE id='edit_cadtools_baselayer_vdefault';
+
+INSERT INTO config_param_system(parameter, value, descript, isenabled, project_type, datatype)
+VALUES ('edit_arc_divide', '{"setArcObsolete":"false","setOldCode":"false"}', 
+'Configuration of arc divide tool. If setArcObsolete true state of old arc would be set to 0, otherwise arc will be deleted. If setOldCode true, new arcs will have same code as old arc.',
+FALSE, 'utils', 'json') ON CONFLICT (parameter) DO NOTHING;
+
+UPDATE config_param_system SET value='{"mode":"disabled", "plan_obsolete_state_type":24}', descript='Define which mode psector trigger would use. Modes: "disabled", "onService"(transform all features afected by psector to its planified state and makes a
+ copy of psector), "obsolete"(set all features afected to obsolete but manage their state_type). Define which plan state_type is going to be set to obsolete when execute psector' WHERE parameter='plan_psector_execute_action';

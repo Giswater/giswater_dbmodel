@@ -89,6 +89,7 @@ v_hide_form boolean;
 v_array_node_id json;
 v_node_id text;
 v_arc_closest text;
+v_set_old_code boolean;
 
 BEGIN
 
@@ -140,6 +141,7 @@ BEGIN
 	SELECT value::smallint INTO v_psector FROM config_param_user WHERE "parameter"='plan_psector_vdefault' AND cur_user=current_user;
 	SELECT value::smallint INTO v_ficticius FROM config_param_system WHERE parameter='plan_statetype_ficticius';
 	SELECT value::boolean INTO v_hide_form FROM config_param_user where parameter='qgis_form_log_hidden' AND cur_user=current_user;
+	SELECT ((value::json)->>'setOldCode')::boolean INTO v_set_old_code FROM config_param_system WHERE parameter='edit_arc_divide';
 
 	-- delete old values on result table
 	DELETE FROM audit_check_data WHERE fid=212 AND cur_user=current_user;
@@ -172,7 +174,7 @@ BEGIN
 			-- For the specificic case of extremal node not reconnected due topology issues (i.e. arc state (1) and node state (2)
 
 			-- Find closest arc inside tolerance
-			SELECT arc_id, state, the_geom INTO v_arc_id, v_state_arc, v_arc_geom  FROM v_edit_arc AS a 
+			SELECT arc_id, state, the_geom, code INTO v_arc_id, v_state_arc, v_arc_geom, v_code  FROM v_edit_arc AS a 
 			WHERE ST_DWithin(v_node_geom, a.the_geom, v_arc_divide_tolerance) AND node_1 != v_node_id AND node_2 != v_node_id
 			ORDER BY ST_Distance(v_node_geom, a.the_geom) LIMIT 1;
 
@@ -216,13 +218,21 @@ BEGIN
 
 					-- Update values of new arc_id (1)
 					rec_aux1.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
-					rec_aux1.code := rec_aux1.arc_id;
+					IF v_set_old_code IS TRUE THEN
+						rec_aux1.code := v_code;
+					ELSE 
+						rec_aux1.code := rec_aux1.arc_id;
+					END IF;
 					rec_aux1.node_2 := v_node_id ;-- rec_aux1.node_1 take values from original arc
 					rec_aux1.the_geom := v_line1;
 
 					-- Update values of new arc_id (2)
 					rec_aux2.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
-					rec_aux2.code := rec_aux2.arc_id;
+					IF v_set_old_code IS TRUE THEN
+						rec_aux2.code := v_code;
+					ELSE
+						rec_aux2.code := rec_aux2.arc_id;
+					END IF;
 					rec_aux2.node_1 := v_node_id; -- rec_aux2.node_2 take values from original arc
 					rec_aux2.the_geom := v_line2;
 
@@ -634,13 +644,13 @@ BEGIN
 
 							-- insert operative connec's on alternative in order to reconnect
 							INSERT INTO plan_psector_x_connec (psector_id, connec_id, arc_id, state, doable)
-							SELECT v_psector, connec_id, NULL, 1,false FROM connec WHERE arc_id = v_arc_id
+							SELECT v_psector, connec_id, NULL, 1,false FROM connec WHERE arc_id = v_arc_id AND state=1
 							ON CONFLICT DO NOTHING;
 
 							-- insert operative gully's on alternative in order to reconnect
 							IF v_project_type='UD' THEN
 								INSERT INTO plan_psector_x_gully (psector_id, gully_id, arc_id, state, doable)
-								SELECT v_psector, gully_id, NULL, 1, false FROM gully WHERE arc_id = v_arc_id
+								SELECT v_psector, gully_id, NULL, 1, false FROM gully WHERE arc_id = v_arc_id AND state=1
 								ON CONFLICT DO NOTHING;
 							END IF;
 
