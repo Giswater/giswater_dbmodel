@@ -18,3 +18,8 @@ FALSE, 'utils', 'json') ON CONFLICT (parameter) DO NOTHING;
 
 UPDATE config_param_system SET value='{"mode":"disabled", "plan_obsolete_state_type":24}', descript='Define which mode psector trigger would use. Modes: "disabled", "onService"(transform all features afected by psector to its planified state and makes a
  copy of psector), "obsolete"(set all features afected to obsolete but manage their state_type). Define which plan state_type is going to be set to obsolete when execute psector' WHERE parameter='plan_psector_execute_action';
+
+INSERT INTO sys_function(id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query, source)
+VALUES (3050, 'gw_fct_getfeaturegeom', 'utils', 'function', 'json', 'json',
+'Return geometries from id list',
+'role_basic', NULL, NULL) ON CONFLICT (id) DO NOTHING;
