@@ -58,11 +58,6 @@ BEGIN
 				INSERT INTO audit_check_data (fid, result_id, criticity, error_message, table_id, cur_user) 
 				VALUES (v_fid, v_result_id, 1, concat('INFO: Pattern id (',rec_csv.csv1,') have been imported succesfully'), rec_csv.csv1, current_user);
 
-
-				INSERT INTO audit_check_data (fid, result_id, criticity, error_message, table_id, cur_user) 
-				VALUES (v_fid, v_result_id, 1, concat('INFO: Padsgasdrfgvasdf garsdf rsf bvg dfsaghrfg rfasgh rfsgh ttern id (',rec_csv.csv1,') have been imported succesfully'), rec_csv.csv1, current_user);
-
-
 				-- insert inp_pattern
 				INSERT INTO inp_pattern VALUES (rec_csv.csv1, rec_csv.csv2, concat('Imported by ',current_user,' on ', now()::date));
 
