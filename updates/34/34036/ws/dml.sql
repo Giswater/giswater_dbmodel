@@ -49,7 +49,16 @@ dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
 SELECT 'v_edit_inp_curve', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_curve';
+FROM config_form_fields WHERE formname = 'inp_curve' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
+
+INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
+iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
+dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
+SELECT 'v_edit_inp_curve_value', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
+false, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
+dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
+FROM config_form_fields WHERE formname = 'inp_curve' AND columnname IN ('curve_type', 'descript', 'sector_id')
+ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
 INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
@@ -57,15 +66,7 @@ dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
 SELECT 'v_edit_inp_curve_value', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_curve' AND columnname IN ('curve_type', 'descript', 'sector_id');
-
-INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
-iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
-dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
-SELECT 'v_edit_inp_curve_value', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
-iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
-dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_curve_value';
+FROM config_form_fields WHERE formname = 'inp_curve_value' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
 INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
@@ -73,7 +74,15 @@ dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
 SELECT 'v_edit_inp_pattern', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_pattern' AND columnname not in ('pattern_type');
+FROM config_form_fields WHERE formname = 'inp_pattern' AND columnname not in ('pattern_type') ON CONFLICT (formname, formtype, columnname) DO NOTHING;
+
+INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
+iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
+dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
+SELECT 'v_edit_inp_pattern_value', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
+false, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
+dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
+FROM config_form_fields WHERE formname = 'inp_pattern' AND columnname not in ('pattern_type', 'pattern_id') ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
 INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
@@ -81,15 +90,7 @@ dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
 SELECT 'v_edit_inp_pattern_value', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_pattern' AND columnname not in ('pattern_type', 'pattern_id');
-
-INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
-iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
-dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
-SELECT 'v_edit_inp_pattern_value', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
-iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
-dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_pattern_value' AND columnname not in ('pattern_id') and columnname not ilike '_%';
+FROM config_form_fields WHERE formname = 'inp_pattern_value' AND columnname not ilike '_f%' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
 INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
@@ -97,7 +98,7 @@ dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
 SELECT 'v_edit_inp_rules', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_rules_x_arc';
+FROM config_form_fields WHERE formname = 'inp_rules_x_arc' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
 
 INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
@@ -106,4 +107,5 @@ dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
 SELECT 'v_edit_inp_inp_controls', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
-FROM config_form_fields WHERE formname = 'inp_controls_x_arc';
+FROM config_form_fields WHERE formname = 'inp_controls_x_arc' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
+
