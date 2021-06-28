@@ -109,3 +109,43 @@ iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue,
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
 FROM config_form_fields WHERE formname = 'inp_controls_x_arc' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
 
+
+INSERT INTO sys_fprocess(fid, fprocess_name, project_type, parameters, source)
+VALUES (384, 'Import inp curves', 'utils',NULL, NULL) 
+ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess(fid, fprocess_name, project_type, parameters, source)
+VALUES (386, 'Import inp patterns', 'utils',NULL, NULL) 
+ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_function (id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query, source)
+VALUES (3048, 'gw_fct_import_inp_pattern', 'utils', 'function', 'json', 'json',
+'Function to assist the import of patterns for inp models',
+'role_epa', NULL, NULL) 
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO sys_function (id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query, source)
+VALUES (3044, 'gw_fct_import_inp_curve', 'utils', 'function', 'json', 'json',
+'Function to assist the import curves for inp models',
+'role_epa', NULL, NULL) 
+ON CONFLICT (id) DO NOTHING;
+
+
+INSERT INTO config_csv(fid, alias, descript, functionname, active, orderby)
+VALUES (384,'Import inp curves', 
+'Function to automatize the import of inp curves files. 
+The csv file must containts next columns on same position: 
+curve_id, x_value, y_value, curve_type (for WS project OR UD project curve_type has diferent values. Check user manual)', 
+'gw_fct_import_inp_curve', true, 9)
+ON CONFLICT (fid) DO NOTHING;
+
+
+INSERT INTO config_csv(fid, alias, descript, functionname, active, orderby)
+VALUES (386,'Import inp patterns', 
+'Function to automatize the import of inp patterns files. 
+The csv file must containts next columns on same position: 
+pattern_id, pattern_type, factor1,.......,factorn. 
+For WS use up factor18, repeating rows if you like. 
+For UD use up factor24. More than one row for pattern is not allowed', 
+'gw_fct_import_inp_pattern', true, 10)
+ON CONFLICT (fid) DO NOTHING;

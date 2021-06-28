@@ -1,3 +1,4 @@
 3.4.036
 ************
 - Minor updates on go2epa functions
+- Add import patterns & import curves
