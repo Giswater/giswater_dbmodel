@@ -11,3 +11,6 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 --2021/06/13
 UPDATE config_form_fields SET dv_querytext = 'SELECT macrosector_id as id,name as idval FROM macrosector WHERE macrosector_id IS NOT NULL'
 WHERE columnname = 'macrosector_id' AND formname = 'v_edit_inp_pump';
+
+UPDATE inp_controls_x_arc i SET sector_id = a.sector_id FROM arc a WHERE a.arc_id = i.arc_id;
+UPDATE inp_rules_x_arc i SET sector_id = a.sector_id FROM arc a WHERE a.arc_id = i.arc_id;
