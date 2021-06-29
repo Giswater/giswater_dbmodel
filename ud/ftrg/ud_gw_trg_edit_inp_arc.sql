@@ -55,7 +55,7 @@ BEGIN
 						WHERE arc_id=NEW.arc_id;
 			END IF;
 			
-			UPDATE arc SET 	arccat_id=NEW.arccat_id, sector_id=NEW.sector_id, annotation= NEW.annotation, custom_length=NEW.custom_length
+			UPDATE arc SET 	arccat_id=NEW.arccat_id, sector_id=NEW.sector_id, annotation= NEW.annotation, custom_length=NEW.custom_length, "state_type"=NEW."state_type"
 			WHERE arc_id = OLD.arc_id;
 		END IF;
 
