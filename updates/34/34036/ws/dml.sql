@@ -104,7 +104,7 @@ FROM config_form_fields WHERE formname = 'inp_rules_x_arc' ON CONFLICT (formname
 INSERT INTO config_form_fields(formname, formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden)
-SELECT 'v_edit_inp_inp_controls', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
+SELECT 'v_edit_inp_controls', formtype, columnname, layoutorder, datatype, widgettype, label,  ismandatory, isparent, 
 iseditable, isautoupdate, dv_querytext, dv_orderby_id, dv_isnullvalue, 
 dv_parent_id, dv_querytext_filterc, widgetfunction, linkedaction,  hidden
 FROM config_form_fields WHERE formname = 'inp_controls_x_arc' ON CONFLICT (formname, formtype, columnname) DO NOTHING;
