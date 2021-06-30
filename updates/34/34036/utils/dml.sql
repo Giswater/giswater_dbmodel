@@ -39,3 +39,8 @@ VALUES (3060, 'gw_trg_edit_inp_curve', 'ws', 'function trigger', NULL, NULL,
 INSERT INTO sys_function(id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query, source)
 VALUES (3062, 'gw_trg_edit_inp_pattern', 'ws', 'function trigger', NULL, NULL,
 'Allows editing inp rules view','role_epa', NULL, NULL) ON CONFLICT (id) DO NOTHING;
+
+--2021/06/30
+INSERT INTO config_param_system VALUES ('admin_formheader_field', '{"node":"node_id", "arc":"arc_id", "connec":"connec_id", "gully":"gully_id", "element":{"childType":"ELEMENT", "column":"element_id"},
+ "hydrometer":{"childType":"HYDROMETER", "column":"hydrometer_id"},  "newText":"NEW"}', 'Field to use as header from every feature_type when getinfofromid. When element and hydrometer, childType is used as text to concat with column. When insert new feature, newText is used to translate the concat text', 
+NULL, NULL, NULL, FALSE, NULL, 'utils') ON CONFLICT (parameter) DO NOTHING;
