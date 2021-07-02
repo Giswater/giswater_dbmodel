@@ -44,8 +44,3 @@ VALUES (3062, 'gw_trg_edit_inp_pattern', 'ws', 'function trigger', NULL, NULL,
 INSERT INTO config_param_system VALUES ('admin_formheader_field', '{"node":"node_id", "arc":"arc_id", "connec":"connec_id", "gully":"gully_id", "element":{"childType":"ELEMENT", "column":"element_id"},
  "hydrometer":{"childType":"HYDROMETER", "column":"hydrometer_id"},  "newText":"NEW"}', 'Field to use as header from every feature_type when getinfofromid. When element and hydrometer, childType is used as text to concat with column. When insert new feature, newText is used to translate the concat text', 
 NULL, NULL, NULL, FALSE, NULL, 'utils') ON CONFLICT (parameter) DO NOTHING;
-
---2021/07/01
-INSERT INTO config_param_system(parameter, value, descript, label,isenabled, project_type,  datatype)
-VALUES ('basic_selector_sectorfromexpl', '{"activated":"false"}', 'If true, sector selector is set automatically set to the sector which  geometry overlaps the selected exploitation.',
-'Selector variables', FALSE, 'utils','json') ON CONFLICT (parameter) DO NOTHING;;
