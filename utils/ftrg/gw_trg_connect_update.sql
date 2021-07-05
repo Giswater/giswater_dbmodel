@@ -96,12 +96,19 @@ BEGIN
 		END LOOP;
 		-- update fields that inherit values from arc
 		IF v_projectype = 'WS' AND NEW.arc_id IS NOT NULL AND (NEW.arc_id != OLD.arc_id) THEN
-			UPDATE v_edit_connec SET presszone_id=a.presszone_id, dqa_id=a.dqa_id, minsector_id=a.minsector_id, fluid_type = a.fluid_type
-			FROM arc a WHERE a.arc_id = NEW.arc_id;
+			UPDATE connec SET presszone_id=a.presszone_id, dqa_id=a.dqa_id, minsector_id=a.minsector_id, fluid_type = a.fluid_type
+			FROM (SELECT connec_id, a.presszone_id, a.dqa_id, a.minsector_id, a.fluid_type FROM v_edit_connec JOIN arc a USING (arc_id) WHERE a.arc_id = NEW.arc_id)a
+			WHERE a.connec_id=connec.connec_id;
 		END IF;
 		
 		IF v_projectype = 'UD' AND NEW.arc_id IS NOT NULL AND (NEW.arc_id != OLD.arc_id) THEN
-			UPDATE v_edit_gully SET fluid_type = a.fluid_type FROM arc a WHERE a.arc_id = NEW.arc_id;
+			UPDATE connec SET fluid_type = a.fluid_type
+			FROM (SELECT connec_id, a.fluid_type FROM v_edit_connec JOIN arc a USING (arc_id) WHERE a.arc_id = NEW.arc_id)a
+			WHERE a.connec_id=connec.connec_id;
+
+			UPDATE gully SET fluid_type = a.fluid_type
+			FROM (SELECT gully_id, a.fluid_type FROM v_edit_gully JOIN arc a USING (arc_id) WHERE a.arc_id = NEW.arc_id)a
+			WHERE a.gully_id=gully.gully_id;
 		END IF;
 
 	ELSIF v_featuretype='gully' THEN
