@@ -26,9 +26,9 @@ v_point_array1 geometry[];
 v_point_array2 geometry[];
 v_count integer;
 v_exists_node_id varchar;
-v_new_record SCHEMA_NAME.v_edit_arc;
-v_my_record1 SCHEMA_NAME.v_edit_arc;
-v_my_record2 SCHEMA_NAME.v_edit_arc;
+v_new_record SCHEMA_NAME.arc;
+v_my_record1 SCHEMA_NAME.arc;
+v_my_record2 SCHEMA_NAME.arc;
 v_arc_geom public.geometry;
 v_project_type text;
 rec_addfield1 record;
@@ -56,6 +56,8 @@ v_workcat_id_end text;
 v_enddate date;
 v_state_node int2;
 v_state_arc int2;
+v_man_table text;
+v_epa_table text;
 
 BEGIN
 
@@ -97,14 +99,14 @@ BEGIN
         VALUES (214, 1, concat('Fusion arcs using node: ', v_exists_node_id,'.'));
 
         -- Find arcs sharing node
-        SELECT COUNT(*) INTO v_count FROM v_edit_arc WHERE node_1 = v_node_id OR node_2 = v_node_id;
+        SELECT COUNT(*) INTO v_count FROM arc WHERE node_1 = v_node_id OR node_2 = v_node_id;
 
         -- Accepted if there are just two distinct arcs
         IF v_count = 2 THEN
 
             -- Get both arc features
-            SELECT * INTO v_my_record1 FROM v_edit_arc WHERE node_1 = v_node_id OR node_2 = v_node_id ORDER BY arc_id DESC LIMIT 1;
-            SELECT * INTO v_my_record2 FROM v_edit_arc WHERE node_1 = v_node_id OR node_2 = v_node_id ORDER BY arc_id ASC LIMIT 1;
+            SELECT * INTO v_my_record1 FROM arc WHERE node_1 = v_node_id OR node_2 = v_node_id ORDER BY arc_id DESC LIMIT 1;
+            SELECT * INTO v_my_record2 FROM arc WHERE node_1 = v_node_id OR node_2 = v_node_id ORDER BY arc_id ASC LIMIT 1;
 
             -- get states
             SELECT state INTO v_state_node FROM node WHERE node_id = v_node_id;
@@ -138,13 +140,22 @@ BEGIN
 
 		    v_arc_geom := ST_MakeLine(v_point_array2);
 
-		    SELECT * INTO v_new_record FROM v_edit_arc WHERE arc_id = v_my_record1.arc_id;
+		    SELECT * INTO v_new_record FROM arc WHERE arc_id = v_my_record1.arc_id;
 
 		    -- Create a new arc values
 		    v_new_record.the_geom := v_arc_geom;
 		    v_new_record.node_1 := (SELECT node_id FROM v_edit_node WHERE ST_DWithin(ST_StartPoint(v_arc_geom), v_edit_node.the_geom, 0.01) LIMIT 1);
 		    v_new_record.node_2 := (SELECT node_id FROM v_edit_node WHERE ST_DWithin(ST_EndPoint(v_arc_geom), v_edit_node.the_geom, 0.01) LIMIT 1);
 		    v_new_record.arc_id := (SELECT nextval('urn_id_seq'));
+
+		    -- get man and epa tables
+		    IF v_project_type = 'UD' THEN
+			    SELECT man_table INTO v_man_table FROM cat_feature_arc WHERE id=v_my_record1.arc_type;
+			    SELECT epa_table INTO v_epa_table FROM cat_feature_arc WHERE id=v_my_record1.arc_type;
+		    ELSE
+			    SELECT man_table INTO v_man_table FROM cat_feature_arc c JOIN cat_arc ON arctype_id=c.id WHERE cat_arc.id=v_my_record1.arccat_id;
+			    SELECT epa_table INTO v_epa_table FROM cat_feature_arc c JOIN cat_arc ON arctype_id=c.id WHERE cat_arc.id=v_my_record1.arccat_id;
+		    END IF;
 
 		    --Compare addfields and assign them to new arc
 		    FOR rec_param IN SELECT DISTINCT parameter_id, param_name FROM man_addfields_value
@@ -182,10 +193,13 @@ BEGIN
 		    -- temporary dissable the arc_searchnodes_control in order to use the node1 and node2 getted before
 		    -- to get values topocontrol arc needs to be before, but this is not possible
 		    UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'activated', false) WHERE parameter = 'edit_arc_searchnodes';
-		    INSERT INTO v_edit_arc SELECT v_new_record.*;
+		    INSERT INTO arc SELECT v_new_record.*;
 		    UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'activated', true) WHERE parameter = 'edit_arc_searchnodes';
 
 		    UPDATE arc SET node_1=v_new_record.node_1, node_2=v_new_record.node_2 where arc_id=v_new_record.arc_id;
+
+		    EXECUTE 'INSERT INTO '||v_man_table||' VALUES ('||v_new_record.arc_id||')';
+		    EXECUTE 'INSERT INTO '||v_epa_table||' VALUES ('||v_new_record.arc_id||')';
 			    
 		    --Insert data on audit_arc_traceability table
 		    INSERT INTO audit_arc_traceability ("type", arc_id, arc_id1, arc_id2, node_id, "tstamp", cur_user) 
