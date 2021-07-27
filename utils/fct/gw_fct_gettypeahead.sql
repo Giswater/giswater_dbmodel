@@ -13,24 +13,13 @@ $BODY$
 
 /*EXAMPLE:
 
--- with parent
-SELECT SCHEMA_NAME.gw_fct_gettypeahead($${
-"client":{"device":4, "infoType":1, "lang":"ES"},
-"form":{},
-"feature":{"tableName":"ve_arc_pipe"},
-"data":{"queryText":"SELECT id AS id, id AS idval FROM cat_arc WHERE id IS NOT NULL",
-	"queryTextFilter":" AND arctype_id = ", 
-	"parentId":"arc_type",
-	"parentValue":"PIPE", 
-	"textToSearch":"FC"}}$$)
-
 -- without parent
 SELECT SCHEMA_NAME.gw_fct_gettypeahead($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "form":{},
 "feature":{"tableName":"ve_arc_pipe"},
 "data":{"queryText":"SELECT id AS id, id AS idval FROM cat_arc WHERE id IS NOT NULL",
-	"textToSearch":"FC"}}$$)
+	"textToSearch":"FD"}}$$)
 	
 SELECT SCHEMA_NAME.gw_fct_gettypeahead($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{},
 "queryText":"SELECT id AS id, a.name AS idval FROM ext_streetaxis a JOIN ext_municipality m USING (muni_id) WHERE id IS NOT NULL", 
@@ -53,6 +42,7 @@ v_parent text;
 v_parentvalue text; 
 v_textosearch text;
 v_fieldtosearch text; 
+v_error_context text;
 
 BEGIN
 
@@ -86,9 +76,7 @@ BEGIN
 	ELSE
 		v_querytext = concat (v_querytext, ' ', v_querytextparent, ' = ' ,quote_literal(v_parentvalue)); 
 	END IF;
-	v_querytext = concat ('SELECT array_to_json(array_agg(row_to_json(a))) FROM ( SELECT * FROM (', (v_querytext), ')a WHERE idval ILIKE ''%', v_textosearch, '%'' LIMIT 10)a');
-
-	RAISE NOTICE 'v_querytext %', v_querytext;
+	v_querytext = concat ('SELECT array_to_json(array_agg(row_to_json(a))) FROM ( SELECT * FROM (', (v_querytext), ')a WHERE idval ILIKE $$%', v_textosearch, '%$$ LIMIT 10)a');
 
 	-- execute query text
 	EXECUTE v_querytext INTO v_response;
@@ -103,6 +91,13 @@ BEGIN
 	-- Return
 	RETURN ('{"status":"Accepted", "message":'||v_message||', "version":'|| v_version ||
     	    ', "body": {"data":'|| v_response || '}}')::json;      
+
+	--EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+
+
+	
 	 
 END;
 $BODY$
