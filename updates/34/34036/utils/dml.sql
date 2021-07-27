@@ -44,3 +44,6 @@ VALUES (3062, 'gw_trg_edit_inp_pattern', 'ws', 'function trigger', NULL, NULL,
 INSERT INTO config_param_system VALUES ('admin_formheader_field', '{"node":"node_id", "arc":"arc_id", "connec":"connec_id", "gully":"gully_id", "element":{"childType":"ELEMENT", "column":"element_id"},
  "hydrometer":{"childType":"HYDROMETER", "column":"hydrometer_id"},  "newText":"NEW"}', 'Field to use as header from every feature_type when getinfofromid. When element and hydrometer, childType is used as text to concat with column. When insert new feature, newText is used to translate the concat text', 
 NULL, NULL, NULL, FALSE, NULL, 'utils') ON CONFLICT (parameter) DO NOTHING;
+
+--2021/07/277
+UPDATE config_form_fields SET dv_querytext='SELECT id AS id, a.descript AS idval FROM v_ext_streetaxis a JOIN ext_municipality m USING (muni_id) WHERE id IS NOT NULL' WHERE formtype='form_feature' AND columnname like 'streetname%';
