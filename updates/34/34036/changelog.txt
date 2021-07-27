@@ -2,3 +2,6 @@
 ************
 - Minor updates on go2epa functions
 - Add import patterns & import curves
+- Enhance transforming streetname into id
+- Enhance gettypeahead function when search text has  single quote character
+- Various bugs fixed on topocontrol and psector
