@@ -1,0 +1,5 @@
+3.4.037
+************
+- Update trg_edit_psector delete planified obsolete feature to avoid duplicate obsolete. Change constraints ON DELETE CASCADE.
+- Set enddate on trg_multievent when update to status 4
+- Enhance fct_setplan adding exception for plan_obsolete_state_type
