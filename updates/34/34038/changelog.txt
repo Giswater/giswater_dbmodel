@@ -1,0 +1,3 @@
+3.4.038
+************
+- Calculate symbol rotation on gw_trg_link_connecrotation_update and manage it by system variable instead of user
