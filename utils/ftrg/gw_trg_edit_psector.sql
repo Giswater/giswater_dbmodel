@@ -85,10 +85,10 @@ BEGIN
 	
 	IF om_aux='plan' THEN
 
-		INSERT INTO plan_psector (psector_id, name, psector_type, descript, priority, text1, text2, observ, rotation, scale, sector_id,
+		INSERT INTO plan_psector (psector_id, name, psector_type, descript, priority, text1, text2, observ, rotation, scale,
 		 atlas_id, gexpenses, vat, other, the_geom, expl_id, active, ext_code, status, text3, text4, text5, text6, num_value)
 		VALUES  (NEW.psector_id, NEW.name, NEW.psector_type, NEW.descript, NEW.priority, NEW.text1, NEW.text2, NEW.observ, NEW.rotation, 
-		NEW.scale, NEW.sector_id, NEW.atlas_id, NEW.gexpenses, NEW.vat, NEW.other, NEW.the_geom, NEW.expl_id, NEW.active,
+		NEW.scale, NEW.atlas_id, NEW.gexpenses, NEW.vat, NEW.other, NEW.the_geom, NEW.expl_id, NEW.active,
 		NEW.ext_code, NEW.status, NEW.text3, NEW.text4, NEW.text5, NEW.text6, NEW.num_value);
 	END IF;
 
@@ -101,7 +101,7 @@ BEGIN
 
 		UPDATE plan_psector 
 		SET psector_id=NEW.psector_id, name=NEW.name, psector_type=NEW.psector_type, descript=NEW.descript, priority=NEW.priority, text1=NEW.text1, 
-		text2=NEW.text2, observ=NEW.observ, rotation=NEW.rotation, scale=NEW.scale, sector_id=NEW.sector_id, atlas_id=NEW.atlas_id, 
+		text2=NEW.text2, observ=NEW.observ, rotation=NEW.rotation, scale=NEW.scale, atlas_id=NEW.atlas_id, 
 		gexpenses=NEW.gexpenses, vat=NEW.vat, other=NEW.other, expl_id=NEW.expl_id, active=NEW.active, ext_code=NEW.ext_code, status=NEW.status,
 		text3=NEW.text3, text4=NEW.text4, text5=NEW.text5, text6=NEW.text6, num_value=NEW.num_value
 		WHERE psector_id=OLD.psector_id;
@@ -176,18 +176,41 @@ BEGIN
 						GET DIAGNOSTICS v_affectrow = row_count;
 						IF v_affectrow=0 THEN
 
-							-- delete features where state_type is plan_obsolete_state_type	(usually generated after ficticius arcs)					
-							EXECUTE 'DELETE FROM '||lower(rec_type.id)||' n WHERE n.'||lower(rec_type.id)||'_id = '''||rec.id||''' AND n.state_type='||v_plan_obsolete_state_type||';';
+                        
+							-- set obsolete features where psector_x_* state is 1 but feature state_type is in plan_obsolete_state_type					
+							EXECUTE 'UPDATE '||lower(rec_type.id)||' n SET state = 0, state_type = '||v_statetype_obsolete||' 
+							FROM plan_psector_x_'||lower(rec_type.id)||' p WHERE n.'||lower(rec_type.id)||'_id = p.'||lower(rec_type.id)||'_id 
+							AND p.state = 1 AND p.psector_id='||OLD.psector_id||' AND n.'||lower(rec_type.id)||'_id = '''||rec.id||''' AND n.state_type='||v_plan_obsolete_state_type||';';
+                        
+
+							GET DIAGNOSTICS v_affectrow = row_count;
+							IF v_affectrow=0 THEN
+
+								-- disconnect related connecs from arc about to be deleted
+								EXECUTE 'UPDATE connec SET arc_id=NULL WHERE arc_id='''||rec.id||''';';
+
+								-- delete parent arcs
+								EXECUTE 'DELETE FROM arc n USING plan_psector_x_arc p WHERE n.arc_id = p.arc_id 
+								AND n.arc_id = '''||rec.id||''' AND (p.addparam::json)->>''arcDivide''=''parent'';';
 
 								GET DIAGNOSTICS v_affectrow = row_count;
 								IF v_affectrow=0 THEN
 
-									-- set obsolete features where psector_x_* state is 0									
-									EXECUTE 'UPDATE '||lower(rec_type.id)||' n SET state = 0, state_type = '||v_statetype_obsolete||' 
-									FROM plan_psector_x_'||lower(rec_type.id)||' p WHERE n.'||lower(rec_type.id)||'_id = p.'||lower(rec_type.id)||'_id 
-									AND p.state = 0 AND p.psector_id='||OLD.psector_id||' AND n.'||lower(rec_type.id)||'_id = '''||rec.id||''';';
+									-- delete deprecated arcs
+									EXECUTE 'DELETE FROM arc n USING plan_psector_x_arc p WHERE n.arc_id = p.arc_id 
+									AND n.arc_id = '''||rec.id||''' AND (p.addparam::json)->>''nodeReplace''=''deprecated'';';
 
-								END IF;			
+									GET DIAGNOSTICS v_affectrow = row_count;
+									IF v_affectrow=0 THEN
+
+										-- set obsolete features where psector_x_* state is 0									
+										EXECUTE 'UPDATE '||lower(rec_type.id)||' n SET state = 0, state_type = '||v_statetype_obsolete||' 
+										FROM plan_psector_x_'||lower(rec_type.id)||' p WHERE n.'||lower(rec_type.id)||'_id = p.'||lower(rec_type.id)||'_id 
+										AND p.state = 0 AND p.psector_id='||OLD.psector_id||' AND n.'||lower(rec_type.id)||'_id = '''||rec.id||''';';
+
+									END IF;
+								END IF;	
+							END IF;		
 						END IF;
 
 	
