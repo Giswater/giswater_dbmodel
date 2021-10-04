@@ -222,7 +222,7 @@ BEGIN
 			CONCAT (search_field, '' : '', cat_id) AS display_name, sys_idname
 			FROM ('||(v_querytext)||')b
 			WHERE CONCAT (search_field, '' : '', cat_id) ILIKE ' || quote_literal(v_textarg) || ' 
-			ORDER BY search_field LIMIT 10) a'
+			ORDER BY length(search_field::text) asc LIMIT 10) a'
 			INTO v_response;
 		ELSE 
 			-- Get values type combo    
@@ -230,7 +230,7 @@ BEGIN
 			CONCAT (search_field, '' : '', cat_id) AS display_name, sys_idname, '||quote_literal(v_searchtype)::text||'  as search_type
 			FROM ('||(v_querytext)||')b
 			WHERE CONCAT (search_field, '' : '', cat_id) ILIKE ' || quote_literal(v_textarg) || ' AND sys_table_id = '||quote_literal(v_idarg)||'
-			ORDER BY search_field LIMIT 10) a'
+			ORDER BY length(search_field::text) asc LIMIT 10) a'
 			INTO v_response;
 		END IF;
 
