@@ -213,7 +213,7 @@ BEGIN
 	-- trigger automatic mapzones
 	IF v_projecttype = 'WS' THEN
 	
-		SELECT type INTO v_type FROM cat_feature JOIN cat_feature_node USING (id) WHERE child_layer = v_tablename AND graf_delimiter !='NONE';
+		SELECT type INTO v_type FROM cat_feature JOIN cat_feature_node USING (id) WHERE child_layer = v_tablename AND graf_delimiter !='NONE' AND graf_delimiter IS NOT NULL;
 		IF v_type = 'VALVE' AND v_closedstatus IS NOT NULL THEN
 
 			-- getting exploitation
