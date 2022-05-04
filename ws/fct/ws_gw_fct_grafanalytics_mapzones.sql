@@ -167,6 +167,7 @@ v_error boolean = false;
 v_nodemapzone text;
 v_conflict text[];
 v_manageconflict boolean;
+v_islastupdate boolean;
 
 BEGIN
 	-- Search path
@@ -198,6 +199,7 @@ BEGIN
 
 	-- select config values
 	SELECT giswater, epsg INTO v_version, v_srid FROM sys_version order by 1 desc limit 1;
+	SELECT value::boolean INTO v_islastupdate FROM config_param_system WHERE parameter='edit_mapzones_set_lastupdate';
 
 	-- data quality analysis
 	IF v_checkdata THEN
@@ -615,6 +617,30 @@ BEGIN
 					-- used connec using v_edit_arc because the exploitation filter (same before)
 					v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM v_edit_arc a WHERE a.arc_id=connec.arc_id';
 					EXECUTE v_querytext;
+
+					IF v_islastupdate IS TRUE THEN
+						v_querytext = 'UPDATE arc SET lastupdate = now(), lastupdate_user=current_user FROM anl_arc a JOIN 
+						(SELECT '||quote_ident(v_fieldmp)||', json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' as nodeparent from '||
+						quote_ident(v_table)||') b
+						ON  nodeparent = descript WHERE fid='||v_fid||' AND a.arc_id=arc.arc_id AND cur_user=current_user';
+						EXECUTE v_querytext;
+
+					-- update node table without graf nodes using node with from v_edit_arc because the exploitation filter. Row before do not needed because table anl_* is filtered by process
+						v_querytext = 'UPDATE node SET lastupdate = now(), lastupdate_user=current_user FROM v_edit_arc a WHERE a.arc_id=node.arc_id';
+						EXECUTE v_querytext;
+							
+					-- update node table with graf nodes
+						v_querytext = 'UPDATE node SET lastupdate = now(), lastupdate_user=current_user 
+						FROM anl_node a join (SELECT  '||quote_ident(v_fieldmp)||', json_array_elements_text((grafconfig->>''use'')::json)::json->>''nodeParent'' 
+						as nodeparent from '
+						||quote_ident(v_table)||') b ON  nodeparent = descript WHERE fid='||v_fid||' AND a.node_id=node.node_id
+						AND cur_user=current_user';
+						EXECUTE v_querytext;
+						
+						-- used connec using v_edit_arc because the exploitation filter (same before)
+						v_querytext = 'UPDATE connec SET lastupdate = now(), lastupdate_user=current_user FROM v_edit_arc a WHERE a.arc_id=connec.arc_id';
+						EXECUTE v_querytext;
+					END IF;
 				
 					-- recalculate staticpressure (fid=147)
 					IF v_fid=146 THEN
