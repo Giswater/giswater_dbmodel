@@ -27,6 +27,7 @@ INSERT INTO cat_users VALUES ('user4','user4');
 
 INSERT INTO cat_manager (idval, expl_id, username, active) VALUES ('general manager', '{1,2}', concat('{',current_user,'}')::text[], true);
 
+UPDATE config_param_user SET value='false' WHERE "parameter"='edit_plan_order_control' AND cur_user=current_user;
 
 TRUNCATE plan_psector_x_node;
 INSERT INTO plan_psector_x_node (id, node_id, psector_id, state, doable, descript,active) VALUES (1, '20599', 1, 1, true, NULL, true);
@@ -545,3 +546,5 @@ UPDATE link SET dma_id = c.dma_id, sector_id = c.sector_id FROM connec c WHERE f
 UPDATE link SET dma_id = c.dma_id, sector_id = c.sector_id FROM gully c WHERE feature_id = gully_id;
 
 UPDATE inp_gully SET method = 'W_O' WHERE method = 'W/O';
+
+UPDATE config_param_user SET value='true' WHERE "parameter"='edit_plan_order_control' AND cur_user=current_user;
