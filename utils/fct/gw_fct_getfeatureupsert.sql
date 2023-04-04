@@ -785,7 +785,7 @@ BEGIN
 						v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboNames'::text;
 						v_new_id = '['||v_new_id || ','|| quote_ident(v_selected_idval)||']';
 						--add new combo names to return json
-						v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);
+						v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id)::json;
 					END IF;
 				END IF;
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'selectedId', COALESCE(field_value, ''));
