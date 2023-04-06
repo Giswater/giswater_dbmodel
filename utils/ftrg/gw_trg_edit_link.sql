@@ -461,7 +461,7 @@ BEGIN
 				"data":{"message":"3220", "function":"1116","debug_msg":null}}$$);';
 			END IF;
 		
-			IF (SELECT feature_id FROM link WHERE feature_id=NEW.feature_id AND link_id::text != NEW.link_id::text AND state = 1) IS NOT NULL THEN
+			IF (SELECT feature_id FROM link WHERE feature_id=NEW.feature_id AND link_id::text != NEW.link_id::text AND state = 1 LIMIT 1) IS NOT NULL THEN
 		
 				IF NEW.feature_type = 'CONNEC' THEN
 
@@ -558,7 +558,7 @@ BEGIN
 
 		ELSIF NEW.state = 1 THEN 
 
-			IF (SELECT feature_id FROM link WHERE feature_id=NEW.feature_id AND link_id::text != NEW.link_id::text AND state = 1) IS NOT NULL THEN
+			IF (SELECT feature_id FROM link WHERE feature_id=NEW.feature_id AND link_id::text != NEW.link_id::text AND state = 1 LIMIT 1) IS NOT NULL THEN
 
 				-- update psector
 				IF NEW.feature_type='CONNEC' THEN
