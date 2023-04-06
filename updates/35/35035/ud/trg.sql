@@ -8,3 +8,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 CREATE TRIGGER gw_trg_link_data AFTER INSERT OR UPDATE OF expl_id2
 ON gully FOR EACH ROW EXECUTE FUNCTION gw_trg_link_data('gully');
+
+DROP TRIGGER IF EXISTS gw_trg_edit_review_gully ON v_edit_review_gully;
+
+CREATE TRIGGER gw_trg_edit_review_gully INSTEAD OF INSERT OR UPDATE OR DELETE ON v_edit_review_gully FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_gully();
