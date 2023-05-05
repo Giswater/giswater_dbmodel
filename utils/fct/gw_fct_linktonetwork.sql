@@ -180,7 +180,7 @@ BEGIN
 				IN (SELECT psector_id FROM selector_psector WHERE cur_user = current_user) AND state = 1) IS NOT NULL AND v_connect.state = 1 THEN
 				v_isoperative_psector = true;
 				v_linkfrompsector = (SELECT link_id FROM plan_psector_x_connec WHERE connec_id = v_connect.connec_id AND psector_id IN
-						    (SELECT psector_id FROM selector_psector WHERE cur_user = current_user) AND state = 1);
+						    (SELECT psector_id FROM selector_psector WHERE cur_user = current_user) AND state = 1 LIMIT 1);
 			END IF;
 
 		ELSIF v_feature_type ='GULLY' THEN
@@ -190,7 +190,7 @@ BEGIN
 			   (SELECT psector_id FROM selector_psector WHERE cur_user = current_user) AND state = 1) IS NOT NULL AND v_connect.state = 1 THEN
 				v_isoperative_psector = true;
 				v_linkfrompsector = (SELECT link_id FROM plan_psector_x_gully WHERE gully_id = v_connect.gully_id AND psector_id IN
-						    (SELECT psector_id FROM selector_psector WHERE cur_user = current_user) AND state = 1);
+						    (SELECT psector_id FROM selector_psector WHERE cur_user = current_user) AND state = 1 LIMIT 1);
 			END IF;
 		END IF;
 
@@ -334,7 +334,7 @@ BEGIN
 						v_link.the_geom := st_setsrid(ST_makeline(v_connect.the_geom, v_point_aux), SRID_VALUE);
 
 						INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-						VALUES (217, null, 4, concat('Create new link eature with the closest arc.'));
+						VALUES (217, null, 4, concat('Create new link feature with the closest arc.'));
 					ELSE
 						v_link.state = 2; -- because it is copied from existing one but related to psector
 
