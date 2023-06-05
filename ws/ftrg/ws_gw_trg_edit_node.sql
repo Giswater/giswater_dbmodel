@@ -599,10 +599,15 @@
 				JOIN cat_node ON cat_node.id=NEW.nodecat_id WHERE n.id = cat_node.nodetype_id LIMIT 1)::text;
 		         
 				IF v_man_table='man_valve' THEN
+				
+					if NEW.closed_valve is null then NEW.closed_valve = false; end if;	
+					if NEW.broken_valve is null then NEW.broken_valve = false; end if;
+					
 					v_sql:= 'INSERT INTO man_valve (node_id, closed, broken) VALUES ('||quote_literal(NEW.node_id)||', '||(NEW.closed_valve)||', '||(NEW.broken_valve)||')';
 				ELSE
 			    	v_sql:= 'INSERT INTO '||v_man_table||' (node_id) VALUES ('||quote_literal(NEW.node_id)||')';
                 END IF;
+				
 			    EXECUTE v_sql;
 
 			END IF;
