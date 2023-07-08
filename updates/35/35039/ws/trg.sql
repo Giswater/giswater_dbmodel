@@ -7,5 +7,5 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = SCHEMA_NAME ,public;
 
-CREATE TRIGGER gw_trg_ui_plan_psector INSTEAD OF INSERT OR UPDATE OR DELETE
+CREATE TRIGGER gw_trg_ui_rpt_cat_result INSTEAD OF INSERT OR UPDATE OR DELETE
 ON v_ui_rpt_cat_result FOR EACH ROW EXECUTE PROCEDURE gw_trg_ui_rpt_cat_result();
