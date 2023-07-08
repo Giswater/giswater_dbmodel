@@ -521,11 +521,7 @@ BEGIN
 				END IF;
 			END IF;
 
-			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-			VALUES (217, null, 4, concat('Recreate link'));
-
-			RAISE NOTICE 'LINK: %, %:, %, %:, %',v_link.link_id, v_link.feature_type, v_link.feature_id, v_link.exit_type, v_link.exit_id;
-
+			RAISE NOTICE 'LINK:%, %:%, %:%',v_link.link_id, v_link.feature_type, v_link.feature_id, v_link.exit_type, v_link.exit_id;
 			-- reset values
 			v_connect := null;
 			v_link := null;
