@@ -7,8 +7,8 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 2560
 
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_get_featureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean);
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_get_featureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean, text, text);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getfeatureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getfeatureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean, text, text);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getfeatureupsert(
     p_table_id character varying,
     p_id character varying,
@@ -770,23 +770,26 @@ BEGIN
 						INTO v_new_id;
 						v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);
 					ELSE
-					
-						select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
-						--remove current combo Ids from return json
-						v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboIds'::text;
-						EXECUTE 'SELECT  array_to_json(''{'||v_selected_id||'}''::text[])'
-						INTO v_new_id;
-						--add new combo Ids to return json
-						v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboIds',v_new_id::json);
-		
-						v_current_id =json_extract_path_text(v_fields_array[array_index],'comboNames');
-						select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
-						--remove current combo names from return json
-						v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboNames'::text;
-						EXECUTE 'SELECT  array_to_json(''{'||v_selected_idval||'}''::text[])'
-						INTO v_new_id;
-						--add new combo names to return json
-						v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);
+
+						IF v_selected_id IS NOT NULL THEN
+							select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
+							--remove current combo Ids from return json
+							v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboIds'::text;
+
+							EXECUTE 'SELECT  array_to_json(''{'||v_selected_id||'}''::text[])'
+							INTO v_new_id;
+							--add new combo Ids to return json
+							v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboIds',v_new_id::json);
+
+							v_current_id =json_extract_path_text(v_fields_array[array_index],'comboNames');
+							select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
+							--remove current combo names from return json
+							v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboNames'::text;
+							EXECUTE 'SELECT  array_to_json(''{'||v_selected_idval||'}''::text[])'
+							INTO v_new_id;
+							--add new combo names to return json
+							v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);
+						END IF;
 					END IF;
 				END IF;
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'selectedId', COALESCE(field_value, ''));
