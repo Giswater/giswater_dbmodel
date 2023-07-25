@@ -216,7 +216,6 @@ BEGIN
 
 	IF v_commitchanges IS FALSE THEN
 		v_updatefeature = false;
-		v_updatemapzgeom = 0;
 	END IF;
 
 	IF v_floodonlymapzone = '' THEN v_floodonlymapzone = NULL; END IF;
@@ -883,148 +882,149 @@ BEGIN
 
 			RAISE NOTICE 'Generate geometries';		
 
-			-- update geometry of mapzones
-			IF v_updatemapzgeom = 0 THEN
-				-- do nothing
-			ELSIF  v_updatemapzgeom = 1 THEN
+			IF v_commitchanges IS TRUE THEN 
+				-- update geometry of mapzones
+				IF v_updatemapzgeom = 0 THEN
+					-- do nothing
+				ELSIF  v_updatemapzgeom = 1 THEN
+				
+					-- concave polygon
+					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = st_multi(a.the_geom) 
+							FROM (with polygon AS (SELECT st_collect (the_geom) as g, '||quote_ident(v_field)||' FROM v_edit_arc 
+							JOIN temp_anlgraph USING (arc_id) 
+							WHERE state > 0  AND water = 1 group by '||quote_ident(v_field)||') 
+							SELECT '||quote_ident(v_field)||
+							', CASE WHEN st_geometrytype(st_concavehull(g, '||v_concavehull||')) = ''ST_Polygon''::text THEN st_buffer(st_concavehull(g, '||
+							v_concavehull||'), 2)::geometry(Polygon,'||(v_srid)||')
+							ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,'||(v_srid)||') END AS the_geom FROM polygon
+							)a WHERE a.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp)||' AND '||quote_ident(v_table)||'.'||
+							quote_ident(v_fieldmp)||' NOT IN (''0'', ''-1'')';
+					
+					EXECUTE v_querytext;
+
+				ELSIF  v_updatemapzgeom = 2 THEN
+				
+					-- pipe buffer
+					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
+
+							(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as geom from v_edit_arc arc 
+							JOIN temp_anlgraph USING (arc_id) 
+							where arc.state > 0 AND water = 1 AND '||quote_ident(v_field)||'::integer > 0 group by '||quote_ident(v_field)||')a 
+							WHERE a.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
+
+							/*
+							UPDATE drainzone set the_geom = geom FROM (
+								SELECT drainzone_id, st_multi(st_buffer(st_collect(the_geom),10)) as geom from arc 
+								 where arc.state > 0 AND drainzone_id::integer > 0 GROUP BY drainzone_id
+							)a WHERE a.drainzone_id=drainzone.drainzone_id;
+							*/
+							
+					EXECUTE v_querytext;
+
+				ELSIF  v_updatemapzgeom = 3 THEN
+				
+					-- use plot and pipe buffer
+					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
+								(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
+								(SELECT '||quote_ident(v_field)||', st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom from v_edit_arc arc
+								JOIN temp_anlgraph USING (arc_id) 
+								where arc.state > 0 AND water = 1 AND  '||quote_ident(v_field)||'::integer > 0 group by '||quote_ident(v_field)||'
+								UNION
+								SELECT '||quote_ident(v_field)||', st_collect(ext_plot.the_geom) as geom FROM  ext_plot, v_edit_connec
+								JOIN temp_anlgraph USING (arc_id) 
+								WHERE v_edit_connec.state > 0 
+								AND '||quote_ident(v_field)||'::integer > 0  AND water = 1
+								AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
+								group by '||quote_ident(v_field)||'	
+								)a group by '||quote_ident(v_field)||')b 
+							WHERE b.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
+	
+							/*
+							UPDATE arc set the_geom = geom FROM(
+								SELECT dma_id, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
+								(SELECT dma_id, st_buffer(st_collect(the_geom), 10) as geom from v_edit_arc 
+								JOIN temp_anlgraph USING (arc_id) 
+								where dma_id::integer > 0 group by dma_id
+								UNION
+								SELECT dma_id, st_collect(ext_plot.the_geom) as geom FROM v_edit_connec, ext_plot
+								WHERE dma_id::integer > 0 
+								AND v_edit_connec.dma_id IN
+								(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
+								AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
+								group by dma_id	
+								)a group by dma_id
+							)b WHERE b.dma_id=dma.dma_id;
+							*/
+
+					EXECUTE v_querytext;
+
+				ELSIF  v_updatemapzgeom = 4 THEN
 			
-				-- concave polygon
-				v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = st_multi(a.the_geom) 
-						FROM (with polygon AS (SELECT st_collect (the_geom) as g, '||quote_ident(v_field)||' FROM v_edit_arc 
-						JOIN temp_anlgraph USING (arc_id) 
-						WHERE state > 0  AND water = 1 group by '||quote_ident(v_field)||') 
-						SELECT '||quote_ident(v_field)||
-						', CASE WHEN st_geometrytype(st_concavehull(g, '||v_concavehull||')) = ''ST_Polygon''::text THEN st_buffer(st_concavehull(g, '||
-						v_concavehull||'), 2)::geometry(Polygon,'||(v_srid)||')
-						ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,'||(v_srid)||') END AS the_geom FROM polygon
-						)a WHERE a.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp)||' AND '||quote_ident(v_table)||'.'||
-						quote_ident(v_fieldmp)||' NOT IN (''0'', ''-1'')';
-						
-				EXECUTE v_querytext;
-
-			ELSIF  v_updatemapzgeom = 2 THEN
-			
-				-- pipe buffer
-				v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
-
-						(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as geom from v_edit_arc arc 
-						JOIN temp_anlgraph USING (arc_id) 
-						where arc.state > 0 AND water = 1 AND '||quote_ident(v_field)||'::integer > 0 group by '||quote_ident(v_field)||')a 
-						WHERE a.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
-
-						/*
-						UPDATE drainzone set the_geom = geom FROM (
-							SELECT drainzone_id, st_multi(st_buffer(st_collect(the_geom),10)) as geom from arc 
-							 where arc.state > 0 AND drainzone_id::integer > 0 GROUP BY drainzone_id
-						)a WHERE a.drainzone_id=drainzone.drainzone_id;
-						*/
-						
-				EXECUTE v_querytext;
-
-			ELSIF  v_updatemapzgeom = 3 THEN
-			
-				-- use plot and pipe buffer
-				v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
+					v_geomparamupdate_divide = v_geomparamupdate/2;
+					-- use link and pipe buffer
+					v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
 							(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-							(SELECT '||quote_ident(v_field)||', st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom from v_edit_arc arc
-							JOIN temp_anlgraph USING (arc_id) 
-							where arc.state > 0 AND water = 1 AND  '||quote_ident(v_field)||'::integer > 0 group by '||quote_ident(v_field)||'
+							(SELECT '||quote_ident(v_field)||', st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom from v_edit_arc arc JOIN temp_anlgraph USING (arc_id) 
+							where arc.state > 0  AND water = 1 AND '||quote_ident(v_field)||'::integer > 0 group by '||quote_ident(v_field)||'
 							UNION
-							SELECT '||quote_ident(v_field)||', st_collect(ext_plot.the_geom) as geom FROM  ext_plot, v_edit_connec
+							SELECT c.'||quote_ident(v_field)||', (st_buffer(st_collect(link.the_geom),'||v_geomparamupdate_divide||',''endcap=flat join=round'')) 
+							as geom FROM v_edit_link link, connec c
 							JOIN temp_anlgraph USING (arc_id) 
-							WHERE v_edit_connec.state > 0 
-							AND '||quote_ident(v_field)||'::integer > 0  AND water = 1
-							AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
-							group by '||quote_ident(v_field)||'	
+							WHERE c.'||quote_ident(v_field)||'::integer > 0  AND water = 1
+							AND c.state > 0	AND link.feature_id = connec_id and link.feature_type = ''CONNEC''
+							group by c.'||quote_ident(v_field)||'	
 							)a group by '||quote_ident(v_field)||')b 
 						WHERE b.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
-
 						/*
-						UPDATE arc set the_geom = geom FROM(
+						UPDATE dma set the_geom = geom FROM
+							(
 							SELECT dma_id, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-							(SELECT dma_id, st_buffer(st_collect(the_geom), 10) as geom from v_edit_arc 
-							JOIN temp_anlgraph USING (arc_id) 
-							where dma_id::integer > 0 group by dma_id
+							(SELECT dma_id, st_buffer(st_collect(the_geom), 5) as geom from arc 
+							where dma_id::integer > 0  group by dma_id
 							UNION
-							SELECT dma_id, st_collect(ext_plot.the_geom) as geom FROM v_edit_connec, ext_plot
-							WHERE dma_id::integer > 0 
-							AND v_edit_connec.dma_id IN
-							(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
-							AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
-							group by dma_id	
+							SELECT c.dma_id, (st_buffer(st_collect(link.the_geom),5/2, ,'endcap=flat join=round')) 
+							as geom FROM v_edit_link link, connec c
+							WHERE c.dma_id:::integer > 0 
+							AND link.feature_id = connec_id and link.feature_type = 'CONNEC'
+							group by c.dma_id	
 							)a group by dma_id
-						)b WHERE b.dma_id=dma.dma_id;
+							)b 
+						WHERE b.dma_id=dma.dma_id
 						*/
 
-				EXECUTE v_querytext;
+					EXECUTE v_querytext;
+					
+				ELSIF v_updatemapzgeom = 5 THEN
 
-			ELSIF  v_updatemapzgeom = 4 THEN
-		
-				v_geomparamupdate_divide = v_geomparamupdate/2;
-				-- use link and pipe buffer
-				v_querytext = '	UPDATE '||quote_ident(v_table)||' set the_geom = geom FROM
-						(SELECT '||quote_ident(v_field)||', st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-						(SELECT '||quote_ident(v_field)||', st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom from v_edit_arc arc JOIN temp_anlgraph USING (arc_id) 
-						where arc.state > 0  AND water = 1 AND '||quote_ident(v_field)||'::integer > 0 group by '||quote_ident(v_field)||'
-						UNION
-						SELECT c.'||quote_ident(v_field)||', (st_buffer(st_collect(link.the_geom),'||v_geomparamupdate_divide||',''endcap=flat join=round'')) 
-						as geom FROM v_edit_link link, connec c
-						JOIN temp_anlgraph USING (arc_id) 
-						WHERE c.'||quote_ident(v_field)||'::integer > 0  AND water = 1
-						AND c.state > 0	AND link.feature_id = connec_id and link.feature_type = ''CONNEC''
-						group by c.'||quote_ident(v_field)||'	
-						)a group by '||quote_ident(v_field)||')b 
-					WHERE b.'||quote_ident(v_field)||'='||quote_ident(v_table)||'.'||quote_ident(v_fieldmp);
+					v_geomparamupdate_divide = v_geomparamupdate/2;
 
-					/*
-					UPDATE dma set the_geom = geom FROM
-						(
-						SELECT dma_id, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-						(SELECT dma_id, st_buffer(st_collect(the_geom), 5) as geom from arc 
-						where dma_id::integer > 0  group by dma_id
-						UNION
-						SELECT c.dma_id, (st_buffer(st_collect(link.the_geom),5/2, ,'endcap=flat join=round')) 
-						as geom FROM v_edit_link link, connec c
-						WHERE c.dma_id:::integer > 0 
-						AND link.feature_id = connec_id and link.feature_type = 'CONNEC'
-						group by c.dma_id	
-						)a group by dma_id
-						)b 
-					WHERE b.dma_id=dma.dma_id
+					/* example of querytext that could be implemented on config_param_system
+					UPDATE v_table set the_geom = geom FROM
+					(SELECT v_field, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
+					(SELECT v_field, st_buffer(st_collect(the_geom), v_geomparamupdate) as geom 
+					FROM v_edit_arc arc
+					JOIN temp_anlgraph USING (arc_id) 
+					where arc.state > 0 AND water = 1 AND v_field::INTEGER> 0 group by v_field
+					UNION
+					SELECT v_field, st_collect(z.geom) as geom FROM v_crm_zone z
+					join v_edit_node using (node_id)
+					JOIN temp_anlgraph ON  node_id = node_1
+					WHERE v_edit_node.state > 0 AND water = 1 AND v_field::INTEGER> 0
+					group by v_field
+					)a group by v_field)b 
+					WHERE b.v_field=v_table.v_fieldmp
 					*/
 
-				EXECUTE v_querytext;
-				
-			ELSIF v_updatemapzgeom = 5 THEN
+					SELECT value into v_querytext FROM config_param_system WHERE parameter='utils_graphanalytics_custom_geometry_constructor';
+					EXECUTE 'SELECT replace(replace(replace(replace(replace('||quote_literal(v_querytext)||',''v_table'', '||quote_literal(v_table)||'),
+					''v_fieldmp'', '||quote_literal(v_fieldmp)||'), ''v_field'', '||quote_literal(v_field)||'), ''v_fid'', '||quote_literal(v_fid)||'),
+					 ''v_geomparamupdate'', '||quote_literal(v_geomparamupdate)||')'
+					INTO v_querytext;
 
-				v_geomparamupdate_divide = v_geomparamupdate/2;
+					EXECUTE v_querytext;
+				ELSIF v_updatemapzgeom = 6 THEN --EPA SUBCATCH
 
-				/* example of querytext that could be implemented on config_param_system
-				UPDATE v_table set the_geom = geom FROM
-				(SELECT v_field, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-				(SELECT v_field, st_buffer(st_collect(the_geom), v_geomparamupdate) as geom 
-				FROM v_edit_arc arc
-				JOIN temp_anlgraph USING (arc_id) 
-				where arc.state > 0 AND water = 1 AND v_field::INTEGER> 0 group by v_field
-				UNION
-				SELECT v_field, st_collect(z.geom) as geom FROM v_crm_zone z
-				join v_edit_node using (node_id)
-				JOIN temp_anlgraph ON  node_id = node_1
-				WHERE v_edit_node.state > 0 AND water = 1 AND v_field::INTEGER> 0
-				group by v_field
-				)a group by v_field)b 
-				WHERE b.v_field=v_table.v_fieldmp
-				*/
-
-				SELECT value into v_querytext FROM config_param_system WHERE parameter='utils_graphanalytics_custom_geometry_constructor';
-				EXECUTE 'SELECT replace(replace(replace(replace(replace('||quote_literal(v_querytext)||',''v_table'', '||quote_literal(v_table)||'),
-				''v_fieldmp'', '||quote_literal(v_fieldmp)||'), ''v_field'', '||quote_literal(v_field)||'), ''v_fid'', '||quote_literal(v_fid)||'),
-				 ''v_geomparamupdate'', '||quote_literal(v_geomparamupdate)||')'
-				INTO v_querytext;
-
-				EXECUTE v_querytext;
-			ELSIF v_updatemapzgeom = 6 THEN --EPA SUBCATCH
-
+				END IF;
 			END IF;
 		
 			RAISE NOTICE 'Disconnected';
@@ -1092,23 +1092,24 @@ BEGIN
 	IF v_floodonlymapzone IS NULL THEN
 		v_result = null;
 
-		-- disconnected arcs
-		SELECT jsonb_agg(features.feature) INTO v_result
-		FROM (
-		SELECT jsonb_build_object(
-		    'type',       'Feature',
-		   'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-		    'properties', to_jsonb(row) - 'the_geom'
-			) AS feature
-		FROM 
-		(SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, 'Disconnected'::text as descript, the_geom FROM v_edit_arc JOIN temp_anlgraph USING (arc_id) WHERE water = 0
-		UNION
-		SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, 'Conflict'::text as descript, the_geom FROM v_edit_arc JOIN temp_anlgraph USING (arc_id) WHERE water = -1
-		) row) features;
+		IF v_updatefeature IS TRUE THEN
+			-- disconnected arcs
+			SELECT jsonb_agg(features.feature) INTO v_result
+			FROM (
+			SELECT jsonb_build_object(
+			    'type',       'Feature',
+			   'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+			    'properties', to_jsonb(row) - 'the_geom'
+				) AS feature
+			FROM 
+			(SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, 'Disconnected'::text as mapzone, the_geom FROM v_edit_arc JOIN temp_anlgraph USING (arc_id) WHERE water = 0
+			UNION
+			SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, 'Conflict'::text as mapzone, the_geom FROM v_edit_arc JOIN temp_anlgraph USING (arc_id) WHERE water = -1
+			) row) features;
 
-		v_result := COALESCE(v_result, '{}'); 
-		v_result_line = concat ('{"geometryType":"LineString", "features":',v_result,'}'); 
-
+			v_result := COALESCE(v_result, '{}'); 
+			v_result_line = concat ('{"geometryType":"LineString", "features":',v_result,'}'); 
+		END IF;
 		-- disconnected connecs
 		v_result = null;
 			
@@ -1119,11 +1120,11 @@ BEGIN
 		    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 		    'properties', to_jsonb(row) - 'the_geom'
 		) AS feature
-		FROM (SELECT DISTINCT ON (connec_id) connec_id, connecat_id, c.state, c.expl_id, 'Disconnected'::text as descript, c.the_geom FROM v_edit_connec c JOIN temp_anlgraph USING (arc_id) WHERE water = 0
+		FROM (SELECT DISTINCT ON (connec_id) connec_id, connecat_id, c.state, c.expl_id, 'Disconnected'::text as mapzone, c.the_geom FROM v_edit_connec c JOIN temp_anlgraph USING (arc_id) WHERE water = 0
 		UNION
-		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Conflict'::text as descript, the_geom FROM v_edit_connec c JOIN temp_anlgraph USING (arc_id) WHERE water = -1
+		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Conflict'::text as mapzone, the_geom FROM v_edit_connec c JOIN temp_anlgraph USING (arc_id) WHERE water = -1
 		UNION			
-		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Orphan'::text as descript, the_geom FROM v_edit_connec c WHERE dma_id = 0 AND arc_id IS NULL
+		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Orphan'::text as mapzone, the_geom FROM v_edit_connec c WHERE dma_id = 0 AND arc_id IS NULL
 		) row) features;
 
 		v_result := COALESCE(v_result, '{}'); 
@@ -1136,8 +1137,8 @@ BEGIN
 		DELETE FROM anl_arc WHERE fid=v_fid AND cur_user=current_user;
 		DELETE FROM anl_connec WHERE fid=v_fid AND cur_user=current_user;
 	
-		INSERT INTO anl_arc (arc_id, expl_id, fid, cur_user, the_geom, dma_id)
-		SELECT arc_id, expl_id, v_fid, current_user, the_geom, trace FROM temp_anlgraph JOIN arc USING (arc_id) WHERE water=1;
+		INSERT INTO anl_arc (arc_id, expl_id, fid, cur_user, the_geom, dma_id, state, arccat_id)
+		SELECT arc_id, expl_id, v_fid, current_user, the_geom, trace, state, arccat_id FROM temp_anlgraph JOIN arc USING (arc_id) WHERE water=1;
 	
 		INSERT INTO anl_connec (connec_id, expl_id, fid, cur_user, the_geom, dma_id)
 		SELECT connec_id, expl_id, v_fid, current_user, the_geom, trace FROM temp_anlgraph JOIN connec USING (arc_id) WHERE water=1;
@@ -1150,20 +1151,109 @@ BEGIN
 		-- arc elements
 		v_result = null;
 
-		EXECUTE 'SELECT jsonb_agg(features.feature) 
+		-- disconnected arcs
+		EXECUTE 'SELECT jsonb_agg(features.feature)
 		FROM (
-	  	SELECT jsonb_build_object(
-	    ''type'',       ''Feature'',
-	    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
-	    ''properties'', to_jsonb(row) - ''the_geom''
-	  	) AS feature
-	  	FROM (SELECT dma_id as '||v_field||', dma_id as descript,expl_id, fid, cur_user, st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as the_geom 
-	  	FROM anl_arc a WHERE fid='||v_fid||' AND cur_user=current_user GROUP BY dma_id,expl_id,fid,cur_user) row) features'
+		SELECT jsonb_build_object(
+		    ''type'',       ''Feature'',
+		   ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+		    ''properties'', to_jsonb(row) - ''the_geom''
+			) AS feature
+		FROM 
+		(SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, ''Disconnected''::text as mapzone, the_geom FROM v_edit_arc JOIN temp_anlgraph USING (arc_id) WHERE water = 0 AND
+		arc_id not in (select arc_id from  anl_arc WHERE fid='||v_fid||' and cur_user=current_user )
+		UNION
+		SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, ''Conflict''::text as mapzone, the_geom FROM v_edit_arc JOIN temp_anlgraph USING (arc_id) WHERE water = -1
+		UNION
+		SELECT DISTINCT ON (arc_id) arc_id, arccat_id, state, expl_id, dma_id::text as mapzone, the_geom FROM anl_arc WHERE fid='||v_fid||' and cur_user=current_user 
+		) row) features'
 		INTO v_result;
+
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_line = concat ('{"geometryType":"LineString", "features":',v_result,'}'); 
+
+		IF  v_updatemapzgeom = 1 THEN
+
+			EXECUTE 'SELECT jsonb_agg(features.feature) 
+			FROM (
+		  	SELECT jsonb_build_object(
+		    ''type'',       ''Feature'',
+		    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+		    ''properties'', to_jsonb(row) - ''the_geom''
+		  	) AS feature
+		  	FROM (with polygon AS (SELECT st_collect (the_geom) as g, dma_id,expl_id, fid, cur_user FROM anl_arc WHERE fid='||v_fid||' AND cur_user=current_user group by dma_id,expl_id, fid, cur_user) 
+			SELECT dma_id as mapzone,expl_id, fid, cur_user, CASE WHEN st_geometrytype(st_concavehull(g,'||v_concavehull||')) = ''ST_Polygon''::text THEN st_buffer(st_concavehull(g, '||v_concavehull||'), 2)::geometry(Polygon,'||(v_srid)||')
+			ELSE st_expand(st_buffer(g, 3::double precision), 1::double precision)::geometry(Polygon,'||(v_srid)||') END AS the_geom 
+			FROM polygon) row) features'
+			INTO v_result;
+					 
+		ELSIF  v_updatemapzgeom = 2 THEN
+
+			EXECUTE 'SELECT jsonb_agg(features.feature) 
+			FROM (
+		  	SELECT jsonb_build_object(
+		    ''type'',       ''Feature'',
+		    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+		    ''properties'', to_jsonb(row) - ''the_geom''
+		  	) AS feature
+		  	FROM (SELECT dma_id as '||v_field||', dma_id as mapzone,expl_id, fid, cur_user, st_multi(st_buffer(st_collect(the_geom),'||v_geomparamupdate||')) as the_geom 
+		  	FROM anl_arc a WHERE fid='||v_fid||' AND cur_user=current_user GROUP BY dma_id,expl_id,fid,cur_user) row) features'
+			INTO v_result;
+
+		ELSIF  v_updatemapzgeom = 3 THEN
+
+			EXECUTE 'SELECT jsonb_agg(features.feature) 
+			FROM (
+		  	SELECT jsonb_build_object(
+		    ''type'',       ''Feature'',
+		    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+		    ''properties'', to_jsonb(row) - ''the_geom''
+		  	) AS feature
+		  	FROM (SELECT mapzone, expl_id, fid, cur_user, st_multi(st_buffer(st_collect(geom),0.01)) as the_geom FROM
+								(SELECT dma_id as mapzone, st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom , expl_id, fid, cur_user
+								FROM anl_arc a WHERE fid='||v_fid||' AND cur_user=current_user and dma_id > 0 GROUP BY dma_id,expl_id, fid, cur_user
+								UNION
+								SELECT a.dma_id as mapzone, st_collect(ext_plot.the_geom) as geom, a.expl_id, a.fid, a.cur_user
+								FROM  ext_plot, v_edit_connec
+								JOIN anl_arc a USING (arc_id) 
+								WHERE fid='||v_fid||' AND cur_user=current_user and a.dma_id > 0 and v_edit_connec.state > 0
+								AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
+								group by mapzone, a.expl_id, a.fid, a.cur_user
+								)a group by mapzone, expl_id, fid, cur_user) row) features'
+			INTO v_result;
+
+
+		ELSIF  v_updatemapzgeom = 4 THEN
+
+			v_geomparamupdate_divide = v_geomparamupdate/2;
+			EXECUTE 'SELECT jsonb_agg(features.feature) 
+			FROM (
+		  	SELECT jsonb_build_object(
+		    ''type'',       ''Feature'',
+		    ''geometry'',   ST_AsGeoJSON(the_geom)::jsonb,
+		    ''properties'', to_jsonb(row) - ''the_geom''
+		  	) AS feature
+		  	FROM (SELECT mapzone, expl_id, fid, cur_user,st_multi(st_buffer(st_collect(geom),0.01)) as the_geom FROM
+							(SELECT dma_id as mapzone,expl_id, fid, cur_user, st_buffer(st_collect(the_geom), '||v_geomparamupdate||') as geom 
+							FROM anl_arc a WHERE fid='||v_fid||' AND cur_user=current_user and dma_id > 0
+							AND a.state > 0 GROUP BY dma_id,expl_id, fid, cur_user
+							UNION
+							SELECT a.dma_id as mapzone,a.expl_id, fid, cur_user, (st_buffer(st_collect(link.the_geom),'||v_geomparamupdate_divide||',''endcap=flat join=round'')) 
+							as geom 
+							FROM v_edit_link link, connec c
+							JOIN anl_arc a USING (arc_id) 
+							WHERE fid='||v_fid||' AND cur_user=current_user and a.dma_id::integer > 0 
+							AND c.state > 0	AND link.feature_id = connec_id and link.feature_type = ''CONNEC''
+							group by a.dma_id,a.expl_id, fid, cur_user
+							)a group by mapzone,expl_id, fid, cur_user) row) features'
+			INTO v_result;
+
+		END IF;
 
 		v_result := COALESCE(v_result, '{}'); 
 		v_result_polygon = concat ('{"geometryType":"Polygon", "features":',v_result, '}');
 
+		v_visible_layer=NULL;
 	END IF;
 
 	IF v_audit_result is null THEN
@@ -1210,7 +1300,6 @@ BEGIN
 	
 	-- Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 
-	v_visible_layer := COALESCE(v_visible_layer, '{}'); 
 	v_result_point := COALESCE(v_result_point, '{}'); 
 	v_result_line := COALESCE(v_result_line, '{}'); 
  	v_result_polygon := COALESCE(v_result_polygon, '{}'); 
