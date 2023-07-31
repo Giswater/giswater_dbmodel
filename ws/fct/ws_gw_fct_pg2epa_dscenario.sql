@@ -189,19 +189,10 @@ BEGIN
 		-- updating values for pumps
 		UPDATE temp_arc t SET status = d.status FROM v_edit_inp_dscenario_pump d 
 		WHERE t.arc_id = concat(d.node_id, '_n2a') AND dscenario_id IN (SELECT unnest(v_userscenario)) AND d.status IS NOT NULL;
-
-		-- power
 		UPDATE temp_arc t SET addparam = gw_fct_json_object_set_key(addparam::json, 'power',d.power) FROM v_edit_inp_dscenario_pump d 
 		WHERE t.arc_id = concat(d.node_id, '_n2a')  AND dscenario_id IN (SELECT unnest(v_userscenario)) AND d.power IS NOT NULL AND d.power !='';
-		UPDATE temp_arc t SET addparam = gw_fct_json_object_set_key(addparam::json, 'curve_id',NULL::TEXT) FROM v_edit_inp_dscenario_pump d 
-		WHERE t.arc_id = concat(d.node_id, '_n2a')  AND dscenario_id IN (SELECT unnest(v_userscenario)) AND d.power IS NOT NULL AND d.power !='';
-
-		-- curve_id
 		UPDATE temp_arc t SET addparam = gw_fct_json_object_set_key(addparam::json, 'curve_id',d.curve_id) FROM v_edit_inp_dscenario_pump d 
 		WHERE t.arc_id = concat(d.node_id, '_n2a')  AND dscenario_id IN (SELECT unnest(v_userscenario)) AND d.curve_id IS NOT NULL;
-		UPDATE temp_arc t SET addparam = gw_fct_json_object_set_key(addparam::json, 'power',NULL::TEXT) FROM v_edit_inp_dscenario_pump d 
-		WHERE t.arc_id = concat(d.node_id, '_n2a')  AND dscenario_id IN (SELECT unnest(v_userscenario)) AND d.curve_id IS NOT NULL;
-
 		UPDATE temp_arc t SET addparam = gw_fct_json_object_set_key(addparam::json, 'speed',d.speed) FROM v_edit_inp_dscenario_pump d 
 		WHERE t.arc_id = concat(d.node_id, '_n2a')  AND dscenario_id IN (SELECT unnest(v_userscenario)) AND d.speed IS NOT NULL;
 		UPDATE temp_arc t SET addparam = gw_fct_json_object_set_key(addparam::json, 'pattern',d.pattern) FROM v_edit_inp_dscenario_pump d 
