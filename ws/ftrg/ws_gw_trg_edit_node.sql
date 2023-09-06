@@ -42,6 +42,7 @@ v_force_delete boolean;
 v_system_id text;
 v_featurecat_id text;
 v_psector integer;
+v_trace_featuregeom boolean;
 
 -- dynamic mapzones strategy
 v_isdma boolean = false;
@@ -827,9 +828,14 @@ BEGIN
 							(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
 			END IF;
 			
-			--update associated geometry of element (if exists)
-			UPDATE element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
-			AND element_id IN (SELECT element_id FROM element_x_node WHERE node_id = NEW.node_id);		
+			--update associated geometry of element (if exists) and trace_featuregeom is true
+			v_trace_featuregeom:= (SELECT trace_featuregeom FROM element join element_x_node USING (element_id) 
+                WHERE node_id=NEW.node_id AND the_geom IS NOT NULL LIMIT 1);
+			-- if trace_featuregeom is false, do nothing
+			IF v_trace_featuregeom IS TRUE THEN
+				UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
+				AND element_id IN (SELECT element_id FROM element_x_node WHERE node_id = NEW.node_id);
+			END IF;
 			
 		END IF;
 	

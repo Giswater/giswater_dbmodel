@@ -9,3 +9,9 @@ SET search_path = SCHEMA_NAME ,public;
 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"link", "column":"epa_type", "dataType":"character varying(16)", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"link", "column":"is_operative", "dataType":"boolean", "isUtils":"False"}}$$);
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"element", "column":"trace_featuregeom", "dataType":"boolean", "isUtils":"False"}}$$);
+ALTER TABLE element ALTER COLUMN trace_featuregeom SET DEFAULT TRUE;
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"polygon", "column":"trace_featuregeom", "dataType":"boolean", "isUtils":"False"}}$$);
+ALTER TABLE polygon ALTER COLUMN trace_featuregeom SET DEFAULT TRUE;

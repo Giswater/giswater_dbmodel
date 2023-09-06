@@ -36,6 +36,7 @@ v_pol_id text;
 v_fluidtype_value text;
 v_dma_value integer;
 v_arc record;
+v_trace_featuregeom boolean;
 
 BEGIN 
 
@@ -121,23 +122,31 @@ BEGIN
 						
 		END LOOP;
 
-		-- Updating polygon geometry in case of exists it
+		-- Updating polygon geometry (if exists) and trace_featuregeom is true
 		v_pol_id:= (SELECT pol_id FROM polygon WHERE feature_id=OLD.connec_id);
-		IF st_equals (NEW.the_geom, OLD.the_geom) IS FALSE AND (v_pol_id IS NOT NULL) THEN
-			xvar= (st_x(NEW.the_geom)-st_x(OLD.the_geom));
-			yvar= (st_y(NEW.the_geom)-st_y(OLD.the_geom));		
-			UPDATE polygon SET the_geom=ST_translate(the_geom, xvar, yvar) WHERE pol_id=v_pol_id;
-		END IF;      
+		v_trace_featuregeom:= (SELECT trace_featuregeom FROM polygon WHERE feature_id=OLD.connec_id);
+		-- if trace_featuregeom is false, do nothing
+		IF v_trace_featuregeom is true then
+			IF st_equals (NEW.the_geom, OLD.the_geom) IS FALSE AND (v_pol_id IS NOT NULL) THEN
+				xvar= (st_x(NEW.the_geom)-st_x(OLD.the_geom));
+				yvar= (st_y(NEW.the_geom)-st_y(OLD.the_geom));
+				UPDATE polygon SET the_geom=ST_translate(the_geom, xvar, yvar) WHERE pol_id=v_pol_id;
+			END IF;
+		END IF;
 				
 	ELSIF v_featuretype='gully' THEN
-	
+		
+		-- Updating polygon geometry (if exists) and trace_featuregeom is true
 		v_pol_id:= (SELECT pol_id FROM polygon WHERE feature_id=OLD.gully_id);
-		-- Updating polygon geometry in case of exists it
-		IF st_equals (NEW.the_geom, OLD.the_geom) IS FALSE AND v_move_polgeom IS TRUE AND (v_pol_id IS NOT NULL) THEN   
-			xvar= (st_x(NEW.the_geom)-st_x(OLD.the_geom));
-			yvar= (st_y(NEW.the_geom)-st_y(OLD.the_geom));		
-			UPDATE polygon SET the_geom=ST_translate(the_geom, xvar, yvar) WHERE pol_id=v_pol_id;
-		END IF;	
+		v_trace_featuregeom:= (SELECT trace_featuregeom FROM polygon WHERE feature_id=OLD.gully_id);
+		-- if trace_featuregeom is false, do nothing
+		IF v_trace_featuregeom is true then
+			IF st_equals (NEW.the_geom, OLD.the_geom) IS FALSE AND (v_pol_id IS NOT NULL) THEN   
+				xvar= (st_x(NEW.the_geom)-st_x(OLD.the_geom));
+				yvar= (st_y(NEW.the_geom)-st_y(OLD.the_geom));		
+				UPDATE polygon SET the_geom=ST_translate(the_geom, xvar, yvar) WHERE pol_id=v_pol_id;
+			END IF;	
+		END IF;
 		
 		-- updating links geom
 		IF st_equals (NEW.the_geom, OLD.the_geom) IS FALSE THEN
