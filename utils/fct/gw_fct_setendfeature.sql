@@ -122,6 +122,12 @@ BEGIN
 				"data":{"message":"1072", "function":"3068","debug_msg":"'||v_result||'"}}$$);' INTO v_audit_result;
 			END IF;
 		END LOOP;
+
+    ELSIF v_featuretype='connec' or v_featuretype='gully' then
+			FOREACH rec_id IN ARRAY(v_id_list)
+			LOOP
+				EXECUTE 'UPDATE link SET state = 0 WHERE feature_id = '|| quote_literal(rec_id)||';';
+			END LOOP;
 	END IF;
 
 	IF v_audit_result is null THEN
