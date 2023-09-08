@@ -31,8 +31,8 @@ BEGIN
 		END IF;
 
 		-- Insert into polygon table
-		INSERT INTO polygon (sys_type, the_geom, feature_id, featurecat_id, trace_featuregeom) 
-		SELECT sys_type, NEW.the_geom, NEW.feature_id, gully_type, NEW.trace_featuregeom
+		INSERT INTO polygon (sys_type, the_geom, feature_id, featurecat_id) 
+		SELECT sys_type, NEW.the_geom, NEW.feature_id, gully_type
 		FROM v_edit_gully WHERE gully_id=NEW.feature_id
 		ON CONFLICT (feature_id) DO UPDATE SET the_geom=NEW.the_geom;
 		
