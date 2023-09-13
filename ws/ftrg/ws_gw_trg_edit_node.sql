@@ -45,6 +45,7 @@ v_psector integer;
 v_auto_streetvalues_status boolean;
 v_auto_streetvalues_buffer integer;
 v_auto_streetvalues_field text;
+v_trace_featuregeom boolean;
 
 -- dynamic mapzones strategy
 v_isdma boolean = false;
@@ -98,7 +99,13 @@ BEGIN
 		v_man_view  = (SELECT child_layer FROM cat_feature f JOIN cat_node c ON c.nodetype_id = f.id WHERE c.id = NEW.nodecat_id);
 		v_input = concat('{"feature":{"type":"node", "childLayer":"',v_man_view,'", "id":"',NEW.node_id,'"}}');
 		
-		-- transforming streetaxis name into id
+		-- check if streetname exists
+		IF (NEW.streetname NOT IN (SELECT DISTINCT descript FROM v_ext_streetaxis)) OR (NEW.streetname2 NOT IN (SELECT DISTINCT descript FROM v_ext_streetaxis)) THEN
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+			"data":{"message":"3246", "function":"1320","debug_msg":null}}$$);';
+		END IF;
+        
+        -- transforming streetaxis name into id
 		v_streetaxis = (SELECT id FROM v_ext_streetaxis WHERE (muni_id = NEW.muni_id OR muni_id IS NULL) AND descript = NEW.streetname LIMIT 1);
 		v_streetaxis2 = (SELECT id FROM v_ext_streetaxis WHERE (muni_id = NEW.muni_id OR muni_id IS NULL) AND descript = NEW.streetname2 LIMIT 1);
 	END IF;
@@ -126,14 +133,9 @@ BEGIN
 			END IF;
 			
 			IF v_customfeature IS NOT NULL THEN		
-				NEW.nodecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);			
+				NEW.nodecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
 			ELSE
 				NEW.nodecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_nodecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-
-				-- get first value (last chance)
-				IF (NEW.nodecat_id IS NULL) THEN
-					NEW.nodecat_id := (SELECT id FROM cat_node WHERE active IS TRUE LIMIT 1);
-				END IF;
 			END IF;
 			
 			IF (NEW.nodecat_id IS NULL) THEN
@@ -863,9 +865,14 @@ BEGIN
 							(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
 			END IF;
 			
-			--update associated geometry of element (if exists)
-			UPDATE element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
-			AND element_id IN (SELECT element_id FROM element_x_node WHERE node_id = NEW.node_id);		
+			--update associated geometry of element (if exists) and trace_featuregeom is true
+			v_trace_featuregeom:= (SELECT trace_featuregeom FROM element join element_x_node USING (element_id) 
+                WHERE node_id=NEW.node_id AND the_geom IS NOT NULL LIMIT 1);
+			-- if trace_featuregeom is false, do nothing
+			IF v_trace_featuregeom IS TRUE THEN
+				UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
+				AND element_id IN (SELECT element_id FROM element_x_node WHERE node_id = NEW.node_id);
+			END IF;
 			
 		END IF;
 	
@@ -1107,3 +1114,4 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
+

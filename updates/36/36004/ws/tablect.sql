@@ -5,18 +5,9 @@ This version of Giswater is provided by Giswater Association
 */
 
 
-CREATE SCHEMA audit;
+SET search_path = SCHEMA_NAME, public, pg_catalog;
 
+ALTER TABLE IF EXISTS rpt_cat_result DROP CONSTRAINT IF EXISTS rpt_cat_result_status_check;
 
-CREATE TABLE audit.log (
-id serial8 PRIMARY KEY,
-schema text, 
-table_name text,
-id_name text,
-user_name text,
-action text,
-olddata json,
-newdata json,
-query text,
-tstamp timestamp default now()
-);
+ALTER TABLE IF EXISTS rpt_cat_result
+ ADD CONSTRAINT rpt_cat_result_status_check CHECK (status = ANY (ARRAY[0, 1, 2, 3]));

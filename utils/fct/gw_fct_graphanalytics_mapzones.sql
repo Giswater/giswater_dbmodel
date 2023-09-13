@@ -138,6 +138,8 @@ v_query_node text;
 v_query_connec text;
 v_query_gully text;
 v_query_link text;
+v_dscenario_valve text;
+v_netscenario text;
 
 BEGIN
 	-- Search path
@@ -160,8 +162,12 @@ BEGIN
 	v_parameters = (SELECT ((p_data::json->>'data')::json->>'parameters'));
 	v_commitchanges = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'commitChanges');
 	v_checkdata = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'checkData');
+	v_dscenario_valve = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'dscenario_valve');
+	v_netscenario = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'netscenario');
 
 	-- profilactic controls
+	IF v_dscenario_valve = '' THEN v_dscenario_valve = NULL; END IF;
+	IF v_netscenario = '' THEN v_netscenario = NULL; END IF;
 	IF v_floodonlymapzone = '' THEN v_floodonlymapzone = NULL; END IF;
 	v_floodonlymapzone = REPLACE(REPLACE (v_floodonlymapzone,'[','') ,']','');
 
@@ -275,6 +281,20 @@ BEGIN
 			
 		INSERT INTO temp_audit_check_data (fid, criticity, error_message)
 		VALUES (v_fid, 3, concat('ERROR-',v_fid,': Dynamic analysis for ',v_class,'''s is not configured on database. Please update system variable ''utils_graphanalytics_status'' to enable it '));
+
+		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+		FROM (SELECT id, error_message as message FROM temp_audit_check_data WHERE cur_user="current_user"() AND fid=v_fid AND criticity > 1 order by criticity desc, id asc) row;
+
+		v_result := COALESCE(v_result, '{}'); 
+		v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
+
+		-- Control nulls
+		v_result_info := COALESCE(v_result_info, '{}'); 
+		
+		--  Return
+		RETURN ('{"status":"Accepted", "message":{"level":3, "text":"Mapzones dynamic analysis canceled. Configuration is not set corerctly to start the process"}, "version":"'||v_version||'"'||
+		',"body":{"form":{}, "data":{ "info":'||v_result_info||'}}}')::json;	
+
 	ELSE	
 		--create temporal tables
 
@@ -490,6 +510,46 @@ BEGIN
 				WHERE closed=TRUE
 				AND v.active IS TRUE)';
 			EXECUTE v_querytext;
+
+			IF v_dscenario_valve IS NOT NULL THEN
+			--close valve
+				v_querytext  = 'UPDATE temp_t_anlgraph SET flag=1 WHERE 
+				node_1::integer IN (
+				SELECT a.node_id::integer 
+				FROM temp_t_node a 
+				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
+				WHERE status=''CLOSED''
+				AND dscenario_id = '||v_dscenario_valve||'::integer)';
+			EXECUTE v_querytext;
+
+			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=1 WHERE 
+				node_2::integer IN (
+				SELECT a.node_id::integer 
+				FROM temp_t_node a 
+				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
+				WHERE status=''CLOSED''
+				AND dscenario_id = '||v_dscenario_valve||'::integer)';
+			EXECUTE v_querytext;
+			
+			--òpen valve
+			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=0 WHERE 
+				node_1::integer IN (
+				SELECT a.node_id::integer 
+				FROM temp_t_node a 
+				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
+				WHERE status=''OPEN''
+				AND dscenario_id = '||v_dscenario_valve||'::integer)';
+			EXECUTE v_querytext;
+
+			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=0 WHERE 
+				node_2::integer IN (
+				SELECT a.node_id::integer 
+				FROM temp_t_node a 
+				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
+				WHERE status=''OPEN''
+				AND dscenario_id = '||v_dscenario_valve||'::integer)';
+			EXECUTE v_querytext;
+			END IF;
 		END IF;
 
 		-- open custom nodes acording config parameters
@@ -626,20 +686,24 @@ BEGIN
 		WHERE node = node_id';
 		
 		RAISE NOTICE ' Update temporal tables of connecs, links and gullies';
+		
 		-- used connec using v_edit_arc because the exploitation filter (same before)
 		v_querytext = 'UPDATE temp_t_connec SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM temp_t_arc a WHERE a.arc_id=temp_t_connec.arc_id';
 		EXECUTE v_querytext;
 
-		v_querytext = 'UPDATE temp_t_connec a SET '||quote_ident(v_field)||' = 0 WHERE connec_id IN (SELECT connec_id FROM v_plan_psector_connec WHERE plan_state = 0)';
+		v_querytext = 'UPDATE temp_t_connec SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM temp_t_node a WHERE temp_t_connec.arc_id IS NULL AND a.node_id=temp_t_connec.pjoint_id';
 		EXECUTE v_querytext;
 
-		IF v_project_type='WS' THEN
-			v_querytext = 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM temp_t_connec a WHERE a.connec_id=temp_t_link.feature_id';
-			EXECUTE v_querytext;
-
-		ELSIF v_project_type='UD' THEN
+		-- update link table
+		EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = c.'||quote_ident(v_field)||' FROM temp_t_connec c WHERE c.connec_id=feature_id';
+		
+		IF v_project_type='UD' THEN
+			
 			v_querytext = 'UPDATE temp_t_gully SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM temp_t_arc a WHERE a.arc_id=temp_t_gully.arc_id';
 			EXECUTE v_querytext;
+
+			-- update link table
+			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g  WHERE c.gullyid=feature_id';		
 		END IF;	
 
 		IF v_islastupdate IS TRUE THEN
@@ -666,6 +730,9 @@ BEGIN
 
 			v_querytext = 'UPDATE temp_t_connec SET lastupdate = now(), lastupdate_user=current_user FROM temp_t_arc a WHERE a.arc_id=temp_t_connec.arc_id';
 			EXECUTE v_querytext;
+
+			-- update link table
+			EXECUTE 'UPDATE temp_t_link SET lastupdate = lastupdate = now(), lastupdate_user=current_user;';
 
 			IF v_project_type='UD' THEN
 				v_querytext = 'UPDATE temp_t_gully SET lastupdate = now(), lastupdate_user=current_user FROM temp_t_arc a WHERE a.arc_id=temp_t_gully.arc_id';
@@ -700,17 +767,27 @@ BEGIN
 			AND fid=147 AND cur_user=current_user;
 			
 			-- update on node table those elements disconnected from graph
-			EXECUTE 'UPDATE temp_t_node SET staticpressure=(staticpress1-(staticpress1-staticpress2)*st_linelocatepoint(temp_t_arc.the_geom, n.the_geom))::numeric(12,3)
+			IF v_usepsector is false then
+				EXECUTE 'UPDATE temp_t_node SET staticpressure=(staticpress1-(staticpress1-staticpress2)*st_linelocatepoint(temp_t_arc.the_geom, n.the_geom))::numeric(12,3)
 				FROM temp_t_arc, temp_t_node n
-				WHERE st_dwithin(temp_t_arc.the_geom, n.the_geom, 0.05::double precision) AND temp_t_arc.state = 1 AND n.state = 1 
-				and n.arc_id IS NOT NULL AND temp_t_node.node_id=n.node_id and n.expl_id='||v_expl_id||' '||v_psectors_query_node||';';
+				WHERE st_dwithin(temp_t_arc.the_geom, n.the_geom, 0.05::double precision) AND temp_t_arc.state = 1 AND n.state =1 
+				and n.arc_id IS NOT NULL AND temp_t_node.node_id=n.node_id and n.expl_id='||v_expl_id||';';
+			END IF;
 				
-			-- updat connec table
+			-- update connec table
 			EXECUTE 'UPDATE temp_t_connec SET staticpressure =(b.head - b.elevation + (case when b.depth is null then 0 else b.depth end)::float) FROM 
-				(SELECT connec_id, head, elevation, depth FROM temp_t_connec c
-				JOIN presszone USING (presszone_id)
-				WHERE state = 1 AND c.expl_id='||v_expl_id||' '||v_psectors_query_connec||') b
+				(SELECT connec_id, head, elevation, depth FROM temp_t_connec c JOIN temp_t_link ON feature_id = connec_id
+				JOIN presszone p ON c.presszone_id = p.presszone_id
+				WHERE temp_t_link.state = 1 AND c.expl_id='||v_expl_id||' '||v_psectors_query_connec||') b
 				WHERE temp_t_connec.connec_id=b.connec_id;';
+
+			-- update link table
+			EXECUTE 'UPDATE temp_t_link SET staticpressure =(b.head - b.elevation + (case when b.depth is null then 0 else b.depth end)::float) FROM 
+				(SELECT link_id, head, elevation, depth FROM temp_t_connec c JOIN temp_t_link ON feature_id = connec_id
+				JOIN presszone p ON c.presszone_id = p.presszone_id
+				WHERE c.expl_id='||v_expl_id||' '||v_psectors_query_connec||') b
+				WHERE temp_t_link.link_id=b.link_id;';
+
 		END IF;
 
 		IF v_updatemapzgeom > 0 THEN		
@@ -746,11 +823,11 @@ BEGIN
 					GET DIAGNOSTICS v_count1 = row_count;
 					
 					-- node
-					EXECUTE 'UPDATE temp_t_node t SET '||v_field||' = -1 FROM temp_t_node a WHERE  a.state = 1 and a.expl_id = '||v_expl_id||' and t.node_id = a.node_id AND t.'||v_field||'::text IN ('||
+					EXECUTE 'UPDATE temp_t_node t SET '||v_field||' = -1 FROM temp_t_node n WHERE  n.state = 1 and n.expl_id = '||v_expl_id||' and t.node_id = n.node_id AND t.'||v_field||'::text IN ('||
 					rec_conflict.mapzone||') '||v_psectors_query_node||';';
 
 					-- connec
-					EXECUTE 'UPDATE temp_t_connec t SET '||v_field||'  = -1 FROM temp_t_connec a WHERE a.state = 1 and a.expl_id = '||v_expl_id||' and t.connec_id = a.connec_id AND t.'||v_field||'::text IN ('||
+					EXECUTE 'UPDATE temp_t_connec t SET '||v_field||'  = -1 FROM temp_t_connec c WHERE c.state = 1 and c.expl_id = '||v_expl_id||' and t.connec_id = c.connec_id AND t.'||v_field||'::text IN ('||
 					rec_conflict.mapzone||') '||v_psectors_query_connec||';';
 					GET DIAGNOSTICS v_count = row_count;
 
@@ -973,9 +1050,16 @@ BEGIN
 			as geom FROM temp_t_link, temp_t_connec a
 			JOIN temp_t_anlgraph USING (arc_id) 
 			WHERE a.'||quote_ident(v_field)||'::integer > 0  AND water = 1
-			AND a.state > 0	AND temp_t_link.feature_id = connec_id and temp_t_link.feature_type = ''CONNEC'' and a.expl_id = '||v_expl_id||'
-			group by a.'||quote_ident(v_field)||'	
-			)c group by '||quote_ident(v_field)||')b 
+			AND a.state > 0 AND temp_t_link.feature_id = connec_id and temp_t_link.feature_type = ''CONNEC'' and a.expl_id = '||v_expl_id||'
+			group by a.'||quote_ident(v_field)||'
+			UNION
+			SELECT a.'||quote_ident(v_field)||', (st_buffer(st_collect(temp_t_link.the_geom),'||v_geomparamupdate_divide||',''endcap=flat join=round'')) 
+			as geom FROM temp_t_link, temp_t_connec a
+			JOIN temp_t_node n ON a.arc_id IS NULL AND n.node_id=a.pjoint_id
+			WHERE a.'||quote_ident(v_field)||'::integer > 0
+			AND a.state > 0 AND temp_t_link.feature_id = connec_id and temp_t_link.feature_type = ''CONNEC'' and a.expl_id = '||v_expl_id||'
+			group by a.'||quote_ident(v_field)||'
+			)c group by '||quote_ident(v_field)||')b
 			WHERE b.'||quote_ident(v_field)||'= temp_'||(v_table)||'.'||quote_ident(v_fieldmp);
 			raise notice 'v_querytext,%',v_querytext;
 
@@ -1079,8 +1163,12 @@ BEGIN
 		UNION
 		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Conflict'::text as descript, the_geom FROM temp_t_connec c JOIN temp_t_anlgraph USING (arc_id) WHERE water = -1
 		group by (arc_id, connec_id, connecat_id, state, expl_id, the_geom) having count(arc_id)=2
-		UNION			
-		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Orphan'::text as descript, the_geom FROM temp_t_connec c WHERE arc_id IS NULL
+		UNION
+		(SELECT DISTINCT ON (connec_id) connec_id, connecat_id, state, expl_id, 'Orphan'::text as descript, the_geom FROM temp_t_connec c WHERE arc_id IS NULL
+		EXCEPT
+		SELECT DISTINCT ON (connec_id) connec_id, connecat_id, c.state, c.expl_id, 'Orphan'::text as descript, c.the_geom FROM temp_t_connec c 
+		JOIN temp_t_node a ON a.node_id=c.pjoint_id
+		WHERE c.pjoint_type = 'NODE')
 		) row) features;
 
 		v_result := COALESCE(v_result, '{}'); 
@@ -1155,7 +1243,7 @@ BEGIN
 		EXECUTE 'INSERT INTO anl_arc (arc_id, expl_id, fid, cur_user, the_geom, '||v_field||') SELECT arc_id, expl_id, '||v_fid||', current_user, the_geom, '||v_field||' FROM temp_t_arc';
 
 		v_visible_layer = NULL;
-	ELSIF v_commitchanges IS TRUE THEN
+	ELSIF v_commitchanges IS TRUE and v_netscenario is null THEN
 
 		-- setting variables in order to enhace performance
 		UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'edit_typevalue_fk_disable' AND cur_user = current_user;
@@ -1218,7 +1306,8 @@ BEGIN
 		EXECUTE v_querytext;
 
 		-- arcs
-		v_querytext = 'UPDATE arc SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||', lastupdate = a.lastupdate FROM temp_t_arc a WHERE a.arc_id=arc.arc_id';
+		v_querytext = 'UPDATE arc SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||', lastupdate_user = a.lastupdate_user, lastupdate = a.lastupdate 
+		FROM temp_t_arc a WHERE a.arc_id=arc.arc_id';
 		EXECUTE v_querytext;
 		IF v_class = 'PRESSZONE' THEN
 			-- static pressure for arcs
@@ -1227,29 +1316,35 @@ BEGIN
 		END IF;
 
 		-- node
-		v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = n.'||quote_ident(v_field)||', lastupdate = n.lastupdate FROM temp_t_node n WHERE n.node_id=node.node_id';
+		v_querytext = 'UPDATE node SET '||quote_ident(v_field)||' = n.'||quote_ident(v_field)||', lastupdate_user = n.lastupdate_user, lastupdate = n.lastupdate 
+		FROM temp_t_node n WHERE n.node_id=node.node_id';
 		EXECUTE v_querytext;
 		IF v_class = 'PRESSZONE' THEN
 			UPDATE node SET staticpressure = n.staticpressure FROM temp_t_node n WHERE n.node_id=node.node_id;
 		END IF;
 
-		-- connec
-		v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = c.'||quote_ident(v_field)||', lastupdate = c.lastupdate FROM temp_t_connec c WHERE c.connec_id=connec.connec_id';
+		-- connec state = 1
+		v_querytext = 'UPDATE connec SET '||quote_ident(v_field)||' = c.'||quote_ident(v_field)||', lastupdate_user = c.lastupdate_user, lastupdate = c.lastupdate 
+		FROM temp_t_connec c WHERE c.connec_id=connec.connec_id';
 		EXECUTE v_querytext;
 		IF v_class = 'PRESSZONE' THEN
 			UPDATE connec SET staticpressure = c.staticpressure FROM temp_t_connec c WHERE c.connec_id=connec.connec_id;
 		END IF;
 
-		IF v_project_type = 'WS' THEN
+		--link
+		IF v_class = 'PRESSZONE' THEN
+			UPDATE link SET staticpressure = l.staticpressure FROM temp_t_link l WHERE l.link_id=link.link_id;
+		END IF;
+		
+		v_querytext = 'UPDATE link SET '||quote_ident(v_field)||' = l.'||quote_ident(v_field)||', lastupdate_user = l.lastupdate_user, lastupdate = l.lastupdate 
+		FROM temp_t_link l WHERE link.link_id = l.link_id';
+		EXECUTE v_querytext;
 
-			--link
-			v_querytext = 'UPDATE link SET '||quote_ident(v_field)||' = l.'||quote_ident(v_field)||' FROM temp_t_link l WHERE l.link_id=link.link_id';
-			EXECUTE v_querytext;
-
-		ELSIF v_project_type = 'UD' THEN
+		IF v_project_type = 'UD' THEN
 		
 			-- gully
-			v_querytext = 'UPDATE gully SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||', lastupdate = g.lastupdate FROM temp_t_gully g WHERE g.gully_id=gully.gully_id';
+			v_querytext = 'UPDATE gully SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||', lastupdate_user = g.lastupdate_user, lastupdate = g.lastupdate 
+			FROM temp_t_gully g WHERE g.gully_id=gully.gully_id';
 			EXECUTE v_querytext;
 		END IF;	
 		
@@ -1257,6 +1352,34 @@ BEGIN
 		UPDATE config_param_user SET value = 'FALSE' WHERE parameter = 'edit_typevalue_fk_disable' AND cur_user = current_user;
 		UPDATE config_param_user SET value = 'FALSE' WHERE parameter = 'edit_node2arc_update_disable' AND cur_user = current_user;
 		UPDATE config_param_system SET value = 'FALSE' WHERE parameter = 'admin_skip_audit';
+
+	ELSIF v_netscenario IS NOT NULL THEN
+
+		v_querytext = 'UPDATE plan_netscenario_'||v_table||' SET the_geom = t.the_geom FROM temp_'||v_table||' t WHERE t.'||v_field||' = plan_netscenario_'||v_table||'.'||v_field;
+		EXECUTE v_querytext;
+
+		DELETE FROM plan_netscenario_arc WHERE netscenario_id = v_netscenario::integer;
+		DELETE FROM plan_netscenario_node WHERE netscenario_id = v_netscenario::integer;
+		DELETE FROM plan_netscenario_connec WHERE netscenario_id = v_netscenario::integer;
+
+		EXECUTE 'INSERT INTO plan_netscenario_arc(netscenario_id, arc_id, '||quote_ident(v_field)||', the_geom)
+		SELECT '|| v_netscenario||', arc_id, '||quote_ident(v_field)||', the_geom FROM temp_t_arc';
+
+		EXECUTE 'INSERT INTO plan_netscenario_node(netscenario_id, node_id, '||quote_ident(v_field)||', the_geom)
+		SELECT '|| v_netscenario||', node_id, '||quote_ident(v_field)||', the_geom FROM temp_t_node';
+
+		EXECUTE 'INSERT INTO plan_netscenario_connec(netscenario_id, connec_id, '||quote_ident(v_field)||', the_geom)
+		SELECT '|| v_netscenario||', connec_id, '||quote_ident(v_field)||', the_geom FROM temp_t_connec';
+
+		IF v_class = 'PRESSZONE' THEN
+			v_visible_layer ='v_edit_plan_netscenario_presszone';
+		ELSIF v_class = 'DMA' THEN
+			v_visible_layer ='v_edit_plan_netscenario_dma';
+		END IF;
+
+		DELETE FROM selector_netscenario  WHERE cur_user=current_user;
+		INSERT INTO selector_netscenario (netscenario_id) VALUES (v_netscenario::integer);
+		
 	END IF;
 	
 	-- Control nulls
@@ -1268,27 +1391,27 @@ BEGIN
 	v_message := COALESCE(v_message, ''); 
 	v_version := COALESCE(v_version, ''); 
 
-	DROP VIEW v_temp_anlgraph;
-	DROP TABLE temp_t_anlgraph;
-	DROP TABLE temp_t_data;
-	DROP TABLE temp_audit_check_data;
-	DROP TABLE temp_anl_arc;
-	DROP TABLE temp_anl_node;
-	DROP TABLE temp_anl_connec;
-	DROP TABLE temp_t_arc;
-	DROP TABLE temp_t_node;
-	DROP TABLE temp_t_connec;
-	DROP TABLE temp_t_link;
+	DROP VIEW IF EXISTS v_temp_anlgraph;
+	DROP TABLE IF EXISTS temp_t_anlgraph;
+	DROP TABLE IF EXISTS temp_t_data;
+	DROP TABLE IF EXISTS temp_audit_check_data;
+	DROP TABLE IF EXISTS temp_anl_arc;
+	DROP TABLE IF EXISTS temp_anl_node;
+	DROP TABLE IF EXISTS temp_anl_connec;
+	DROP TABLE IF EXISTS temp_t_arc;
+	DROP TABLE IF EXISTS temp_t_node;
+	DROP TABLE IF EXISTS temp_t_connec;
+	DROP TABLE IF EXISTS temp_t_link;
 
 	IF v_project_type = 'UD' THEN
-		DROP TABLE temp_t_gully;
-		DROP TABLE temp_drainzone;
+		DROP TABLE IF EXISTS temp_t_gully;
+		DROP TABLE IF EXISTS temp_drainzone;
 	ELSE
-		DROP TABLE temp_om_waterbalance_dma_graph;
-		DROP TABLE temp_sector;
-		DROP TABLE temp_presszone;
-		DROP TABLE temp_dma;
-		DROP TABLE temp_dqa;
+		DROP TABLE IF EXISTS temp_om_waterbalance_dma_graph;
+		DROP TABLE IF EXISTS temp_sector;
+		DROP TABLE IF EXISTS temp_presszone;
+		DROP TABLE IF EXISTS temp_dma;
+		DROP TABLE IF EXISTS temp_dqa;
 	END IF;
 	
 	--  Return

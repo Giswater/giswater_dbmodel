@@ -496,9 +496,6 @@ UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, '
 UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'explFromSector', false) WHERE parameter = 'basic_selector_tab_sector';
 UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json,'explFromMacroexpl', false) WHERE parameter = 'basic_selector_tab_macroexploitation';
 
-UPDATE config_param_user SET value = gw_fct_json_object_set_key(value::json, 'autoRepair', 'true'::boolean) WHERE parameter = 'inp_options_debug';
-UPDATE sys_param_user SET vdefault = gw_fct_json_object_set_key(vdefault::json, 'autoRepair', 'true'::boolean) WHERE id = 'inp_options_debug';
-
 UPDATE inp_flwreg_orifice SET nodarc_id = concat(node_id,'OR',order_id);
 UPDATE inp_flwreg_weir SET nodarc_id = concat(node_id,'WE',order_id);
 UPDATE inp_flwreg_outlet SET nodarc_id = concat(node_id,'OT',order_id);
@@ -604,3 +601,5 @@ UPDATE config_form_fields
 	WHERE formname='v_edit_inp_dscenario_inflows' AND columnname='order_id';
 
 UPDATE config_form_fields SET iseditable = true WHERE layoutname = 'lyt_epa_dsc_1' AND widgettype = 'button';
+
+UPDATE sys_table SET alias = 'Gully child' WHERE id='ve_gully_gully';

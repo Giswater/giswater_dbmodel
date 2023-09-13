@@ -137,6 +137,7 @@ v_table_child text;
 v_table_epa text;
 v_epatype text;
 v_tablename_aux text;
+v_zone text;
 
 BEGIN
 	
@@ -180,7 +181,7 @@ BEGIN
 
 		EXECUTE 'SELECT feature_id, featurecat_id  FROM '||v_tablename||' WHERE pol_id = '||quote_literal(v_id)||''
 		INTO v_id, v_tablename;
-		v_tablename = (SELECT concat('v_edit_',lower(feature_type)) FROM cat_feature WHERE system_id = v_tablename LIMIT 1);
+		v_tablename = (SELECT concat('v_edit_',lower(feature_type)) FROM cat_feature WHERE id = v_tablename LIMIT 1);
 		IF v_tablename IS NULL THEN v_tablename = 'v_edit_element'; END IF;
 		v_editable = true;
 	END IF;
@@ -735,6 +736,11 @@ raise notice 'BB -> %',v_querystring;
 			-- getting id from URN
 			IF v_id IS NULL AND v_isepa IS true THEN
 			    v_id = '';
+			ELSIF v_id IS NULL AND v_tablename in  ('v_edit_dma', 'v_edit_dqa', 'v_edit_sector', 'v_edit_drainzone') THEN
+				v_zone = replace(v_tablename,'v_edit_','');
+				v_id = (SELECT nextval(concat('SCHEMA_NAME.',v_zone,'_',v_zone,'_id_seq')));
+			ELSIF v_id IS NULL AND v_tablename = 'v_edit_presszone' THEN
+				 select max(presszone_id::integer)+1 INTO v_id from presszone where presszone_id ~ '^[0-9]+$';
 			ELSIF v_id IS NULL AND v_islayer is not true then
 				v_id = (SELECT nextval('SCHEMA_NAME.urn_id_seq'));
 			END IF;

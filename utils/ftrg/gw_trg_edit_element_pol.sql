@@ -47,7 +47,7 @@ BEGIN
 	-- UPDATE
 	ELSIF TG_OP = 'UPDATE' THEN
 	
-		UPDATE polygon SET pol_id=NEW.pol_id, the_geom=NEW.the_geom WHERE pol_id=OLD.pol_id;
+		UPDATE polygon SET pol_id=NEW.pol_id, the_geom=NEW.the_geom, trace_featuregeom=NEW.trace_featuregeom WHERE pol_id=OLD.pol_id;
 		
 		IF (NEW.element_id != OLD.element_id) THEN
 			IF (SELECT element_id FROM v_edit_element WHERE element_id=NEW.element_id) iS NULL THEN
