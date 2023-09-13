@@ -5,7 +5,8 @@ This version of Giswater is provided by Giswater Association
 */
 
 
+SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
-GRANT ALL ON SCHEMA audit TO role_basic; --probably the restriction might be stronger
-GRANT ALL ON SEQUENCE audit.log_id_seq TO role_basic;
+DROP VIEW IF EXISTS v_ui_element_x_gully;
+ALTER TABLE element_x_gully ALTER COLUMN id TYPE integer USING id::integer;

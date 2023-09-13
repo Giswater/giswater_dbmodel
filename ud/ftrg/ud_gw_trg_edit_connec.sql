@@ -36,6 +36,7 @@ v_connect2network boolean;
 v_auto_streetvalues_status boolean;
 v_auto_streetvalues_buffer integer;
 v_auto_streetvalues_field text;
+v_trace_featuregeom boolean;
 
 BEGIN
 
@@ -63,7 +64,13 @@ BEGIN
 	
 	
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-		-- transforming streetaxis name into id
+		-- check if streetname exists
+		IF (NEW.streetname NOT IN (SELECT DISTINCT descript FROM v_ext_streetaxis)) OR (NEW.streetname2 NOT IN (SELECT DISTINCT descript FROM v_ext_streetaxis)) THEN
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+			"data":{"message":"3246", "function":"1204","debug_msg":null}}$$);';
+		END IF;
+        
+        -- transforming streetaxis name into id
 		v_streetaxis = (SELECT id FROM v_ext_streetaxis WHERE (muni_id = NEW.muni_id OR muni_id IS NULL) AND descript = NEW.streetname LIMIT 1);
 		v_streetaxis2 = (SELECT id FROM v_ext_streetaxis WHERE (muni_id = NEW.muni_id OR muni_id IS NULL) AND descript = NEW.streetname2 LIMIT 1);
 		
@@ -110,10 +117,7 @@ BEGIN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 				"data":{"message":"1022", "function":"1204","debug_msg":null}}$$);';
 			END IF;
-				NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-			IF (NEW.connecat_id IS NULL) THEN
-				NEW.connecat_id:=(SELECT id FROM cat_connec WHERE active IS TRUE LIMIT 1);
-			END IF;
+			NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 		END IF;
 		
 		-- Exploitation
@@ -540,9 +544,14 @@ BEGIN
 							(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
 			END IF;	
 			
-			--update associated geometry of element (if exists)
-			UPDATE element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
-			AND element_id IN (SELECT element_id FROM element_x_connec WHERE connec_id = NEW.connec_id);	
+			--update associated geometry of element (if exists) and trace_featuregeom is true
+			v_trace_featuregeom:= (SELECT trace_featuregeom FROM element JOIN element_x_connec using (element_id) 
+                WHERE connec_id=NEW.connec_id AND the_geom IS NOT NULL LIMIT 1);
+			-- if trace_featuregeom is false, do nothing
+			IF v_trace_featuregeom IS TRUE THEN
+				UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
+				AND element_id IN (SELECT element_id FROM element_x_connec WHERE connec_id=NEW.connec_id);
+			END IF;
 			
 		END IF;
 

@@ -40,7 +40,7 @@ BEGIN
 	-- UPDATE
 	ELSIF TG_OP = 'UPDATE' THEN
 	
-		UPDATE polygon SET pol_id=NEW.pol_id, the_geom=NEW.the_geom WHERE pol_id=OLD.pol_id;
+		UPDATE polygon SET pol_id=NEW.pol_id, the_geom=NEW.the_geom, trace_featuregeom=NEW.trace_featuregeom WHERE pol_id=OLD.pol_id;
 		
 		IF (NEW.feature_id != OLD.feature_id) THEN
 			UPDATE polygon SET feature_id=NEW.feature_id, featurecat_id =connec_type 

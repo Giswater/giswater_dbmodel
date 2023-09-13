@@ -48,6 +48,12 @@ BEGIN
 	v_psector = (SELECT value::integer FROM config_param_user WHERE "parameter"='plan_psector_vdefault' AND cur_user=current_user);
 
 	IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+		-- check if streetname exists
+		IF (NEW.streetname NOT IN (SELECT DISTINCT descript FROM v_ext_streetaxis)) OR (NEW.streetname2 NOT IN (SELECT DISTINCT descript FROM v_ext_streetaxis)) THEN
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+			"data":{"message":"3246", "function":"1302","debug_msg":null}}$$);';
+		END IF;
+        
 		-- transforming streetaxis name into id
 		v_streetaxis = (SELECT id FROM v_ext_streetaxis WHERE (muni_id = NEW.muni_id OR muni_id IS NULL) AND descript = NEW.streetname LIMIT 1);
 		v_streetaxis2 = (SELECT id FROM v_ext_streetaxis WHERE (muni_id = NEW.muni_id OR muni_id IS NULL) AND descript = NEW.streetname2 LIMIT 1);
@@ -78,11 +84,6 @@ BEGIN
 				NEW.arccat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
 			ELSE
 				NEW.arccat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_arccat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
-
-				-- get first value (last chance)
-				IF (NEW.arccat_id IS NULL) THEN
-					NEW.arccat_id := (SELECT id FROM cat_arc WHERE active IS TRUE LIMIT 1);
-				END IF;    
 			END IF;
 
 			-- get values using proximity
@@ -641,6 +642,9 @@ BEGIN
         END IF;       
 		--update values of related connecs;
 		IF NEW.fluid_type != OLD.fluid_type AND v_autoupdate_fluid IS TRUE THEN
+			IF NEW.fluid_type not in (SELECT fluid_type FROM man_type_fluid WHERE feature_type='CONNEC') THEN
+				INSERT INTO man_type_fluid (fluid_type, feature_type) VALUES (NEW.fluid_type, 'CONNEC') ON CONFLICT (fluid_type, feature_type) DO NOTHING;
+			END IF;
 			UPDATE connec SET fluid_type = NEW.fluid_type WHERE arc_id = NEW.arc_id;
 			UPDATE link SET fluid_type = NEW.fluid_type WHERE exit_id = NEW.arc_id;
 		END IF;
