@@ -11,3 +11,6 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 DELETE FROM sys_param_user WHERE id='edit_gully_autoupdate_polgeom';
 DELETE FROM config_param_user WHERE parameter='edit_gully_autoupdate_polgeom';
 
+INSERT INTO config_param_system(parameter, value, descript, label, isenabled,  project_type,  datatype, widgettype, ismandatory)
+VALUES ('om_profile_nonpriority_statetype', 6, 'Features with defined state type won''t be prioritised to be choosen on a profile in case of overlaying conduiuts', 
+'Profile non priority state type', false, 'ud', 'integer', 'linetext', false ) ON CONFLICT (parameter) DO NOTHING;
