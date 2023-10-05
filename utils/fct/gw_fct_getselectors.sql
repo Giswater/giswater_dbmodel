@@ -84,6 +84,8 @@ v_columns json;
 v_layerColumns json;
 v_loadProject boolean=false;
 v_addschema text;
+v_exclude_tab text='';
+
 BEGIN
 
 	-- Set search path to local schema
@@ -112,7 +114,8 @@ BEGIN
 
 	-- profilactic control of schema name
 	IF lower(v_addschema) = 'none' OR v_addschema = '' OR lower(v_addschema) ='null' OR v_addschema is null OR v_addschema='NULL' THEN 
-		v_addschema = null; 
+		v_addschema = null;
+		v_exclude_tab = ' AND tabname != ''tab_exploitation_add''';
 	END IF;
 	-- profilactic control of message
 	IF v_message is null THEN
@@ -136,8 +139,9 @@ BEGIN
 	v_query = concat('SELECT config_form_tabs.*, value FROM config_form_tabs, config_param_system WHERE formname=',quote_literal(v_selector_type),
 	' AND isenabled IS TRUE AND concat(''basic_selector_'', tabname) = parameter ',(v_querytab),
 	' AND sys_role IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, ''member'')',
-	' AND device = ',v_device,
+	' AND device = ',v_device, v_exclude_tab,
 	')  ORDER BY orderby');
+
 	v_debug_vars := json_build_object('v_selector_type', v_selector_type, 'v_querytab', v_querytab);
 	v_debug := json_build_object('querystring', v_query, 'vars', v_debug_vars, 'funcname', 'gw_fct_getselectors', 'flag', 10);
 	SELECT gw_fct_debugsql(v_debug) INTO v_msgerr;
