@@ -12,5 +12,6 @@ DELETE FROM sys_param_user WHERE id='edit_gully_autoupdate_polgeom';
 DELETE FROM config_param_user WHERE parameter='edit_gully_autoupdate_polgeom';
 
 INSERT INTO config_param_system(parameter, value, descript, label, isenabled,  project_type,  datatype, widgettype, ismandatory)
-VALUES ('om_profile_nonpriority_statetype', null, 'Features with defined state type won''t be prioritised to be choosen on a profile in case of overlaying conduiuts', 
-'Profile non priority state type', false, 'ud', 'integer', 'linetext', false ) ON CONFLICT (parameter) DO NOTHING;
+VALUES ('om_profile_nonpriority_statetype', '{"state_type":"", "extra_cost":0.1}', 
+'Features with defined state type won''t be prioritised to be chosen on a profile in case of overlaying conduiuts, instead it will have an additional path cost added to it''s length', 
+'Profile non priority state type', false, 'ud', 'json', 'linetext', false ) ON CONFLICT (parameter) DO NOTHING;
