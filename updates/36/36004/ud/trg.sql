@@ -12,3 +12,4 @@ CREATE TRIGGER gw_trg_ui_element INSTEAD OF
 INSERT OR DELETE OR UPDATE
 ON v_ui_element_x_gully 
 FOR EACH ROW EXECUTE FUNCTION gw_trg_ui_element('element_x_gully');
+

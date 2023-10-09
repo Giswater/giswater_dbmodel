@@ -174,26 +174,34 @@ BEGIN
 	-- set fid:
 	IF v_class = 'PRESSZONE' THEN 
 		v_fid=146;
-		v_table = 'presszone';
+		v_table  = 'presszone';
 		v_field = 'presszone_id';
 		v_fieldmp = 'presszone_id';
-		v_visible_layer ='v_edit_presszone';
-		v_mapzonename = 'name';
+		v_visible_layer ='"v_edit_presszone"';
+		IF v_netscenario is not null then
+			v_mapzonename = 'presszone_name';
+		else
+			v_mapzonename = 'name';
+		end if;
 			
 	ELSIF v_class = 'DMA' THEN 
 		v_fid=145;
 		v_table = 'dma';
 		v_field = 'dma_id';
 		v_fieldmp = 'dma_id';
-		v_visible_layer ='v_edit_dma';
-		v_mapzonename = 'name';
+		v_visible_layer ='"v_edit_dma"';
+		IF v_netscenario is not null then
+			v_mapzonename = 'dma_name';
+		else
+			v_mapzonename = 'name';
+		end if;
 			
 	ELSIF v_class = 'DQA' THEN 
 		v_fid=144;
 		v_table = 'dqa';
 		v_field = 'dqa_id';
 		v_fieldmp = 'dqa_id';
-		v_visible_layer ='v_edit_dqa';
+		v_visible_layer ='"v_edit_dqa"';
 		v_mapzonename = 'name';
 			
 	ELSIF v_class = 'SECTOR' THEN 
@@ -201,7 +209,7 @@ BEGIN
 		v_table = 'sector';
 		v_field = 'sector_id';
 		v_fieldmp = 'sector_id';
-		v_visible_layer ='v_edit_sector';
+		v_visible_layer ='"v_edit_sector"';
 		v_mapzonename = 'name';
 		
 	ELSIF v_class = 'DRAINZONE' THEN 
@@ -209,7 +217,7 @@ BEGIN
 		v_table = 'drainzone';
 		v_field = 'drainzone_id';
 		v_fieldmp = 'drainzone_id';
-		v_visible_layer ='v_edit_drainzone';
+		v_visible_layer ='"v_edit_drainzone"';
 		v_mapzonename = 'name';	
 	ELSE	
 		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
@@ -311,9 +319,14 @@ BEGIN
 		ELSE
 			CREATE TEMP TABLE temp_om_waterbalance_dma_graph (LIKE SCHEMA_NAME.om_waterbalance_dma_graph INCLUDING ALL);
 			CREATE TEMP TABLE temp_sector (LIKE SCHEMA_NAME.sector INCLUDING ALL);
-			CREATE TEMP TABLE temp_dma (LIKE SCHEMA_NAME.dma INCLUDING ALL);
-			CREATE TEMP TABLE temp_presszone (LIKE SCHEMA_NAME.presszone INCLUDING ALL);
 			CREATE TEMP TABLE temp_dqa (LIKE SCHEMA_NAME.dqa INCLUDING ALL);
+			IF v_netscenario IS NOT NULL THEN
+				CREATE TEMP TABLE temp_dma (LIKE SCHEMA_NAME.plan_netscenario_dma INCLUDING ALL);
+				CREATE TEMP TABLE temp_presszone (LIKE SCHEMA_NAME.plan_netscenario_presszone INCLUDING ALL);
+			ELSE
+				CREATE TEMP TABLE temp_dma (LIKE SCHEMA_NAME.dma INCLUDING ALL);
+				CREATE TEMP TABLE temp_presszone (LIKE SCHEMA_NAME.presszone INCLUDING ALL);
+			END IF;
 		END IF;
 
 		--create temporal view
@@ -433,7 +446,11 @@ BEGIN
 		IF v_class = 'SECTOR' THEN
 			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND sector_id IN (SELECT distinct '||v_field||' FROM temp_t_arc)';
 		ELSE 
-			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND expl_id = '||v_expl_id;
+			IF v_netscenario IS NOT NULL THEN
+				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM plan_netscenario_'||v_table||' WHERE active is true AND netscenario_id = '||v_netscenario;
+			ELSE
+				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND expl_id = '||v_expl_id;
+			END IF;
 		END IF;
 
 		EXECUTE 'UPDATE temp_'||v_table||' SET the_geom = null';
@@ -479,16 +496,28 @@ BEGIN
 			WHERE node_1 IS NOT NULL AND node_2 IS NOT NULL AND value_state_type.is_operative=TRUE AND a.state = 1  and expl_id='||v_expl_id||' '||v_psectors_query_arc||';';
 		END IF;
 
-		-- close custom nodes acording config parameters
-		EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_1 IN (SELECT json_array_elements_text((graphconfig->>''forceClosed'')::json) FROM '
-		||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
-		EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_2 IN (SELECT json_array_elements_text((graphconfig->>''forceClosed'')::json) FROM '
-		||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
+		IF v_netscenario IS NOT NULL THEN
+			-- close custom nodes acording config parameters
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_1 IN (SELECT json_array_elements_text((graphconfig->>''forceClosed'')::json) FROM plan_netscenario_'
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE AND netscenario_id = '||v_netscenario||')';
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_2 IN (SELECT json_array_elements_text((graphconfig->>''forceClosed'')::json) FROM plan_netscenario_'
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE AND netscenario_id = '||v_netscenario||')';
 
-		-- set header node for mapzones
-		v_text = 'SELECT node_id::integer  FROM( SELECT ((json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'') as node_id 
-		FROM '||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)a WHERE node_id ~ ''^[0-9]+$''';
+			-- set header node for mapzones
+			v_text = 'SELECT node_id::integer  FROM( SELECT ((json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'') as node_id 
+			FROM plan_netscenario_'||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE AND netscenario_id = '||v_netscenario||')a WHERE node_id ~ ''^[0-9]+$''';
+		ELSE
+			-- close custom nodes acording config parameters
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_1 IN (SELECT json_array_elements_text((graphconfig->>''forceClosed'')::json) FROM '
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_2 IN (SELECT json_array_elements_text((graphconfig->>''forceClosed'')::json) FROM '
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
 
+			-- set header node for mapzones
+			v_text = 'SELECT node_id::integer  FROM( SELECT ((json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'') as node_id 
+			FROM '||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)a WHERE node_id ~ ''^[0-9]+$''';
+		END IF;
+		
 		-- close boundary conditions acording config_graph_valve (flag=1)
 		IF v_class !='DRAINZONE' THEN
 			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=1 WHERE 
@@ -511,56 +540,58 @@ BEGIN
 				AND v.active IS TRUE)';
 			EXECUTE v_querytext;
 
-			IF v_dscenario_valve IS NOT NULL THEN
+			IF v_netscenario IS NOT NULL THEN
 			--close valve
 				v_querytext  = 'UPDATE temp_t_anlgraph SET flag=1 WHERE 
 				node_1::integer IN (
 				SELECT a.node_id::integer 
-				FROM temp_t_node a 
-				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
-				WHERE status=''CLOSED''
-				AND dscenario_id = '||v_dscenario_valve||'::integer)';
-			EXECUTE v_querytext;
-
-			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=1 WHERE 
-				node_2::integer IN (
+				FROM plan_netscenario_valve a 
+				WHERE closed IS TRUE
+				AND netscenario_id = '||v_netscenario||'::integer) 
+				OR node_2::integer IN (
 				SELECT a.node_id::integer 
-				FROM temp_t_node a 
-				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
-				WHERE status=''CLOSED''
-				AND dscenario_id = '||v_dscenario_valve||'::integer)';
+				FROM plan_netscenario_valve a 
+				WHERE closed IS TRUE
+				AND netscenario_id = '||v_netscenario||'::integer)';
 			EXECUTE v_querytext;
 			
 			--òpen valve
 			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=0 WHERE 
 				node_1::integer IN (
 				SELECT a.node_id::integer 
-				FROM temp_t_node a 
-				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
-				WHERE status=''OPEN''
-				AND dscenario_id = '||v_dscenario_valve||'::integer)';
-			EXECUTE v_querytext;
-
-			v_querytext  = 'UPDATE temp_t_anlgraph SET flag=0 WHERE 
-				node_2::integer IN (
+				FROM plan_netscenario_valve a 
+				WHERE closed IS FALSE
+				AND netscenario_id = '||v_netscenario||'::integer) 
+				OR node_2::integer IN (
 				SELECT a.node_id::integer 
-				FROM temp_t_node a 
-				JOIN inp_dscenario_shortpipe s ON a.node_id = s.node_id
-				WHERE status=''OPEN''
-				AND dscenario_id = '||v_dscenario_valve||'::integer)';
+				FROM plan_netscenario_valve a 
+				WHERE closed IS FALSE
+				AND netscenario_id = '||v_netscenario||'::integer)';
 			EXECUTE v_querytext;
 			END IF;
 		END IF;
 
-		-- open custom nodes acording config parameters
-		EXECUTE 'UPDATE temp_t_anlgraph SET flag = 0 WHERE node_1 IN (SELECT json_array_elements_text((graphconfig->>''forceOpen'')::json) FROM '
-		||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
-		EXECUTE 'UPDATE temp_t_anlgraph SET flag = 0 WHERE node_2 IN (SELECT json_array_elements_text((graphconfig->>''forceOpen'')::json) FROM '
-		||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
-    
-		-- close customized stoppers acording on graphconfig column on mapzone table
-		EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_1 IN (SELECT (json_array_elements_text((graphconfig->>''stopper'')::json)) as node_id FROM '||quote_ident(v_table)||')';
-		EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_2 IN (SELECT (json_array_elements_text((graphconfig->>''stopper'')::json)) as node_id FROM '||quote_ident(v_table)||')';
+		IF v_netscenario IS NOT NULL THEN
+			-- open custom nodes acording config parameters
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 0 WHERE node_1 IN (SELECT json_array_elements_text((graphconfig->>''forceOpen'')::json) FROM plan_netscenario_'
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE AND netscenario_id = '||v_netscenario||') ';
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 0 WHERE node_2 IN (SELECT json_array_elements_text((graphconfig->>''forceOpen'')::json) FROM plan_netscenario_'
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE AND netscenario_id = '||v_netscenario||')';
+	    
+			-- close customized stoppers acording on graphconfig column on mapzone table
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_1 IN (SELECT (json_array_elements_text((graphconfig->>''stopper'')::json)) as node_id FROM plan_netscenario_'||quote_ident(v_table)||' WHERE netscenario_id = '||v_netscenario||')';
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_2 IN (SELECT (json_array_elements_text((graphconfig->>''stopper'')::json)) as node_id FROM plan_netscenario_'||quote_ident(v_table)||' WHERE netscenario_id = '||v_netscenario||')';
+		ELSE
+			-- open custom nodes acording config parameters
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 0 WHERE node_1 IN (SELECT json_array_elements_text((graphconfig->>''forceOpen'')::json) FROM '
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 0 WHERE node_2 IN (SELECT json_array_elements_text((graphconfig->>''forceOpen'')::json) FROM '
+			||quote_ident(v_table)||' WHERE graphconfig IS NOT NULL AND active IS TRUE)';
+	    
+			-- close customized stoppers acording on graphconfig column on mapzone table
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_1 IN (SELECT (json_array_elements_text((graphconfig->>''stopper'')::json)) as node_id FROM '||quote_ident(v_table)||')';
+			EXECUTE 'UPDATE temp_t_anlgraph SET flag = 1 WHERE node_2 IN (SELECT (json_array_elements_text((graphconfig->>''stopper'')::json)) as node_id FROM '||quote_ident(v_table)||')';
+		END IF;
 
 		-- close checkvalves on the opposite sense where they are working
 		IF v_class !='DRAINZONE' THEN
@@ -599,14 +630,25 @@ BEGIN
 			ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);
 		
 		ELSIF v_class = 'DMA' THEN
-			-- dma (dma.graphconfig)
-			UPDATE temp_t_anlgraph SET flag=0, isheader = true WHERE id IN (
-			SELECT id FROM temp_t_anlgraph JOIN (
-			SELECT (json_array_elements_text((graphconfig->>'use')::json))::json->>'nodeParent' as node_id, 
-			json_array_elements_text(((json_array_elements_text((graphconfig->>'use')::json))::json->>'toArc')::json) 
-			as to_arc from dma 
-			where graphconfig is not null and active is true order by 1,2) a
-			ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);
+			IF v_netscenario IS NOT NULL THEN
+				-- dma (dma.graphconfig)
+				EXECUTE 'UPDATE temp_t_anlgraph SET flag=0, isheader = true WHERE id IN (
+				SELECT id FROM temp_t_anlgraph JOIN (
+				SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id, 
+				json_array_elements_text(((json_array_elements_text((graphconfig->>''use'')::json))::json->>''toArc'')::json) 
+				as to_arc from plan_netscenario_dma 
+				where graphconfig is not null and active is true AND netscenario_id = '||v_netscenario::integer||' order by 1,2) a
+				ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);';
+			ELSE
+				-- dma (dma.graphconfig)
+				UPDATE temp_t_anlgraph SET flag=0, isheader = true WHERE id IN (
+				SELECT id FROM temp_t_anlgraph JOIN (
+				SELECT (json_array_elements_text((graphconfig->>'use')::json))::json->>'nodeParent' as node_id, 
+				json_array_elements_text(((json_array_elements_text((graphconfig->>'use')::json))::json->>'toArc')::json) 
+				as to_arc from dma 
+				where graphconfig is not null and active is true order by 1,2) a
+				ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);
+			END IF;
 
 		ELSIF v_class = 'DQA' THEN
 			-- dqa (dqa.graphconfig)
@@ -619,29 +661,55 @@ BEGIN
 			ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);
 
 		ELSIF v_class = 'PRESSZONE' THEN
-			-- presszone (presszone.graphconfig)
-			UPDATE temp_t_anlgraph SET flag=0, isheader = true WHERE id IN (
-			SELECT id FROM temp_t_anlgraph JOIN (
-			SELECT (json_array_elements_text((graphconfig->>'use')::json))::json->>'nodeParent' as node_id, 
-			json_array_elements_text(((json_array_elements_text((graphconfig->>'use')::json))::json->>'toArc')::json) 
-			as to_arc from presszone
-			where graphconfig is not null and active is true order by 1,2) a
-			ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);		
+			IF v_netscenario IS NOT NULL THEN
+				-- presszone (presszone.graphconfig)
+				EXECUTE 'UPDATE temp_t_anlgraph SET flag=0, isheader = true WHERE id IN (
+				SELECT id FROM temp_t_anlgraph JOIN (
+				SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id, 
+				json_array_elements_text(((json_array_elements_text((graphconfig->>''use'')::json))::json->>''toArc'')::json) 
+				as to_arc from plan_netscenario_presszone
+				where graphconfig is not null and active is true AND netscenario_id = '||v_netscenario::integer||' order by 1,2) a
+				ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);';
+			ELSE
+				-- presszone (presszone.graphconfig)
+				UPDATE temp_t_anlgraph SET flag=0, isheader = true WHERE id IN (
+				SELECT id FROM temp_t_anlgraph JOIN (
+				SELECT (json_array_elements_text((graphconfig->>'use')::json))::json->>'nodeParent' as node_id, 
+				json_array_elements_text(((json_array_elements_text((graphconfig->>'use')::json))::json->>'toArc')::json) 
+				as to_arc from presszone
+				where graphconfig is not null and active is true order by 1,2) a
+				ON to_arc::integer=arc_id::integer WHERE node_id::integer=node_1::integer);
+			END IF;
 		END IF;
 
 		IF v_class != 'DRAINZONE' THEN
 		
 			-- set the starting element (water)
-			IF v_floodonlymapzone IS NULL THEN
-				v_querytext = 'UPDATE temp_t_anlgraph SET water=1, trace = '||v_fieldmp||'::integer 
-				FROM '||v_table||' WHERE graphconfig is not null and active is true AND flag=0 
-				AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
-				EXECUTE v_querytext;
+			IF v_netscenario IS NOT NULL THEN
+				IF v_floodonlymapzone IS NULL THEN
+					v_querytext = 'UPDATE temp_t_anlgraph SET water=1, trace = '||v_fieldmp||'::integer 
+					FROM plan_netscenario_'||v_table||' WHERE graphconfig is not null and active is true AND flag=0 AND netscenario_id = '||v_netscenario||' 
+					AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id) ';
+					EXECUTE v_querytext;
+				ELSE
+					v_querytext = 'UPDATE temp_t_anlgraph SET water=1, trace = '||v_fieldmp||'::integer 
+					FROM plan_netscenario_'||v_table||' WHERE graphconfig is not null and active is true AND '||v_fieldmp||'::integer IN ('||v_floodonlymapzone||') AND flag=0 AND netscenario_id = '||v_netscenario||'
+					AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
+					EXECUTE v_querytext;
+				END IF;
 			ELSE
-				v_querytext = 'UPDATE temp_t_anlgraph SET water=1, trace = '||v_fieldmp||'::integer 
-				FROM '||v_table||' WHERE graphconfig is not null and active is true AND '||v_fieldmp||'::integer IN ('||v_floodonlymapzone||') AND flag=0 
-				AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
-				EXECUTE v_querytext;
+
+				IF v_floodonlymapzone IS NULL THEN
+					v_querytext = 'UPDATE temp_t_anlgraph SET water=1, trace = '||v_fieldmp||'::integer 
+					FROM '||v_table||' WHERE graphconfig is not null and active is true AND flag=0 
+					AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
+					EXECUTE v_querytext;
+				ELSE
+					v_querytext = 'UPDATE temp_t_anlgraph SET water=1, trace = '||v_fieldmp||'::integer 
+					FROM '||v_table||' WHERE graphconfig is not null and active is true AND '||v_fieldmp||'::integer IN ('||v_floodonlymapzone||') AND flag=0 
+					AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
+					EXECUTE v_querytext;
+				END IF;
 			END IF;
 		ELSE 
 			v_querytext = 'UPDATE temp_t_anlgraph SET water=1, flag=0, trace = '||v_fieldmp||'::integer 
@@ -703,7 +771,7 @@ BEGIN
 			EXECUTE v_querytext;
 
 			-- update link table
-			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g  WHERE c.gullyid=feature_id';		
+			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g WHERE g.gully_id=feature_id';		
 		END IF;	
 
 		IF v_islastupdate IS TRUE THEN
@@ -766,6 +834,7 @@ BEGIN
 			UPDATE temp_t_node SET staticpressure=(log_message::json->>'staticpressure')::float FROM temp_t_data a WHERE a.feature_id=node_id 
 			AND fid=147 AND cur_user=current_user;
 			
+			/*
 			-- update on node table those elements disconnected from graph
 			IF v_usepsector is false then
 				EXECUTE 'UPDATE temp_t_node SET staticpressure=(staticpress1-(staticpress1-staticpress2)*st_linelocatepoint(temp_t_arc.the_geom, n.the_geom))::numeric(12,3)
@@ -773,6 +842,7 @@ BEGIN
 				WHERE st_dwithin(temp_t_arc.the_geom, n.the_geom, 0.05::double precision) AND temp_t_arc.state = 1 AND n.state =1 
 				and n.arc_id IS NOT NULL AND temp_t_node.node_id=n.node_id and n.expl_id='||v_expl_id||';';
 			END IF;
+			*/
 				
 			-- update connec table
 			EXECUTE 'UPDATE temp_t_connec SET staticpressure =(b.head - b.elevation + (case when b.depth is null then 0 else b.depth end)::float) FROM 
@@ -836,8 +906,11 @@ BEGIN
 					VALUES (v_fid, 2, concat('WARNING-395: There is a conflict against ',upper(v_table),'''s (',rec_conflict.mapzone,') with ',v_count1,' arc(s) and ',v_count,' connec(s) affected.'));
 							
 					-- update mapzone geometry
-					EXECUTE 'UPDATE '||v_table||' SET the_geom = null WHERE '||v_fieldmp||'::text IN ('||rec_conflict.mapzone||')';
-
+					IF v_netscenario IS NOT NULL THEN
+						EXECUTE 'UPDATE plan_netscenario_'||v_table||' SET the_geom = null WHERE '||v_fieldmp||'::text IN ('||rec_conflict.mapzone||') AND netscenario_id = '||v_netscenario||';';
+					ELSE 
+						EXECUTE 'UPDATE '||v_table||' SET the_geom = null WHERE '||v_fieldmp||'::text IN ('||rec_conflict.mapzone||')';
+					END IF;
 					-- setting the graph for conflict
 					EXECUTE 'UPDATE temp_t_anlgraph t SET water = -1 FROM temp_t_arc a WHERE a.state = 1 and a.expl_id = '||v_expl_id||' and t.arc_id = a.arc_id AND a.'||v_field||'::integer = -1 '||
 					v_psectors_query_arc||'';
@@ -860,14 +933,26 @@ BEGIN
 				JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field);
 				EXECUTE v_querytext;
 			ELSE 
-				v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
-				SELECT '||v_fid||', 0, concat('||v_mapzonename||','' with '', arcs, '' Arcs, '',nodes, '' Nodes and '', case when connecs is null then 0 else connecs end, '' Connecs'')
-				FROM (SELECT '||(v_field)||', count(*) as arcs FROM temp_t_arc a WHERE state = 1 and expl_id = '||v_expl_id||' and  '||(v_field)||'::integer > 0 '||v_psectors_query_arc||' GROUP BY '||(v_field)||')e
-				LEFT JOIN (SELECT '||(v_field)||', count(*) as nodes FROM temp_t_node n WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_node||
-				' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
-				LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_connec||
-				' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
-				JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field);
+				IF v_netscenario IS NOT NULL THEN
+					v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
+					SELECT '||v_fid||', 0, concat('||v_mapzonename||','' with '', arcs, '' Arcs, '',nodes, '' Nodes and '', case when connecs is null then 0 else connecs end, '' Connecs'')
+					FROM (SELECT '||(v_field)||', count(*) as arcs FROM temp_t_arc a WHERE state = 1 and expl_id = '||v_expl_id||' and  '||(v_field)||'::integer > 0 '||v_psectors_query_arc||' GROUP BY '||(v_field)||')e
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as nodes FROM temp_t_node n WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_node||
+					' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_connec||
+					' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
+					JOIN plan_netscenario_'||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field);
+				ELSE
+					v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
+					SELECT '||v_fid||', 0, concat('||v_mapzonename||','' with '', arcs, '' Arcs, '',nodes, '' Nodes and '', case when connecs is null then 0 else connecs end, '' Connecs'')
+					FROM (SELECT '||(v_field)||', count(*) as arcs FROM temp_t_arc a WHERE state = 1 and expl_id = '||v_expl_id||' and  '||(v_field)||'::integer > 0 '||v_psectors_query_arc||' GROUP BY '||(v_field)||')e
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as nodes FROM temp_t_node n WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_node||
+					' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_connec||
+					' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
+					JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field);
+				END IF;
+
 				EXECUTE v_querytext;
 			END IF;
 				
@@ -887,16 +972,29 @@ BEGIN
 				WHERE a.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone);
 				EXECUTE v_querytext;
 			ELSE
-				v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
-				SELECT '||v_fid||', 0, concat('||v_mapzonename||','' with '', arcs, '' Arcs, '',nodes, '' Nodes and '', case when connecs is null then 0 else connecs end, '' Connecs'')
-				FROM (SELECT '||(v_field)||', count(*) as arcs FROM temp_t_arc a WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_arc||
-				' GROUP BY '||(v_field)||')e
-				LEFT JOIN (SELECT '||(v_field)||', count(*) as nodes FROM temp_t_node n WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_node||
-				' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
-				LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_connec||
-				' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
-				JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field)||'
-				WHERE p.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone)||'::text';
+				IF v_netscenario IS NOT NULL THEN
+					v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
+					SELECT '||v_fid||', 0, concat('||v_mapzonename||','' with '', arcs, '' Arcs, '',nodes, '' Nodes and '', case when connecs is null then 0 else connecs end, '' Connecs'')
+					FROM (SELECT '||(v_field)||', count(*) as arcs FROM temp_t_arc a WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_arc||
+					' GROUP BY '||(v_field)||')e
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as nodes FROM temp_t_node n WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_node||
+					' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_connec||
+					' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
+					JOIN plan_netscenario_'||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field)||'
+					WHERE p.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone)||'::text';
+				ELSE
+					v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
+					SELECT '||v_fid||', 0, concat('||v_mapzonename||','' with '', arcs, '' Arcs, '',nodes, '' Nodes and '', case when connecs is null then 0 else connecs end, '' Connecs'')
+					FROM (SELECT '||(v_field)||', count(*) as arcs FROM temp_t_arc a WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_arc||
+					' GROUP BY '||(v_field)||')e
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as nodes FROM temp_t_node n WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_node||
+					' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
+					LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE state = 1 and expl_id = '||v_expl_id||' and '||(v_field)||'::integer > 0 '||v_psectors_query_connec||
+					' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
+					JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field)||'
+					WHERE p.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone)||'::text';
+				END IF;
 				EXECUTE v_querytext;
 			END IF;
 		END IF;
@@ -1194,7 +1292,6 @@ BEGIN
 
 	------ end of multi-transactional event
 	IF v_commitchanges IS FALSE THEN  -- all features in order to make a more complex log
-	
 		
 		-- arc elementS
 		EXECUTE 'SELECT jsonb_agg(features.feature) 
@@ -1355,7 +1452,8 @@ BEGIN
 
 	ELSIF v_netscenario IS NOT NULL THEN
 
-		v_querytext = 'UPDATE plan_netscenario_'||v_table||' SET the_geom = t.the_geom FROM temp_'||v_table||' t WHERE t.'||v_field||' = plan_netscenario_'||v_table||'.'||v_field;
+		v_querytext = 'UPDATE plan_netscenario_'||v_table||' SET the_geom = t.the_geom, lastupdate = now(), lastupdate_user=current_user FROM temp_'||v_table||' t WHERE t.'||v_field||' = plan_netscenario_'||v_table||'.'||v_field||' 
+		AND plan_netscenario_'||v_table||'.netscenario_id = '||v_netscenario||'';
 		EXECUTE v_querytext;
 
 		DELETE FROM plan_netscenario_arc WHERE netscenario_id = v_netscenario::integer;
@@ -1372,9 +1470,17 @@ BEGIN
 		SELECT '|| v_netscenario||', connec_id, '||quote_ident(v_field)||', the_geom FROM temp_t_connec';
 
 		IF v_class = 'PRESSZONE' THEN
-			v_visible_layer ='v_edit_plan_netscenario_presszone';
+			v_visible_layer ='"v_edit_plan_netscenario_presszone"';
 		ELSIF v_class = 'DMA' THEN
-			v_visible_layer ='v_edit_plan_netscenario_dma';
+			v_visible_layer ='"v_edit_plan_netscenario_dma"';
+		END IF;
+
+		DELETE FROM selector_inp_dscenario WHERE cur_user = current_user;
+		
+		IF v_dscenario_valve IS NOT NULL THEN
+			v_visible_layer = concat(v_visible_layer, ', ', '"v_edit_inp_dscenario_shortpipe"');
+			
+			INSERT INTO selector_inp_dscenario (dscenario_id) VALUES (v_dscenario_valve::integer);
 		END IF;
 
 		DELETE FROM selector_netscenario  WHERE cur_user=current_user;
@@ -1419,7 +1525,7 @@ BEGIN
              ',"body":{"form":{}, "data":{ "info":'||v_result_info||','||
 					  '"point":'||v_result_point||','||
 					  '"line":'||v_result_line||','||
-					  '"polygon":'||v_result_polygon||'}'||'}}')::json, 2710, null, ('{"visible": ["'||v_visible_layer||'"]}')::json, null)::json;
+					  '"polygon":'||v_result_polygon||'}'||'}}')::json, 2710, null, ('{"visible": ['||v_visible_layer||']}')::json, null)::json;
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN

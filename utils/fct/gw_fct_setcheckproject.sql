@@ -153,7 +153,7 @@ BEGIN
 
 	-- profilactic null control
 	IF v_qgis_init_guide_map IS NULL THEN v_qgis_init_guide_map = FALSE; END IF;
-	IF v_qgis_layers_setpropierties IS NULL THEN v_qgis_layers_setpropierties = FALSE; END IF;
+	IF v_qgis_layers_setpropierties IS NULL THEN v_qgis_layers_setpropierties = TRUE; END IF;
 	IF v_ignoregraphanalytics IS NULL THEN v_ignoregraphanalytics = FALSE; END IF;
 	IF v_ignoreepa IS NULL THEN v_ignoreepa = FALSE; END IF;
 	IF v_ignoreplan IS NULL THEN v_ignoreplan = FALSE; END IF;
@@ -387,9 +387,9 @@ BEGIN
 			ELSE
 				-- delete old values on result table
 				DELETE FROM project_temp_audit_check_data WHERE fid=115 AND cur_user=current_user;
-				DELETE FROM anl_connec WHERE cur_user=current_user AND fid IN (252);
-				DELETE FROM anl_arc WHERE cur_user=current_user AND fid IN (252);
-				DELETE FROM anl_node WHERE cur_user=current_user AND fid IN (252, 354, 355);
+				DELETE FROM anl_connec WHERE cur_user=current_user AND fid IN (252, 354, 355);
+				DELETE FROM anl_arc WHERE cur_user=current_user AND fid IN (252, 354, 355);
+				DELETE FROM anl_node WHERE cur_user=current_user AND fid IN (252, 354, 355, 467);
 			END IF;
 		END IF;
 

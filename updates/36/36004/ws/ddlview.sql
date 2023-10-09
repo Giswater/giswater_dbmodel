@@ -596,5 +596,3 @@ CREATE OR REPLACE VIEW v_ui_dqa AS
      LEFT JOIN macrodqa md ON md.macrodqa_id = d.macrodqa_id
   WHERE d.dqa_id > 0
   ORDER BY d.dqa_id;
-
-

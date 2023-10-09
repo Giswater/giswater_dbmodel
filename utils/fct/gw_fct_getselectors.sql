@@ -97,6 +97,7 @@ v_mincut_valve_not_proposed json;
 v_mincut_node json;
 v_mincut_connec json;
 v_mincut_arc json;
+v_exclude_tab text='';
 BEGIN
 
 	-- Set search path to local schema
@@ -131,7 +132,8 @@ BEGIN
 
 	-- profilactic control of schema name
 	IF lower(v_addschema) = 'none' OR v_addschema = '' OR lower(v_addschema) ='null' OR v_addschema is null OR v_addschema='NULL' THEN 
-		v_addschema = null; 
+		v_addschema = null;
+		v_exclude_tab = ' AND tabname != ''tab_exploitation_add''';
 	END IF;
 	-- profilactic control of message
 	IF v_message is null THEN
@@ -156,14 +158,15 @@ BEGIN
 	'SELECT formname, tabname, label, tooltip, tabfunction, tabactions, value
 	 FROM (SELECT formname, tabname, f.label, f.tooltip, tabfunction, tabactions, unnest(device) AS device, value, orderby FROM config_form_tabs f, config_param_system
 	 WHERE formname=',quote_literal(v_selector_type),' AND isenabled IS TRUE AND concat(''basic_selector_'', tabname) = parameter ',(v_querytab),
-	' AND sys_role IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, ''member'')))a WHERE device = ',v_device,' ORDER BY orderby');
+	' AND sys_role IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, ''member'')))a WHERE device = ',v_device, v_exclude_tab,' ORDER BY orderby');
 	v_debug_vars := json_build_object('v_selector_type', v_selector_type, 'v_querytab', v_querytab);
 	v_debug := json_build_object('querystring', v_query, 'vars', v_debug_vars, 'funcname', 'gw_fct_getselectors', 'flag', 10);
 	SELECT gw_fct_debugsql(v_debug) INTO v_msgerr;
 
 	FOR v_tab IN EXECUTE v_query
 ​
-	LOOP		
+	LOOP
+		continue when v_tab.tabname not in ('tab_exploitation', 'tab_mincut') and v_tiled = true;		
 		-- get variables form input
 		v_selector_list := (p_data ->> 'data')::json->> 'ids';
 		v_filterfrominput := (p_data ->> 'data')::json->> 'filterText';
@@ -324,8 +327,21 @@ BEGIN
 						WHERE ',v_table_id ,' NOT IN (' , v_ids, ') ',
 						 v_fullfilter ,' ORDER BY orderby asc) a');
 				END IF;
-
+		ELSIF v_tab.tabname ='tab_exploitation_add' and v_addschema IS NOT NULL THEN
+			v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(a))) FROM (
+						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
+						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", true as "value" 
+						FROM ',v_addschema,'.' , v_table , ' m 
+						WHERE ',v_table_id ,' NOT IN (SELECT ',v_table_id ,' FROM  SCHEMA_NAME.', v_table , ') AND ' , 
+						v_table_id , ' IN (SELECT ' , v_selector_id , ' FROM ',v_addschema,'.' , v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ', v_fullfilter ,' UNION 
+						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
+						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", false as "value" 
+						FROM ',v_addschema,'.', v_table , ' m
+						WHERE ',v_table_id ,' NOT IN (SELECT ',v_table_id ,' FROM  SCHEMA_NAME.', v_table , ') AND ' , 
+						v_table_id , ' NOT IN (SELECT ' , v_selector_id , ' FROM ',v_addschema,'.' , v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ', v_fullfilter ,' ORDER BY orderby asc) a');
+			
 		ELSE 
+		
 			v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(b))) FROM (
 					select *, row_number() OVER (ORDER BY orderby) as orderby from (
 					SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' , 
