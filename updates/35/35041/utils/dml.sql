@@ -9,3 +9,7 @@ SET search_path = SCHEMA_NAME ,public;
 
 INSERT INTO config_typevalue(typevalue, id, idval, camelstyle, addparam)
 VALUES ('tabname_typevalue', 'tab_exploitation_add', 'tab_exploitation_add', 'ExploitationAdd', null) ON CONFLICT (typevalue, id) DO NOTHING;
+
+INSERT INTO sys_fprocess(fid, fprocess_name, project_type, parameters, source, isaudit, fprocess_type, addparam)
+VALUES (518, 'Set end feature', 'utils', null, 'core', true, 'Function process', null) 
+ON CONFLICT (fid) DO NOTHING;
