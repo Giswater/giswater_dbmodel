@@ -25,3 +25,9 @@ UPDATE sys_function SET descript='Function to capture automatically closest addr
 - Search buffer: maximum distance to look for an address from the point.
 - Elements to update: if you dont''t want to update all elements, choose to only update the ones where streetaxis_id, postnumber or postcomplement is null.
 - Insersect with polygon layer: If selected value is different from NONE, address and number will only be capturated for those elements which intersect with the configured polygonal layer.' WHERE id=3198;
+
+-- 27/10/23
+UPDATE config_form_fields SET tooltip='arc_id - Identificador del arco. No es necesario introducirlo, es un serial automático' WHERE formname='v_edit_arc' AND formtype='form_feature' AND columnname='arc_id' AND tabname='tab_data';
+UPDATE config_form_fields SET tooltip='arc_id - Identificador del arco. No es necesario introducirlo, es un serial automático' WHERE formname='ve_arc_pipe' AND formtype='form_feature' AND columnname='arc_id' AND tabname='tab_data';
+UPDATE config_form_fields SET tooltip='arc_id - Identificador del arco. No es necesario introducirlo, es un serial automático' WHERE formname='ve_arc_varc' AND formtype='form_feature' AND columnname='arc_id' AND tabname='tab_data';
+UPDATE config_form_fields SET tooltip='arc_id - Identificador del arco. No es necesario introducirlo, es un serial automático' WHERE formname='ve_arc' AND formtype='form_feature' AND columnname='arc_id' AND tabname='tab_data';
