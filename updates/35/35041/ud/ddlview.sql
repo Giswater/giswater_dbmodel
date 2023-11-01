@@ -96,3 +96,21 @@ AS SELECT e.pol_id,
     polygon.trace_featuregeom
    FROM v_edit_element e
      JOIN polygon USING (pol_id);
+	 
+--1/11/2023
+CREATE OR REPLACE VIEW v_edit_plan_psector_x_gully AS 
+SELECT plan_psector_x_gully.id,
+    plan_psector_x_gully.gully_id,
+    plan_psector_x_gully.arc_id,
+    plan_psector_x_gully.psector_id,
+    plan_psector_x_gully.state,
+    plan_psector_x_gully.doable,
+    plan_psector_x_gully.descript,
+    plan_psector_x_gully.link_id,
+    plan_psector_x_gully.active,
+    plan_psector_x_gully.insert_tstamp,
+    plan_psector_x_gully.insert_user,
+    exit_type
+   FROM plan_psector_x_gully
+   JOIN v_edit_link USING (link_id);
+  
