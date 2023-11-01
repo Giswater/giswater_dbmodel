@@ -13,3 +13,8 @@ VALUES ('tabname_typevalue', 'tab_exploitation_add', 'tab_exploitation_add', 'Ex
 INSERT INTO sys_fprocess(fid, fprocess_name, project_type, parameters, source, isaudit, fprocess_type, addparam)
 VALUES (518, 'Set end feature', 'utils', null, 'core', true, 'Function process', null) 
 ON CONFLICT (fid) DO NOTHING;
+
+
+UPDATE sys_message SET error_message = 'IT iS IMPOSSIBLE TO UPDATE ARC_ID FROM PSECTOR DIALOG BECAUSE THIS PLANNED LINK HAS NOT ARC AS EXIT-TYPE',
+hint_message = 'USE CONNECT(CONNEC-GULLY) DIALOG OR EDIT THE GEOMETRY OF THE LINK ON CANVAS TO UPDATE IT'
+where id = 3212;
