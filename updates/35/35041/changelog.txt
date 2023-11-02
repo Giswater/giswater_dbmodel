@@ -1,0 +1,10 @@
+3.5.041
+*************
+- Enhance fct_mincut_connec setting anl_feature_type, anl_the_geom and anl_feature_id
+- Minor bug fix. Wrong order on insert on trg_edit_dma (UD)
+- Enhance trg_edit_element to correctly manage polygon geometry, no matter if it is automatic or not
+- manage non priority profile features - new parameter om_profile_nonpriority_statetype
+- managing tab_exploitation_add on selectors
+- Enhance setfeaturedelete by managing tab log
+- Update trigger edit link enabling values for exit_elev and exit_topelev
+
