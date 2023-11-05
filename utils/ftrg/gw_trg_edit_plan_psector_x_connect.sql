@@ -4,6 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
+
 --FUNCTION CODE: 3174
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_trg_edit_plan_psector_x_connect()
@@ -38,9 +39,9 @@ BEGIN
 
 				-- inserting new link on psector
 				INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
-				exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+				exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2)
 				SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
-				expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE state=1 AND feature_id = v_rec.connec_id
+				expl_id2 FROM link WHERE state=1 AND feature_id = v_rec.connec_id
 				RETURNING link_id INTO v_link_new;
 				UPDATE link SET state = 2 where link_id = v_link_new;
 			
@@ -66,9 +67,9 @@ BEGIN
 
 				-- inserting new link on psector
 				INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
-				exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+				exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2)
 				SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
-				expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE state=1 AND feature_id = v_rec.gully_id
+				expl_id2 FROM link WHERE state=1 AND feature_id = v_rec.gully_id
 				RETURNING link_id INTO v_link_new;
 				UPDATE link SET state = 2 where link_id = v_link_new;
 
