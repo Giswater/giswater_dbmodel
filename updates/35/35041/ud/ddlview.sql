@@ -112,7 +112,7 @@ SELECT plan_psector_x_gully.id,
     plan_psector_x_gully.insert_user,
     exit_type
    FROM plan_psector_x_gully
-   JOIN v_edit_link USING (link_id);
+   LEFT JOIN link USING (link_id);
   
   
 drop view if exists v_ui_arc_x_relations;
