@@ -10,3 +10,5 @@ SET search_path = SCHEMA_NAME ,public;
 -- 27/10/23
 
 UPDATE cat_feature_node SET epa_default='UNDEFINED', isarcdivide=false WHERE id='AIR_VALVE';
+
+UPDATE sys_message SET hint_message='Unlink hydrometers first or set edit_connec_downgrade_force on config_param_system to true' WHERE id=3194;
