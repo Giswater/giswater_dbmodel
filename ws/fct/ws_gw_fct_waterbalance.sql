@@ -232,7 +232,7 @@ BEGIN
 			(SELECT dma_id, p.id as cat_period_id, count(hydrometer_id) as count_hydro
 			FROM ext_cat_period p, rtc_hydrometer_x_connec d
 			JOIN connec c USING (connec_id) 
-			JOIN ext_rtc_hydrometer h ON c.customer_code = h.connec_id
+            JOIN ext_rtc_hydrometer h ON c.customer_code::text = h.connec_id::text
 			where state=1  and p.id = v_period
 			GROUP BY dma_id, p.id)a
 			WHERE n.dma_id = a.dma_id AND n.cat_period_id = a.cat_period_id AND expl_id = v_expl;
