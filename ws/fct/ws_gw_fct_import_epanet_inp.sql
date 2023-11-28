@@ -396,41 +396,78 @@ BEGIN
 			-- improve velocity for junctions using directy tables in spite of vi_junctions view
 			INSERT INTO node (node_id, elevation, nodecat_id, epa_type, sector_id, dma_id, expl_id, state, state_type, presszone_id) 
 			SELECT csv1, csv2::numeric(12,3), 'JUNCTION', 'JUNCTION', 1, 1, 1, 1, 2, 1
-			FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user order by 1;
-			INSERT INTO inp_junction SELECT csv1, csv3::numeric(12,6), csv4::varchar(16) FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
-			INSERT INTO man_junction SELECT csv1 FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
+			FROM temp_csv WHERE source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user order by 1;
+			INSERT INTO inp_junction SELECT csv1, csv3::numeric(12,6), csv4::varchar(16) FROM temp_csv WHERE source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
+			INSERT INTO man_junction SELECT csv1 FROM temp_csv WHERE source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 
 			-- insert controls
 			INSERT INTO inp_controls (sector_id, text, active)
-			select 1, csv1, true FROM temp_csv where source='[CONTROLS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';-%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			SELECT 1, csv1, true FROM temp_csv WHERE source='[CONTROLS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';-%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 
 			-- insert rules
 			INSERT INTO inp_rules (sector_id, text, active)
-			select 1, csv1, true FROM temp_csv where source='[RULES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';-%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			SELECT 1, csv1, true FROM temp_csv WHERE source='[RULES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';-%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 		
 			-- insert reservoirs
 			INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
-			select csv1, csv2::numeric(12,3), 'RESERVOIR','RESERVOIR',1,1,1,1,2 FROM temp_csv where source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
-			INSERT INTO inp_reservoir (node_id, pattern_id) select csv1, csv3 FROM temp_csv where source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
-			INSERT INTO man_source(node_id) select csv1 FROM temp_csv where source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			SELECT csv1, csv2::numeric(12,3), 'RESERVOIR','RESERVOIR',1,1,1,1,2 FROM temp_csv WHERE source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			INSERT INTO inp_reservoir (node_id, pattern_id) SELECT csv1, csv3 FROM temp_csv WHERE source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			INSERT INTO man_source(node_id) SELECT csv1 FROM temp_csv WHERE source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 		
 			-- insert tanks
 			INSERT INTO node (node_id, elevation, nodecat_id, epa_type,sector_id, dma_id, expl_id, state, state_type) 
-			select csv1, csv2::numeric(12,3), 'TANK','TANK',1,1,1,1,2 FROM temp_csv where source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			SELECT csv1, csv2::numeric(12,3), 'TANK','TANK',1,1,1,1,2 FROM temp_csv WHERE source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 			
 			INSERT INTO inp_tank (node_id, initlevel, minlevel, maxlevel, diameter, minvol, curve_id, overflow) 
-			SELECT csv1, csv3::numeric(12,3), csv4::numeric(12,3), csv5::numeric(12,3), csv6::numeric(12,3), csv7::numeric(12,3), NULL, NULL FROM temp_csv where source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			SELECT csv1, csv3::numeric(12,3), csv4::numeric(12,3), csv5::numeric(12,3), csv6::numeric(12,3), csv7::numeric(12,3), NULL, NULL FROM temp_csv WHERE source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 			
 			INSERT INTO man_tank (node_id) 
-			select csv1 FROM temp_csv where source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			SELECT csv1 FROM temp_csv WHERE source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 
+			--insert patterns
+			INSERT INTO inp_pattern_value (pattern_id, factor_1,factor_2,factor_3,factor_4,factor_5,factor_6,factor_7,factor_8, factor_9,factor_10,factor_11,factor_12,factor_13,factor_14, factor_15, factor_16,factor_17, factor_18)
+			SELECT csv1, csv2::numeric, csv3::numeric, csv4::numeric, csv5::numeric, csv6::numeric, csv7::numeric, csv8::numeric, csv9::numeric, csv10::numeric, csv11::numeric, csv12::numeric, csv13::numeric, csv14::numeric, csv15::numeric, csv16::numeric, csv17::numeric, 
+				csv18::numeric, csv19::numeric NULL FROM temp_csv WHERE source='[PATTERNS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 
+			-- insert curves
+			INSERT INTO inp_curve (id, curve_type)  
+			SELECT csv1, 'CURVE' FROM temp_csv WHERE source='[CURVES]' and csv4 IS NULL AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			 
+			INSERT INTO inp_curve (id, curve_type)  
+			SELECT csv1, csv4 FROM temp_csv WHERE source='[CURVES]' and csv4 IS NOT NULL AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			
+			INSERT INTO inp_curve_value(curve_id, x_value, y_value) 
+			SELECT csv1, csv2::numeric(12,3), csv3::numeric(12,3) FROM temp_csv WHERE source='[CURVES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			
+			--insert backdrop 			
+			INSERT INTO inp_backdrop(text) 
+			SELECT  csv1 FROM temp_csv where source='[BACKDROP]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			
+			--insert pumps
+		    INSERT INTO arc (arc_id, node_1, node_2, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type)
+		    SELECT csv1, csv2, csv3, 'ARCPUMP','VIRTUALPUMP',1,1,1,1,(SELECT id FROM value_state_type WHERE state=1 LIMIT 1) FROM temp_csv WHERE source='[PUMPS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			
+		   	INSERT INTO inp_virtualpump (arc_id, power, curve_id, speed, pattern_id) 
+		    SELECT csv1, csv4, csv5, csv6::numeric(12,3), csv7 FROM temp_csv WHERE source='[PUMPS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+		    
+		   	INSERT INTO man_pipe (arc_id) 
+		   	SELECT csv1 FROM temp_csv WHERE source='[PUMPS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+		
+			-- insert tags
+			INSERT INTO inp_tags(feature_type, feature_id, tag) 
+			SELECT csv1, NULL , NULL FROM temp_csv WHERE source='[TAGS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+		
+			-- insert labels 
+		    INSERT INTO inp_label (xcoord, ycoord, label, node_id) 
+		   	SELECT csv1::numeric(12,3), csv2::numeric(12,3) , csv3, NULL FROM temp_csv WHERE source='[LABELS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+
+		   
 			-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
 			FOR v_rec_table IN SELECT * FROM config_fprocess WHERE fid=v_fid AND tablename 
-			NOT IN ('vi_tanks', 'vi_reservoirs', 'vi_pipes', 'vi_junctions', 'vi_valves', 'vi_status', 'vi_controls', 'vi_rules', 'vi_coordinates') order by orderby
+			NOT IN ('vi_backdrop', 'vi_curves','vi_patterns', 'vi_pumps', 'vi_tags','vi_labels', 'vi_tanks', 'vi_reservoirs', 'vi_pipes', 'vi_junctions', 'vi_valves', 'vi_status', 'vi_controls', 'vi_rules', 'vi_coordinates') order by orderby
 			LOOP
 				--identifing the number of fields of the editable view
-				FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns 
+				FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) AS rid, column_name, data_type from information_schema.columns 
 				where table_name=v_rec_table.tablename AND table_schema='SCHEMA_NAME'
 				LOOP	
 					-- profilactic control for postgis specific datatypes

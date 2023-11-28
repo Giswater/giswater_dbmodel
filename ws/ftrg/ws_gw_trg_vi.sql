@@ -36,21 +36,7 @@ BEGIN
     
    IF TG_OP = 'INSERT' THEN
 	    
-
-	  IF v_view='vi_pumps' THEN 
-	    INSERT INTO arc (arc_id, node_1, node_2, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
-	    VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, 'ARCPUMP','VIRTUALPUMP',1,1,1,1,(SELECT id FROM value_state_type WHERE state=1 LIMIT 1));
-	    IF NEW.power ='POWER' THEN
-			NEW.power=NEW.head;
-	    ELSIF NEW.power ='HEAD' THEN
-			NEW.power=NULL;	   
-	    END IF;
-	    
-	    INSERT INTO inp_virtualpump (arc_id,power,curve_id,speed,pattern_id)
-	    VALUES (NEW.arc_id,NEW.power, NEW.head, NEW.speed::numeric, NEW.pattern_id);
-	    INSERT INTO man_pipe (arc_id) VALUES (NEW.arc_id); 
-	    
-	  ELSIF v_view='vi_valves' THEN
+	  IF v_view='vi_valves' THEN
 	    INSERT INTO arc (arc_id, node_1, node_2, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type) 
 	    VALUES (NEW.arc_id, NEW.node_1, NEW.node_2, concat('ARC',NEW.valv_type),'VIRTUALVALVE',1,1,1,1,(SELECT id FROM value_state_type WHERE state=1 LIMIT 1));
 	    INSERT INTO inp_virtualvalve (arc_id, diameter, valv_type, minorloss) VALUES (NEW.arc_id,NEW.diameter, NEW.valv_type, NEW.minorloss);
@@ -63,29 +49,14 @@ BEGIN
 	      ELSIF NEW.valv_type='GPV' THEN
 		UPDATE inp_virtualvalve SET curve_id=NEW.setting WHERE arc_id=NEW.arc_id;
 	      END IF;         
-	    
-	  ELSIF v_view='vi_tags' THEN 
-		INSERT INTO inp_tags(feature_type, feature_id, tag) VALUES (NEW.feature_type, NEW.feature_id, NEW.tag);
-	    
+	    	    
 	  ELSIF v_view='vi_demands' THEN 
 	  	INSERT INTO inp_pattern (pattern_id) VALUES (NEW.pattern_id) ON CONFLICT (pattern_id) DO NOTHING;
 	 	 	INSERT INTO cat_dscenario (dscenario_id, name) VALUES (1, 'IMPORTINP') ON CONFLICT (dscenario_id) DO NOTHING;
 			INSERT INTO inp_dscenario_demand (dscenario_id, feature_id, demand, pattern_id, demand_type) VALUES (1, NEW.feature_id, NEW.demand, NEW.pattern_id, NEW.other);
       	    
-	  ELSIF v_view='vi_patterns' THEN 
-		INSERT INTO inp_pattern_value (pattern_id, factor_1,factor_2,factor_3,factor_4,factor_5,factor_6,factor_7,factor_8, factor_9,factor_10,
-					   factor_11,factor_12,factor_13,factor_14, factor_15, factor_16,factor_17, factor_18) VALUES 
-					   (NEW.pattern_id, NEW.factor_1,NEW.factor_2,NEW.factor_3,NEW.factor_4,NEW.factor_5,NEW.factor_6,NEW.factor_7,NEW.factor_8, NEW.factor_9,
-					   NEW.factor_10,NEW.factor_11,NEW.factor_12,NEW.factor_13,NEW.factor_14, NEW.factor_15, NEW.factor_16,NEW.factor_17, NEW.factor_18);
-	  
-	  ELSIF v_view='vi_curves' THEN
-
-		IF NEW.curve_id NOT IN (SELECT id FROM inp_curve) then
-			INSERT INTO inp_curve (id,curve_type,descript)  VALUES (NEW.curve_id, split_part(NEW.other,' ',1), split_part(NEW.other,' ',2));
-		END IF;
-
-		INSERT INTO inp_curve_value(curve_id, x_value, y_value) VALUES (NEW.curve_id, NEW.x_value, NEW.y_value);
-	    
+	 
+	   
 	  ELSIF v_view='vi_emitters' THEN
 		--INSERT INTO inp_emitter(node_id, coef) VALUES (NEW.node_id, NEW.coef);
 		UPDATE inp_junction SET emitter_coeff = NEW.coef WHERE node_id=NEW.node_id;
@@ -141,11 +112,7 @@ BEGIN
 	    WHERE layoutname IN ('lyt_reports_1', 'lyt_reports_2') AND ismandatory=true AND vdefault IS NOT NULL
 	    ON CONFLICT (parameter,cur_user) DO NOTHING;
 	    
-	  ELSIF v_view='vi_labels' THEN
-	    INSERT INTO inp_label (xcoord, ycoord, label, node_id) VALUES (NEW.xcoord, NEW.ycoord, NEW.label, NEW.node_id);
-	    
-	  ELSIF v_view='vi_backdrop' THEN
-	    INSERT INTO inp_backdrop(text) VALUES (NEW.text);
+	 
 	    
 	  ELSIF v_view='vi_options' THEN
 	    INSERT INTO config_param_user (parameter, value, cur_user) 
