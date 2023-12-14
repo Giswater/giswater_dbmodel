@@ -13,29 +13,127 @@ $BODY$
 DECLARE 
 v_table text;
 v_link_id integer;
+v_link_new integer;
 v_exit_type text;
 v_rec record;
+v_record record;
+v_record_2 record;
+v_project_type text;
+
 
 BEGIN 
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	v_table:= TG_ARGV[0];
 
+	v_project_type = (SELECT project_type FROM sys_version LIMIT 1);
+
 	IF TG_OP = 'INSERT' THEN
+
 		
 		IF v_table = 'plan_psector_x_connec' then
 		
-			EXECUTE 'SELECT state, arc_id FROM connec where connec_id = '''||new.connec_id||''''
+			EXECUTE 'SELECT connec_id, state, arc_id FROM connec where connec_id = '''||new.connec_id||''''
 			INTO v_rec;
 
-			v_link_id = (select link_id from link where feature_id = new.connec_id and feature_type = 'CONNEC' AND exit_id = v_rec.arc_id LIMIT 1);
+			v_link_id = (select link_id from link where feature_id = new.connec_id and feature_type = 'CONNEC' and link.state = 1 LIMIT 1);
 
 			--inserting on tables
 			IF v_rec.state =  1 THEN
+
+				-- inserting new link/connect on psector
+				IF v_project_type = 'WS' THEN
+					INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+					exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+					SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id,  exit_elev,
+					expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE state=1 AND feature_id = v_rec.connec_id
+					RETURNING link_id INTO v_link_new;
+
+				ELSIF v_project_type = 'UD' THEN
+					INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+					exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id)
+					SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
+					expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id FROM link WHERE state=1 AND feature_id = v_rec.connec_id
+					RETURNING link_id INTO v_link_new;
+
+				END IF;
+
+				UPDATE link SET state = 2 where link_id = v_link_new;
+			
 				INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (NEW.connec_id,  NEW.psector_id, 0, v_link_id, v_rec.arc_id) 
 				on conflict do nothing;
-				INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (NEW.connec_id,  NEW.psector_id, 1, NULL, NULL) 
+				INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (NEW.connec_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
 				on conflict do nothing;
+
+				-- first degree of connections
+				FOR v_record IN SELECT * FROM link WHERE exit_id = v_rec.connec_id AND state = 1
+				LOOP 
+					-- inserting new link/connect on psector
+					IF v_project_type = 'WS' THEN
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+						exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+						SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id,  exit_elev,
+						expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE link_id = v_record.link_id
+						RETURNING link_id INTO v_link_new;
+
+					ELSIF v_project_type = 'UD' THEN
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+						exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id)
+						SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
+						expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id FROM link WHERE link_id = v_record.link_id
+						RETURNING link_id INTO v_link_new;
+					END IF;
+
+					UPDATE link SET state = 2 where link_id = v_link_new;
+
+					IF v_record.feature_type = 'CONNEC' THEN
+						INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 0, v_record.link_id, v_rec.arc_id) 
+						on conflict do nothing;
+						INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+						on conflict do nothing;
+						
+					ELSIF v_record.feature_type = 'GULLY' THEN
+						INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 0, v_record.link_id, v_rec.arc_id) 
+						on conflict do nothing;
+						INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+						on conflict do nothing;
+					END IF;
+
+					-- second dregree of connectios 
+					FOR v_record_2 IN SELECT * FROM link WHERE exit_id = v_record.feature_id AND state = 1
+					LOOP 
+						-- inserting new link/connect on psector
+						IF v_project_type = 'WS' THEN
+							INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+							exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+							SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id,  exit_elev,
+							expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE link_id = v_record_2.link_id
+							RETURNING link_id INTO v_link_new;
+
+						ELSIF v_project_type = 'UD' THEN
+							INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+							exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id)
+							SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
+							expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id FROM link WHERE link_id = v_record_2.link_id
+							RETURNING link_id INTO v_link_new;
+						END IF;
+
+						UPDATE link SET state = 2 where link_id = v_link_new;
+					
+						IF v_record_2.feature_type = 'CONNEC' THEN
+							INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 0, v_record_2.link_id, v_rec.arc_id) 
+							on conflict do nothing;
+							INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+							on conflict do nothing;
+							
+						ELSIF v_record_2.feature_type = 'GULLY' THEN
+							INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 0, v_record_2.link_id, v_rec.arc_id) 
+							on conflict do nothing;
+							INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+							on conflict do nothing;
+						END IF;
+					END LOOP;
+				END LOOP;		
 				
 			ELSIF v_rec.state = 2 THEN
 				INSERT INTO plan_psector_x_connec (connec_id, psector_id, state) values (NEW.connec_id,  NEW.psector_id, 1)
@@ -44,17 +142,96 @@ BEGIN
 		
 		ELSIF v_table = 'plan_psector_x_gully' THEN
 
-			EXECUTE 'SELECT state, arc_id FROM gully where gully_id = '''||new.gully_id||''''
+			EXECUTE 'SELECT gully_id, state, arc_id FROM gully where gully_id = '''||new.gully_id||''''
 			INTO v_rec;
 			
-			v_link_id = (select link_id from link where feature_id = new.gully_id and feature_type = 'GULLY' AND exit_id = v_rec.arc_id LIMIT 1);
+			v_link_id = (select link_id from link where feature_id = new.gully_id and feature_type = 'GULLY'  and link.state = 1 LIMIT 1);
 
 			--inserting on tables
 			IF v_rec.state =  1 THEN
+
+				-- inserting new link on psector
+				INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+				exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id)
+				SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
+				expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id FROM link WHERE state=1 AND feature_id = v_rec.gully_id
+				RETURNING link_id INTO v_link_new;
+				UPDATE link SET state = 2 where link_id = v_link_new;
+
 				INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (NEW.gully_id,  NEW.psector_id, 0, v_link_id, v_rec.arc_id) 
 				on conflict do nothing;
-				INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (NEW.gully_id,  NEW.psector_id, 1, NULL, NULL) 
+				INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (NEW.gully_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
 				on conflict do nothing;
+				
+				-- first degree of connections
+				FOR v_record IN SELECT * FROM link WHERE exit_id = v_rec.gully_id AND state = 1
+				LOOP 
+					-- inserting new link/connect on psector
+					IF v_project_type = 'WS' THEN
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+						exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+						SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id,  exit_elev,
+						expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE link_id = v_record.link_id
+						RETURNING link_id INTO v_link_new;
+
+					ELSIF v_project_type = 'UD' THEN
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+						exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id)
+						SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
+						expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id FROM link WHERE link_id = v_record.link_id
+						RETURNING link_id INTO v_link_new;
+					END IF;
+
+					UPDATE link SET state = 2 where link_id = v_link_new;
+				
+					IF v_record.feature_type = 'CONNEC' THEN
+						INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 0, v_link_id, v_rec.arc_id) 
+						on conflict do nothing;
+						INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+						on conflict do nothing;
+						
+					ELSIF v_record.feature_type = 'GULLY' THEN
+						INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 0, v_link_id, v_rec.arc_id) 
+						on conflict do nothing;
+						INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+						on conflict do nothing;
+					END IF;
+
+					-- second dregree of connectios 
+					FOR v_record_2 IN SELECT * FROM link WHERE exit_id = v_record.feature_id AND state = 1
+					LOOP 
+						-- inserting new link/connect on psector
+						IF v_project_type = 'WS' THEN
+							INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+							exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate)
+							SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, presszone_id, dqa_id, minsector_id,  exit_elev,
+							expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate FROM link WHERE link_id = v_record_2.link_id
+							RETURNING link_id INTO v_link_new;
+
+						ELSIF v_project_type = 'UD' THEN
+							INSERT INTO link (feature_id, feature_type, exit_id, exit_type, userdefined_geom, state, expl_id, the_geom, 
+							exit_topelev, sector_id, dma_id, fluid_type, exit_elev, expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id)
+							SELECT feature_id, feature_type, exit_id, exit_type, userdefined_geom, 2, expl_id, the_geom, exit_topelev, sector_id, dma_id, fluid_type, exit_elev,
+							expl_id2, epa_type, is_operative, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, drainzone_id FROM link WHERE link_id = v_record_2.link_id
+							RETURNING link_id INTO v_link_new;
+						END IF;
+
+						UPDATE link SET state = 2 where link_id = v_link_new;
+					
+						IF v_record_2.feature_type = 'CONNEC' THEN
+							INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 0, v_link_id, v_rec.arc_id) 
+							on conflict do nothing;
+							INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+							on conflict do nothing;
+							
+						ELSIF v_record_2.feature_type = 'GULLY' THEN
+							INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 0, v_link_id, v_rec.arc_id) 
+							on conflict do nothing;
+							INSERT INTO plan_psector_x_gully (gully_id, psector_id, state, link_id, arc_id) values (v_record_2.feature_id,  NEW.psector_id, 1, v_link_new, v_rec.arc_id) 
+							on conflict do nothing;
+						END IF;
+					END LOOP;
+				END LOOP;
 				
 			ELSIF v_rec.state = 2 THEN
 				INSERT INTO plan_psector_x_gully (gully_id, psector_id, state) values (NEW.gully_id,  NEW.psector_id, 1)

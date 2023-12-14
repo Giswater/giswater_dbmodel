@@ -216,8 +216,8 @@ BEGIN
 
 			execute 'SELECT row_to_json(row) FROM (SELECT 
 				CASE
-				WHEN st_geometrytype(st_concavehull(d.the_geom, 0.99::double precision)) = ''ST_Polygon''::text THEN st_astext(st_buffer(st_concavehull(d.the_geom, 0.99::double precision), 10::double precision)::geometry(Polygon, 25831))
-				ELSE st_astext(st_expand(st_buffer(d.the_geom, 10::double precision), 1::double precision)::geometry(Polygon, 25831))
+				WHEN st_geometrytype(st_concavehull(d.the_geom, 0.99::double precision)) = ''ST_Polygon''::text THEN st_astext(st_buffer(st_concavehull(d.the_geom, 0.99::double precision), 10::double precision)::geometry(Polygon, '||v_srid||'))
+				ELSE st_astext(st_expand(st_buffer(d.the_geom, 10::double precision), 1::double precision)::geometry(Polygon, '||v_srid||'))
 				END AS st_astext
 			
 				FROM (SELECT st_collect(a.the_geom) AS the_geom, a.workcat_id FROM (  SELECT node.workcat_id, node.the_geom FROM node WHERE node.state = 1
@@ -440,7 +440,7 @@ BEGIN
 				concat ('||quote_ident(v_hydro_layer)||'.'||quote_ident(v_hydro_search_field_1)||','' - '',
 				'||quote_ident(v_hydro_layer)||'.'||quote_ident(v_hydro_search_field_2)||','' - '',
 				'||quote_ident(v_hydro_layer)||'.'||quote_ident(v_hydro_search_field_3)||')
-				 AS display_name, '||quote_literal(v_hydro_layer)||' AS sys_table_id, '||quote_literal(v_hydro_id_field)||' AS sys_idname
+				 AS display_name, '||quote_literal(v_hydro_layer)||' AS sys_table_id, '||quote_literal(v_hydro_id_field)||' AS sys_idname, '||quote_ident(v_hydro_feature_field)||' AS sys_connec_id
 				FROM '||quote_ident(v_hydro_layer)||'
 				JOIN connec ON (connec.connec_id = '||quote_ident(v_hydro_layer)||'.'||quote_ident(v_hydro_feature_field)||')
 				WHERE '||quote_ident(v_hydro_layer)||'.'||quote_ident(v_exploitation_display_field)||' = '||quote_literal(v_name)||'

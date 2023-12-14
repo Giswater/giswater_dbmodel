@@ -78,7 +78,7 @@ BEGIN
 	-- get input data
 	v_debugmode := ((p_data ->>'data')::json->>'parameters')::json->>'debugMode'::text;
 	
-	IF (select count(*) from SCHEMA_NAME.temp_csv where CSV1 = ';Created by Giswater') = 1 THEN
+	IF (select count(*) from temp_csv where CSV1 = ';Created by Giswater') = 1 THEN
 		v_isgwproject := TRUE;
 	END IF;
 
@@ -112,9 +112,6 @@ BEGIN
 			
 			DELETE FROM rpt_cat_result;
 			DELETE FROM config_graph_valve;
-
-			-- Disable constraints
-			PERFORM gw_fct_admin_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"}}$$);
 
 			-- Delete system and user catalogs
 			DELETE FROM macroexploitation;
@@ -173,10 +170,7 @@ BEGIN
 			DELETE FROM rpt_inp_arc;
 			DELETE FROM rpt_inp_node;
 			DELETE FROM rpt_cat_result;
-			DELETE FROM config_graph_inlet;
-		ELSE 
-			-- Disable constraints
-			PERFORM gw_fct_admin_manage_ct($${"client":{"lang":"ES"}, "data":{"action":"DROP"}}$$);		
+			DELETE FROM config_graph_inlet;	
 		END IF;
 		
 		-- check for network object id string length
@@ -406,18 +400,6 @@ BEGIN
 			INSERT INTO inp_junction SELECT csv1, csv3::numeric(12,6), csv4::varchar(16) FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 			INSERT INTO man_junction SELECT csv1 FROM temp_csv where source='[JUNCTIONS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 
-			-- improve velocity for pipes using directy tables in spite of vi_pipes view
-			INSERT INTO arc (arc_id, node_1, node_2, custom_length, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type, presszone_id) 
-			SELECT csv1, csv2, csv3, csv4::numeric(12,3), concat((csv6::numeric(12,3))::text,'-',(csv5::numeric(12,3))::text), 'PIPE', 1, 1, 1, 1, 2, 1 
-			FROM temp_csv where source='[PIPES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user order by 1;
-			INSERT INTO inp_pipe (arc_id, minorloss, status) 
-			SELECT csv1, csv7::numeric(12,6), upper(csv8) FROM temp_csv where source='[PIPES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
-
-			-- delete those custom_length with same value of real_length
-			UPDATE arc SET custom_length = null WHERE custom_length::numeric(12,3) <> (st_length(the_geom))::numeric(12,3);
-			
-			INSERT INTO man_pipe SELECT csv1 FROM temp_csv where source='[PIPES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
-			
 			-- insert controls
 			INSERT INTO inp_controls (sector_id, text, active)
 			select 1, csv1, true FROM temp_csv where source='[CONTROLS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';-%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
@@ -425,10 +407,27 @@ BEGIN
 			-- insert rules
 			INSERT INTO inp_rules (sector_id, text, active)
 			select 1, csv1, true FROM temp_csv where source='[RULES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';-%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+		
+			-- insert reservoirs
+			INSERT INTO node (node_id, elevation, nodecat_id,epa_type,sector_id, dma_id, expl_id, state, state_type) 
+			select csv1, csv2::numeric(12,3), 'RESERVOIR','RESERVOIR',1,1,1,1,2 FROM temp_csv where source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			INSERT INTO inp_reservoir (node_id, pattern_id) select csv1, csv3 FROM temp_csv where source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			INSERT INTO man_source(node_id) select csv1 FROM temp_csv where source='[RESERVOIRS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+		
+			-- insert tanks
+			INSERT INTO node (node_id, elevation, nodecat_id, epa_type,sector_id, dma_id, expl_id, state, state_type) 
+			select csv1, csv2::numeric(12,3), 'TANK','TANK',1,1,1,1,2 FROM temp_csv where source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			
+			INSERT INTO inp_tank (node_id, initlevel, minlevel, maxlevel, diameter, minvol, curve_id, overflow) 
+			SELECT csv1, csv3::numeric(12,3), csv4::numeric(12,3), csv5::numeric(12,3), csv6::numeric(12,3), csv7::numeric(12,3), NULL, NULL FROM temp_csv where source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
+			
+			INSERT INTO man_tank (node_id) 
+			select csv1 FROM temp_csv where source='[TANKS]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%' AND csv1 NOT LIKE ';text') AND cur_user=current_user order by 1;
 
 
 			-- LOOPING THE EDITABLE VIEWS TO INSERT DATA
-			FOR v_rec_table IN SELECT * FROM config_fprocess WHERE fid=v_fid AND tablename NOT IN ('vi_pipes', 'vi_junctions', 'v_valves', 'vi_status', 'vi_controls', 'vi_rules', 'vi_coordinates') order by orderby
+			FOR v_rec_table IN SELECT * FROM config_fprocess WHERE fid=v_fid AND tablename 
+			NOT IN ('vi_tanks', 'vi_reservoirs', 'vi_pipes', 'vi_junctions', 'vi_valves', 'vi_status', 'vi_controls', 'vi_rules', 'vi_coordinates') order by orderby
 			LOOP
 				--identifing the number of fields of the editable view
 				FOR v_rec_view IN SELECT row_number() over (order by v_rec_table.tablename) as rid, column_name, data_type from information_schema.columns 
@@ -454,6 +453,18 @@ BEGIN
 				EXECUTE v_sql;
 				
 			END LOOP;
+		
+			-- improve velocity for pipes using directy tables in spite of vi_pipes view
+			INSERT INTO arc (arc_id, node_1, node_2, custom_length, arccat_id, epa_type, sector_id, dma_id, expl_id, state, state_type, presszone_id) 
+			SELECT csv1, csv2, csv3, csv4::numeric(12,3), concat((csv6::numeric(12,3))::text,'-',(csv5::numeric(12,3))::text), 'PIPE', 1, 1, 1, 1, 2, 1 
+			FROM temp_csv where source='[PIPES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user order by 1;
+			INSERT INTO inp_pipe (arc_id, minorloss, status) 
+			SELECT csv1, csv7::numeric(12,6), upper(csv8) FROM temp_csv where source='[PIPES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
+
+			-- delete those custom_length with same value of real_length
+			UPDATE arc SET custom_length = null WHERE custom_length::numeric(12,3) <> (st_length(the_geom))::numeric(12,3);
+			
+			INSERT INTO man_pipe SELECT csv1 FROM temp_csv where source='[PIPES]' AND fid = 239  AND (csv1 NOT LIKE '[%' AND csv1 NOT LIKE ';%') AND cur_user=current_user;
 
 			-- update coordinates
 			UPDATE node SET the_geom=ST_SetSrid(ST_MakePoint(csv2::numeric,csv3::numeric),v_epsg)
@@ -498,6 +509,8 @@ BEGIN
 
 			IF v_isgwproject THEN -- manage pumps & valves as a reverse nod2arc. It means transforming lines into points reversing sintaxis applied on Giswater exportation
 
+				-- set node topocontrol=false
+				UPDATE config_param_system SET value='{"activated":false,"value":0.1}' WHERE "parameter"='edit_node_proximity';
 
 				FOR v_data IN SELECT * FROM arc WHERE arc_id like '%_n2a' OR arc_id like '%_n2a_5'
 				LOOP
@@ -608,6 +621,10 @@ BEGIN
 
 				INSERT INTO audit_check_data (fid, criticity, error_message) VALUES (239, 1, 
 				'INFO: Link geometries from VALVES AND PUMPS have been transformed using reverse nod2arc strategy as nodes. Geometry from arcs and nodes are saved using state=0');
+			
+				-- set node topocontrol=true
+				UPDATE config_param_system SET value='{"activated":true,"value":0.1}' WHERE "parameter"='edit_node_proximity';
+			
 			END IF;
 
 
@@ -654,13 +671,10 @@ BEGIN
 			RAISE NOTICE 'step-6/7';
 			INSERT INTO audit_check_data (fid, criticity, error_message) VALUES (239, 1, 'INFO: Creating arc geometries -> Done');
 
-			-- Enable constraints
-			PERFORM gw_fct_admin_manage_ct($${"client":{"lang":"ES"},"data":{"action":"ADD"}}$$);
-
 			IF v_isgwproject THEN -- Reconnect those arcs connected to dissapeared nodarcs to the new node
 
 				-- reconnect presspumps
-				FOR v_node_id, v_newnode, v_oldarc IN SELECT  node_id, replace (node_id, '_n2a_2', ''), replace (node_id, '_n2a_2', '_n2a_4') FROM node where substring(reverse(node_id),1,2) = '2_'
+				FOR v_node_id, v_newnode, v_oldarc IN SELECT  node_id, replace (node_id, '_n2a_2', ''), replace (node_id, '_n2a_2', '_n2a_4') FROM node where substring(reverse(node_id),1,2) = '3_'
 				LOOP
 					UPDATE arc SET node_1=v_newnode WHERE node_1=v_node_id;
 					UPDATE arc SET node_2=v_newnode WHERE node_2=v_node_id;

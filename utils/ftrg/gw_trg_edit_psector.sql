@@ -25,6 +25,7 @@ v_state_obsolete_planified integer;
 v_affectrow integer;
 v_psector_geom geometry;
 v_action text;
+v_plan_psector_force_delete text;
 
 BEGIN
 
@@ -100,28 +101,56 @@ BEGIN
 			v_psector_geom = (SELECT the_geom FROM plan_psector WHERE psector_id=NEW.psector_id);
 		
 			-- copy values into traceability tables
-			INSERT INTO audit_psector_arc_traceability
-			SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, 'Execute psector', arc.*
-			FROM plan_psector_x_arc pa JOIN arc USING (arc_id) 
-			WHERE psector_id=NEW.psector_id;
-		
-			INSERT INTO audit_psector_node_traceability
-			SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, 'Execute psector', node.*
-			FROM plan_psector_x_node pn JOIN node USING (node_id) 
-			WHERE psector_id=NEW.psector_id;
-		
 			INSERT INTO audit_psector_connec_traceability
 			SELECT nextval('SCHEMA_NAME.audit_psector_connec_traceability_id_seq'), psector_id, pc.state, doable, pc.arc_id, l.link_id, l.the_geom, now(), current_user, 'Execute psector', connec.*
 			FROM plan_psector_x_connec pc JOIN connec USING (connec_id)
 			JOIN link l USING (link_id)
 			WHERE psector_id=NEW.psector_id;
+
+			IF v_projectype = 'WS' THEN
+
+				-- arc & node insert is different from ud because UD has legacy of _sys_length & _sys_elev and the impossibility to remove it from old production environments
+				INSERT INTO audit_psector_arc_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, 'Execute psector', arc.*
+				FROM plan_psector_x_arc pa JOIN arc USING (arc_id) 
+				WHERE psector_id=NEW.psector_id;
+
+				INSERT INTO audit_psector_node_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, 'Execute psector', node.*
+				FROM plan_psector_x_node pn JOIN node USING (node_id) 
+				WHERE psector_id=NEW.psector_id;
 		
-			IF v_projectype = 'UD' THEN
+			ELSIF v_projectype = 'UD' THEN
+
+				-- arc & node insert is different from ws because legacy of _sys_length & _sys_elev and the impossibility to remove it from old production environments
+				INSERT INTO audit_psector_arc_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, 'Execute psector',
+				a.arc_id,code,node_1,node_2,y1,y2,elev1,elev2,custom_y1,custom_y2,custom_elev1,custom_elev2,sys_elev1,sys_elev2,arc_type,arccat_id,
+				matcat_id,epa_type,sector_id,a.state,state_type,annotation,observ,comment,sys_slope,inverted_slope,custom_length,dma_id,soilcat_id,
+				function_type,category_type,fluid_type,location_type,workcat_id,workcat_id_end,buildercat_id,builtdate,enddate,ownercat_id,muni_id,
+				postcode,streetaxis_id,postnumber,postcomplement,streetaxis2_id,postnumber2,postcomplement2,a.descript,link,verified,the_geom,undelete,
+				label_x,label_y,label_rotation,publish,inventory,uncertain,expl_id,num_value,feature_type,tstamp,lastupdate,lastupdate_user,a.insert_user,
+				district_id,workcat_id_plan,asset_id,pavcat_id,drainzone_id,nodetype_1,node_sys_top_elev_1,node_sys_elev_1,nodetype_2,node_sys_top_elev_2,
+				node_sys_elev_2,parent_id,expl_id2, adate, adescript	
+				FROM plan_psector_x_arc pa JOIN arc a USING (arc_id) 
+				WHERE psector_id=NEW.psector_id;
+
+				INSERT INTO audit_psector_node_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, 'Execute psector', 
+				n.node_id,code,top_elev,ymax,elev,custom_top_elev,custom_ymax,custom_elev,node_type,nodecat_id,epa_type,sector_id,n.state,state_type,annotation,observ,
+				comment,dma_id,soilcat_id,function_type,category_type,fluid_type,location_type,workcat_id,workcat_id_end,buildercat_id,builtdate,enddate,ownercat_id,
+				muni_id,postcode,streetaxis_id,postnumber,postcomplement,streetaxis2_id,postnumber2,postcomplement2,n.descript,rotation,link,verified,the_geom,undelete,
+				label_x,label_y,label_rotation,publish,inventory,xyz_date,uncertain,unconnected,expl_id,num_value,feature_type,tstamp,arc_id,lastupdate,lastupdate_user,
+				n.insert_user,matcat_id,district_id,workcat_id_plan,asset_id,drainzone_id,parent_id,expl_id2, adate, adescript
+				FROM plan_psector_x_node pn JOIN node n USING (node_id) 
+				WHERE psector_id=NEW.psector_id;
+			
 				INSERT INTO audit_psector_gully_traceability
 				SELECT nextval('SCHEMA_NAME.audit_psector_gully_traceability_id_seq'), psector_id, pg.state, doable, pg.arc_id, l.link_id, l.the_geom, now(), current_user, 'Execute psector', gully.*
 				FROM plan_psector_x_gully pg JOIN gully USING (gully_id)
 				JOIN link l USING (link_id)
 				WHERE psector_id=NEW.psector_id;
+				
 			END IF;
 
 			-- get state_type default values
@@ -237,6 +266,14 @@ BEGIN
 						AND p.state = 1 AND p.psector_id='||OLD.psector_id||' AND n.'||lower(rec_type.id)||'_id = '''||rec.id||'''
 						AND n.pjoint_type=''NODE'';';
 					
+						-- set pjoint_id when pjoint_type=ARC getting it from exit_id on planified link
+						EXECUTE 'UPDATE '||lower(rec_type.id)||' n SET pjoint_id = link.exit_id
+						FROM plan_psector_x_'||lower(rec_type.id)||' p 
+						JOIN link USING (link_id)
+						WHERE n.'||lower(rec_type.id)||'_id = p.'||lower(rec_type.id)||'_id 
+						AND p.state = 1 AND p.psector_id='||OLD.psector_id||' AND n.'||lower(rec_type.id)||'_id = '''||rec.id||'''
+						AND n.pjoint_type=''ARC'';';
+					
 						-- set links to state 0 when its connec is 0 on psector
 						EXECUTE 'UPDATE link SET state=0
 						FROM plan_psector_x_'||lower(rec_type.id)||' p WHERE link.link_id = p.link_id 
@@ -265,8 +302,8 @@ BEGIN
 				DELETE FROM config_param_user WHERE parameter='edit_connect_downgrade_link' AND cur_user=current_user;
 			END IF;
 		
-			-- reset psector geometry
-			UPDATE plan_psector SET the_geom=v_psector_geom WHERE psector_id=NEW.psector_id;
+			-- reset psector geometry and set inactive
+			UPDATE plan_psector SET the_geom=v_psector_geom, active=false WHERE psector_id=NEW.psector_id;
 
 			--reset topology control
 			UPDATE config_param_user SET value = 'false' WHERE parameter='edit_disable_statetopocontrol' AND cur_user=current_user;
@@ -285,39 +322,74 @@ BEGIN
 			END IF;
 
 			-- copy values into traceability tables
-			INSERT INTO audit_psector_arc_traceability
-			SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, v_action, arc.*
-			FROM plan_psector_x_arc pa JOIN arc USING (arc_id) 
-			WHERE psector_id=NEW.psector_id;
-		
-			INSERT INTO audit_psector_node_traceability
-			SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, v_action, node.*
-			FROM plan_psector_x_node pn JOIN node USING (node_id) 
-			WHERE psector_id=NEW.psector_id;
-		
 			INSERT INTO audit_psector_connec_traceability
 			SELECT nextval('SCHEMA_NAME.audit_psector_connec_traceability_id_seq'), psector_id, pc.state, doable, pc.arc_id, l.link_id, l.the_geom, now(), current_user, v_action, connec.*
 			FROM plan_psector_x_connec pc JOIN connec USING (connec_id)
 			JOIN link l USING (link_id)
 			WHERE psector_id=NEW.psector_id;
+
+			IF v_projectype = 'WS' THEN
+
+				-- arc & node insert is different from ud because UD has legacy of _sys_length & _sys_elev and the impossibility to remove it from old production environments
+				INSERT INTO audit_psector_arc_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, v_action, arc.*
+				FROM plan_psector_x_arc pa JOIN arc USING (arc_id) 
+				WHERE psector_id=NEW.psector_id;
+
+				INSERT INTO audit_psector_node_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, v_action, node.*
+				FROM plan_psector_x_node pn JOIN node USING (node_id) 
+				WHERE psector_id=NEW.psector_id;
 		
-			IF v_projectype = 'UD' THEN
+			ELSIF v_projectype = 'UD' THEN
+
+				-- arc & node insert is different from ws because legacy of _sys_length & _sys_elev and the impossibility to remove it from old production environments
+				INSERT INTO audit_psector_arc_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, v_action,
+				a.arc_id,code,node_1,node_2,y1,y2,elev1,elev2,custom_y1,custom_y2,custom_elev1,custom_elev2,sys_elev1,sys_elev2,arc_type,arccat_id,
+				matcat_id,epa_type,sector_id,a.state,state_type,annotation,observ,comment,sys_slope,inverted_slope,custom_length,dma_id,soilcat_id,
+				function_type,category_type,fluid_type,location_type,workcat_id,workcat_id_end,buildercat_id,builtdate,enddate,ownercat_id,muni_id,
+				postcode,streetaxis_id,postnumber,postcomplement,streetaxis2_id,postnumber2,postcomplement2,a.descript,link,verified,the_geom,undelete,
+				label_x,label_y,label_rotation,publish,inventory,uncertain,expl_id,num_value,feature_type,tstamp,lastupdate,lastupdate_user,a.insert_user,
+				district_id,workcat_id_plan,asset_id,pavcat_id,drainzone_id,nodetype_1,node_sys_top_elev_1,node_sys_elev_1,nodetype_2,node_sys_top_elev_2,
+				node_sys_elev_2,parent_id,expl_id2, adate, adescript	
+				FROM plan_psector_x_arc pa JOIN arc a USING (arc_id) 
+				WHERE psector_id=NEW.psector_id;
+
+				INSERT INTO audit_psector_node_traceability
+				SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, v_action, 
+				n.node_id,code,top_elev,ymax,elev,custom_top_elev,custom_ymax,custom_elev,node_type,nodecat_id,epa_type,sector_id,n.state,state_type,annotation,observ,
+				comment,dma_id,soilcat_id,function_type,category_type,fluid_type,location_type,workcat_id,workcat_id_end,buildercat_id,builtdate,enddate,ownercat_id,
+				muni_id,postcode,streetaxis_id,postnumber,postcomplement,streetaxis2_id,postnumber2,postcomplement2,n.descript,rotation,link,verified,the_geom,undelete,
+				label_x,label_y,label_rotation,publish,inventory,xyz_date,uncertain,unconnected,expl_id,num_value,feature_type,tstamp,arc_id,lastupdate,lastupdate_user,
+				n.insert_user,matcat_id,district_id,workcat_id_plan,asset_id,drainzone_id,parent_id,expl_id2, adate, adescript
+				FROM plan_psector_x_node pn JOIN node n USING (node_id) 
+				WHERE psector_id=NEW.psector_id;
+			
 				INSERT INTO audit_psector_gully_traceability
 				SELECT nextval('SCHEMA_NAME.audit_psector_gully_traceability_id_seq'), psector_id, pg.state, doable, pg.arc_id, l.link_id, l.the_geom, now(), current_user, v_action, gully.*
 				FROM plan_psector_x_gully pg JOIN gully USING (gully_id)
 				JOIN link l USING (link_id)
 				WHERE psector_id=NEW.psector_id;
+				
 			END IF;
 		
+			-- get v_plan_psector_force_delete and set to true in order to also delete from arc/node/connec when delete from plan_psector_x_*
+			SELECT value INTO v_plan_psector_force_delete FROM config_param_user WHERE parameter='plan_psector_force_delete' AND cur_user=current_user;
+			UPDATE config_param_user SET value='true' WHERE parameter='plan_psector_force_delete' AND cur_user=current_user;
+		
 			-- delete from plan_psector_x_* tables
-			FOR rec_type IN (SELECT * FROM sys_feature_type WHERE classlevel = 1 OR classlevel = 2 ORDER BY id asc) LOOP
+			FOR rec_type IN (SELECT * FROM sys_feature_type WHERE classlevel IN (1,2) ORDER BY id asc) LOOP
 				-- delete from psector_x_*
 				EXECUTE 'DELETE FROM plan_psector_x_'||lower(rec_type.id)||' 
 				WHERE psector_id = '||OLD.psector_id||';';
 			END LOOP;
 			
-			-- reset psector geometry
-			UPDATE plan_psector SET the_geom=v_psector_geom WHERE psector_id=NEW.psector_id;
+			-- reset psector geometry and set inactive
+			UPDATE plan_psector SET the_geom=v_psector_geom, active=false WHERE psector_id=NEW.psector_id;
+		
+			-- reset plan_psector_force_delete
+			UPDATE config_param_user SET value=v_plan_psector_force_delete WHERE parameter='plan_psector_force_delete' AND cur_user=current_user;
 		
 		END IF;
 	END IF;
