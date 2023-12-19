@@ -120,3 +120,61 @@ UPDATE config_form_fields SET widgetcontrols='{"labelPosition": "top"}'::json WH
 
 -- 13/12/2023
 INSERT INTO config_param_system ("parameter", value, descript, "label", dv_querytext, dv_filterbyfield, isenabled, layoutorder, project_type, dv_isparent, isautoupdate, "datatype", widgettype, ismandatory, iseditable, dv_orderby_id, dv_isnullvalue, stylesheet, widgetcontrols, placeholder, standardvalue, layoutname) VALUES('basic_search_hydrometer_show_connec', 'FALSE', 'If the variable is set to False, the workflow remains as it is right now (open basic form). If variable is set to True, you have to make an infofromid to the specific connec, directly in the "hydrometer" tab.', 'Show connec hydrometer:', NULL, NULL, true, 16, 'utils', NULL, NULL, 'boolean', 'check', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'lyt_admin_other');
+
+-- 19/12/2023
+UPDATE config_form_list SET listname='tbl_inp_dscenario_virtualvalve' WHERE listname='tbl_inp_virtualvalve' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_connec' WHERE listname='tbl_inp_connec' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_inlet' WHERE listname='tbl_inp_inlet' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_junction' WHERE listname='tbl_inp_junction' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_pipe' WHERE listname='tbl_inp_pipe' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_pump' WHERE listname='tbl_inp_pump' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_reservoir' WHERE listname='tbl_inp_reservoir' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_shortpipe' WHERE listname='tbl_inp_shortpipe' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_tank' WHERE listname='tbl_inp_tank' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_valve' WHERE listname='tbl_inp_valve' AND device=4;
+UPDATE config_form_list SET listname='tbl_inp_dscenario_virtualpump' WHERE listname='tbl_inp_virtualpump' AND device=4;
+
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_connec' WHERE formname='ve_epa_connec' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_inlet' WHERE formname='ve_epa_inlet' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_connec' WHERE formname='ve_epa_connec' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_junction' WHERE formname='ve_epa_junction' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pipe' WHERE formname='ve_epa_pipe' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pump' WHERE formname='ve_epa_pump' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_reservoir' WHERE formname='ve_epa_reservoir' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_shortpipe' WHERE formname='ve_epa_shortpipe' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_inlet' WHERE formname='ve_epa_inlet' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_junction' WHERE formname='ve_epa_junction' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pipe' WHERE formname='ve_epa_pipe' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pump' WHERE formname='ve_epa_pump' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_tank' WHERE formname='ve_epa_tank' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_valve' WHERE formname='ve_epa_valve' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualpump' WHERE formname='ve_epa_virtualpump' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualvalve' WHERE formname='ve_epa_virtualvalve' AND formtype='form_feature' AND columnname='hspacer_epa_1' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_tank' WHERE formname='ve_epa_tank' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_valve' WHERE formname='ve_epa_valve' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualpump' WHERE formname='ve_epa_virtualpump' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_junction' WHERE formname='ve_epa_junction' AND formtype='form_feature' AND columnname='tbl_inp_junction' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pipe' WHERE formname='ve_epa_pipe' AND formtype='form_feature' AND columnname='tbl_inp_pipe' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pump' WHERE formname='ve_epa_pump' AND formtype='form_feature' AND columnname='tbl_inp_pump' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_shortpipe' WHERE formname='ve_epa_shortpipe' AND formtype='form_feature' AND columnname='tbl_inp_shortpipe' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_tank' WHERE formname='ve_epa_tank' AND formtype='form_feature' AND columnname='tbl_inp_tank' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_reservoir' WHERE formname='ve_epa_reservoir' AND formtype='form_feature' AND columnname='tbl_inp_reservoir' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_valve' WHERE formname='ve_epa_valve' AND formtype='form_feature' AND columnname='tbl_inp_valve' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualvalve' WHERE formname='ve_epa_virtualvalve' AND formtype='form_feature' AND columnname='tbl_inp_virtualvalve' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_connec' WHERE formname='ve_epa_connec' AND formtype='form_feature' AND columnname='tbl_inp_connec' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pump' WHERE formname='ve_epa_virtualpump' AND formtype='form_feature' AND columnname='tbl_inp_pump' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_inlet' WHERE formname='ve_epa_inlet' AND formtype='form_feature' AND columnname='tbl_inp_inlet' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_inlet' WHERE formname='ve_epa_inlet' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_reservoir' WHERE formname='ve_epa_reservoir' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_shortpipe' WHERE formname='ve_epa_shortpipe' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualvalve' WHERE formname='ve_epa_virtualvalve' AND formtype='form_feature' AND columnname='remove_from_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pump' WHERE formname='ve_epa_pump' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_connec' WHERE formname='ve_epa_connec' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_junction' WHERE formname='ve_epa_junction' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_pipe' WHERE formname='ve_epa_pipe' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_reservoir' WHERE formname='ve_epa_reservoir' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_shortpipe' WHERE formname='ve_epa_shortpipe' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_tank' WHERE formname='ve_epa_tank' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_valve' WHERE formname='ve_epa_valve' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualpump' WHERE formname='ve_epa_virtualpump' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
+UPDATE config_form_fields SET linkedobject='tbl_inp_dscenario_virtualvalve' WHERE formname='ve_epa_virtualvalve' AND formtype='form_feature' AND columnname='add_to_dscenario' AND tabname='tab_epa';
