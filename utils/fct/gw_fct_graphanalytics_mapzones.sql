@@ -813,7 +813,7 @@ BEGIN
 				LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE '||(v_field)||'::integer > 0 GROUP BY '||(v_field)||')c USING ('||(v_field)||')
 				LEFT JOIN (SELECT '||(v_field)||', count(*) as gullies FROM temp_t_gully g WHERE '||(v_field)||'::integer > 0  GROUP BY '||(v_field)||')d USING ('||(v_field)||')
 				JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field)||'
-				WHERE a.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone);
+				WHERE e.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone);
 				EXECUTE v_querytext;
 			ELSE
 				v_querytext = ' INSERT INTO temp_audit_check_data (fid, criticity, error_message)
