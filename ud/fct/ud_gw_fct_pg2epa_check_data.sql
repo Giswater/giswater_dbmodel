@@ -18,8 +18,8 @@ $BODY$
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":127}}}$$)-- when is called from go2epa_main
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":101}}}$$)-- when is called from checkproject
 
--- fid: main: 255,
-	other: 106,107,111,113,164,175,187,188,294,295,379,427,430,440,480, 522
+-- fid: main: 225,
+	other: 106,107,111,113,164,175,187,188,294,295,379,427,430,440,480,522
 
 SELECT * FROM audit_check_data WHERE fid = v_fid
 
@@ -637,8 +637,68 @@ BEGIN
 		group by node.node_id having count(node.node_id)>1';
 	END IF;
 	v_count=0;
+	
+RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id is a node) or in v_edit_inp_subcatchment (if outlet_id is a subcathment)';
+	
+	v_querytext = '(select outlet_id from v_edit_inp_subc2outlet where outlet_type = ''JUNCTION'' AND outlet_id not in (select node_id from v_edit_inp_junction) union
+	select outlet_id from v_edit_inp_subc2outlet where outlet_type = ''SUBCATCHMENT'' AND outlet_id not in (select subc_id from v_edit_inp_subcatchment))';
+	
+	EXECUTE concat('SELECT count(*) FROM ',v_querytext, 'a') INTO v_count;
+	
+	IF v_count>0 then
+		EXECUTE concat ('INSERT INTO temp_anl_node (fid, node_id, descript, the_geom) 
+		SELECT 528, subc_id, ''Non-existing outlet_id related to subcatchment'', st_startpoint(the_geom) from v_edit_inp_subc2outlet where outlet_id in ', v_querytext);
+		
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '528', 3, concat('ERROR-528 (anl_node): There is/are ',v_count,' non-existing node_id or subc_id as an outlet_id.'),v_count);
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '528', 1, 'INFO: All subcatchments have an existing outlet_id',v_count);
+	END IF;
+	v_count=0;
 
+	
+	RAISE NOTICE '529 - Check null values on inp_weir';
+	v_querytext='(select arc_id, weir_type, cd, geom1, geom2, offsetval from v_edit_inp_weir 
+	where weir_type is null or cd is null or geom1 is null or geom2 is null or offsetval is null)';
 
+	execute concat('select count(*) from ', v_querytext, 'a') into v_count;
+	
+	IF v_count>0 then 
+		EXECUTE 'INSERT INTO temp_anl_arc (fid, arc_id, descript, the_geom) 
+		SELECT 529, arc_id, ''Missing values on some data of Inp Weir (weir_type, cd, geom1, geom2, offsetval)'', the_geom from v_edit_inp_weir 
+		where weir_type is null or cd is null or geom1 is null or geom2 is null or offsetval is null';
+		
+	
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '529', 3, concat('ERROR-529: There is/are ',v_count,' null values on table Inp Weir (weir_type, cd, geom1, geom2, offsetval)'), v_count);
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '529', 1, 'INFO: No missing data on Inp Weir.', v_count);
+	END IF;
+	v_count=0;
+	
+	
+	RAISE NOTICE '530 - Check null values on inp_orifice';
+	v_querytext='(select ori_type, geom1, offsetval from v_edit_inp_orifice
+	where ori_type is null or geom1 is null or offsetval is null)';
+
+	execute concat('select count(*) from ', v_querytext, 'a') into v_count;
+	
+	IF v_count>0 then 
+	
+		EXECUTE 'INSERT INTO temp_anl_arc (fid, arc_id, descript, the_geom) 
+		SELECT 530, arc_id, ''Missing values on some data of Inp Orifice (ori_type, geom1, offsetval)'', the_geom from v_edit_inp_orifice
+		where ori_type is null or geom1 is null or offsetval is null';
+	
+	
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '530', 3, concat('ERROR-530: There is/are ',v_count,' null values on table Inp Orifice (ori_type, geom1, offsetval)'), v_count);
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '530', 1, 'INFO: No missing data on Inp Orifice.', v_count);
+	END IF;
+	v_count=0;
 
 	
 	-- Removing isaudit false sys_fprocess
@@ -680,7 +740,7 @@ BEGIN
 	-- info
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
 	FROM (SELECT error_message as message FROM temp_audit_check_data WHERE cur_user="current_user"() 
-	AND fid=255 order by criticity desc, id asc) row;
+	AND fid=225 order by criticity desc, id asc) row;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 	
@@ -694,8 +754,8 @@ BEGIN
 	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
-	FROM (SELECT DISTINCT ON (node_id) id, node_id, nodecat_id, state, expl_id, descript,fid, the_geom
-	FROM  temp_anl_node WHERE cur_user="current_user"() AND fid IN (106, 107, 111, 113, 164, 187, 294, 379)) row) features;
+	FROM (SELECT node_id, nodecat_id, state, expl_id, descript,fid, the_geom
+	FROM  temp_anl_node WHERE cur_user="current_user"() AND fid IN (106, 107, 111, 113, 164, 187, 294, 379, 528)) row) features;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point",  "features":',v_result, '}'); 
 
@@ -708,13 +768,14 @@ BEGIN
 	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
-	FROM (SELECT DISTINCT ON (arc_id) id, arc_id, arccat_id, state, expl_id, descript, the_geom, fid
-	FROM  temp_anl_arc WHERE cur_user="current_user"() AND fid IN (188, 284, 295, 427,430, 522)) row) features;
+	FROM (SELECT arc_id, arccat_id, state, expl_id, descript, the_geom, fid
+	FROM  temp_anl_arc WHERE cur_user="current_user"() AND fid IN (188, 284, 295, 427,430, 522, 529, 530)) row) features;
 
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_line = concat ('{"geometryType":"LineString", "features":',v_result,'}'); 
 
-	
+	-- polygon
+	v_result = null;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_polygon = concat ('{"geometryType":"Polygon", "features":',v_result, '}');
 
@@ -741,11 +802,6 @@ BEGIN
 				'}'||
 			'}'||
 		'}')::json, 2431, null, null, null);
-
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

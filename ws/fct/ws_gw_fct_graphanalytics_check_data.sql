@@ -407,8 +407,6 @@ BEGIN
 	LOOP
 		-- remove anl tables
 		DELETE FROM temp_anl_node WHERE fid = v_record.fid AND cur_user = current_user;
-		DELETE FROM temp_anl_arc WHERE fid = v_record.fid AND cur_user = current_user;
-		DELETE FROM temp_anl_connec WHERE fid = v_record.fid AND cur_user = current_user;
 
 		DELETE FROM temp_audit_check_data WHERE result_id::text = v_record.fid::text AND cur_user = current_user AND fid = v_fid;		
 	END LOOP;
@@ -431,9 +429,6 @@ BEGIN
 	ELSIF  v_fid = 101 THEN 
 		UPDATE temp_audit_check_data SET fid = 211;
 		UPDATE temp_anl_node SET fid = 211;
-
-		INSERT INTO project_temp_temp_anl_node SELECT * FROM temp_anl_node;
-		INSERT INTO project_temp_audit_check_data SELECT * FROM temp_audit_check_data;
 
 	END IF;
 
@@ -488,11 +483,6 @@ BEGIN
 		       '}'||
 	    '}')::json, 2790, null, null, null);
 
-	-- Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-   
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

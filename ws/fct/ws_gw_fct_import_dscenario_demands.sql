@@ -71,12 +71,12 @@ BEGIN
 			DELETE FROM inp_dscenario_demand WHERE dscenario_id = v_dscenario_id;
 
 			INSERT INTO inp_dscenario_demand(
-			dscenario_id, feature_id, feature_type, demand, demand_type, source)
-			SELECT v_dscenario_id, csv2, 'CONNEC',csv4::float, substring(csv5,1,18), csv6 FROM temp_csv JOIN connec ON csv2 = connec_id WHERE cur_user=current_user AND fid = v_fid;
+			dscenario_id, feature_id, feature_type, demand, pattern_id, demand_type, source)
+			SELECT v_dscenario_id, csv2, 'CONNEC',csv4::float, csv5, substring(csv6,1,18), csv7 FROM temp_csv JOIN connec ON csv2 = connec_id WHERE cur_user=current_user AND fid = v_fid;
 
 			INSERT INTO inp_dscenario_demand(
-			dscenario_id, feature_id, feature_type, demand, demand_type, source)
-			SELECT v_dscenario_id, csv2, 'NODE',csv4::float, substring(csv5,1,18), csv6 FROM temp_csv JOIN man_netwjoin ON csv2 = node_id WHERE cur_user=current_user AND fid = v_fid;
+			dscenario_id, feature_id, feature_type, demand, pattern_id, demand_type, source)
+			SELECT v_dscenario_id, csv2, 'NODE',csv4::float, csv5, substring(csv6,1,18), csv7 FROM temp_csv JOIN man_netwjoin ON csv2 = node_id WHERE cur_user=current_user AND fid = v_fid;
 
 			-- manage log (fid: v_fid)
 			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (v_fid, v_result_id, concat('Reading values from temp_csv table -> Done'));
@@ -115,11 +115,7 @@ BEGIN
             ',"body":{"form":{}'||
 		     ',"data":{ "info":'||v_result_info||'}}'||
 	    '}')::json;
-	    
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-	
+
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

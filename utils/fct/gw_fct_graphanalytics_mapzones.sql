@@ -689,11 +689,18 @@ BEGIN
 				END IF;
 			END IF;
 		ELSE 
-			v_querytext = 'UPDATE temp_t_anlgraph SET water=1, flag=0, trace = '||v_fieldmp||'::integer 
-			FROM '||v_table||' WHERE graphconfig is not null and active is true
-			AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
-			EXECUTE v_querytext;
-
+			
+			IF v_floodonlymapzone IS NULL THEN
+				v_querytext = 'UPDATE temp_t_anlgraph SET water=1, flag=0, trace = '||v_fieldmp||'::integer 
+				FROM '||v_table||' WHERE graphconfig is not null and active is true
+				AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
+				EXECUTE v_querytext;
+			ELSE
+				v_querytext = 'UPDATE temp_t_anlgraph SET water=1, flag=0, trace = '||v_fieldmp||'::integer 
+				FROM '||v_table||' WHERE graphconfig is not null and active is true AND '||v_fieldmp||'::integer IN ('||v_floodonlymapzone||')
+				AND node_1 IN (SELECT (json_array_elements_text((graphconfig->>''use'')::json))::json->>''nodeParent'' as node_id)';
+				EXECUTE v_querytext;
+			END IF;
 		END IF;	
 
 		-- inundation process
@@ -730,7 +737,7 @@ BEGIN
 		)c order by node, c desc)a
 		WHERE node = node_id';
 		
-		RAISE NOTICE ' Update temporal tables of connecs, links and gullies';
+		RAISE NOTICE ' Update temporal tables of connects and links';
 		
 		-- used connec using v_edit_arc because the exploitation filter (same before)
 		v_querytext = 'UPDATE temp_t_connec SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM temp_t_arc a WHERE a.arc_id=temp_t_connec.arc_id';
@@ -748,8 +755,8 @@ BEGIN
 			EXECUTE v_querytext;
 
 			-- update link table
-			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g WHERE g.gully_id=feature_id';		
-		END IF;	
+			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g WHERE g.gully_id=feature_id';
+		END IF;
 
 		IF v_islastupdate IS TRUE THEN
 		
@@ -903,7 +910,7 @@ BEGIN
 				' GROUP BY '||(v_field)||')b USING ('||(v_field)||')
 				LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE '||(v_field)||'::integer > 0 '
 				' GROUP BY '||(v_field)||')c USING ('||(v_field)||')
-				LEFT JOIN (SELECT '||(v_field)||', count(*) as gullies FROM temp_t_gully g WHERE  and '||(v_field)||'::integer > 0 '
+				LEFT JOIN (SELECT '||(v_field)||', count(*) as gullies FROM temp_t_gully g WHERE '||(v_field)||'::integer > 0 '
 				' GROUP BY '||(v_field)||')d USING ('||(v_field)||')
 				JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field);
 				EXECUTE v_querytext;
@@ -937,7 +944,7 @@ BEGIN
 				LEFT JOIN (SELECT '||(v_field)||', count(*) as connecs FROM temp_t_connec c WHERE '||(v_field)||'::integer > 0 GROUP BY '||(v_field)||')c USING ('||(v_field)||')
 				LEFT JOIN (SELECT '||(v_field)||', count(*) as gullies FROM temp_t_gully g WHERE '||(v_field)||'::integer > 0  GROUP BY '||(v_field)||')d USING ('||(v_field)||')
 				JOIN '||(v_table)||' p ON e.'||(v_field)||' = p.'||(v_field)||'
-				WHERE a.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone);
+				WHERE e.'||(v_field)||'::text = '||quote_literal(v_floodonlymapzone);
 				EXECUTE v_querytext;
 			ELSE
 				IF v_netscenario IS NOT NULL THEN
@@ -990,8 +997,10 @@ BEGIN
 				VALUES (v_fid, 1, concat('INFO: 0 connec''s have been disconnected'));
 			END IF;
 			
-			RAISE NOTICE 'Disconnected gullies';
 			IF v_project_type='UD' THEN
+			
+				RAISE NOTICE 'Disconnected gullies';
+
 				IF v_count > 0 THEN 
 					select count(*) INTO v_count FROM 
 					(SELECT DISTINCT gully_id FROM temp_t_gully JOIN temp_t_arc USING (arc_id) WHERE water = 0 group by (arc_id, gully_id) having count(arc_id)=2 )a;
@@ -1020,6 +1029,8 @@ BEGIN
 		INSERT INTO temp_audit_check_data (fid,  criticity, error_message) VALUES (v_fid,  1, '');
 		INSERT INTO temp_audit_check_data (fid,  criticity, error_message) VALUES (v_fid,  0, '');
 	END IF;
+
+	RAISE NOTICE 'Creating geometry of mapzones';
 
 	-- update geometry of mapzones
 	IF v_updatemapzgeom = 0 THEN
@@ -1412,7 +1423,8 @@ BEGIN
 
 	ELSIF v_netscenario IS NOT NULL THEN
 
-		v_querytext = 'UPDATE plan_netscenario_'||v_table||' SET the_geom = t.the_geom, lastupdate = now(), lastupdate_user=current_user FROM temp_'||v_table||' t WHERE t.'||v_field||' = plan_netscenario_'||v_table||'.'||v_field||' 
+		v_querytext = 'UPDATE plan_netscenario_'||v_table||' SET the_geom = t.the_geom, lastupdate = now(), lastupdate_user=current_user FROM temp_'||v_table||
+		' t WHERE t.'||v_field||' = plan_netscenario_'||v_table||'.'||v_field||' 
 		AND plan_netscenario_'||v_table||'.netscenario_id = '||v_netscenario||'';
 		EXECUTE v_querytext;
 
@@ -1421,13 +1433,17 @@ BEGIN
 		DELETE FROM plan_netscenario_connec WHERE netscenario_id = v_netscenario::integer;
 
 		EXECUTE 'INSERT INTO plan_netscenario_arc(netscenario_id, arc_id, '||quote_ident(v_field)||', the_geom)
-		SELECT '|| v_netscenario||', arc_id, '||quote_ident(v_field)||', the_geom FROM temp_t_arc';
-
+		SELECT '|| v_netscenario||', arc_id, '||quote_ident(v_field)||', a.the_geom FROM temp_t_arc a
+		JOIN plan_netscenario_'||v_table||' USING (dma_id) WHERE netscenario_id =  '|| v_netscenario||'';
+	
 		EXECUTE 'INSERT INTO plan_netscenario_node(netscenario_id, node_id, '||quote_ident(v_field)||', the_geom)
-		SELECT '|| v_netscenario||', node_id, '||quote_ident(v_field)||', the_geom FROM temp_t_node';
+		SELECT '|| v_netscenario||', node_id, '||quote_ident(v_field)||', n.the_geom FROM temp_t_node n
+		JOIN plan_netscenario_'||v_table||' USING (dma_id) WHERE netscenario_id =  '|| v_netscenario||'';
 
 		EXECUTE 'INSERT INTO plan_netscenario_connec(netscenario_id, connec_id, '||quote_ident(v_field)||', the_geom)
-		SELECT '|| v_netscenario||', connec_id, '||quote_ident(v_field)||', the_geom FROM temp_t_connec';
+		SELECT '|| v_netscenario||', connec_id, '||quote_ident(v_field)||', c.the_geom FROM temp_t_connec c
+		JOIN plan_netscenario_'||v_table||' USING (dma_id) WHERE netscenario_id =  '|| v_netscenario||'';
+
 
 		IF v_class = 'PRESSZONE' THEN
 			v_visible_layer ='"v_edit_plan_netscenario_presszone"';
@@ -1490,12 +1506,6 @@ BEGIN
 					  '"point":'||v_result_point||','||
 					  '"line":'||v_result_line||','||
 					  '"polygon":'||v_result_polygon||'}'||'}}')::json, 2710, null, ('{"visible": ['||v_visible_layer||']}')::json, null)::json;
-
-	-- Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' ||
-	to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

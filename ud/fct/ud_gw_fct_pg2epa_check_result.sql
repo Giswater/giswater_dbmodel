@@ -547,7 +547,7 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, concat('INFO: All CONTROLS has correct arc id values.'));
 	END IF;
 
-	IF v_networkmode = 2 THEN
+	IF v_networkmode = 2 or v_networkmode = 3 THEN
 	
 		RAISE NOTICE '6 - Check arc_id null for gully (455)';
 		SELECT count(*) INTO v_count FROM (SELECT * FROM v_edit_gully g,  selector_sector s 
@@ -672,11 +672,6 @@ BEGIN
 				'"line":'||v_result_line||'}'||
 			'}'||
 		'}')::json, 2858, null, null, null);
-
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

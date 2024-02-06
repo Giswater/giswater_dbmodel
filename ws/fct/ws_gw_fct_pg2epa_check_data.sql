@@ -946,7 +946,7 @@ BEGIN
 	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
-	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript,fid, the_geom
+	FROM (SELECT node_id, nodecat_id, state, expl_id, descript,fid, the_geom
 	FROM temp_anl_node WHERE cur_user="current_user"() AND fid IN (107, 164, 165, 166, 167, 170, 171, 187, 198, 294, 379, 411, 412, 432)) row) features;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point",  "features":',v_result, '}'); 
@@ -960,7 +960,7 @@ BEGIN
 	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
-	FROM (SELECT id, arc_id, arccat_id, state, expl_id, descript, the_geom, fid
+	FROM (SELECT arc_id, arc_id, arccat_id, state, expl_id, descript, the_geom, fid
 	FROM  temp_anl_arc WHERE cur_user="current_user"() AND fid IN (188, 169, 229, 230, 295)) row) features;
 
 	v_result := COALESCE(v_result, '{}'); 
@@ -990,11 +990,6 @@ BEGIN
 				'"polygon":'||v_result_polygon||'}'||
 			'}'||
 		'}')::json, 2430, null, null, null);
-
-	-- Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$
