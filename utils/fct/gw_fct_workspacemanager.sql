@@ -322,7 +322,7 @@ BEGIN
 						ELSIF v_selector_name = 'selector_inp_dscenario' THEN
 							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT dscenario_id, current_user FROM cat_dscenario WHERE dscenario_id::text IN (select json_array_elements_text('''||v_selector_value||'''))';
 
-						ELSIF v_selector_name in ('selector_rpt_main', 'selector_rpt_compare','selector_rpt_main_tstep','selector_rpt_compare_tstep') THEN
+						ELSIF v_selector_name in ('selector_rpt_main') THEN
 							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT result_id, current_user FROM rpt_cat_result WHERE result_id::text IN (select json_array_elements_text('''||v_selector_value||'''))';
 						ELSE
 							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT value::'||v_datatype||', current_user FROM json_array_elements_text('''||v_selector_value||''')';
