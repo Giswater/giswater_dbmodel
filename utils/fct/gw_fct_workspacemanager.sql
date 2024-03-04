@@ -298,22 +298,36 @@ BEGIN
 
 						SELECT string_agg(key,', ') as keys,  string_agg(quote_literal(value),', ') as values  INTO rec_selectorcolumn FROM (
 						SELECT * from json_each_text(rec_selectorcomp::JSON))a;
-						
-						EXECUTE 'INSERT INTO '||v_selector_name||' ('||rec_selectorcolumn.keys||') 
-						VALUES ('||rec_selectorcolumn.values||' );';
-				
+
+						IF v_selector_name in ('selector_rpt_main', 'selector_rpt_compare','selector_rpt_main_tstep','selector_rpt_compare_tstep') THEN
+							EXECUTE 'INSERT INTO '||v_selector_name||' ('||rec_selectorcolumn.keys||') SELECT result_id FROM rpt_cat_result WHERE result_id = '||rec_selectorcolumn.values;
+						ELSE
+							EXECUTE 'INSERT INTO '||v_selector_name||' ('||rec_selectorcolumn.keys||') VALUES ('||rec_selectorcolumn.values||')';
+						END IF;
 					END LOOP;
 				ELSE 
-				--insert values into selectors with 1 field
+			
+					--insert values into selectors with 1 field
 					IF v_selector_value IS NOT NULL THEN
 						EXECUTE 'SELECT data_type FROM information_schema.columns where table_name = '||quote_literal(v_selector_name)||'
 						AND table_schema='||quote_literal(v_schemaname)||' and column_name!=''cur_user'''
 						INTO v_datatype;
 
-						EXECUTE 'INSERT INTO '||v_selector_name||'
-						SELECT value::'||v_datatype||', current_user FROM json_array_elements_text('''||v_selector_value||''')';
-					END IF;
+						IF v_selector_name = 'selector_psector' THEN
+							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT psector_id, current_user FROM plan_psector WHERE psector_id::text IN (select json_array_elements_text('''||v_selector_value||'''))';
 
+						ELSIF v_selector_name = 'selector_sector' THEN
+							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT sector_id, current_user FROM sector WHERE sector_id::text IN (select json_array_elements_text('''||v_selector_value||'''))';
+
+						ELSIF v_selector_name = 'selector_inp_dscenario' THEN
+							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT dscenario_id, current_user FROM cat_dscenario WHERE dscenario_id::text IN (select json_array_elements_text('''||v_selector_value||'''))';
+
+						ELSIF v_selector_name in ('selector_rpt_main', 'selector_rpt_compare','selector_rpt_main_tstep','selector_rpt_compare_tstep') THEN
+							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT result_id, current_user FROM rpt_cat_result WHERE result_id::text IN (select json_array_elements_text('''||v_selector_value||'''))';
+						ELSE
+							EXECUTE 'INSERT INTO '||v_selector_name||' SELECT value::'||v_datatype||', current_user FROM json_array_elements_text('''||v_selector_value||''')';
+						END IF;
+					END IF;
 				END IF;
 			END IF;
 		END LOOP;
