@@ -125,9 +125,13 @@ BEGIN
 		IF v_nodeparent IS NOT NULL THEN
 			EXECUTE 'SELECT json_agg(a.data::json) FROM 
 				(SELECT json_array_elements_text(
-				json_extract_path('''||v_config||'''::json,''use'')) data)a
+				json_extract_path('''||v_config||'''::json,''use'')) as data)a
 				WHERE  json_extract_path_text(data ::json,''nodeParent'') != '||quote_literal(v_nodeparent)||''
 				into v_use_node;
+			
+				IF v_use_node is null then
+					v_use_node= '[]';
+				END IF;
 
 				v_preview = jsonb_set( v_config::jsonb, '{use}', v_use_node::jsonb);
 			
@@ -139,9 +143,13 @@ BEGIN
 			from (SELECT json_array_elements_text( v_forceclosed::json)  as elem)a ;
 					
 			EXECUTE 'SELECT json_agg(a.data::integer) FROM 
-			(SELECT json_array_elements_text(json_extract_path('''||v_config||'''::json,''forceClosed'')) data)a
+			(SELECT json_array_elements_text(json_extract_path('''||v_config||'''::json,''forceClosed'')) as data)a
 			WHERE  a.data not in ('||v_forceclosed||')'
 			into v_use_forceclosed;
+
+			IF v_use_forceclosed is null then
+				v_use_forceclosed= '[]';
+			END IF;
 
 			v_preview = jsonb_set( v_config::jsonb, '{forceClosed}',v_use_forceclosed::jsonb);
 

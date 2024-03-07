@@ -203,15 +203,11 @@ BEGIN
 		RAISE NOTICE '4.1 - Fill temp tables';
 		PERFORM gw_fct_pg2epa_fill_data(v_result);
 
-		SELECT count(*) INTO v_count FROM temp_anl_node WHERE fid IN (166,167);
-		IF v_count = 0 THEN
-		
-			RAISE NOTICE '4.2 - Call gw_fct_pg2epa_nod2arc function';
-			PERFORM gw_fct_pg2epa_nod2arc(v_result, v_onlymandatory_nodarc, false);
+		RAISE NOTICE '4.2 - Call gw_fct_pg2epa_nod2arc function';
+		PERFORM gw_fct_pg2epa_nod2arc(v_result, v_onlymandatory_nodarc, false);
 
-			RAISE NOTICE '4.3 - Call gw_fct_pg2epa_doublenod2arc';
-			PERFORM gw_fct_pg2epa_nod2arc_double(v_result);
-		END IF;
+		RAISE NOTICE '4.3 - Call gw_fct_pg2epa_doublenod2arc';
+		PERFORM gw_fct_pg2epa_nod2arc_double(v_result);
 				
 		RAISE NOTICE '4.4 - Call gw_fct_pg2epa_pump_additional function';
 		PERFORM gw_fct_pg2epa_pump_additional(v_result);
@@ -260,25 +256,6 @@ BEGIN
 
 		RAISE NOTICE '4.13 - Profilactic last control';
 
-		-- arcs without nodes
-		UPDATE temp_t_arc t SET epa_type = 'TODELETE' FROM (SELECT a.id FROM temp_t_arc a LEFT JOIN temp_t_node ON node_1=node_id WHERE temp_t_node.node_id is null) a WHERE t.id = a.id;
-		UPDATE temp_t_arc t SET epa_type = 'TODELETE' FROM (SELECT a.id FROM temp_t_arc a LEFT JOIN temp_t_node ON node_2=node_id WHERE temp_t_node.node_id is null) a WHERE t.id = a.id;
-
-		INSERT INTO temp_audit_log_data (fid, feature_id, feature_type, log_message) 
-		SELECT v_fid, arc_id, 'ARC', '23 - Profilactic last delete' FROM temp_t_arc WHERE epa_type  ='TODELETE';
-		
-		DELETE FROM temp_t_arc WHERE epa_type = 'TODELETE';
-
-		-- nodes without arcs
-		UPDATE temp_t_node t SET epa_type = 'TODELETE' FROM 
-		(SELECT id FROM temp_t_node LEFT JOIN (SELECT node_1 as node_id FROM temp_t_arc UNION SELECT node_2 FROM temp_t_arc) a USING (node_id) WHERE a.node_id IS NULL) a 
-		WHERE t.id = a.id;
-
-		INSERT INTO temp_audit_log_data (fid, feature_id, feature_type, log_message) 
-		SELECT v_fid, node_id, 'NODE', '23 - Profilactic last delete' FROM temp_t_node WHERE epa_type  ='TODELETE';
-			
-		DELETE FROM temp_t_node WHERE epa_type = 'TODELETE';
-		
 		-- update diameter when is null USING neighbourg from node_1
 		UPDATE temp_t_arc SET diameter = dint FROM (
 		SELECT node_1 as n1, diameter dint FROM temp_t_arc UNION SELECT node_2, diameter FROM temp_t_arc
@@ -340,7 +317,7 @@ BEGIN
 	-- step 5: analyze graph
 	ELSIF v_step=5 THEN
 
-		PERFORM gw_fct_pg2epa_check_network(v_input);	
+		PERFORM gw_fct_pg2epa_check_network(v_input);
 		v_return = '{"status": "Accepted", "message":{"level":1, "text":"Export INP file 5/7 - Graph analysis...... done succesfully"}}'::json;
 		RETURN v_return;
 
@@ -348,6 +325,26 @@ BEGIN
 	ELSIF v_step=6 THEN
 
 		SELECT gw_fct_pg2epa_check_result(v_input) INTO v_return ;
+
+		-- deleting arcs without nodes
+		UPDATE temp_t_arc t SET epa_type = 'TODELETE' FROM (SELECT a.id FROM temp_t_arc a LEFT JOIN temp_t_node ON node_1=node_id WHERE temp_t_node.node_id is null) a WHERE t.id = a.id;
+		UPDATE temp_t_arc t SET epa_type = 'TODELETE' FROM (SELECT a.id FROM temp_t_arc a LEFT JOIN temp_t_node ON node_2=node_id WHERE temp_t_node.node_id is null) a WHERE t.id = a.id;
+
+		INSERT INTO temp_audit_log_data (fid, feature_id, feature_type, log_message) 
+		SELECT v_fid, arc_id, 'ARC', '23 - Profilactic last delete' FROM temp_t_arc WHERE epa_type  ='TODELETE';
+		
+		DELETE FROM temp_t_arc WHERE epa_type = 'TODELETE';
+
+		-- deleting nodes without arcs
+		UPDATE temp_t_node t SET epa_type = 'TODELETE' FROM 
+		(SELECT id FROM temp_t_node LEFT JOIN (SELECT node_1 as node_id FROM temp_t_arc UNION SELECT node_2 FROM temp_t_arc) a USING (node_id) WHERE a.node_id IS NULL) a 
+		WHERE t.id = a.id;
+
+		INSERT INTO temp_audit_log_data (fid, feature_id, feature_type, log_message) 
+		SELECT v_fid, node_id, 'NODE', '23 - Profilactic last delete' FROM temp_t_node WHERE epa_type  ='TODELETE';
+			
+		DELETE FROM temp_t_node WHERE epa_type = 'TODELETE';
+		
 		SELECT gw_fct_pg2epa_export_inp(p_data) INTO v_file;
 		v_body = gw_fct_json_object_set_key((v_return->>'body')::json, 'file', v_file);
 		v_return = gw_fct_json_object_set_key(v_return, 'body', v_body);
@@ -373,6 +370,20 @@ BEGIN
 		SELECT result_id, arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, diameter, roughness, length, 
 		status, the_geom, expl_id, flw_code, minorloss, addparam, arcparent,dma_id, presszone_id, dqa_id, minsector_id
 		FROM temp_t_arc;
+
+		-- move log data
+		DELETE FROM anl_arc WHERE cur_user = current_user AND fid IN (107,153,164,165,166,167,169,170,171,188,198,227,229,230,292,294,295,371,379,433,411,412,430,432,480,	-- CHECK DATA
+									       172,375,377,413,414,415,400,297,373,396,402,407,								-- CHECK RESULT
+									       228,454,290,404,231,139,232,233,431);									-- CHECK NETWORK
+
+		DELETE FROM anl_node WHERE cur_user = current_user AND fid IN (107,153,164,165,166,167,169,170,171,188,198,227,229,230,292,294,295,371,379,433,411,412,430,432,480,	-- CHECK DATA
+									       172,375,377,413,414,415,400,297,373,396,402,407,								-- CHECK RESULT
+									       228,454,290,404,231,139,232,233,431);									-- CHECK NETWORK
+		
+		DELETE FROM anl_connec WHERE cur_user = current_user AND fid IN (107,153,164,165,166,167,169,170,171,188,198,227,229,230,292,294,295,371,379,433,411,412,430,432,480,	-- CHECK DATA
+									       172,375,377,413,414,415,400,297,373,396,402,407,								-- CHECK RESULT
+									       228,454,290,404,231,139,232,233,431);									-- CHECK NETWORK
+
 
 		-- move patterns data
 		INSERT INTO rpt_inp_pattern_value SELECT * FROM temp_rpt_inp_pattern_value;	

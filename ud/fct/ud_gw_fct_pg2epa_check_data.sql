@@ -19,7 +19,7 @@ SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":127}}
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":101}}}$$)-- when is called from checkproject
 
 -- fid: main: 225,
-	other: 106,107,111,113,164,175,187,188,294,295,379,427,430,440,480,522
+	other: 106,107,111,113,164,175,187,188,294,295,379,427,430,440,480,522,528,529,530
 
 SELECT * FROM audit_check_data WHERE fid = v_fid
 
@@ -580,26 +580,27 @@ BEGIN
 	END IF;	
 
 	RAISE NOTICE '24 - Check percentage of arcs with custom_length values';
-	WITH cust_len AS (SELECT count(*) FROM v_edit_arc WHERE custom_length IS NOT NULL), arcs AS (SELECT count(*) FROM v_edit_arc)
-	SELECT cust_len.count::numeric / arcs.count::numeric *100 INTO v_count FROM arcs, cust_len;
+	SELECT count(*) FROM v_edit_arc into v_count;
 
-	IF v_count > (SELECT json_extract_path_text(value::json,'customLength','maxPercent')::NUMERIC FROM config_param_system WHERE parameter = 'epa_outlayer_values') THEN
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '482', 2, concat('WARNING-482: Over ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
-	ELSIF v_count=0 THEN
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
+	IF v_count>0 then
+		WITH cust_len AS (SELECT count(*) FROM v_edit_arc WHERE custom_length IS NOT NULL), arcs AS (SELECT count(*) FROM v_edit_arc)
+		SELECT cust_len.count::numeric / arcs.count::numeric *100 INTO v_count FROM arcs, cust_len;
+	
+		IF v_count > (SELECT json_extract_path_text(value::json,'customLength','maxPercent')::NUMERIC FROM config_param_system WHERE parameter = 'epa_outlayer_values') THEN
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '482', 2, concat('WARNING-482: Over ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
+		ELSIF v_count=0 THEN
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
+		ELSE
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '482', 1, concat('INFO: Less then ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
+		END IF;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '482', 1, concat('INFO: Less then ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
+		VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
 	END IF;
 	v_count=0;
-
-	IF v_result_id IS NULL THEN
-		UPDATE temp_audit_check_data SET result_id = table_id WHERE cur_user="current_user"() AND fid=v_fid AND result_id IS NULL;
-		UPDATE temp_audit_check_data SET table_id = NULL WHERE cur_user="current_user"() AND fid=v_fid; 
-	END IF;
-	
 
 	RAISE NOTICE '25 - Check shape with null values on arc catalog';
 	SELECT count(*) INTO v_count FROM cat_arc WHERE shape is null;
@@ -628,20 +629,27 @@ BEGIN
 	select count(*) from n into v_count;
 	
 	IF v_count>0 then
-		INSERT INTO temp_audit_check_data (result_id, criticity, error_message, fcount)
-		VALUES ('522', 3, concat('ERROR-522: There is/are ',v_count,' outfalls with more than 1 arc connected.'),v_count);
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '522', 3, concat('ERROR-522: There is/are ',v_count,' outfalls with more than 1 arc connected.'),v_count);
 		
 		EXECUTE 'INSERT INTO temp_anl_node (fid, node_id, descript, the_geom, expl_id, nodecat_id) 
 		select 522, node.node_id, ''Outfall with more than 1 arc'', node.the_geom, node.expl_id, node.nodecat_id 
 		from node, arc where node.epa_type=''OUTFALL'' and st_dwithin(node.the_geom, arc.the_geom, 0.01) 
 		group by node.node_id having count(node.node_id)>1';
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '522', 1, 'INFO: All outlets have a valid number of connected arcs.',v_count);
 	END IF;
 	v_count=0;
+
+	RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id is a node) or in v_edit_inp_subcatchment (if outlet_id is a subcathment)';
 	
-RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id is a node) or in v_edit_inp_subcatchment (if outlet_id is a subcathment)';
-	
-	v_querytext = '(select outlet_id from v_edit_inp_subc2outlet where outlet_type = ''JUNCTION'' AND outlet_id not in (select node_id from v_edit_inp_junction) union
-	select outlet_id from v_edit_inp_subc2outlet where outlet_type = ''SUBCATCHMENT'' AND outlet_id not in (select subc_id from v_edit_inp_subcatchment))';
+	v_querytext = '(select outlet_id from v_edit_inp_subc2outlet
+			LEFT JOIN (select node_id from v_edit_inp_junction UNION select node_id from v_edit_inp_storage UNION select node_id from v_edit_inp_netgully) a on outlet_id = node_id
+			where outlet_type in (''JUNCTION'') and node_id is null
+			union
+			select a.outlet_id from v_edit_inp_subc2outlet a LEFT JOIN v_edit_inp_subcatchment s on a.outlet_id = s.subc_id
+			where outlet_type = ''SUBCATCHMENT'' and s.subc_id is null)';
 	
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext, 'a') INTO v_count;
 	
@@ -656,7 +664,6 @@ RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id i
 		VALUES (v_fid, '528', 1, 'INFO: All subcatchments have an existing outlet_id',v_count);
 	END IF;
 	v_count=0;
-
 	
 	RAISE NOTICE '529 - Check null values on inp_weir';
 	v_querytext='(select arc_id, weir_type, cd, geom1, geom2, offsetval from v_edit_inp_weir 
@@ -700,6 +707,10 @@ RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id i
 	END IF;
 	v_count=0;
 
+	IF v_result_id IS NULL THEN
+		UPDATE temp_audit_check_data SET result_id = table_id WHERE cur_user="current_user"() AND fid=v_fid AND result_id IS NULL;
+		UPDATE temp_audit_check_data SET table_id = NULL WHERE cur_user="current_user"() AND fid=v_fid; 
+	END IF;
 	
 	-- Removing isaudit false sys_fprocess
 	FOR v_record IN SELECT * FROM sys_fprocess WHERE isaudit is false
@@ -716,6 +727,10 @@ RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id i
 	INSERT INTO temp_audit_check_data (fid, criticity, error_message) VALUES (v_fid, 2, '');
 	INSERT INTO temp_audit_check_data (fid, criticity, error_message) VALUES (v_fid, 1, ''); 
 
+	-- 101 - checkproject
+	-- 127 - go2epa main
+	-- 225 - triggered alone
+	
 	IF v_fid = 225 THEN
 			
 		DELETE FROM anl_arc WHERE fid =225 AND cur_user=current_user;
@@ -728,8 +743,6 @@ RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id i
 
 	ELSIF  v_fid = 101 THEN 
 		UPDATE temp_audit_check_data SET fid = 225;
-		UPDATE temp_anl_arc SET fid = 225;
-		UPDATE temp_anl_node SET fid = 225;
 
 		INSERT INTO project_temp_anl_arc SELECT * FROM temp_anl_arc;
 		INSERT INTO project_temp_anl_node SELECT * FROM temp_anl_node;

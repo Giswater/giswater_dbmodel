@@ -85,7 +85,7 @@ BEGIN
 		v_edit = 'v_edit_';
 	END IF;
 	
-	IF v_fid = 125 OR v_fid = 101 THEN
+	IF v_fid = 211 OR v_fid = 101 THEN
 		CREATE TEMP TABLE temp_anl_node (LIKE SCHEMA_NAME.anl_node INCLUDING ALL);
 		CREATE TEMP TABLE temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
 	END IF;
@@ -377,7 +377,7 @@ BEGIN
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 		IF v_count > 0 THEN
 			EXECUTE 'INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			SELECT v_fid, 2, 367, concat(''WARNING-367: There is/are '','||v_count||',
+			SELECT '||v_fid||', 2, 367, concat(''WARNING-367: There is/are '','||v_count||',
 			'' arc(s) that are configured as toArc for '','''||rec||''','' but is not operative on arc table. Arc_id - '',
 			string_agg(concat('''||rec||':'',zone_id,''-'',a.arc_id),'', ''),''.''), '||v_count||' FROM('|| v_querytext||')a';
 		ELSE
@@ -392,7 +392,7 @@ BEGIN
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 		IF v_count > 0 THEN
 			EXECUTE 'INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			SELECT v_fid, 2, 367, concat(''WARNING-367: There is/are '','||v_count||',
+			SELECT '||v_fid||', 2, 367, concat(''WARNING-367: There is/are '','||v_count||',
 			'' node(s) that are configured as nodeParent for '','''||rec||''','' but is not operative on node table. Node_id - '',
 			string_agg(concat('''||rec||':'',zone_id,''-'',a.node_id::text),'', ''),''.''), '||v_count||' FROM('|| v_querytext||')a';
 		ELSE
@@ -428,7 +428,9 @@ BEGIN
 
 	ELSIF  v_fid = 101 THEN 
 		UPDATE temp_audit_check_data SET fid = 211;
-		UPDATE temp_anl_node SET fid = 211;
+
+		INSERT INTO project_temp_audit_check_data SELECT * FROM temp_audit_check_data;
+		INSERT INTO project_temp_anl_node SELECT * FROM temp_anl_node;
 
 	END IF;
 

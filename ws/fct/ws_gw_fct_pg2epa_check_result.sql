@@ -13,7 +13,7 @@ $BODY$
 /*EXAMPLE
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_result($${"data":{"parameters":{"resultId":"test1","fid":227}}}$$) --when is called from go2epa_main from toolbox
 
--- fid: 114, 159, 230, 297, 396, 400, 402, 404, 405, 413, 414, 415, 432. Number 227 is passed by input parameters
+-- fid: 172,375,377,413,414,415,400,297,373,396,402,407 Number 227 is passed by input parameters
 
 */
 
@@ -544,7 +544,7 @@ BEGIN
 		'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 		'properties', to_jsonb(row) - 'the_geom' 
 		) AS feature
-		FROM (SELECT node_id as id, fid, 'ERROR-228: Orphan node' as descript, the_geom FROM temp_anl_node WHERE cur_user="current_user"() AND fid = 228
+		FROM (SELECT node_id as id, 228 as fid, 'ERROR-228: Orphan node' as descript, the_geom FROM temp_anl_node WHERE cur_user="current_user"() AND fid IN (107,228)
 			UNION
 		      SELECT node_id, fid, 'ERROR-233: Dry node with demand', the_geom FROM temp_anl_node WHERE cur_user="current_user"() AND fid = 233
 		        UNION

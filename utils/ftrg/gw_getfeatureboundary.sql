@@ -49,7 +49,7 @@ BEGIN
       );
    END LOOP;
    v_querytext = left(v_querytext, length(v_querytext) - 6);
-   v_querytext = CONCAT('SELECT ST_AsGeoJSON(COALESCE(ST_Union(ST_Buffer(the_geom, 2)), ST_GeomFromText(''POINT EMPTY'')))
+   v_querytext = CONCAT('SELECT ST_AsGeoJSON(COALESCE(ST_Collect(ST_Buffer(the_geom, 2)), ST_GeomFromText(''POINT EMPTY'')))
    FROM (', v_querytext, ') AS combined_geometries');
   
   ELSIF v_type = 'area' THEN
@@ -77,7 +77,7 @@ BEGIN
     END IF;
 
     -- Building the query text
-    v_querytext = concat('SELECT ST_AsGeoJSON(ST_Union(ST_Buffer(the_geom, 2))) from (', v_querynode, v_queryarc, v_queryconnec, v_querygully, ') a');
+    v_querytext = concat('SELECT ST_AsGeoJSON(ST_Collect(ST_Buffer(the_geom, 2))) from (', v_querynode, v_queryarc, v_queryconnec, v_querygully, ') a');
   END IF;
 
   -- Execute query text and set boundary geometry
