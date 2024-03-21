@@ -41,7 +41,7 @@ SELECT gw_fct_graphanalytics_mapzones('{"data":{"parameters":{"graphClass":"DRAI
 SELECT gw_fct_graphanalytics_mapzones('{"data":{"parameters":{"graphClass":"PRESSZONE", "exploitation":[1,2], "commitChanges":true, "updateMapZone":2, "geomParamUpdate":15, "usePlanPsector":false}}}');
 
 
-SELECT SCHEMA_NAME.gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":5367}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"PRESSZONE", "exploitation":"1", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "valueForDisconnected":"0", "updateMapZone":"5", "geomParamUpdate":"100"}}}$$);
+SELECT SCHEMA_NAME.gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"PRESSZONE", "exploitation":"1", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "valueForDisconnected":"0", "updateMapZone":"5", "geomParamUpdate":"100"}}}$$);
 
 if exploitation not exists > macroexploitation
 
@@ -784,7 +784,7 @@ BEGIN
 			EXECUTE v_querytext;
 
 			-- update link table
-			EXECUTE 'UPDATE temp_t_link SET lastupdate = lastupdate = now(), lastupdate_user=current_user;';
+			EXECUTE 'UPDATE temp_t_link SET lastupdate = now(), lastupdate_user=current_user;';
 
 			IF v_project_type='UD' THEN
 				v_querytext = 'UPDATE temp_t_gully SET lastupdate = now(), lastupdate_user=current_user FROM temp_t_arc a WHERE a.arc_id=temp_t_gully.arc_id';

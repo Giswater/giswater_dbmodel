@@ -58,6 +58,7 @@ v_max_seq_id integer;
 v_querytext text;
 v_definition text;
 rec_viewname text;
+rec_feature record;
 
 BEGIN 
 	-- search path
@@ -399,11 +400,25 @@ BEGIN
 			UPDATE config_param_system SET value =
 			'{"sys_table_id":"v_edit_gully","sys_id_field":"gully_id","sys_search_field":"gully_id","alias":"Gullies","cat_field":"gratecat_id","orderby":"3","search_type":"gully"}'
 			WHERE  parameter = 'basic_search_network_gully';
+			
+			-- fix i18n
+			IF v_gwversion = '3.6.009' THEN
+				PERFORM gw_fct_admin_manage_fix_i18n_36008();
+			END IF;
+			
+			DROP FUNCTION IF EXISTS gw_fct_admin_manage_fix_i18n_36008();
 
 		ELSIF v_isnew IS FALSE THEN
 		
+			-- fix i18n
+			IF v_gwversion = '3.6.009' AND v_oldversion IN ('3.6.008', '3.6.008.1', '3.6.008.2') THEN
+				PERFORM gw_fct_admin_manage_fix_i18n_36008();
+			END IF;
+			
+			DROP FUNCTION IF EXISTS gw_fct_admin_manage_fix_i18n_36008();
+			
+				
 			SELECT project_type INTO v_projecttype FROM sys_version ORDER BY 1 DESC LIMIT 1;
-		
 		
 			-- profilactic delete to avoid conflicts with sequences and to clean gdb
 			DELETE FROM audit_check_project;
@@ -448,6 +463,17 @@ BEGIN
 			INSERT INTO audit_check_data (fid, criticity, error_message) VALUES (v_fid, 4, concat('Project have been sucessfully updated from ',v_oldversion,' version to ',v_gwversion, ' version'));
 			v_message='Project sucessfully updated';
 
+			IF v_oldversion IN ('3.6.007', '3.6.008', '3.6.008.1', '3.6.008.2') THEN
+
+				FOR rec_feature IN SELECT * FROM cat_feature 
+				LOOP
+					INSERT INTO sys_table (id, descript, sys_role, criticity, context, alias) 
+					VALUES (rec_feature.child_layer, concat('Custom edit view for ', rec_feature.child_layer), 'role_edit', 0, concat('{"level_1":"INVENTORY","level_2":"NETWORK","level_3":"', 
+					upper(rec_feature.feature_type),'"}'), rec_feature.id)
+					ON CONFLICT (id) 
+					DO update set context = concat('{"level_1":"INVENTORY","level_2":"NETWORK","level_3":"', upper(rec_feature.feature_type),'"}');
+				END LOOP;
+			END IF;
 		END IF;
 
 		--reset sequences and id of anl, temp and audit tables
@@ -455,8 +481,8 @@ BEGIN
 		
 		-- last process
 		UPDATE config_param_system SET value = v_gwversion WHERE parameter = 'admin_version';
-		PERFORM gw_fct_setowner($${"client":{"lang":"ES"},"data":{"owner":"role_admin"}}$$);
 		PERFORM gw_fct_admin_role_permissions();
+		PERFORM gw_fct_setowner($${"client":{"lang":"ES"},"data":{"owner":"role_admin"}}$$);
 		
 		--build return with log table
 		SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result
