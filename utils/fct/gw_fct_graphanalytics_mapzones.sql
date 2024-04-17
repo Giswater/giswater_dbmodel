@@ -337,7 +337,7 @@ BEGIN
 			WHERE node_id IN 
 			(SELECT node_id FROM temp_om_waterbalance_dma_graph
 			JOIN node n USING (node_id)
-			WHERE n.expl_id = '||v_expl_id||' '||v_psectors_query_node||');';
+			WHERE n.expl_id = '||v_expl_id||');';
 		END IF;
 
 		-- start build log message
@@ -1215,7 +1215,7 @@ BEGIN
 			WHERE node_id IN 
 			(SELECT node_id FROM om_waterbalance_dma_graph
 			JOIN node n USING (node_id)
-			WHERE n.expl_id = '||v_expl_id||' '||v_psectors_query_node||');';
+			WHERE n.expl_id = '||v_expl_id||');';
 
 			INSERT INTO om_waterbalance_dma_graph SELECT * FROM temp_om_waterbalance_dma_graph ON CONFLICT (dma_id, node_id) DO NOTHING;
 			
@@ -1237,7 +1237,12 @@ BEGIN
 		END IF;
 
 		-- mapzone
-		v_querytext = 'UPDATE '||v_table||' SET the_geom = t.the_geom FROM temp_'||v_table||' t WHERE t.'||v_field||' = '||v_table||'.'||v_field;
+		IF v_floodonlymapzone IS NULL THEN
+			v_querytext = 'UPDATE '||v_table||' SET the_geom = t.the_geom FROM temp_'||v_table||' t WHERE t.'||v_field||' = '||v_table||'.'||v_field;
+		ELSE
+			v_querytext = 'UPDATE '||v_table||' m SET the_geom = t.the_geom FROM temp_'||v_table||' t WHERE t.'||v_field||' = m.'||v_field||' AND m.'||quote_ident(v_field)||'::integer IN ('||v_floodonlymapzone||')';
+		END IF;
+
 		EXECUTE v_querytext;
 
 		-- arcs
