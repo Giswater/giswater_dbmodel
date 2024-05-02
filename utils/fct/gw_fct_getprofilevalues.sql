@@ -179,7 +179,7 @@ BEGIN
   	SELECT (value::json->>'vnodeStatus') INTO v_vnode_status FROM config_param_system WHERE parameter = 'om_profile_vdefault';
 
   	-- set value to v_linksdistance if null
-	IF v_linksdistance IS NULL THEN
+	IF v_linksdistance IS NULL OR v_linksdistance < 0 THEN
 		v_linksdistance = 0;
 	END IF;
 
@@ -372,7 +372,7 @@ BEGIN
 					    v_edit_arc.sys_elev1 + v_edit_arc.sys_y1 AS top_elev1,
 					    v_edit_arc.sys_elev2 + v_edit_arc.sys_y2 AS top_elev2
 					   FROM v_edit_arc, temp_link t
-					    WHERE st_dwithin(v_edit_arc.the_geom, t.the_geom_endpoint, 0.01::double precision) AND v_edit_arc.state > 0 AND t.state > 0) a)b
+					    WHERE st_dwithin(v_edit_arc.the_geom, t.the_geom_endpoint, 0.01::double precision) AND v_edit_arc.state > 0 AND t.state > 0 AND exit_type ='ARC') a)b
 					    ORDER BY arc_id, node_2 DESC;		
 				  
 			ELSIF v_project_type = 'WS' THEN
