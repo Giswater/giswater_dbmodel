@@ -13,4 +13,4 @@ UPDATE om_visit_cat set alias = name;
 
 INSERT INTO edit_typevalue
 (typevalue, id, idval, descript, addparam)
-VALUES('value_verified', '3', 'IGNORE CHECK', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
+VALUES('value_verified', '2', 'IGNORE CHECK', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
