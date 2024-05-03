@@ -40,6 +40,7 @@ v_fid integer;
 v_nodetolerance float;
 v_minlength float;
 v_nodeproximity float;
+v_fid2 integer;
 
 BEGIN
 	--  Search path	
@@ -47,6 +48,7 @@ BEGIN
 
 	-- getting input data 	
 	v_fid := ((p_data ->>'data')::json->>'parameters')::json->>'fid'::text;
+	v_fid2 = v_fid;
 	
 	-- select config values
 	SELECT project_type, giswater  INTO v_project_type, v_version FROM sys_version ORDER BY id DESC LIMIT 1;
@@ -56,9 +58,7 @@ BEGIN
 
 	-- init variables
 	v_count=0;
-	IF v_fid is null THEN
-		v_fid = 225;
-	END IF;
+	v_fid = 225;
 
 	-- delete old values on result table
 	DELETE FROM audit_check_data WHERE fid = v_fid AND cur_user=current_user;
@@ -838,37 +838,40 @@ BEGIN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '482', 1, concat('INFO: Less then ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
 	END IF;
+
+	-- exception for duplicated fid's with OM Check. Only return when v_fid=225 and v_fid2 IS NULL (when v_fid2=101 we dont return)
+	IF v_fid2 IS NULL AND v_fid=225 THEN
+		RAISE NOTICE '36 - Check nodes with state_type isoperative = false (187)';
+		v_querytext = 'SELECT node_id, nodecat_id, the_geom, n.expl_id FROM v_edit_node n JOIN value_state_type s ON id=state_type 
+		 	WHERE n.state > 0 AND s.is_operative IS FALSE and verified <>''3''';
 	
-	RAISE NOTICE '36 - Check nodes with state_type isoperative = false (187)';
-	v_querytext = 'SELECT node_id, nodecat_id, the_geom, n.expl_id FROM v_edit_node n JOIN value_state_type s ON id=state_type 
-	 	WHERE n.state > 0 AND s.is_operative IS FALSE';
-
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-	IF v_count > 0 THEN
-		EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom, expl_id)
-		SELECT 187, node_id, nodecat_id, ''Nodes with state_type isoperative = false'', the_geom, expl_id FROM (', v_querytext,')a');
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid,'187', 2, concat('WARNING-187 (anl_node): There is/are ',v_count,' node(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue.'),v_count);
-	ELSE
-		INSERT INTO audit_check_data (fid,  result_id,criticity, error_message, fcount)
-		VALUES (v_fid, '187', 1, 'INFO: No nodes with state > 0 AND state_type.is_operative on FALSE found.',v_count);
-	END IF;
-
-	RAISE NOTICE '37 - Check arcs with state_type isoperative = false (188)';
-	v_querytext = 'SELECT arc_id, arccat_id, the_geom, a.expl_id FROM v_edit_arc a JOIN value_state_type s ON id=state_type 
-	WHERE a.state > 0 AND s.is_operative IS FALSE'; 
-
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-
-	IF v_count > 0 THEN
-		EXECUTE concat ('INSERT INTO anl_arc (fid, arc_id, arccat_id, descript, the_geom, expl_id)
-			SELECT 188, arc_id, arccat_id, ''arcs with state_type isoperative = false'', the_geom, expl_id FROM (', v_querytext,')a');
-
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '188', 2, concat('WARNING-188 (anl_arc): There is/are ',v_count,' arc(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue.'),v_count);
-	ELSE
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '188', 1, 'INFO: No arcs with state > 0 AND state_type.is_operative on FALSE found.',v_count);
+		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+		IF v_count > 0 THEN
+			EXECUTE concat ('INSERT INTO anl_node (fid, node_id, nodecat_id, descript, the_geom, expl_id)
+			SELECT 187, node_id, nodecat_id, ''Nodes with state_type isoperative = false'', the_geom, expl_id FROM (', v_querytext,')a');
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid,'187', 2, concat('WARNING-187 (anl_node): There is/are ',v_count,' node(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue.'),v_count);
+		ELSE
+			INSERT INTO audit_check_data (fid,  result_id,criticity, error_message, fcount)
+			VALUES (v_fid, '187', 1, 'INFO: No nodes with state > 0 AND state_type.is_operative on FALSE found.',v_count);
+		END IF;
+	
+		RAISE NOTICE '37 - Check arcs with state_type isoperative = false (188)';
+		v_querytext = 'SELECT arc_id, arccat_id, the_geom, a.expl_id FROM v_edit_arc a JOIN value_state_type s ON id=state_type 
+		WHERE a.state > 0 AND s.is_operative IS FALSE and verified <>''3'''; 
+	
+		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+	
+		IF v_count > 0 THEN
+			EXECUTE concat ('INSERT INTO anl_arc (fid, arc_id, arccat_id, descript, the_geom, expl_id)
+				SELECT 188, arc_id, arccat_id, ''arcs with state_type isoperative = false'', the_geom, expl_id FROM (', v_querytext,')a');
+	
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '188', 2, concat('WARNING-188 (anl_arc): There is/are ',v_count,' arc(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue.'),v_count);
+		ELSE
+			INSERT INTO audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '188', 1, 'INFO: No arcs with state > 0 AND state_type.is_operative on FALSE found.',v_count);
+		END IF;
 	END IF;
 
 	-- Removing isaudit false sys_fprocess

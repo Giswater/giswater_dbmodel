@@ -420,7 +420,8 @@ BEGIN
 
 			IF v_ignoreepa IS FALSE THEN
 				EXECUTE 'SELECT gw_fct_pg2epa_check_data($${
-				"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{}}$$)';
+				"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"parameters":{"fid":101}}}$$)';
+
 				-- insert results 
 				UPDATE audit_check_data SET error_message = concat(split_part(error_message,':',1), ' (DB EPA):', split_part(error_message,': ',2))
 				WHERE fid=225 AND criticity < 4 AND error_message !='' AND cur_user=current_user AND result_id IS NOT NULL;
