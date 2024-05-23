@@ -96,8 +96,8 @@ BEGIN
 		-- Create the matrix to work with pgrouting
 		INSERT INTO temp_t_mincut 
 		SELECT a.id, a.source, a.target,
-		(case when (a.id = b.id and a.source::text = b.source::text) then -1 else cost end) as cost, 			-- close especial case of config_graph_checkvalve only direct sense
-		(case when (a.id = b.id and a.source::text != b.source::text) then -1 else reverse_cost end) as reverse_cost  	-- close especial case of config_graph_checkvalve only reverse sense
+		(case when (a.id = b.id and a.source::text != b.source::text) then -1 else cost end) as cost, 			-- close especial case of config_graph_checkvalve only direct sense
+		(case when (a.id = b.id and a.source::text = b.source::text) then -1 else reverse_cost end) as reverse_cost  	-- close especial case of config_graph_checkvalve only reverse sense
 		FROM (
 			SELECT arc.arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, 
 			(case when a.closed=true then -1 else 1 end) as cost,
@@ -122,9 +122,9 @@ BEGIN
 			FOR rec_tank IN 
 			SELECT v_edit_node.node_id, v_edit_node.the_geom FROM config_graph_inlet
 			JOIN v_edit_node ON v_edit_node.node_id=config_graph_inlet.node_id
-			JOIN exploitation ON exploitation.expl_id=config_graph_inlet.expl_id
+			JOIN exploitation ON exploitation.expl_id=v_edit_node.expl_id
 			WHERE (is_operative IS TRUE) AND (exploitation.macroexpl_id=v_macroexpl) AND config_graph_inlet.active IS TRUE 
-			AND v_edit_node.the_geom IS NOT NULL AND v_edit_node.node_id NOT IN (select node_id FROM temp_om_mincut_node)
+			AND v_edit_node.the_geom IS NOT NULL
 			ORDER BY 1
 			LOOP
 				/*
@@ -215,8 +215,8 @@ BEGIN
 		-- Create the matrix to work with pgrouting
 		INSERT INTO temp_t_mincut 
 		SELECT a.id, a.source, a.target,
-		(case when (a.id = b.id and a.source::text = b.source::text) then -1 else cost end) as cost, 			-- close especial case of config_graph_checkvalve only direct sense
-		(case when (a.id = b.id and a.source::text != b.source::text) then -1 else reverse_cost end) as reverse_cost  	-- close especial case of config_graph_checkvalve only reverse sense
+		(case when (a.id = b.id and a.source::text != b.source::text) then -1 else cost end) as cost, 			-- close especial case of config_graph_checkvalve only direct sense
+		(case when (a.id = b.id and a.source::text = b.source::text) then -1 else reverse_cost end) as reverse_cost  	-- close especial case of config_graph_checkvalve only reverse sense
 		FROM (
 			SELECT arc.arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, 
 			(case when a.closed=true then -1 else 1 end) as cost,

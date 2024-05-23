@@ -26,7 +26,7 @@ SELECT gw_fct_graphanalytics_mapzones_advanced('{"data":{"parameters":{"graphCla
 DECLARE
 
 v_class text;
-v_expl integer;
+v_expl text;
 v_updatemapzone integer;
 v_data json;
 v_paramupdate float;
@@ -66,9 +66,14 @@ BEGIN
 	IF v_valuefordisconnected IS NULL THEN v_valuefordisconnected = 0; END IF;
 	IF v_floodonlymapzone IS NULL THEN v_floodonlymapzone = ''; END IF;
 	IF v_commitchanges IS NULL THEN v_commitchanges = FALSE ; END IF;
-
 	
-	v_data = concat ('{"data":{"parameters":{"graphClass":"',v_class,'", "exploitation": [',v_expl,'], "updateFeature":"TRUE",
+	IF v_expl ='-999' THEN 
+		v_expl = (select replace(replace((array_agg(expl_id))::text,'{',''),'}','') from selector_expl where cur_user = current_user);
+	ELSE 
+		v_expl = (select replace(replace(v_expl,'{',''),'}',''));
+	END IF;
+	
+	v_data = concat ('{"data":{"parameters":{"graphClass":"',v_class,'", "exploitation": "',v_expl,'", "updateFeature":"TRUE",
 	"updateMapZone":',v_updatemapzone,', "geomParamUpdate":',v_paramupdate, ',"floodFromNode":"',v_floodfromnode,'", "forceOpen": [',v_forceopen,'], "forceClosed":[',v_forceclosed,'], "usePlanPsector": ',v_usepsector,', "debug":"FALSE", 
 	"valueForDisconnected":',v_valuefordisconnected,', "floodOnlyMapzone":"',v_floodonlymapzone,'", "commitChanges":',v_commitchanges,'}}}');
 

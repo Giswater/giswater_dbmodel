@@ -270,29 +270,24 @@ BEGIN
 	-- to_arc wrong values (170)
 	IF (SELECT value FROM config_param_system WHERE parameter = 'epa_shutoffvalve') = 'VALVE' THEN
 		INSERT INTO temp_anl_node (fid, node_id, nodecat_id, the_geom, descript, sector_id)
-		select 170, node_id, nodecat_id, the_geom, 'To arc is null or does not exists as closest arc for valve', sector_id FROM v_edit_inp_valve JOIN(
-		select node_id FROM v_edit_inp_valve JOIN arc on arc_id=to_arc AND node_id=node_1 where valv_type !='TCV'
-		union
-		select node_id FROM v_edit_inp_valve JOIN arc on arc_id=to_arc AND node_id=node_2 where valv_type !='TCV')a USING (node_id)
-		WHERE a.node_id IS NULL;			
+		select 170, node_id, nodecat_id, n.the_geom, 'To arc does not exists as closest arc for valve', n.sector_id
+		from inp_valve LEFT JOIN v_edit_arc v on arc_id = to_arc JOIN v_edit_node n USING (node_id) where node_id not in (node_1, node_2) AND valv_type !='TCV';		
 	ELSE 
 		INSERT INTO temp_anl_node (fid, node_id, nodecat_id, the_geom, descript, sector_id)
-		select 170, node_id, nodecat_id, the_geom, 'To arc is null or does not exists as closest arc for valve', sector_id FROM v_edit_inp_valve JOIN(
-		select node_id FROM v_edit_inp_valve JOIN arc on arc_id=to_arc AND node_id=node_1
-		union
-		select node_id FROM v_edit_inp_valve JOIN arc on arc_id=to_arc AND node_id=node_2)a USING (node_id)
-		WHERE a.node_id IS NULL;	
+		select 170, node_id, nodecat_id, n.the_geom, 'To arc does not exists as closest arc for valve', n.sector_id
+		from inp_valve LEFT JOIN v_edit_arc v on arc_id = to_arc JOIN v_edit_node n USING (node_id) where node_id not in (node_1, node_2);
+
 	END IF;
-	
+
 	
 	SELECT count(*) INTO v_count FROM temp_anl_node WHERE fid = 170 AND cur_user=current_user;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '170', 3, concat('ERROR-170 (anl_node): There is/are ', v_count,' valve(s) with wrong to_arc value according with the two closest arcs.'),v_count);
+		VALUES (v_fid, '170', 3, concat('ERROR-170 (anl_node): There is/are ', v_count,' valve(s) with wrong to_arc value according to the current closest arcs.'),v_count);
 	ELSE 
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '170', 1,
-		'INFO: Valve to_arc wrong values checked. No inconsistencies have been detected (values acording closest arcs).', v_count);
+		'INFO: Valve to_arc wrong values checked. No inconsistencies have been detected according to the current closest arcs.', v_count);
 	END IF;
 
 
@@ -451,22 +446,20 @@ BEGIN
 	
 	-- to_arc wrong values (171)
 	INSERT INTO temp_anl_node (fid, node_id, nodecat_id, the_geom, descript, sector_id)
-	select 171, node_id, nodecat_id , the_geom,  'To arc is null or does not exists as closest arc for pump', sector_id FROM v_edit_inp_pump WHERE node_id NOT IN(
-		select node_id FROM v_edit_inp_pump JOIN arc on arc_id=to_arc AND node_id=node_1
-		union
-		select node_id FROM v_edit_inp_pump JOIN arc on arc_id=to_arc AND node_id=node_2);
+	select 171, node_id, nodecat_id , n.the_geom,  'To arc does not exists as closest arc for pump', n.sector_id 
+	from inp_pump LEFT JOIN v_edit_arc v on arc_id = to_arc JOIN v_edit_node n USING (node_id) where node_id not in (node_1, node_2);
 	
 	SELECT count(*) INTO v_count FROM temp_anl_node WHERE fid = 171 AND cur_user=current_user;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '171', 3, concat('ERROR-171 (anl_node): There is/are ', v_count,' pump(s) with wrong to_arc value according with closest arcs.'),v_count);
+		VALUES (v_fid, '171', 3, concat('ERROR-171 (anl_node): There is/are ', v_count,' pump(s) with wrong to_arc value according to the current closest arcs.'),v_count);
 
 	ELSE 
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '171', 1,
-		'INFO: Pump to_arc wrong values checked. have been detected (values acording closest arcs).', v_count);
+		'INFO: Pump to_arc wrong values checked. No inconsistencies have been detected according with the current closest arcs.', v_count);
 	END IF;
-	
+
 	
 	RAISE NOTICE '15 - pumps. Pump type and others';	
 
@@ -818,25 +811,29 @@ BEGIN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '429' , 1, concat('INFO: All patterns checked have names without spaces.'),v_count);
 	END IF;
+    
+    IF v_fid <> 101 THEN --not on check project (101) because it's already on om_check_data
+		RAISE NOTICE '32 - Check nodes ''T candidate'' with wrong topology (fid: 432)';
+		v_querytext = 'with q_arc as (select * from arc JOIN v_state_arc USING (arc_id))
+				SELECT b.* FROM (SELECT n1.node_id, n1.nodecat_id, n1.sector_id, n1.expl_id, n1.state,
+				''Node ''''T candidate'''' with wrong topology'', 432, n1.the_geom 
+		    	FROM q_arc, (select * from node JOIN v_state_node USING (node_id)) n1
+		    	JOIN (SELECT node_1 node_id from q_arc UNION select node_2 FROM q_arc) b USING (node_id)
+		    	WHERE st_dwithin(q_arc.the_geom, n1.the_geom,0.01) AND n1.node_id NOT IN (node_1, node_2))b, selector_sector s 
+		    	where s.sector_id = b.sector_id AND cur_user=current_user';
 	
-	RAISE NOTICE '32 - Check nodes ''T candidate'' with wrong topology (fid: 432)';
-
-	v_querytext = 'SELECT b.* FROM (SELECT n1.node_id, n1.sector_id, 432, ''Node ''''T candidate'''' with wrong topology'', n1.nodecat_id, n1.the_geom FROM arc a, node n1
-					JOIN v_state_node USING (node_id) JOIN v_expl_node USING (node_id)
-		      JOIN (SELECT node_1 node_id FROM arc WHERE state = 1 UNION SELECT node_2 FROM arc WHERE state = 1) b USING (node_id)
-		      WHERE st_dwithin(a.the_geom, n1.the_geom,0.01) AND n1.node_id NOT IN (node_1, node_2))b, selector_sector s WHERE s.sector_id = b.sector_id AND cur_user=current_user';
-
-	EXECUTE 'SELECT count(*) FROM ('||v_querytext||')a'
-	INTO v_count;
+		EXECUTE 'SELECT count(*) FROM ('||v_querytext||')a'
+		INTO v_count;
+		
+		IF v_count > 0 THEN
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '432', 3, concat('ERROR-432 (anl_node): There is/are ',v_count,' Node(s) ''T candidate'' with wrong topology'),v_count);
 	
-	IF v_count > 0 THEN
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '429', 3, concat('ERROR-432 (anl_node): There is/are ',v_count,' Node(s) ''T candidate'' with wrong topology'),v_count);
-
-		EXECUTE 'INSERT INTO temp_anl_node (node_id, sector_id, fid, descript, nodecat_id, the_geom) '||v_querytext;
-	ELSE
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '429', 1, concat('INFO: All Nodes T has right topology.'),v_count);
+			EXECUTE 'INSERT INTO temp_anl_node (node_id, nodecat_id, sector_id, expl_id, state, descript, fid, the_geom) '||v_querytext;
+		ELSE
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '432', 1, concat('INFO: All Nodes T has right topology.'),v_count);
+		END IF;
 	END IF;
 	
 	RAISE NOTICE '33 - Check matcat not null on arc (430)';
@@ -845,12 +842,12 @@ BEGIN
 	
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '427', 3, concat(
+		VALUES (v_fid, '430', 3, concat(
 		'ERROR-430: There is/are ',v_count,' arcs without matcat_id informed.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '427', 1, 'INFO: All arcs have matcat_id filled.',v_count);
+		VALUES (v_fid, '430', 1, 'INFO: All arcs have matcat_id filled.',v_count);
 	END IF;	
 	
 	RAISE NOTICE '34 - Check duplicated connec on visible psectors';
@@ -891,7 +888,40 @@ BEGIN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
 	END IF;
-	v_count=0;
+	
+    IF v_fid <> 101 THEN --not on check project (101) because it's already on om_check_data
+        RAISE NOTICE '36 - Check nodes with state_type isoperative = false (187)';
+        v_querytext = 'SELECT node_id, nodecat_id, the_geom, n.expl_id FROM v_edit_node n JOIN value_state_type s ON id=state_type 
+            WHERE n.state > 0 AND s.is_operative IS FALSE AND verified <>''2''';
+
+        EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+        IF v_count > 0 THEN
+            EXECUTE concat ('INSERT INTO temp_anl_node (fid, node_id, nodecat_id, descript, the_geom, expl_id)
+            SELECT 187, node_id, nodecat_id, ''Nodes with state_type isoperative = false'', the_geom, expl_id FROM (', v_querytext,')a');
+            INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+            VALUES (v_fid,'187', 2, concat('WARNING-187 (anl_node): There is/are ',v_count,' node(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue.'),v_count);
+        ELSE
+            INSERT INTO temp_audit_check_data (fid,  result_id,criticity, error_message, fcount)
+            VALUES (v_fid, '187', 1, 'INFO: No nodes with state > 0 AND state_type.is_operative on FALSE found.',v_count);
+        END IF;
+
+        RAISE NOTICE '37 - Check arcs with state_type isoperative = false (188)';
+        v_querytext = 'SELECT arc_id, arccat_id, the_geom, a.expl_id FROM v_edit_arc a JOIN value_state_type s ON id=state_type 
+        WHERE a.state > 0 AND s.is_operative IS FALSE AND verified <>''2'''; 
+
+        EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+
+        IF v_count > 0 THEN
+            EXECUTE concat ('INSERT INTO temp_anl_arc (fid, arc_id, arccat_id, descript, the_geom, expl_id)
+                SELECT 188, arc_id, arccat_id, ''arcs with state_type isoperative = false'', the_geom, expl_id FROM (', v_querytext,')a');
+
+            INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+            VALUES (v_fid, '188', 2, concat('WARNING-188 (anl_arc): There is/are ',v_count,' arc(s) with state > 0 and state_type.is_operative on FALSE. Please, check your data before continue.'),v_count);
+        ELSE
+            INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+            VALUES (v_fid, '188', 1, 'INFO: No arcs with state > 0 AND state_type.is_operative on FALSE found.',v_count);
+        END IF;
+    END IF;
 
 	-- Removing isaudit false sys_fprocess
 	FOR v_record IN SELECT * FROM sys_fprocess WHERE isaudit is false

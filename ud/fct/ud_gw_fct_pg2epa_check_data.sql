@@ -67,6 +67,7 @@ BEGIN
 		CREATE TEMP TABLE temp_anl_arc (LIKE SCHEMA_NAME.anl_arc INCLUDING ALL);
 		CREATE TEMP TABLE temp_anl_node (LIKE SCHEMA_NAME.anl_node INCLUDING ALL);
 		CREATE TEMP TABLE temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
+		CREATE TEMP TABLE temp_anl_polygon (LIKE SCHEMA_NAME.anl_polygon INCLUDING ALL);
 		
 		-- Header
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, v_result_id, 4, concat('DATA QUALITY ANALYSIS ACORDING EPA RULES'));
@@ -373,7 +374,7 @@ BEGIN
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id, 3, '106' ,concat('WARNING-106 (anl_node): There is/are ',v_count,' nodes with less proximity than minimum configured (',v_nodetolerance,').'),v_count);
+		VALUES (v_fid, v_result_id, 2, '106' ,concat('WARNING-106 (anl_node): There is/are ',v_count,' nodes with less proximity than minimum configured (',v_nodetolerance,').'),v_count);
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 1, '106','INFO: All nodes has the minimum distance among them acording with the configured value ',v_count);
@@ -625,8 +626,8 @@ BEGIN
 	v_count=0;
 
 	RAISE NOTICE '27 - Check if outfalls have more than 1 connected arc';
-	with n as (select node_id from node, arc where node.epa_type='OUTFALL' and st_dwithin(node.the_geom, arc.the_geom, 0.01) group by node_id having count(node_id)>1)
-	select count(*) from n into v_count;
+	select count(*) into v_count 
+	from (select node_2 from v_edit_inp_conduit a join v_edit_inp_outfall n on node_2 = node_id group by node_2 having count(*) > 1)a;   
 	
 	IF v_count>0 then
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
@@ -645,7 +646,12 @@ BEGIN
 	RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id is a node) or in v_edit_inp_subcatchment (if outlet_id is a subcathment)';
 	
 	v_querytext = '(select outlet_id from v_edit_inp_subc2outlet
-			LEFT JOIN (select node_id from v_edit_inp_junction UNION select node_id from v_edit_inp_storage UNION select node_id from v_edit_inp_netgully) a on outlet_id = node_id
+			LEFT JOIN (
+			select node_id from v_edit_inp_junction 
+			UNION select node_id from v_edit_inp_outfall
+			UNION select node_id from v_edit_inp_storage 
+			UNION select node_id from v_edit_inp_netgully
+			) a on outlet_id = node_id
 			where outlet_type in (''JUNCTION'') and node_id is null
 			union
 			select a.outlet_id from v_edit_inp_subc2outlet a LEFT JOIN v_edit_inp_subcatchment s on a.outlet_id = s.subc_id
@@ -654,8 +660,8 @@ BEGIN
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext, 'a') INTO v_count;
 	
 	IF v_count>0 then
-		EXECUTE concat ('INSERT INTO temp_anl_node (fid, node_id, descript, the_geom) 
-		SELECT 528, subc_id, ''Non-existing outlet_id related to subcatchment'', st_startpoint(the_geom) from v_edit_inp_subc2outlet where outlet_id in ', v_querytext);
+		EXECUTE concat ('INSERT INTO temp_anl_polygon (fid, pol_id, descript, the_geom) 
+		SELECT 528, subc_id, ''Non-existing outlet_id related to subcatchment'', the_geom from v_edit_inp_subcatchment where outlet_id in ', v_querytext);
 		
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '528', 3, concat('ERROR-528 (anl_node): There is/are ',v_count,' non-existing node_id or subc_id as an outlet_id.'),v_count);
@@ -740,6 +746,7 @@ BEGIN
 		INSERT INTO anl_arc SELECT * FROM temp_anl_arc;
 		INSERT INTO anl_node SELECT * FROM temp_anl_node;
 		INSERT INTO audit_check_data SELECT * FROM temp_audit_check_data;
+		INSERT INTO anl_polygon SELECT * FROM temp_anl_polygon;
 
 	ELSIF  v_fid = 101 THEN 
 		UPDATE temp_audit_check_data SET fid = 225;
@@ -768,7 +775,7 @@ BEGIN
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
 	FROM (SELECT node_id, nodecat_id, state, expl_id, descript,fid, the_geom
-	FROM  temp_anl_node WHERE cur_user="current_user"() AND fid IN (106, 107, 111, 113, 164, 187, 294, 379, 528)) row) features;
+	FROM  temp_anl_node WHERE cur_user="current_user"() AND fid IN (106, 107, 111, 113, 164, 187, 294, 379)) row) features;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point",  "features":',v_result, '}'); 
 
@@ -789,6 +796,16 @@ BEGIN
 
 	-- polygon
 	v_result = null;
+	SELECT jsonb_agg(features.feature) INTO v_result
+	FROM (
+	SELECT jsonb_build_object(
+	'type',       'Feature',
+	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+	'properties', to_jsonb(row) - 'the_geom'
+	) AS feature
+	FROM (SELECT pol_id, pol_type, state, expl_id, descript, the_geom, fid
+	FROM  temp_anl_polygon WHERE cur_user="current_user"() AND fid IN (528)) row) features;
+
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_polygon = concat ('{"geometryType":"Polygon", "features":',v_result, '}');
 
@@ -803,6 +820,7 @@ BEGIN
 		DROP TABLE IF EXISTS temp_anl_arc;
 		DROP TABLE IF EXISTS temp_anl_node ;
 		DROP TABLE IF EXISTS temp_audit_check_data;
+		DROP TABLE IF EXISTS temp_anl_polygon;
 	END IF;
 
 	--  Return

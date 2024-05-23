@@ -293,12 +293,6 @@ BEGIN
 		-- Municipality 
 		IF (NEW.muni_id IS NULL) THEN
 			
-			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM ext_municipality WHERE active IS TRUE ) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3110", "function":"1320","debug_msg":null}}$$);';
-			END IF;
-			
 			-- getting value default
 			IF (NEW.muni_id IS NULL) THEN
 				NEW.muni_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_municipality_vdefault' AND "cur_user"="current_user"() LIMIT 1);
@@ -314,12 +308,6 @@ BEGIN
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
 				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.muni_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"2024", "function":"1320","debug_msg":"'||NEW.node_id::text||'"}}$$);';
 			END IF;            
 		END IF;
 	
@@ -373,14 +361,16 @@ BEGIN
 
 		END IF;
 		
-		--Inventory (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
+		--Inventory
 		IF NEW.inventory IS NULL THEN
 			NEW.inventory := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_inventory_sysvdefault');
 		END IF;
 		
-		--Publish (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
-		NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
-		
+		--Publish
+		IF NEW.publish IS NULL THEN
+			NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
+		END IF; 
+				
 		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature JOIN cat_node ON cat_feature.id=cat_node.nodetype_id WHERE cat_node.id=NEW.nodecat_id;
 		
 		--Copy id to code field
@@ -592,8 +582,8 @@ BEGIN
 			INSERT INTO man_manhole (node_id, name) VALUES(NEW.node_id, NEW.name);
 		
 		ELSIF v_man_table='man_meter' THEN
-			INSERT INTO man_meter (node_id, brand, model, real_press_max, real_press_min, real_press_avg) 
-			VALUES(NEW.node_id, NEW.brand, NEW.model, NEW.real_press_max, NEW.real_press_min, NEW.real_press_avg);
+			INSERT INTO man_meter (node_id, brand, model, real_press_max, real_press_min, real_press_avg, meter_code) 
+			VALUES(NEW.node_id, NEW.brand, NEW.model, NEW.real_press_max, NEW.real_press_min, NEW.real_press_avg, NEW.meter_code);
 		
 		ELSIF v_man_table='man_source' THEN	
 				INSERT INTO man_source (node_id, name) VALUES(NEW.node_id, NEW.name);
@@ -658,7 +648,7 @@ BEGIN
 			VALUES (NEW.node_id, NEW.expl_id, TRUE);	
 		END IF;
 
-		-- man addfields insert
+		-- childtable insert
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM sys_addfields
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
@@ -668,11 +658,11 @@ BEGIN
 					INTO v_new_value_param;
 
 				IF v_new_value_param IS NOT NULL THEN
-					EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
-						USING NEW.node_id, v_addfields.id, v_new_value_param;
-				END IF;	
+					EXECUTE 'INSERT INTO man_node_'||lower(v_customfeature)||' (node_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')'
+						USING NEW.node_id, v_new_value_param;
+				END IF;
 			END LOOP;
-		END IF;				
+		END IF;
 
 		-- EPA insert
 		IF (NEW.epa_type = 'JUNCTION') THEN 
@@ -965,7 +955,7 @@ BEGIN
 
 		ELSIF v_man_table ='man_meter' THEN
 			UPDATE man_meter SET
-			brand=NEW.brand, model=NEW.model, real_press_max = NEW.real_press_max, real_press_min=NEW.real_press_min, real_press_avg=NEW.real_press_avg
+			brand=NEW.brand, model=NEW.model, real_press_max = NEW.real_press_max, real_press_min=NEW.real_press_min, real_press_avg=NEW.real_press_avg, meter_code=NEW.meter_code
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table ='man_waterwell' THEN
@@ -1036,33 +1026,29 @@ BEGIN
 			END IF;
 		END IF;
 
-		-- man addfields update
+		-- childtable update
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM sys_addfields
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
 			LOOP
-
-				EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
+				EXECUTE 'SELECT $1."' || v_addfields.param_name ||'"'
 					USING NEW
 					INTO v_new_value_param;
 	 
-				EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
+				EXECUTE 'SELECT $1."' || v_addfields.param_name ||'"'
 					USING OLD
 					INTO v_old_value_param;
 
-				IF (v_new_value_param IS NOT null and v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT null and v_old_value_param is NULL) THEN 
-
-					EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
-						ON CONFLICT (feature_id, parameter_id)
-						DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
-						USING NEW.node_id , v_addfields.id, v_new_value_param;	
+				IF (v_new_value_param IS NOT NULL AND v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT NULL AND v_old_value_param IS NULL) THEN
+					EXECUTE 'INSERT INTO man_node_'||lower(v_customfeature)||' (node_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')
+					    ON CONFLICT (node_id)
+					    DO UPDATE SET '||v_addfields.param_name||'=$2::'||v_addfields.datatype_id||' WHERE man_node_'||lower(v_customfeature)||'.node_id=$1'
+						USING NEW.node_id, v_new_value_param;
 
 				ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
-
-					EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
-						USING NEW.node_id , v_addfields.id;
+					EXECUTE 'UPDATE man_node_'||lower(v_customfeature)||' SET '||v_addfields.param_name||' = null WHERE man_node_'||lower(v_customfeature)||'.node_id=$1'
+					    USING NEW.node_id;
 				END IF;
-			
 			END LOOP;
 		END IF;
 		
@@ -1098,9 +1084,12 @@ BEGIN
 		--remove node from config_graph_inlet
 		DELETE FROM config_graph_inlet WHERE node_id=OLD.node_id;
 
-		--Delete addfields (after or before deletion of node, doesn't matter)
-		DELETE FROM man_addfields_value WHERE feature_id = OLD.node_id  and parameter_id in 
-		(SELECT id FROM sys_addfields WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.node_type);
+		-- Delete childtable addfields (after or before deletion of node, doesn't matter)
+        FOR v_addfields IN SELECT * FROM sys_addfields
+        WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
+        LOOP
+		    EXECUTE 'DELETE FROM man_node_'||lower(v_addfields.cat_feature_id)||' WHERE node_id = OLD.node_id';
+        END LOOP;
 
 		-- delete from node_add table
 		DELETE FROM node_add WHERE node_id = OLD.node_id;

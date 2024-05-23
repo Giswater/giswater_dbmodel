@@ -69,24 +69,14 @@ BEGIN
 		v_userscenario = (SELECT array_agg(dscenario_id) FROM selector_inp_dscenario where cur_user=current_user);
 		v_deafultpattern = Coalesce((SELECT value FROM config_param_user WHERE parameter='inp_options_pattern' AND cur_user=current_user),''); 
 
-		-- base demand management	
-		IF v_demandpriority = 0 THEN -- Remove whole base demand
+		
+		-- Remove whole base demand
+		IF v_demandpriority = 0 THEN 
 		
 			UPDATE temp_t_node SET demand = 0, pattern_id = null;
 
-		ELSIF	v_demandpriority = 1 THEN -- keep base demand and overwrites it when dscenario demand exists
-			-- EPANET standard 
-			
-		ELSIF v_demandpriority = 2 THEN -- Dscenario and base demand are joined,  moving to temp_t_demand in order to do not lose base demand (because EPANET does)
-
-			-- moving node demands to temp_t_demand
-			INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id)
-			SELECT DISTINCT ON (node_id) 0, node_id, n.demand, n.pattern_id 
-			FROM temp_t_node n
-			JOIN temp_t_demand ON node_id = feature_id
-			WHERE n.demand IS NOT NULL AND n.demand <> 0;
 		END IF;
-
+		
 		-- insert node demands from dscenario into temp_t_demand
 		INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id, demand_type, source)
 		SELECT dscenario_id, feature_id, d.demand, d.pattern_id, d.demand_type, d.source
@@ -99,10 +89,10 @@ BEGIN
 			-- demands for connec related to arcs
 			INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id, demand_type, source)
 			SELECT dscenario_id, node_1 AS node_id, d.demand/2 as demand, d.pattern_id, demand_type, source FROM temp_t_arc JOIN v_edit_inp_connec USING (arc_id)
-			JOIN inp_dscenario_demand d ON feature_id = connec_id WHERE dscenario_id IN (SELECT unnest(v_userscenario))
+			JOIN inp_dscenario_demand d ON feature_id = connec_id WHERE dscenario_id IN (SELECT unnest(v_userscenario)) AND pjoint_type = 'ARC'
 			UNION ALL
 			SELECT dscenario_id, node_2 AS node_id, d.demand/2 as demand, d.pattern_id, demand_type, source  FROM temp_t_arc JOIN v_edit_inp_connec USING (arc_id)
-			JOIN inp_dscenario_demand d ON feature_id = connec_id WHERE dscenario_id IN (SELECT unnest(v_userscenario));
+			JOIN inp_dscenario_demand d ON feature_id = connec_id WHERE dscenario_id IN (SELECT unnest(v_userscenario)) AND pjoint_type = 'ARC';
 
 			-- demands for connec related to nodes
 			INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id, demand_type, source)
@@ -111,10 +101,14 @@ BEGIN
 			WHERE pjoint_type = 'NODE'
 			AND dscenario_id IN (SELECT unnest(v_userscenario));
 
-			
-		ELSIF v_networkmode = 3 THEN
-
-			-- removed due refactor of 2022/6/12
+			IF v_demandpriority = 2 THEN 
+				-- moving node demands to temp_t_demand (to skip EPANET behaviour)
+				INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id)
+				SELECT DISTINCT ON (node_id) 0, node_id, n.demand, n.pattern_id 
+				FROM temp_t_node n
+				JOIN temp_t_demand ON node_id = feature_id
+				WHERE n.demand IS NOT NULL AND n.demand <> 0;				
+			END IF;	
 			
 		END IF;
 
@@ -128,7 +122,7 @@ BEGIN
 		JOIN connec c ON concat('VC',c.pjoint_id) =  n.node_id
 		WHERE c.connec_id = d.feature_id AND d.demand IS NOT NULL AND d.demand <> 0  
 		AND dscenario_id IN (SELECT unnest(v_userscenario));
-		
+			
 		-- pattern
 		IF v_patternmethod = 11 THEN -- DEFAULT PATTERN
 			UPDATE temp_t_demand SET pattern_id=v_deafultpattern WHERE pattern_id IS NULL;
@@ -140,9 +134,9 @@ BEGIN
 			 AND temp_t_demand.pattern_id IS NULL;
 		
 		ELSIF v_patternmethod = 13 THEN -- DMA PATTERN (NODE)
-			UPDATE temp_t_demand SET pattern_id=sector.pattern_id FROM node JOIN dma ON dma.dma_id=node.dma_id WHERE temp_t_demand.feature_id=node.node_id
+			UPDATE temp_t_demand SET pattern_id=dma.pattern_id FROM node JOIN dma ON dma.dma_id=node.dma_id WHERE temp_t_demand.feature_id=node.node_id
 			 AND temp_t_demand.pattern_id IS NULL;
-			UPDATE temp_t_demand SET pattern_id=sector.pattern_id FROM connec JOIN dma ON dma.dma_id=connec.dma_id WHERE temp_t_demand.feature_id=connec.connec_id
+			UPDATE temp_t_demand SET pattern_id=dma.pattern_id FROM connec JOIN dma ON dma.dma_id=connec.dma_id WHERE temp_t_demand.feature_id=connec.connec_id
 			 AND temp_t_demand.pattern_id IS NULL;
 			
 		ELSIF v_patternmethod = 14 THEN -- FEATURE PATTERN (NODE)

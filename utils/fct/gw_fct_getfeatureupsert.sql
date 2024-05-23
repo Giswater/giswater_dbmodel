@@ -95,7 +95,6 @@ v_catfeature record;
 v_codeautofill boolean=true;
 v_values_array json;
 v_record record;
-v_gislength float;
 v_catalog text;
 v_dnom text;
 v_pnom text;
@@ -138,8 +137,8 @@ v_debug_vars json;
 v_debug json;
 v_msgerr json;
 v_epa text;
-v_elevation float;
-v_staticpressure float;
+v_elevation numeric(12,4);
+v_staticpressure numeric(12,3);
 label_value text;
 
 v_streetname varchar;
@@ -393,9 +392,6 @@ BEGIN
 					END IF;
 				END IF;
 
-				--getting 1st approach of gis length
-				v_gislength = (SELECT st_length(p_reduced_geometry))::numeric(12,0);
-
 			ELSIF upper(v_catfeature.feature_type) ='CONNEC' THEN
 				v_numnodes := (SELECT COUNT(*) FROM connec WHERE ST_DWithin(p_reduced_geometry, connec.the_geom, v_connec_proximity) AND connec.connec_id != p_id AND connec.state!=0);
 				IF (v_numnodes >1) AND (v_connec_proximity_control IS TRUE) THEN
@@ -491,7 +487,7 @@ BEGIN
 		-- Dem elevation
 		IF v_sys_raster_dem AND v_edit_insert_elevation_from_dem AND p_idname IN ('node_id', 'connec_id', 'gully_id') THEN
 			v_elevation = (SELECT ST_Value(rast,1, p_reduced_geometry, true) FROM v_ext_raster_dem WHERE id =
-			(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1))::numeric (12,3);
+			(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1));
 		END IF;
 
 		-- static pressure
@@ -678,8 +674,6 @@ BEGIN
 					field_value = v_noderecord1.node_id;
 				WHEN 'node_2' THEN
 					field_value = v_noderecord2.node_id;
-				WHEN 'gis_length' THEN
-					field_value = v_gislength;
 				WHEN 'epa_type' THEN
 				    if v_catfeature.feature_type != 'LINK' then
                         v_querystring = concat('SELECT epa_default FROM cat_feature_',(v_catfeature.feature_type),' WHERE id = ', quote_nullable(v_catfeature.id));
@@ -817,6 +811,21 @@ BEGIN
 					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_feature_auto_builtdate') IS TRUE AND field_value IS NULL  THEN
 						EXECUTE 'SELECT date(now())' INTO field_value;
 					END IF;
+					
+				WHEN 'inventory' THEN
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_inventory_sysvdefault') IS TRUE THEN
+						field_value = (SELECT value::boolean FROM config_param_system WHERE parameter='edit_inventory_sysvdefault');
+					END IF;
+
+				WHEN 'publish' THEN
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_publish_sysvdefault') IS TRUE THEN
+						field_value = (SELECT value::boolean FROM config_param_system WHERE parameter='edit_publish_sysvdefault');
+					END IF;
+
+				WHEN 'uncertain' THEN
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_uncertain_sysvdefault') IS TRUE THEN
+						field_value = (SELECT value::boolean FROM config_param_system WHERE parameter='edit_uncertain_sysvdefault');
+					END IF;
 
 				WHEN 'streetname' THEN
 					IF (v_auto_streetvalues_status is true) then
@@ -918,7 +927,7 @@ BEGIN
                             select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
                             --remove current combo names from return json
                             v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboNames'::text;
-                            EXECUTE 'SELECT  array_to_json(''{'||v_selected_idval||'}''::text[])'
+                            EXECUTE 'SELECT  array_to_json(ARRAY['||quote_literal(v_selected_idval)||'])::text'
                             INTO v_new_id;
                             --add new combo names to return json
                             v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);

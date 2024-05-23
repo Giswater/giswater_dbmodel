@@ -220,12 +220,6 @@ BEGIN
 		-- Municipality 
 		IF (NEW.muni_id IS NULL) THEN
 			
-			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM ext_municipality WHERE active IS TRUE ) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-		       	"data":{"message":"3110", "function":"1204","debug_msg":null}}$$);';
-			END IF;
-			
 			-- getting value default
 			IF (NEW.muni_id IS NULL) THEN
 				NEW.muni_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_municipality_vdefault' AND "cur_user"="current_user"() LIMIT 1);
@@ -241,13 +235,7 @@ BEGIN
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
 				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.muni_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"2024", "function":"1204","debug_msg":"'||NEW.connec_id::text||'"}}$$);';
-			END IF;            
+			END IF;        
 		END IF;
         
 		-- District 
@@ -364,16 +352,20 @@ BEGIN
 			NEW.code=NEW.connec_id;
 		END IF;
 
-		--Inventory (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
+		--Inventory
 		IF NEW.inventory IS NULL THEN
 			NEW.inventory := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_inventory_sysvdefault');
 		END IF;
 		
-		--Publish (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
-		NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
-
-		--Uncertain (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
-		NEW.uncertain := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_uncertain_sysvdefault');
+		--Publish
+		IF NEW.publish IS NULL THEN
+			NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
+		END IF; 
+	
+		--Uncertain
+		IF NEW.uncertain IS NULL THEN
+			NEW.uncertain := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_uncertain_sysvdefault');
+		END IF;
 		
 		-- LINK
 		--google maps style
@@ -512,21 +504,21 @@ BEGIN
 			NEW.pjoint_id = v_arc.arc_id; NEW.pjoint_type = 'ARC'; NEW.sector_id = v_arc.sector_id; NEW.dma_id = v_arc.dma_id;
 		END IF;
 		
-		-- man addfields insert
+		-- childtable insert
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM sys_addfields
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
 			LOOP
-				EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
+				EXECUTE 'SELECT $1."' ||v_addfields.param_name||'"'
 					USING NEW
 					INTO v_new_value_param;
 
 				IF v_new_value_param IS NOT NULL THEN
-					EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
-						USING NEW.connec_id, v_addfields.id, v_new_value_param;
-				END IF;	
+					EXECUTE 'INSERT INTO man_connec_'||lower(v_customfeature)||' (connec_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')'
+						USING NEW.connec_id, v_new_value_param;
+				END IF;
 			END LOOP;
-		END IF;		
+		END IF;
 
 		RETURN NEW;
 
@@ -734,35 +726,31 @@ BEGIN
 			WHERE connec_id = OLD.connec_id;		
 		END IF;
 
-		-- man addfields update
+		-- childtable update
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM sys_addfields
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
 			LOOP
-
-				EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
+				EXECUTE 'SELECT $1."' || v_addfields.param_name ||'"'
 					USING NEW
 					INTO v_new_value_param;
-	 
-				EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
+
+				EXECUTE 'SELECT $1."' || v_addfields.param_name ||'"'
 					USING OLD
 					INTO v_old_value_param;
 
-				IF (v_new_value_param IS NOT null and v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT null and v_old_value_param is NULL) THEN 
-
-					EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
-						ON CONFLICT (feature_id, parameter_id)
-						DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
-						USING NEW.connec_id , v_addfields.id, v_new_value_param;	
+				IF (v_new_value_param IS NOT NULL AND v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT NULL AND v_old_value_param IS NULL) THEN
+					EXECUTE 'INSERT INTO man_connec_'||lower(v_customfeature)||' (connec_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')
+					    ON CONFLICT (connec_id)
+					    DO UPDATE SET '||v_addfields.param_name||'=$2::'||v_addfields.datatype_id||' WHERE man_connec_'||lower(v_customfeature)||'.connec_id=$1'
+						USING NEW.connec_id, v_new_value_param;
 
 				ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
-
-					EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
-						USING NEW.connec_id , v_addfields.id;
+					EXECUTE 'UPDATE man_connec_'||lower(v_customfeature)||' SET '||v_addfields.param_name||' = null WHERE man_connec_'||lower(v_customfeature)||'.connec_id=$1'
+					    USING NEW.connec_id;
 				END IF;
-			
 			END LOOP;
-	    END IF;     
+		END IF;
 
         RETURN NEW;
 
@@ -784,9 +772,12 @@ BEGIN
 		-- restore plan_psector_force_delete
 		UPDATE config_param_user SET value = v_force_delete WHERE parameter = 'plan_psector_force_delete' and cur_user = current_user;
 
-		--Delete addfields
-  		DELETE FROM man_addfields_value WHERE feature_id = OLD.connec_id  and parameter_id in 
-  		(SELECT id FROM sys_addfields WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.connec_type);
+		-- Delete childtable addfields (after or before deletion of connec, doesn't matter)
+        FOR v_addfields IN SELECT * FROM sys_addfields
+        WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
+        LOOP
+		    EXECUTE 'DELETE FROM man_connec_'||lower(v_addfields.cat_feature_id)||' WHERE connec_id = OLD.connec_id';
+        END LOOP;
 
 		-- delete links
 		FOR v_record_link IN SELECT * FROM link WHERE feature_type='CONNEC' AND feature_id=OLD.connec_id

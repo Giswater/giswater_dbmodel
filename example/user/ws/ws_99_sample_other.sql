@@ -55,7 +55,7 @@ FROM doc, om_visit;
 INSERT INTO selector_hydrometer (state_id, cur_user) VALUES (1, 'postgres');
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OUTFALL_VALVE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"outfallvalve_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"outfallvalve_param_1", "datatype":"text", 
 "widgettype":"text", "label":"Outvalve param_1","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
@@ -65,13 +65,13 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"SHUTOFF_VALVE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"shtvalve_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"shtvalve_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Shtvalve param_1","ismandatory":"False",
 "active":"True", "iseditable":"True", "dv_isnullvalue":"True","layoutname":"lyt_data_1",
 "dv_querytext":"SELECT id as id, idval as idval  FROM edit_typevalue WHERE typevalue='shtvalve_param_1'"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"SHUTOFF_VALVE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"shtvalve_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"shtvalve_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Shtvalve param_2","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
@@ -81,12 +81,12 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"GREEN_VALVE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"greenvalve_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"greenvalve_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Gvalve param_2","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"AIR_VALVE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"airvalve_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"airvalve_param_1", "datatype":"text", 
 "widgettype":"text", "label":"Airvalve param_1","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
@@ -101,17 +101,17 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"CHECK_VALVE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"checkvalve_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"checkvalve_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Check param_2","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"PIPE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"pipe_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"pipe_param_1", "datatype":"text", 
 "widgettype":"text", "label":"Pipe param_1","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"PRESSURE_METER"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"pressmeter_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"pressmeter_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Pressmeter param_1","ismandatory":"False",
 "active":"True", "iseditable":"True", "dv_isnullvalue":"True","layoutname":"lyt_data_1",
 "dv_querytext":"SELECT id as id, idval as idval  FROM edit_typevalue WHERE typevalue='pressmeter_param_1'"}}}$$);
@@ -127,7 +127,7 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"FILTER"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"filter_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"filter_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Filter param_2","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
@@ -142,7 +142,7 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"HYDRANT"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"hydrant_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"hydrant_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Hydrant param_1","ismandatory":"False",
 "active":"True", "iseditable":"True", "dv_isnullvalue":"True","layoutname":"lyt_data_1",
 "dv_querytext":"SELECT id as id, idval as idval  FROM edit_typevalue WHERE typevalue='hydrant_param_1'"}}}$$);
@@ -166,12 +166,9 @@ INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','2','
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','3','combo3');
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','4','combo4');
 
-INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field, parameter_id)
-SELECT 'edit_typevalue','hydrant_param_1','man_addfields_value','value_param',id FROM sys_addfields WHERE param_name='hydrant_param_1';
-INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field, parameter_id)
-SELECT 'edit_typevalue','shtvalve_param_1','man_addfields_value','value_param',id FROM sys_addfields WHERE param_name='shtvalve_param_1';
-INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field, parameter_id)
-SELECT 'edit_typevalue','pressmeter_param_1','man_addfields_value','value_param',id FROM sys_addfields WHERE param_name='pressmeter_param_1';
+INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','hydrant_param_1','man_node_hydrant','hydrant_param_1');
+INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','shtvalve_param_1','man_node_shutoff_valve','shtvalve_param_1');
+INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','pressmeter_param_1','man_node_pressure_meter','pressmeter_param_1');
 
 -- rotate vnodes and connec labels
 INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_link_connecrotation_update', TRUE, current_user) ON CONFLICT (parameter, cur_user) DO NOTHING;
@@ -426,16 +423,6 @@ UPDATE config_form_fields SET placeholder = 'Top floor of the building (ex: 3)' 
 UPDATE config_form_fields SET placeholder = 'Optional: Arc_id of related arc' where columnname = 'arc_id' AND formname like '%ve_node%';
 UPDATE config_form_fields SET placeholder = 'Optional: Node_id of the parent node' where columnname = 'parent_id' AND formname like '%ve_node%';
 
-INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1069',35.4,'2020-01-01 03:05:00');
-INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1069',34.4,'2020-01-01 03:10:00');
-INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1067',45.4,'2020-01-01 03:05:00');
-INSERT INTO ext_node (fid, node_id, val, tstamp) VALUES (364,'1067',44.4,'2020-01-01 03:10:00');
-
-INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (363,'2078',1.1,'2020-01-01 03:05:00');
-INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (363,'2078',0.9,'2020-01-01 03:10:00');
-INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (365,'2078',0.02,'2020-01-01 03:05:00');
-INSERT INTO ext_arc (fid, arc_id, val, tstamp) VALUES (365,'2078',0.03,'2020-01-01 03:10:00');
-
 
 -- 2020/12/07
 UPDATE sys_param_user SET vdefault ='{"reservoir":{"switch2Junction":["WTP", "WATERWELL", "SOURCE"]},
@@ -523,7 +510,7 @@ UPDATE config_toolbox SET inputparams='[
 {"widgetname":"graphClass", "label":"Graph class:", "widgettype":"combo","datatype":"text","tooltip": "Graphanalytics method used", "layoutname":"grl_option_parameters","layoutorder":1,"comboIds":["PRESSZONE","DQA","DMA","SECTOR"],
 "comboNames":["Pressure Zonification (PRESSZONE)", "District Quality Areas (DQA) ", "District Metering Areas (DMA)", "Inlet Sectorization (SECTOR-HIGH / SECTOR-LOW)"], "selectedId":""}, 
 {"widgetname":"exploitation", "label":"Exploitation:","widgettype":"combo","datatype":"text","tooltip": "Choose exploitation to work with", "layoutname":"grl_option_parameters","layoutorder":2, 
-"dvQueryText":"select expl_id as id, name as idval from exploitation where active is not false order by name", "selectedId":"$userExploitation"},
+"dvQueryText":"select id, idval from (select -999 as id, ''User selected expl'' AS idval, ''a'' AS sort_order union select expl_id as id, name as idval, ''b'' as sort_order from exploitation where active is not false)a order by sort_order asc, idval asc", "selectedId":"$userExploitation"},
 {"widgetname":"floodOnlyMapzone", "label":"Flood only one mapzone: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Flood only identified mapzones. The purpose of this is update only network elements affected by this flooding keeping rest of network as is. Recommended to gain performance when mapzones ecosystem is under work", "placeholder":"1001", "layoutname":"grl_option_parameters","layoutorder":3, "value":""},
 {"widgetname":"forceOpen", "label":"Force open nodes: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary open closed node(s) in order to force algorithm to continue there", "placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":5, "value":""},
 {"widgetname":"forceClosed", "label":"Force closed nodes: (*)","widgettype":"text","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary close open node(s) to force algorithm to stop there","placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":6,"value":""},

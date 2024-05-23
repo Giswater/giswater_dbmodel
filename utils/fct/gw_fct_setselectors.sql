@@ -13,7 +13,7 @@ $BODY$
 
 /*example
 SELECT SCHEMA_NAME.gw_fct_setselectors($${"client":{"device":4, "infoType":1, "lang":"ES", "cur_user":"test_user"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "selectorType":"None", "tabName":"tab_exploitation", "forceParent":"True", "checkAll":"True", "addSchema":"None"}}$$);
-SELECT SCHEMA_NAME.gw_fct_setselectors($${"client":{"device":4, "infoType":1, "lang":"ES", "cur_user":"test_user"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "selectorType":"explfrommuni", "id":32, "value":true, "isAlone":true, "addSchema":"SCHEMA_NAME"}}$$)::text
+SELECT SCHEMA_NAME.gw_fct_setselectors($${"client":{"device":4, "infoType":1, "lang":"ES", "cur_user":"test_user"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "selectorType":"explfrommuni", "id":32, "value":true, "isAlone":true, "addSchema":"ws"}}$$)::text
 
 SELECT SCHEMA_NAME.gw_fct_setselectors($${"client":{"device":4, "infoType":1, "lang":"ES", "cur_user":"test_user"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "selectorType":"selector_basic", "tabName":"tab_psector", "id":"1", "ids":"[1,2]", "isAlone":"True", "value":"True", "addSchema":"None", "useAtlas":true}}$$);
 
@@ -60,7 +60,6 @@ v_action text = null;
 v_sector integer;
 v_sectorfromexpl boolean;
 v_explfromsector boolean;
-v_sectorfrommacroexpl boolean;
 v_explmuni text;
 v_zonetable text;
 v_cur_user text;
@@ -139,10 +138,9 @@ BEGIN
 	v_columnname = v_parameter_selector->>'selector_id'; 
 	v_table = v_parameter_selector->>'table';
 	v_tableid = v_parameter_selector->>'table_id';
-	v_sectorfromexpl = v_parameter_selector->>'sectorFromExpl';
-	v_explfromsector = v_parameter_selector->>'explFromSector';
-	v_sectorfrommacroexpl = v_parameter_selector->>'sectorFromMacroexpl';
-
+	v_sectorfromexpl = (SELECT value::json->>'sectorFromExpl' FROM config_param_system where parameter = 'basic_selector_tab_exploitation');
+	v_explfromsector = (SELECT value::json->>'explFromSector' FROM config_param_system where parameter = 'basic_selector_tab_sector');
+	
 	IF v_tabname='tab_macroexploitation' or v_tabname='tab_macroexploitation_add' or v_tabname='tab_exploitation_add' THEN
 		v_zonetable = 'exploitation';
 	ELSIF v_tabname='tab_macrosector' THEN
@@ -181,17 +179,21 @@ BEGIN
 				IF (SELECT value::boolean FROM config_param_system WHERE parameter = 'admin_exploitation_x_user') IS TRUE THEN
 					IF v_tabname = 'tab_exploitation' THEN
 						EXECUTE 'INSERT INTO selector_expl SELECT expl_id, current_user FROM config_user_x_expl WHERE username = current_user ON CONFLICT DO NOTHING';
+						
 					ELSIF  v_tabname = 'tab_macrosector' THEN
 						EXECUTE 'INSERT INTO selector_sector SELECT sector_id, current_user FROM config_user_x_sector  WHERE username = current_user ON CONFLICT DO NOTHING';
+						
 					ELSIF  v_tabname = 'tab_sector' THEN
 						EXECUTE 'INSERT INTO selector_sector SELECT sector_id, current_user FROM config_user_x_sector WHERE username = current_user ON CONFLICT DO NOTHING';
 					END IF;
 					
 				ELSIF v_tabname='tab_macroexploitation' OR v_tabname='tab_macrosector' THEN
+				
 					EXECUTE 'INSERT INTO ' || v_tablename || ' ('|| v_columnname ||', cur_user) 
 					SELECT '|| v_columnname ||', current_user FROM '||v_zonetable||' ON CONFLICT ('|| v_columnname ||', cur_user) DO NOTHING';
 				
 				ELSIF v_tabname='tab_macroexploitation_add' AND v_addschema IS NOT NULL THEN
+				
 					EXECUTE 'INSERT INTO ' || v_tablename || ' ('|| v_columnname ||', cur_user) 
 					SELECT e.'|| v_columnname ||', current_user 
 					FROM '||v_zonetable||' e
@@ -200,18 +202,22 @@ BEGIN
 					
 					EXECUTE 'INSERT INTO '||v_addschema||'.'|| v_tablename || ' ('|| v_columnname ||', cur_user) 
 					SELECT '|| v_columnname ||', current_user FROM '||v_addschema||'.'||v_zonetable||' ON CONFLICT ('|| v_columnname ||', cur_user) DO NOTHING';
-
+					
 				ELSIF v_tabname='tab_exploitation_add' AND v_addschema IS NOT NULL THEN
-					--IF v_checkall IS FALSE THEN
-					--	EXECUTE 'DELETE FROM '||v_addschema||'.'|| v_tablename || ' WHERE cur_user = current_user';
-					--ELSE
-						EXECUTE 'INSERT INTO '||v_addschema||'.'|| v_tablename || ' ('|| v_columnname ||', cur_user) 
-						SELECT '|| v_columnname ||', current_user FROM '||v_addschema||'.'||v_zonetable||' WHERE
+				
+					EXECUTE 'INSERT INTO '||v_addschema||'.'|| v_tablename || ' ('|| v_columnname ||', cur_user) 
+					SELECT '|| v_columnname ||', current_user FROM '||v_addschema||'.'||v_zonetable||' WHERE active is TRUE
 						'|| v_columnname ||' NOT IN (SELECT '|| v_columnname ||'  FROM '||v_zonetable||' ) ON CONFLICT ('|| v_columnname ||', cur_user) DO NOTHING';
-					--END IF;
+					
+				ELSIF v_tabname='tab_hydro_state' THEN
+
+					EXECUTE concat('INSERT INTO ',v_tablename,' (',v_columnname,', cur_user) SELECT ',v_tableid,', current_user FROM ',v_table,'
+					',(CASE when v_ids is not null then concat(' WHERE id = ANY(ARRAY',v_ids,') ') end),' 
+					ON CONFLICT (',v_columnname,', cur_user) DO NOTHING;');	
+
 				ELSE
 					EXECUTE concat('INSERT INTO ',v_tablename,' (',v_columnname,', cur_user) SELECT ',v_tableid,', current_user FROM ',v_table,'
-					',(CASE when v_ids is not null then concat(' WHERE id = ANY(ARRAY',v_ids,')') end),'
+					',(CASE when v_ids is not null then concat(' WHERE id = ANY(ARRAY',v_ids,')') end),' WHERE active
 					ON CONFLICT (',v_columnname,', cur_user) DO NOTHING;');		
 				END IF;		
 			END IF;
@@ -297,11 +303,13 @@ BEGIN
 		v_name = substring (v_tabname,5,99);
 		
 		IF v_value THEN
+		
 			-- getting parent_id for selected row
 			EXECUTE 'SELECT parent_id FROM '||v_table||' WHERE active IS TRUE AND parent_id IS NOT NULL AND '||v_tableid||' = '||v_id
 			INTO v_id;
 
 			IF v_id IS NOT NULL THEN
+			
 				-- force parent_id to be visible if child have been enabled
 				EXECUTE 'INSERT INTO ' || v_tablename || ' ('|| v_columnname ||', cur_user) VALUES('|| v_id ||', '''|| current_user ||''')ON CONFLICT DO NOTHING';
 				GET DIAGNOSTICS v_count = row_count;
@@ -347,8 +355,58 @@ BEGIN
 	
 	SELECT count(the_geom) INTO v_count_2 FROM v_edit_arc LIMIT 1;
 
-	-- get envelope over arcs or over exploitation if arcs dont exist
-	IF v_tabname='tab_sector' THEN
+
+	/*set expl as vdefault if only one value on selector. In spite expl_vdefault is a hidden value, user can enable this variable if he needs it when working on more than
+	one exploitation in order to choose what is the default (remember default value has priority over spatial intersection)*/ 
+	IF (SELECT count (*) FROM selector_expl WHERE cur_user = current_user) = 1 THEN
+	
+		v_expl = (SELECT expl_id FROM selector_expl WHERE cur_user = current_user);
+		
+		INSERT INTO config_param_user(parameter, value, cur_user)
+		VALUES ('edit_exploitation_vdefault', v_expl, current_user) ON CONFLICT (parameter, cur_user) 
+		DO UPDATE SET value = v_expl WHERE config_param_user.parameter = 'edit_exploitation_vdefault' AND config_param_user.cur_user = current_user;
+	ELSE -- delete if more than one value on selector
+		DELETE FROM config_param_user WHERE parameter = 'edit_exploitation_vdefault' AND cur_user = current_user;
+	END IF;
+
+	-- trigger getmapzones
+	IF v_tabname IN('tab_exploitation', 'tab_macroexploitation') THEN
+
+		-- force mapzones
+		v_action = '[{"funcName": "set_style_mapzones", "params": {}}]';
+
+	END IF;
+	
+	--set sector as vdefault if only one value on selector. 
+	IF (SELECT count (*) FROM selector_sector WHERE cur_user = current_user) = 1 THEN
+	
+		v_sector = (SELECT sector_id FROM selector_sector WHERE cur_user = current_user);
+		
+		INSERT INTO config_param_user(parameter, value, cur_user)
+		VALUES ('edit_sector_vdefault', v_sector, current_user) ON CONFLICT (parameter, cur_user) 
+		DO UPDATE SET value = v_sector WHERE config_param_user.parameter = 'edit_sector_vdefault' AND config_param_user.cur_user = current_user;
+	ELSE -- delete if more than one value on selector
+		DELETE FROM config_param_user WHERE parameter = 'edit_sector_vdefault' AND cur_user = current_user;
+	END IF;
+
+	-- manage cross-reference tables
+	-- inserting sector id from selected exploitaitons
+	IF v_sectorfromexpl AND v_tabname IN ('tab_exploitation', 'tab_macroexploitation') THEN
+		DELETE FROM selector_sector WHERE cur_user = current_user;
+		INSERT INTO selector_sector
+		SELECT DISTINCT sector_id, current_user FROM node WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user) AND sector_id > 0;
+		
+	END IF;
+
+	-- inserting expl id from selected sectors
+	IF v_explfromsector AND v_tabname IN ('tab_sector', 'tab_macrosector') THEN
+		DELETE FROM selector_expl WHERE cur_user = current_user;
+		INSERT INTO selector_expl
+		SELECT DISTINCT expl_id, current_user FROM node WHERE sector_id IN (SELECT sector_id FROM selector_sector WHERE cur_user = current_user);
+	END IF;	
+
+	-- get envelope 
+	IF v_tabname IN ('tab_sector', 'tab_macrosector') THEN
 		SELECT row_to_json (a) 
 		INTO v_geometry
 		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, 
@@ -376,70 +434,8 @@ BEGIN
 		SELECT row_to_json (a) 
 		INTO v_geometry
 		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2 
-		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM exploitation where expl_id=v_id::int) b) a;
-	END IF;
-
-	/*set expl as vdefault if only one value on selector. In spite expl_vdefault is a hidden value, user can enable this variable if he needs it when working on more than
-	one exploitation in order to choose what is the default (remember default value has priority over spatial intersection)*/ 
-	IF (SELECT count (*) FROM selector_expl WHERE cur_user = current_user) = 1 THEN
-	
-		v_expl = (SELECT expl_id FROM selector_expl WHERE cur_user = current_user);
-		
-		INSERT INTO config_param_user(parameter, value, cur_user)
-		VALUES ('edit_exploitation_vdefault', v_expl, current_user) ON CONFLICT (parameter, cur_user) 
-		DO UPDATE SET value = v_expl WHERE config_param_user.parameter = 'edit_exploitation_vdefault' AND config_param_user.cur_user = current_user;
-	ELSE -- delete if more than one value on selector
-		DELETE FROM config_param_user WHERE parameter = 'edit_exploitation_vdefault' AND cur_user = current_user;
-	END IF;
-
-	-- trigger getmapzones
-	IF v_tabname IN('tab_exploitation', 'tab_macroexploitation') THEN
-
-		-- force mapzones
-		v_action = '[{"funcName": "set_style_mapzones", "params": {}}]';
-
-	END IF;
-
-	-- manage cross-reference tables
-	IF v_tabname IN('tab_exploitation', 'tab_macroexploitation', 'tab_sector') THEN
-
-		IF v_sectorfromexpl AND v_id::int > 0 THEN
-
-			-- checking actually sector id exists with same id than expl_id
-			IF (SELECT count(*) FROM sector WHERE sector_id = v_id::int) = 1 THEN
-				DELETE FROM selector_sector WHERE cur_user = current_user;
-				INSERT INTO selector_sector VALUES (v_id::int, current_user);
-			END IF;
-		END IF;
-
-		IF v_sectorfrommacroexpl AND v_id::int > 0  THEN
-			-- checking actually sector id exists with same id than expl_id
-			IF (SELECT count(*) FROM sector WHERE sector_id = v_id::int) = 1 THEN
-				DELETE FROM selector_sector WHERE cur_user = current_user;
-				INSERT INTO selector_sector VALUES (v_id::int, current_user);
-			END IF;
-		END IF;	
-		
-		IF v_explfromsector AND v_id::int > 0 THEN
-			-- checking actually expl id exists with same id than sector_id
-			IF (SELECT count(*) FROM exploitation WHERE expl_id = v_id::int) = 1 THEN
-				DELETE FROM selector_expl WHERE cur_user = current_user;
-				INSERT INTO selector_expl VALUES (v_id::int, current_user);
-			END IF;
-		END IF;	
-		
-	END IF;
-	
-	--set sector as vdefault if only one value on selector. 
-	IF (SELECT count (*) FROM selector_sector WHERE cur_user = current_user) = 1 THEN
-	
-		v_sector = (SELECT sector_id FROM selector_sector WHERE cur_user = current_user);
-		
-		INSERT INTO config_param_user(parameter, value, cur_user)
-		VALUES ('edit_sector_vdefault', v_sector, current_user) ON CONFLICT (parameter, cur_user) 
-		DO UPDATE SET value = v_sector WHERE config_param_user.parameter = 'edit_sector_vdefault' AND config_param_user.cur_user = current_user;
-	ELSE -- delete if more than one value on selector
-		DELETE FROM config_param_user WHERE parameter = 'edit_sector_vdefault' AND cur_user = current_user;
+		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM exploitation where expl_id IN
+		(SELECT expl_id FROM selector_expl WHERE cur_user=current_user)) b) a;
 	END IF;
 
 	-- get uservalues

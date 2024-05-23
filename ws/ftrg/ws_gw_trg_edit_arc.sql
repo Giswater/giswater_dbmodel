@@ -235,12 +235,6 @@ BEGIN
 		-- Municipality 
 		IF (NEW.muni_id IS NULL) THEN
 			
-			-- control error without any mapzones defined on the table of mapzone
-			IF ((SELECT COUNT(*) FROM ext_municipality WHERE  active IS TRUE ) = 0) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-		       	"data":{"message":"3110", "function":"1302","debug_msg":null}}$$);';
-			END IF;
-			
 			-- getting value default
 			IF (NEW.muni_id IS NULL) THEN
 				NEW.muni_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_municipality_vdefault' AND "cur_user"="current_user"() LIMIT 1);
@@ -256,13 +250,7 @@ BEGIN
 					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
 				END IF;	
-			END IF;
-			
-			-- control error when no value
-			IF (NEW.muni_id IS NULL) THEN
-				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"2024", "function":"1302","debug_msg":"'||NEW.arc_id::text||'"}}$$);';
-			END IF;            
+			END IF;       
 		END IF;
         
 		-- District 
@@ -312,14 +300,16 @@ BEGIN
 			"data":{"message":"3036", "function":"1318","debug_msg":"'||v_sql::text||'"}}$$);';
 		END IF;
 
-		--Inventory (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
+		--Inventory
 		IF NEW.inventory IS NULL THEN
 			NEW.inventory := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_inventory_sysvdefault');
 		END IF;
 		
-		--Publish (boolean fields cannot have IF because QGIS only manage true/false and trigger gets a false when checkbox is empty)
-		NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
-
+		--Publish
+		IF NEW.publish IS NULL THEN
+			NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
+		END IF; 
+		
 		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature JOIN cat_arc ON cat_feature.id=cat_arc.arctype_id WHERE cat_arc.id=NEW.arccat_id;
 	
 		--Copy id to code field	
@@ -446,21 +436,21 @@ BEGIN
       		END IF;		
 		END IF;
 
-		-- man addfields insert
+        -- childtable insert
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM sys_addfields
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
 			LOOP
-				EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
+				EXECUTE 'SELECT $1."' ||v_addfields.param_name||'"'
 					USING NEW
 					INTO v_new_value_param;
 
 				IF v_new_value_param IS NOT NULL THEN
-					EXECUTE 'INSERT INTO man_addfields_value (feature_id, parameter_id, value_param) VALUES ($1, $2, $3)'
-						USING NEW.arc_id, v_addfields.id, v_new_value_param;
-				END IF;	
+					EXECUTE 'INSERT INTO man_arc_'||lower(v_customfeature)||' (arc_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')'
+						USING NEW.arc_id, v_new_value_param;
+				END IF;
 			END LOOP;
-		END IF;		
+		END IF;
 
         -- EPA INSERT
         IF (NEW.epa_type = 'PIPE') THEN 
@@ -611,35 +601,32 @@ BEGIN
 				om_state=NEW.om_state, conserv_state=NEW.conserv_state, parent_id = NEW.parent_id,expl_id2 =NEW.expl_id2
 				WHERE arc_id=OLD.arc_id;
 				
-		-- man addfields update
+		-- childtable update
 		IF v_customfeature IS NOT NULL THEN
 			FOR v_addfields IN SELECT * FROM sys_addfields
 			WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
 			LOOP
+				EXECUTE 'SELECT $1."' || v_addfields.param_name ||'"'
+					USING NEW
+					INTO v_new_value_param;
 
-			EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
-				USING NEW
-				INTO v_new_value_param;
- 
-			EXECUTE 'SELECT $1."' || v_addfields.param_name||'"'
-				USING OLD
-				INTO v_old_value_param;
+				EXECUTE 'SELECT $1."' || v_addfields.param_name ||'"'
+					USING OLD
+					INTO v_old_value_param;
 
-			IF (v_new_value_param IS NOT null and v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT null and v_old_value_param is NULL) THEN 
+				IF (v_new_value_param IS NOT NULL AND v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT NULL AND v_old_value_param IS NULL) THEN
+					EXECUTE 'INSERT INTO man_arc_'||lower(v_customfeature)||' (arc_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')
+					    ON CONFLICT (arc_id)
+					    DO UPDATE SET '||v_addfields.param_name||'=$2::'||v_addfields.datatype_id||' WHERE man_arc_'||lower(v_customfeature)||'.arc_id=$1'
+						USING NEW.arc_id, v_new_value_param;
 
-				EXECUTE 'INSERT INTO man_addfields_value(feature_id, parameter_id, value_param) VALUES ($1, $2, $3) 
-					ON CONFLICT (feature_id, parameter_id)
-					DO UPDATE SET value_param=$3 WHERE man_addfields_value.feature_id=$1 AND man_addfields_value.parameter_id=$2'
-					USING NEW.arc_id , v_addfields.id, v_new_value_param;	
+				ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
+					EXECUTE 'UPDATE man_arc_'||lower(v_customfeature)||' SET '||v_addfields.param_name||' = null WHERE man_arc_'||lower(v_customfeature)||'.arc_id=$1'
+					    USING NEW.arc_id;
+				END IF;
+			END LOOP;
+		END IF;
 
-			ELSIF v_new_value_param IS NULL AND v_old_value_param IS NOT NULL THEN
-
-				EXECUTE 'DELETE FROM man_addfields_value WHERE feature_id=$1 AND parameter_id=$2'
-					USING NEW.arc_id , v_addfields.id;
-			END IF;
-		END LOOP;
-
-        END IF;       
 		--update values of related connecs;
 		IF NEW.fluid_type != OLD.fluid_type AND v_autoupdate_fluid IS TRUE THEN
 			IF NEW.fluid_type not in (SELECT fluid_type FROM man_type_fluid WHERE feature_type='CONNEC') AND NEW.fluid_type IS NOT NULL THEN
@@ -665,11 +652,14 @@ BEGIN
 		-- restore plan_psector_force_delete
 		UPDATE config_param_user SET value = v_force_delete WHERE parameter = 'plan_psector_force_delete' and cur_user = current_user;
         
-		--Delete addfields
-  		DELETE FROM man_addfields_value WHERE feature_id = OLD.arc_id  and parameter_id in 
-  		(SELECT id FROM sys_addfields WHERE cat_feature_id IS NULL OR cat_feature_id =OLD.arc_type);
+		-- Delete childtable addfields (after or before deletion of arc, doesn't matter)
+        FOR v_addfields IN SELECT * FROM sys_addfields
+        WHERE (cat_feature_id = v_customfeature OR cat_feature_id is null) AND active IS TRUE AND iseditable IS TRUE
+        LOOP
+		    EXECUTE 'DELETE FROM man_arc_'||lower(v_addfields.cat_feature_id)||' WHERE arc_id = OLD.arc_id';
+        END LOOP;
 
-  	--update arc_add
+  	    -- delete from arc_add table
 		DELETE FROM arc_add WHERE arc_id = OLD.arc_id;
 		
 		RETURN NULL;

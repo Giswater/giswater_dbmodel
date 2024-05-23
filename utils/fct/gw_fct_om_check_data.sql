@@ -242,7 +242,7 @@ BEGIN
 
 	RAISE NOTICE '08 - Check nodes with state_type isoperative = false (187)';
 	v_querytext = 'SELECT node_id, nodecat_id, the_geom, n.expl_id FROM '||v_edit||'node n JOIN value_state_type s ON id=state_type 
-	 	WHERE n.state > 0 AND s.is_operative IS FALSE';
+	 	WHERE n.state > 0 AND s.is_operative IS FALSE AND verified <>''2''';
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 	IF v_count > 0 THEN
@@ -257,7 +257,7 @@ BEGIN
 
 	RAISE NOTICE '09 - Check arcs with state_type isoperative = false (188)';
 	v_querytext = 'SELECT arc_id, arccat_id, the_geom, a.expl_id FROM '||v_edit||'arc a JOIN value_state_type s ON id=state_type 
-	WHERE a.state > 0 AND s.is_operative IS FALSE'; 
+	WHERE a.state > 0 AND s.is_operative IS FALSE AND verified <>''2'''; 
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
@@ -450,7 +450,7 @@ BEGIN
 			VALUES (v_fid, 1, '254', 'INFO: No features (arc, node, connec, gully, element) with NULL values on code found.',v_count);
 		END IF;
 
-	ELSIF v_project_type ='WS' THEN
+	ELSIF v_project_type = 'WS' THEN
 
 		v_querytext = '(SELECT arc_id, arccat_id, the_geom FROM '||v_edit||'arc WHERE code IS NULL 
 				UNION SELECT node_id, nodecat_id, the_geom FROM '||v_edit||'node WHERE code IS NULL
@@ -504,40 +504,8 @@ BEGIN
 			VALUES (v_fid, 1, '255', 'INFO: No polygons without parent feature found.', v_count);
 		END IF;
 	END IF;
-
-	RAISE NOTICE '18 - Check for orphan rows on man_addfields values table (256)';
-	IF v_project_type ='UD' THEN
-
-		v_querytext = 'SELECT * FROM man_addfields_value a LEFT JOIN 
-			      (SELECT arc_id as feature_id FROM arc UNION SELECT node_id FROM node UNION SELECT connec_id FROM connec UNION SELECT gully_id FROM gully) b USING (feature_id) WHERE b.feature_id IS NULL';
-
-		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-	
-		IF v_count > 0 THEN
-			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 2, '256', concat('WARNING-256: There is/are ',v_count,' rows on man_addfields_value without parent feature. We recommend you to clean data before continue.'),v_count);
-		ELSE
-			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 1, '256', 'INFO: No rows without feature found on man_addfields_value table.',v_count);
-		END IF;	
-	ELSIF v_project_type='WS' THEN
-		v_querytext = 'SELECT * FROM man_addfields_value a LEFT JOIN 
-			      (SELECT arc_id as feature_id FROM arc UNION SELECT node_id FROM node UNION SELECT connec_id FROM connec) b USING (feature_id) WHERE b.feature_id IS NULL';
-
-		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
-	
-		IF v_count > 0 THEN
-			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 2, '256', concat('WARNING-256: There is/are ',v_count,' rows on man_addfields_value without parent feature. We recommend you to clean data before continue.'),v_count);
-		ELSE
-			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 1, '256', 'INFO: No rows without feature found on man_addfields_value table.',v_count);
-		END IF;	
-
-	END IF;
-	
     
-	RAISE NOTICE '19 - connec/gully without link (204)';
+	RAISE NOTICE '18 - connec/gully without link (204)';
     
 	v_querytext = 'SELECT connec_id, connecat_id, c.the_geom, c.expl_id from '||v_edit||'connec c WHERE c.state= 1 
 					AND connec_id NOT IN (SELECT feature_id FROM link)
@@ -585,7 +553,7 @@ BEGIN
 	END IF;
 
 
-	RAISE NOTICE '20 - connec/gully without arc_id or with arc_id different than the one to which points its link (257)';
+	RAISE NOTICE '19 - connec/gully without arc_id or with arc_id different than the one to which points its link (257)';
 
 	v_querytext = 'SELECT c.connec_id, c.connecat_id, c.the_geom, c.expl_id, l.feature_type, link_id 
 		FROM arc a, link l
@@ -647,7 +615,7 @@ BEGIN
 			END IF;
 		END IF;
 
-	RAISE NOTICE '22 - links without feature_id (260)';
+	RAISE NOTICE '20 - links without feature_id (260)';
 	v_querytext = 'SELECT link_id, the_geom FROM '||v_edit||'link where feature_id is null and state > 0';
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
@@ -674,7 +642,7 @@ BEGIN
 	END IF;
 
 
-	RAISE NOTICE '24 - Chained connecs/gullies which has different arc_id than the final connec/gully. (205)';
+	RAISE NOTICE '21 - Chained connecs/gullies which has different arc_id than the final connec/gully. (205)';
 	IF v_project_type = 'WS' THEN 
 		v_querytext = 'with c as (
 					Select '||v_edit||'connec.connec_id as id, arc_id as arc, '||v_edit||'connec.connecat_id as 
@@ -728,7 +696,7 @@ BEGIN
 		END IF;
 	END IF;
 
-	RAISE NOTICE '25 - features with state 1 and end date (262)';
+	RAISE NOTICE '22 - features with state 1 and end date (262)';
 	IF v_project_type = 'WS' THEN
 		v_querytext = 'SELECT arc_id as feature_id  from '||v_edit||'arc where state = 1 and enddate is not null
 					UNION SELECT node_id from '||v_edit||'node where state = 1 and enddate is not null
@@ -750,7 +718,7 @@ BEGIN
 		VALUES (v_fid, 1, '262', 'INFO: No features on service have value of end date', v_count);
 	END IF;
 
-	RAISE NOTICE 'features with state 0 and without end date (263)';
+	RAISE NOTICE '23 - features with state 0 and without end date (263)';
 	IF v_project_type = 'WS' THEN
 		v_querytext = 'SELECT arc_id as feature_id  from '||v_edit||'arc where state = 0 and enddate is null
 					UNION SELECT node_id from '||v_edit||'node where state = 0 and enddate is null
@@ -772,16 +740,16 @@ BEGIN
 		VALUES (v_fid, 1, '263','INFO: No features with state 0 are missing the end date',v_count);
 	END IF;
 
-	RAISE NOTICE '26 - features with state 1 and end date before start date (264)';
+	RAISE NOTICE '24 - features with state 1 and end date before start date (264)';
 	IF v_project_type = 'WS' THEN
-		v_querytext = 'SELECT arc_id as feature_id  from '||v_edit||'arc where enddate < builtdate
-					UNION SELECT node_id from '||v_edit||'node where enddate < builtdate
-					UNION SELECT connec_id from '||v_edit||'connec where enddate < builtdate';
+		v_querytext = 'SELECT arc_id as feature_id  from '||v_edit||'arc where enddate < builtdate and state = 1
+					UNION SELECT node_id from '||v_edit||'node where enddate < builtdate and state = 1
+					UNION SELECT connec_id from '||v_edit||'connec where enddate < builtdate and state = 1';
 	ELSIF v_project_type = 'UD' THEN
-		v_querytext = 'SELECT arc_id as feature_id from '||v_edit||'arc where enddate < builtdate
-					UNION SELECT node_id from '||v_edit||'node where enddate < builtdate
-					UNION SELECT connec_id from '||v_edit||'connec where enddate < builtdate
-					UNION SELECT gully_id from '||v_edit||'gully where enddate < builtdate';
+		v_querytext = 'SELECT arc_id as feature_id from '||v_edit||'arc where enddate < builtdate and state = 1
+					UNION SELECT node_id from '||v_edit||'node where enddate < builtdate and state = 1
+					UNION SELECT connec_id from '||v_edit||'connec where enddate < builtdate and state = 1
+					UNION SELECT gully_id from '||v_edit||'gully where enddate < builtdate and state = 1';
 	END IF;
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
@@ -794,7 +762,7 @@ BEGIN
 		VALUES (v_fid, 1, '264','INFO: No features with end date earlier than built date',v_count);
 	END IF;
 
-	RAISE NOTICE '27 - Automatic links with more than 100 mts (length out-of-range) (265)';
+	RAISE NOTICE '25 - Automatic links with more than 100 mts (length out-of-range) (265)';
 
 	EXECUTE 'SELECT count(*) FROM '||v_edit||'link where st_length(the_geom) > 100'
 	INTO v_count;
@@ -802,14 +770,12 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, criticity, result_id,error_message, fcount)
 		VALUES (v_fid, 2, '265', concat('WARNING-265: There is/are ',v_count,' automatic links with longitude out-of-range found.'),v_count);
-		INSERT INTO temp_audit_check_data (fid, criticity, error_message, fcount)
-		VALUES (v_fid, 2, concat('HINT: Links with this longitudes doesn''t make sense.'),v_count);
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, criticity, result_id,error_message, fcount)
 		VALUES (v_fid, 1,'265', 'INFO: No automatic links with out-of-range Longitude found.',v_count);
 	END IF;
 
-    RAISE NOTICE '28 - Duplicated ID values between arc, node, connec, gully(266)';
+    RAISE NOTICE '26 - Duplicated ID values between arc, node, connec, gully(266)';
 	IF v_project_type = 'WS' THEN
 		v_querytext = 'SELECT node_id AS feature_id FROM '||v_edit||'node n JOIN '||v_edit||'arc a ON a.arc_id=n.node_id
 					UNION SELECT node_id FROM '||v_edit||'node n JOIN '||v_edit||'connec c ON c.connec_id=n.node_id
@@ -836,7 +802,7 @@ BEGIN
 		VALUES (v_fid, 1, '266','INFO: All features have a diferent ID to be correctly identified',v_count);
 	END IF;
 
-	RAISE NOTICE '29 - Check planned connects without reference link (356)';
+	RAISE NOTICE '27 - Check planned connects without reference link (356)';
 
 	IF v_project_type = 'WS' THEN
 		v_querytext = 'SELECT count(*) FROM plan_psector_x_connec WHERE link_id IS NULL';
@@ -860,7 +826,7 @@ BEGIN
 	END IF;
 
 
-	RAISE NOTICE '30 - Connecs and gullies with different expl_id than arc (291)';
+	RAISE NOTICE '28 - Connecs and gullies with different expl_id than arc (291)';
 
 	IF v_project_type = 'WS' THEN
 		v_querytext = 'SELECT DISTINCT connec_id, connecat_id, c.the_geom, c.expl_id FROM '||v_edit||'connec c JOIN '||v_edit||'arc b using (arc_id) WHERE b.expl_id::text != c.expl_id::text';
@@ -890,7 +856,7 @@ BEGIN
 
 	IF (SELECT value::boolean FROM config_param_system WHERE parameter = 'admin_crm_schema') IS TRUE THEN 
 
-		RAISE NOTICE '31 - Control null values on crm.hydrometer.code(299)';
+		RAISE NOTICE '29 - Control null values on crm.hydrometer.code(299)';
 		v_querytext = 'SELECT id FROM crm.hydrometer WHERE code IS NULL';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
@@ -903,7 +869,7 @@ BEGIN
 		END IF;
 	END IF;
 
-	RAISE NOTICE '31 - Check operative arcs with wrong topology (372)';
+	RAISE NOTICE '30 - Check operative arcs with wrong topology (372)';
 	
 	EXECUTE 'INSERT INTO temp_t_arc (arc_id, node_1, node_2, result_id, sector_id,state) SELECT arc_id, node_1, node_2, ''372'', sector_id,state 
 			 FROM '||v_edit||'arc WHERE state = 1';
@@ -933,7 +899,7 @@ BEGIN
 	END IF;
 	
 
-	RAISE NOTICE '32 - Check arcs shorter than value set as node proximity (391)';
+	RAISE NOTICE '31 - Check arcs shorter than value set as node proximity (391)';
 
 	v_querytext = 'SELECT arc_id,arccat_id,st_length(the_geom), the_geom, expl_id, json_extract_path_text(value::json,''value'')::numeric as nprox
 	FROM '||v_edit||'arc, config_param_system where parameter = ''edit_node_proximity''
@@ -954,7 +920,7 @@ BEGIN
 	END IF;
 
 
-	RAISE NOTICE '33 - Check builtdate before 1900  (fid 406)';
+	RAISE NOTICE '32 - Check builtdate before 1900  (fid 406)';
 	IF v_project_type = 'WS' THEN
 		v_querytext='SELECT arc_id, ''ARC''::text FROM '||v_edit||'arc WHERE builtdate < ''1900/01/01''::date
 				UNION 
@@ -986,7 +952,7 @@ BEGIN
 	END IF;
 
 
-	RAISE NOTICE '34 - Check operative links with wrong topology (417, 418)';
+	RAISE NOTICE '33 - Check operative links with wrong topology (417, 418)';
 
 	-- connec_id (417)
 	DELETE FROM temp_t_arc;
@@ -1001,14 +967,13 @@ BEGIN
 		)a where t.arc_id = a.link_id::text AND t.node_1 = a.connec_id;
 	ELSE
 		INSERT INTO temp_t_arc (arc_id, node_1, result_id, sector_id, state, the_geom) SELECT link_id, feature_id, '417', l.sector_id, l.state, l.the_geom 
-		FROM v_edit_link l JOIN v_edit_connec c ON feature_id = connec_id WHERE l.state = 1 and l.feature_type = 'CONNEC';
+		FROM link l JOIN v_edit_connec c ON feature_id = connec_id WHERE l.state > 0 and l.feature_type = 'CONNEC';
 
 		UPDATE temp_t_arc t SET node_1 = connec_id, state = 9 FROM (
 		SELECT l.link_id, c.connec_id, (ST_Distance(c.the_geom, ST_startpoint(l.the_geom))) as d FROM v_edit_connec c, link l
 		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.05) group by 1,2,3 ORDER BY 1 DESC,3 DESC
 		)a where t.arc_id = a.link_id::text AND t.node_1 = a.connec_id;
 	END IF;
-		
 
 	EXECUTE 'SELECT count(*) FROM temp_t_arc WHERE state = 1'
 	INTO v_count;
@@ -1059,7 +1024,7 @@ BEGIN
 		END IF;
 	END IF;
 
-	RAISE NOTICE '35 - Check hydrometer related to more than one connec (419)';
+	RAISE NOTICE '34 - Check hydrometer related to more than one connec (419)';
 	v_querytext = 'SELECT hydrometer_id, count(*) FROM v_rtc_hydrometer  group by hydrometer_id having count(*)> 1 ';
 	EXECUTE 'SELECT count(*) FROM ('||v_querytext||')a'
 	INTO v_count;
@@ -1074,7 +1039,7 @@ BEGIN
 		VALUES (v_fid, 1, '419','INFO: All hydrometeres are related to a unique connec',v_count);
 	END IF;
 
-	RAISE NOTICE '36- Check category_type values which do not exists on man_type table (421)';
+	RAISE NOTICE '35- Check category_type values which do not exists on man_type table (421)';
 	IF v_project_type = 'WS' THEN
 		v_querytext='SELECT ''ARC'', arc_id, category_type FROM '||v_edit||'arc WHERE category_type NOT IN (SELECT category_type FROM man_type_category WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND category_type IS NOT NULL
 		UNION
@@ -1103,7 +1068,7 @@ BEGIN
 		VALUES (v_fid, 1, '421','INFO: All features has category_type informed on man_type_category table',v_count);
 	END IF;
 
-	RAISE NOTICE '37- Check function_type values which do not exists on man_type table (422)';
+	RAISE NOTICE '36- Check function_type values which do not exists on man_type table (422)';
 	IF v_project_type = 'WS' THEN
 		v_querytext='SELECT ''ARC'', arc_id, function_type FROM '||v_edit||'arc WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL
 		UNION
@@ -1133,7 +1098,7 @@ BEGIN
 	END IF;
 
 
-	RAISE NOTICE '38- Check fluid_type values which do not exists on man_type table (423)';
+	RAISE NOTICE '37- Check fluid_type values which do not exists on man_type table (423)';
 	IF v_project_type = 'WS' THEN
 		v_querytext='SELECT ''ARC'', arc_id, fluid_type FROM '||v_edit||'arc WHERE fluid_type NOT IN (SELECT fluid_type FROM man_type_fluid WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND fluid_type IS NOT NULL
 		UNION
@@ -1162,7 +1127,7 @@ BEGIN
 		VALUES (v_fid, 1, '423','INFO: All features has fluid_type informed on man_type_fluid table',v_count);
 	END IF;
 
-	RAISE NOTICE '39- Check location_type values which do not exists on man_type table (424)';
+	RAISE NOTICE '38- Check location_type values which do not exists on man_type table (424)';
 	IF v_project_type = 'WS' THEN
 		v_querytext='SELECT ''ARC'', arc_id, location_type FROM '||v_edit||'arc WHERE location_type NOT IN (SELECT location_type FROM man_type_location WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND location_type IS NOT NULL
 		UNION
@@ -1205,7 +1170,7 @@ BEGIN
 		END IF;
 	END IF;
 
-	RAISE NOTICE '40 - Check nodes duplicated(106)';
+	RAISE NOTICE '40 - Check nodes duplicated (106)';
 
 	v_querytext = 'SELECT * FROM (SELECT DISTINCT t1.node_id AS node_1, t1.nodecat_id AS nodecat_1, t1.state as state1, t2.node_id AS node_2, t2.nodecat_id AS nodecat_2, t2.state as state2, t1.expl_id, 106, t1.the_geom
 	FROM '||v_edit||'node AS t1 JOIN node AS t2 ON ST_Dwithin(t1.the_geom, t2.the_geom, 0.01) WHERE t1.node_id != t2.node_id ORDER BY t1.node_id ) a where a.state1 = 1 AND a.state2 = 1';
@@ -1347,11 +1312,13 @@ BEGIN
 
 	RAISE NOTICE '46 - Check arcs with the same geometry (479)';
 
-	v_querytext = '(SELECT arc_id, arccat_id, state1, arc_id_aux, node_1, node_2, expl_id, the_geom FROM (
+	v_querytext = ' (SELECT arc_id, arccat_id, state1, arc_id_aux, node_1, node_2, expl_id, the_geom FROM
+				    (WITH q_arc AS (SELECT * FROM arc JOIN v_state_arc using (arc_id))
 					SELECT DISTINCT t1.arc_id, t1.arccat_id, t1.state as state1, t2.arc_id as arc_id_aux, 
 					t2.state as state2, t1.node_1, t1.node_2, t1.expl_id, t1.the_geom
-					FROM '||v_edit||'arc AS t1 JOIN '||v_edit||'arc AS t2 USING(the_geom)
-					WHERE t1.arc_id != t2.arc_id ORDER BY t1.arc_id ) a where a.state1 > 0 AND a.state2 > 0) a';
+					FROM q_arc AS t1 JOIN q_arc AS t2 USING(the_geom) JOIN '||v_edit||'arc v ON t1.arc_id = v.arc_id
+					WHERE t1.arc_id != t2.arc_id ORDER BY t1.arc_id )a 
+					where a.state1 > 0 AND a.state2 > 0	) a';
 
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
 	IF v_count > 0 THEN
@@ -1365,7 +1332,7 @@ BEGIN
 		VALUES (v_fid, 1, '479', 'INFO: No arcs with duplicated geometry.',v_count);
 	END IF;
     
-    RAISE NOTICE '47 - Check connecs related to arcs with diameter bigger than defined value (488) (WS)';
+    RAISE NOTICE '47 - Check connecs related to arcs with diameter bigger than defined value (488) (ws)';
     IF v_project_type = 'WS' THEN
         IF (SELECT value::json->>'status' FROM config_param_system WHERE parameter = 'edit_link_check_arcdnom')::boolean IS TRUE THEN
             v_check_arcdnom:= (SELECT value::json->>'diameter' FROM config_param_system WHERE parameter = 'edit_link_check_arcdnom');
@@ -1459,7 +1426,7 @@ BEGIN
         VALUES (v_fid, 1, '498', 'INFO: All visits are related to the features or have geometry.',v_count);
     END IF;
 
-  RAISE NOTICE '51 - Check no geometry orphan elements (499)';
+  RAISE NOTICE '52 - Check no geometry orphan elements (499)';
   	IF v_project_type = 'WS' THEN
 	    v_querytext = '(select element_id from element where the_geom is null and element_id not in (
 										select distinct element_id from element_x_arc UNION
@@ -1482,6 +1449,28 @@ BEGIN
         INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
         VALUES (v_fid, 1, '499', 'INFO: All elements are related to the features or have geometry.',v_count);
     END IF;
+   
+   	RAISE NOTICE '53 - Check nodes ''T candidate'' with wrong topology (fid: 432)';
+	v_querytext = 'with q_arc as (select * from arc JOIN v_state_arc USING (arc_id))
+			SELECT b.* FROM (SELECT n1.node_id, n1.nodecat_id, n1.sector_id, n1.expl_id, n1.state,
+			''Node ''''T candidate'''' with wrong topology'', 432, n1.the_geom 
+	    	FROM q_arc, (select * from node JOIN v_state_node USING (node_id)) n1
+	    	JOIN (SELECT node_1 node_id from q_arc UNION select node_2 FROM q_arc) b USING (node_id)
+	    	WHERE st_dwithin(q_arc.the_geom, n1.the_geom,0.01) AND n1.node_id NOT IN (node_1, node_2))b, selector_expl e 
+	    	where e.expl_id= b.expl_id AND cur_user=current_user';
+
+	EXECUTE 'SELECT count(*) FROM ('||v_querytext||')a'
+	INTO v_count;
+	
+	IF v_count > 0 THEN
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '432', 3, concat('ERROR-432 (anl_node): There is/are ',v_count,' Node(s) ''T candidate'' with wrong topology'),v_count);
+
+		EXECUTE 'INSERT INTO temp_anl_node (node_id, nodecat_id, sector_id, expl_id, state, descript, fid, the_geom) '||v_querytext;
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '432', 1, concat('INFO: All Nodes T has right topology.'),v_count);
+	END IF;
 
 
 	-- Removing isaudit false sys_fprocess
@@ -1509,7 +1498,7 @@ BEGIN
 		-- delete old values on anl table
 		DELETE FROM anl_connec WHERE cur_user=current_user AND fid IN (210,201,202,204,205,257,291,478);
 		DELETE FROM anl_arc WHERE cur_user=current_user AND fid IN (103,196,197,188,223,202,372,391,417,418,461,381, 479);
-		DELETE FROM anl_node WHERE cur_user=current_user AND fid IN (106,177,187,202,442,443,461);
+		DELETE FROM anl_node WHERE cur_user=current_user AND fid IN (106,177,187,202,442,443,461,432);
 
 		INSERT INTO anl_arc SELECT * FROM temp_anl_arc;
 		INSERT INTO anl_node SELECT * FROM temp_anl_node;
@@ -1546,7 +1535,7 @@ BEGIN
 	'properties', to_jsonb(row) - 'the_geom'
   	) AS feature
   	FROM (SELECT node_id, nodecat_id as feature_catalog, state, expl_id, descript, fid, the_geom FROM temp_anl_node WHERE cur_user="current_user"()
-	AND fid IN (106,177,187,202,442,443,175)
+	AND fid IN (106,177,187,202,442,443,175,432)
 	UNION
 	SELECT connec_id, connecat_id, state, expl_id, descript, fid, the_geom FROM temp_anl_connec WHERE cur_user="current_user"()
 	AND fid IN (210,201,202,204,205,291,478,488,480)) row) features;

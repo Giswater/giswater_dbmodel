@@ -3300,10 +3300,8 @@ INSERT INTO sys_foreignkey VALUES (71, 'inp_typevalue', 'inp_value_status_pipe',
 INSERT INTO sys_foreignkey VALUES (72, 'inp_typevalue', 'inp_value_status_pipe', 'inp_dscenario_shortpipe', 'status', NULL, true);
 INSERT INTO sys_foreignkey VALUES (73, 'inp_typevalue', 'inp_typevalue_dscenario', 'cat_dscenario', 'dscenario_type', NULL, true);
 INSERT INTO sys_foreignkey VALUES (74, 'config_typevalue', 'sys_table_context', 'sys_table', 'context', NULL, true);
-INSERT INTO sys_foreignkey VALUES (75, 'inp_typevalue', 'inp_value_status_pump', 'inp_dscenario_pump', 'status', NULL, true);
 INSERT INTO sys_foreignkey VALUES (76, 'inp_typevalue', 'inp_value_status_pump', 'inp_dscenario_pump_additional', 'status', NULL, true);
 INSERT INTO sys_foreignkey VALUES (77, 'inp_typevalue', 'inp_value_param_energy', 'inp_dscenario_pump_additional', 'energyparam', NULL, true);
-INSERT INTO sys_foreignkey VALUES (78, 'inp_typevalue', 'inp_value_status_pipe', 'inp_dscenario_shortpipe', 'status', NULL, true);
 INSERT INTO sys_foreignkey VALUES (79, 'inp_typevalue', 'inp_typevalue_valve', 'inp_virtualvalve', 'valv_type', NULL, true);
 INSERT INTO sys_foreignkey VALUES (80, 'inp_typevalue', 'inp_value_status_valve', 'inp_virtualvalve', 'status', NULL, true);
 INSERT INTO sys_foreignkey VALUES (81, 'inp_typevalue', 'inp_typevalue_valve', 'inp_dscenario_virtualvalve', 'valv_type', NULL, true);
@@ -3854,7 +3852,6 @@ INSERT INTO sys_function VALUES (2792, 'gw_fct_admin_manage_backup', 'utils', 'f
 INSERT INTO sys_function VALUES (2734, 'gw_fct_psector_duplicate', 'utils', 'function', 'json', 'json', 'Create a copy of existing psector', 'role_master', NULL, 'core');
 INSERT INTO sys_function VALUES (2800, 'gw_fct_pg2epa_buildup_transport', 'ws', 'function', 'text ', 'integer', 'Function to generate supply models oriented to manage olumes of water and water quality', 'role_epa', NULL, 'core');
 INSERT INTO sys_function VALUES (2806, 'gw_fct_admin_test_ci', 'utils', 'function', 'void', 'json', 'Function used in continous integration to test database processes', 'role_admin', NULL, 'core');
-INSERT INTO sys_function VALUES (2810, 'gw_fct_admin_schema_i18n', 'utils', 'function', 'json', 'json', 'Function to manage how the updates of tooltips and labels must be executed (overwrting old values, only when null or never', 'role_admin', NULL, 'core');
 INSERT INTO sys_function VALUES (2818, 'gw_fct_admin_manage_triggers', 'utils', 'function', 'text, text ', 'void', 'Function to activate custom foreign keys of bbdd', 'role_admin', NULL, 'core');
 INSERT INTO sys_function VALUES (2822, 'gw_fct_admin_manage_roles', 'utils', 'function', 'json', 'json', 'Function to system roles of giswater: role_basic, role_om, role_edit, role_epa, role_master, role_admin', 'role_admin', NULL, 'core');
 INSERT INTO sys_function VALUES (2824, 'gw_fct_getdimensioning', 'utils', 'function', 'json', 'json', 'Function to show dimensioning form of api', 'role_basic', NULL, 'core');

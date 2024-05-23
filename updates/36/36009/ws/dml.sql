@@ -32,3 +32,5 @@ UPDATE config_form_fields SET widgetcontrols = (replace(widgetcontrols::text,'"f
 where formname = 'cat_arc' and columnname = 'arctype_id';
 UPDATE config_form_fields SET widgetcontrols = (replace(widgetcontrols::text,'"filterExpression": null', '"filterExpression":"active=true"'))::json 
 where formname = 'cat_connec' and columnname = 'connectype_id';
+
+UPDATE config_form_fields SET dv_isnullvalue=true WHERE formname in ('v_edit_inp_dscenario_pump', 'inp_dscenario_pump') AND columnname='pattern_id';

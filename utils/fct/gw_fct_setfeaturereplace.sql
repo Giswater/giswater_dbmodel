@@ -36,7 +36,7 @@ v_column varchar;
 v_value text;
 v_state integer;
 v_state_type integer;
-v_epa_type text;
+v_old_epa_type text;
 v_epa_type_new text;
 rec_arc record;	
 v_old_featuretype varchar;
@@ -103,11 +103,15 @@ v_dqa_id integer;
 v_minsector_id integer;
 v_drainzone_id integer;
 v_presszone_id text;
+v_feature_childtable_name_old text;
+v_feature_childtable_name_new text;
+v_schemaname text;
 
 BEGIN
 
 	-- Search path
 	SET search_path = 'SCHEMA_NAME', public;
+	v_schemaname = 'SCHEMA_NAME';
 
 	SELECT project_type, giswater  INTO v_project_type, v_version FROM sys_version ORDER BY id DESC LIMIT 1;
 
@@ -167,6 +171,9 @@ BEGIN
 	EXECUTE 'SELECT  '|| v_cat_column||' FROM '|| v_feature_layer  ||'  WHERE '||v_id_column||'='''||v_old_feature_id||''';'
 	INTO v_old_featurecat;
 
+	EXECUTE 'SELECT epa_type FROM '|| v_feature_layer  ||'  WHERE '||v_id_column||'='''||v_old_feature_id||''';'
+	INTO v_old_epa_type;
+
 	EXECUTE 'SELECT sector_id FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
 	INTO v_sector_id;
 	EXECUTE 'SELECT state_type FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
@@ -216,11 +223,12 @@ BEGIN
 	IF v_feature_type ='connec' AND v_project_type = 'UD' THEN
 		-- is not epa
 	ELSE
-		EXECUTE 'SELECT epa_type FROM '||v_feature_layer||' WHERE '||v_id_column||'='''||v_old_feature_id||''';'
+		EXECUTE 'select epa_default from cat_feature_'||v_feature_type||' where id='''||v_feature_type_new||''';'	
 		INTO v_epa_type_new;
 
-		EXECUTE 'SELECT epa_table FROM sys_feature_epa_type WHERE feature_type = '||quote_literal(v_feature_type)||' AND id = '||quote_literal(v_epa_type_new)
-		INTO v_epa_table_new;
+		IF v_epa_type_new <> 'UNDEFINED' THEN
+			v_epa_table_new = concat('inp_', lower(v_epa_type_new));
+		END IF;
 	END IF;
 	
 	-- Control of state(1)
@@ -260,11 +268,6 @@ BEGIN
 				VALUES (v_id, v_code, v_old_featuretype, v_old_featurecat, v_epa_type_new, v_sector_id, v_dma_id, v_expl_id, 
 				0, v_state_type, v_workcat_id_end, v_the_geom, v_category, v_function, v_fluid, v_location, v_drainzone_id);
 
-				IF v_epa_type_new = 'OUTFALL' THEN
-					DELETE FROM drainzone WHERE name = v_old_feature_id;
-					INSERT INTO drainzone (name,expl_id, graphconfig)
-					VALUES (v_id,v_expl_id, concat('{"use":[{"nodeParent":"',v_id,'"}], "ignore":[], "forceClosed":[]}')::json);
-				END IF;
 			END IF;
 
 			INSERT INTO audit_check_data (fid, result_id, error_message)
@@ -321,12 +324,12 @@ BEGIN
 			EXECUTE 'SELECT man_table FROM cat_feature c JOIN sys_feature_cat s ON c.system_id = s.id WHERE c.id='''||v_feature_type_new||''';'
 				INTO v_man_table;
 		
-			v_query_string_insert='INSERT INTO '||v_man_table||' VALUES ('||v_id||');';
+			v_query_string_insert='INSERT INTO '||v_man_table||' VALUES ('||v_id||') ON CONFLICT ('||v_feature_type||'_id) DO NOTHING;';
 			EXECUTE v_query_string_insert;
 		END IF;
 
 		IF v_epa_table_new IS NOT NULL THEN
-			v_query_string_insert='INSERT INTO '||v_epa_table_new||' VALUES ('||v_id||');';
+			v_query_string_insert='INSERT INTO '||v_epa_table_new||' VALUES ('||v_id||') ON CONFLICT ('||v_feature_type||'_id) DO NOTHING;';
 			EXECUTE v_query_string_insert;
 		END IF;
 				
@@ -374,41 +377,65 @@ BEGIN
 		END IF;
 			
 		-- updating values on table epa_table from values of old feature
-		IF (v_feature_type='node' or v_feature_type='arc' or (v_feature_type='connec' AND v_project_type='WS')) and v_epa_table is not null AND 
-		v_epa_type_new = v_epa_type THEN
+		IF (v_feature_type='node' or v_feature_type='arc' or v_feature_type='gully' or (v_feature_type='connec' AND v_project_type='WS')) 
+		and v_epa_table_new is not null AND v_epa_type_new = v_old_epa_type THEN
 			v_sql:='select column_name  FROM information_schema.columns 
 								where (table_schema=''SCHEMA_NAME'' and udt_name <> ''inet'' and 
-								table_name='''||v_epa_table||''') and column_name!='''||v_id_column||''';';
+								table_name='''||v_epa_table_new||''') and column_name!='''||v_id_column||''';';
 			
 			FOR v_column IN EXECUTE v_sql LOOP
-				v_query_string_select= 'SELECT '||v_column||' FROM '||v_epa_table||' where '||v_feature_type||'_id='||quote_literal(v_old_feature_id)||';';
+				v_query_string_select= 'SELECT '||v_column||' FROM '||v_epa_table_new||' where '||v_feature_type||'_id='||quote_literal(v_old_feature_id)||';';
 				IF v_query_string_select IS NOT NULL THEN
 					EXECUTE v_query_string_select INTO v_value;	
 				END IF;
 				
-				v_query_string_update= 'UPDATE '||v_epa_table||' set '||v_column||'='||quote_literal(v_value)||' where '||v_id_column||'='||quote_literal(v_id)||';';
+				v_query_string_update= 'UPDATE '||v_epa_table_new||' set '||v_column||'='||quote_literal(v_value)||' where '||v_id_column||'='||quote_literal(v_id)||';';
 				IF v_query_string_update IS NOT NULL THEN
 					EXECUTE v_query_string_update; 
 
 				END IF;
 			END LOOP;
 		END IF;
-		
-		-- taking values from old feature (from man_addfields table)
-		INSERT INTO man_addfields_value (feature_id, parameter_id, value_param)
-		SELECT 
-		v_id,
-		parameter_id,
-		value_param
-		FROM man_addfields_value WHERE feature_id=v_old_feature_id;
 
-		IF (SELECT count(parameter_id) FROM man_addfields_value WHERE feature_id = v_id::text) > 0 THEN
-			FOR rec_addfields IN (SELECT parameter_id, value_param FROM man_addfields_value WHERE feature_id = v_id::text)
+
+		v_feature_childtable_name_old := 'man_' || v_feature_type || '_' || lower(v_old_featuretype);
+		v_feature_childtable_name_new := 'man_' || v_feature_type || '_' || lower(v_feature_type_new);
+
+		IF (SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = v_schemaname AND table_name = v_feature_childtable_name_old)) IS TRUE AND
+			(SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = v_schemaname AND table_name = v_feature_childtable_name_new)) IS TRUE
+		THEN
+
+			EXECUTE 'INSERT INTO '||v_feature_childtable_name_new||' ('||v_feature_type||'_id) VALUES ('||v_id||');';
+
+			v_sql := 'SELECT column_name FROM information_schema.columns 
+					WHERE table_schema = ''SCHEMA_NAME'' 
+					AND table_name = '''||v_feature_childtable_name_old||''' 
+					AND column_name !=''id'' AND column_name != '''||v_feature_type||'_id'' 
+					AND column_name IN (SELECT column_name
+										FROM information_schema.columns
+										WHERE table_name = '''||v_feature_childtable_name_new||'''
+										AND column_name !=''id'' AND column_name != '''||v_feature_type||'_id'');';
+
+			-- taking values from old feature (from man_{feature_type}_{feature_childtype}) if the column is equal.
+			FOR rec_addfields IN EXECUTE v_sql
 			LOOP
-				INSERT INTO audit_check_data (fid, result_id, error_message)
-				VALUES (v_fid, v_result_id, concat('Copy value of addfield ',rec_addfields.parameter_id,' old feature into new one: ',rec_addfields.value_param,'.'));
+
+				v_query_string_update = 'UPDATE '||v_feature_childtable_name_new||' SET '||rec_addfields.column_name||' = '
+										'(SELECT '||rec_addfields.column_name||' FROM '||v_feature_childtable_name_old||' WHERE '||v_id_column||' = '||quote_literal(v_id)||' ) '
+										'WHERE '||v_feature_childtable_name_old||'.'||v_id_column||' = '||quote_literal(v_old_feature_id)||';';
+				IF v_query_string_update IS NOT NULL THEN
+					EXECUTE v_query_string_update; 
+					INSERT INTO audit_check_data (fid, result_id, error_message)
+					VALUES (v_fid, v_result_id, concat('Assign old data from ',rec_addfields.column_name,' addfield to the new feature.'));
+				END IF;
+
 			END LOOP;
+
+			EXECUTE 'DELETE FROM '||v_feature_childtable_name_old||' WHERE '||v_id_column||'='||quote_literal(v_old_feature_id)||';'; 
 		END IF;
+
+		
+
 
 		--Moving elements from old feature to new feature
 		IF v_keep_elements IS TRUE THEN

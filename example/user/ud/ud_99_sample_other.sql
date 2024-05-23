@@ -518,7 +518,7 @@ UPDATE config_form_fields set layoutorder = 3 WHERE formname in ('ve_connec') AN
 SELECT gw_fct_setcheckproject($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"0", "fid":1}}$$)::text;
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"CHAMBER"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"chamber_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"chamber_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Chamber param_1","ismandatory":"False",
 "active":"True", "iseditable":"True",  "dv_isnullvalue":"True","layoutname":"lyt_data_1",
 "dv_querytext":"SELECT id as id, idval as idval  FROM edit_typevalue WHERE typevalue='chamber_param_1'"}}}$$);
@@ -534,12 +534,12 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "fieldLength":"10", "numDecimals" :null,"active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"CIRC_MANHOLE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"cirmanhole_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"cirmanhole_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Cmanhole param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"PGULLY"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"grate_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"grate_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Grate param_1","ismandatory":"False",
 "active":"True", "iseditable":"True",  "dv_isnullvalue":"True","layoutname":"lyt_data_1",
 "dv_querytext":"SELECT id as id, idval as idval  FROM edit_typevalue WHERE typevalue='grate_param_1'"}}}$$);
@@ -549,13 +549,13 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "widgettype":"check", "label":"Grate param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
-SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OWERFLOW_STORAGE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"owestorage_param_1", "datatype":"integer", 
+SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OVERFLOW_STORAGE"},
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"ovestorage_param_1", "datatype":"integer", 
 "widgettype":"text", "label":"Owstorage param_1","ismandatory":"False",
 "fieldLength":"10", "numDecimals" :null,"active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
-SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OWERFLOW_STORAGE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"owestorage_param_2", "datatype":"string", 
+SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OVERFLOW_STORAGE"},
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"ovestorage_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Owstorage param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
@@ -565,38 +565,38 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"PUMP_PIPE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"pumpipe_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"pumpipe_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Ppipe param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"RECT_MANHOLE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"recmanhole_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"recmanhole_param_1", "datatype":"text", 
 "widgettype":"text", "label":"Rect. mhole param_1","ismandatory":"False",
 "fieldLength":"500", "numDecimals" :null,"active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"RECT_MANHOLE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"recmanhole_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"recmanhole_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Rect. mhole param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"REGISTER"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"register_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"register_param_1", "datatype":"text", 
 "widgettype":"text", "label":"Register param_1","ismandatory":"False",
 "fieldLength":"500", "numDecimals" :null,"active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"REGISTER"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"register_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"register_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Register param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"SEWER_STORAGE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"sewstorage_param_1", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"sewstorage_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Sstorage param_1","ismandatory":"False",
 "active":"True", "iseditable":"True",  "dv_isnullvalue":"True","layoutname":"lyt_data_1",
 "dv_querytext":"SELECT id as id, idval as idval  FROM edit_typevalue WHERE typevalue='sewstorage_param_1'"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"SEWER_STORAGE"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"sewstorage_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"sewstorage_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Sstorage param_1","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
@@ -606,7 +606,7 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"WEIR"},
-"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"weir_param_2", "datatype":"string", 
+"data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"weir_param_2", "datatype":"text", 
 "widgettype":"text", "label":"Weir param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
@@ -624,12 +624,9 @@ INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('chamber_param_1','2','c
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('chamber_param_1','3','combo3');
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('chamber_param_1','4','combo4');
 
-INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field, parameter_id)
-SELECT 'edit_typevalue','sewstorage_param_1','man_addfields_value','value_param',id FROM sys_addfields WHERE param_name='sewstorage_param_1';
-INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field, parameter_id)
-SELECT 'edit_typevalue','grate_param_1','man_addfields_value','value_param',id FROM sys_addfields WHERE param_name='grate_param_1';
-INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field, parameter_id)
-SELECT 'edit_typevalue','chamber_param_1','man_addfields_value','value_param',id FROM sys_addfields WHERE param_name='chamber_param_1';
+INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','sewstorage_param_1','man_node_sewer_storage','sewstorage_param_1');
+INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','grate_param_1','man_gully_pgully','grate_param_1');
+INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','chamber_param_1','man_node_chamber','chamber_param_1');
 
 SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
 "data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"1"}}$$);
@@ -697,9 +694,6 @@ UPDATE config_form_fields SET layoutname = 'lyt_data_2',  layoutorder = 40 where
 UPDATE config_form_fields SET layoutname = 'lyt_data_2' , layoutorder = 40 where columnname ='workcat_id_end' AND formname LIKE '%_gully_%';
 UPDATE config_form_fields SET layoutname = 'lyt_data_2' , layoutorder = 40 where columnname ='workcat_id_end' AND formname LIKE '%_arc_%';
 
-UPDATE config_form_fields SET  hidden = true where columnname = 'z1';
-UPDATE config_form_fields SET  hidden = true where columnname = 'z2';
-UPDATE config_form_fields SET  hidden = true where columnname = 'cat_geom2' AND formname LIKE '%_arc_%';
 UPDATE config_form_fields SET  hidden = true where columnname = 'cat_shape' AND formname LIKE '%_arc_%';
 UPDATE config_form_fields SET  hidden = true where columnname = 'soilcat_id' AND formname LIKE '%_arc_%';
 
@@ -911,6 +905,8 @@ UPDATE config_form_fields
 
 UPDATE config_form_fields SET iseditable = true WHERE layoutname = 'lyt_epa_dsc_1' AND widgettype = 'button';
 
-UPDATE sys_table SET alias = 'Gully child' WHERE id='ve_gully_gully';
-
 UPDATE config_param_system SET value = (replace(value, 'Disable', 'Random')) WHERE parameter='utils_graphanalytics_style';
+
+update config_toolbox set inputparams= '[{"widgetname":"graphClass", "label":"Graph class:", "widgettype":"combo","datatype":"text","tooltip": "Graphanalytics method used", "layoutname":"grl_option_parameters","layoutorder":1,"comboIds":["DRAINZONE"],
+"comboNames":["Drainage area (DRAINZONE)"], "selectedId":""},{"widgetname":"exploitation", "label":"Exploitation:","widgettype":"combo","datatype":"text","tooltip": "Choose exploitation to work with", "layoutname":"grl_option_parameters","layoutorder":2, "dvQueryText":"select id, idval from (select -999 as id, ''User selected expl'' AS idval, ''a'' AS sort_order union select expl_id as id, name as idval, ''b'' as sort_order from exploitation where active is not false)a order by sort_order asc, idval asc", "selectedId":""}, {"widgetname":"floodOnlyMapzone", "label":"Flood only one mapzone: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Flood only identified mapzones. The purpose of this is update only network elements affected by this flooding keeping rest of network as is. Recommended to gain performance when mapzones ecosystem is under work", "placeholder":"1001", "layoutname":"grl_option_parameters","layoutorder":3, "value":""}, {"widgetname":"forceOpen", "label":"Force open nodes: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary open closed node(s) in order to force algorithm to continue there", "placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":5, "value":""}, {"widgetname":"forceClosed", "label":"Force closed nodes: (*)","widgettype":"text","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary close open node(s) to force algorithm to stop there","placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":6,"value":""}, {"widgetname":"usePlanPsector", "label":"Use selected psectors:", "widgettype":"check","datatype":"boolean","tooltip":"If true, use selected psectors. If false ignore selected psectors and only works with on-service network" , "layoutname":"grl_option_parameters","layoutorder":7,"value":""}, {"widgetname":"commitChanges", "label":"Commit changes:", "widgettype":"check","datatype":"boolean","tooltip":"If true, changes will be applied to DB. If false, algorithm results will be saved in anl tables" , "layoutname":"grl_option_parameters","layoutorder":8,"value":""}, {"widgetname":"valueForDisconnected", "label":"Value for disconn. and conflict: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Value to use for disconnected features. Usefull for work in progress with dynamic mpzonesnode" , "placeholder":"", "layoutname":"grl_option_parameters","layoutorder":9, "value":""}, {"widgetname":"updateMapZone", "label":"Mapzone constructor method:","widgettype":"combo","datatype":"integer","layoutname":"grl_option_parameters","layoutorder":10,"comboIds":[0,1,2,6], "comboNames":["NONE", "CONCAVE POLYGON", "PIPE BUFFER", "EPA SUBCATCH"], "selectedId":""}, {"widgetname":"geomParamUpdate", "label":"Pipe buffer","widgettype":"text","datatype":"float","tooltip":"Buffer from arcs to create mapzone geometry using [PIPE BUFFER] options. Normal values maybe between 3-20 mts.", "layoutname":"grl_option_parameters","layoutorder":11, "isMandatory":false, "placeholder":"5-30", "value":""}]'::json where id=2768;
+
