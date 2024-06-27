@@ -14,3 +14,6 @@ UPDATE om_visit_cat set alias = name;
 INSERT INTO edit_typevalue
 (typevalue, id, idval, descript, addparam)
 VALUES('value_verified', '2', 'IGNORE CHECK', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
+
+INSERT INTO config_param_system ("parameter", value, descript, "label", project_type,"datatype", widgettype)
+VALUES('plan_node_replace_code', 'false', 'If true, when a node replace in planification is performed, new arcs will have the same code as the replaced one. Otherwise, new arcs will have the same code as its arc_id.', 'Plan node replace code', 'utils', 'boolean', 'text') ON CONFLICT (parameter) DO NOTHING;
