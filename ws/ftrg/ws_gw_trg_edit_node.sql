@@ -46,6 +46,8 @@ v_auto_streetvalues_status boolean;
 v_auto_streetvalues_buffer integer;
 v_auto_streetvalues_field text;
 v_trace_featuregeom boolean;
+v_seq_name text;
+v_seq_code text;
 
 -- dynamic mapzones strategy
 v_isdma boolean = false;
@@ -62,6 +64,7 @@ v_epavdef json;
 v_man_view text;
 v_input json;
 
+v_code_prefix text;
 
 BEGIN
 
@@ -371,7 +374,19 @@ BEGIN
 			NEW.publish := (SELECT "value" FROM config_param_system WHERE "parameter"='edit_publish_sysvdefault');
 		END IF; 
 				
-		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature JOIN cat_node ON cat_feature.id=cat_node.nodetype_id WHERE cat_node.id=NEW.nodecat_id;
+		-- Code
+		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix' INTO v_code_autofill_bool, v_featurecat, v_code_prefix FROM cat_feature 
+		JOIN cat_node ON cat_feature.id=cat_node.nodetype_id WHERE cat_node.id=NEW.nodecat_id;
+	
+		-- use specific sequence for code when its name matches featurecat_code_seq
+		EXECUTE 'SELECT concat('||quote_literal(lower(v_featurecat))||',''_code_seq'');' INTO v_seq_name;
+		EXECUTE 'SELECT relname FROM pg_catalog.pg_class WHERE relname='||quote_literal(v_seq_name)||';' INTO v_sql;
+		
+		
+		IF v_sql IS NOT NULL AND NEW.code IS NULL THEN
+			EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+				NEW.code=concat(v_code_prefix,v_seq_code);
+		END IF;
 		
 		--Copy id to code field
 		IF (v_code_autofill_bool IS TRUE) AND NEW.code IS NULL THEN 
@@ -641,11 +656,11 @@ BEGIN
 
 		END IF;
 		
-		--insert tank into config_graph_inlet
+		--insert tank into config_graph_mincut
 		IF v_man_table='man_tank' THEN 
 			
-			INSERT INTO config_graph_inlet(node_id, expl_id, active)
-			VALUES (NEW.node_id, NEW.expl_id, TRUE);	
+			INSERT INTO config_graph_mincut(node_id, active)
+			VALUES (NEW.node_id, TRUE);	
 		END IF;
 
 		-- childtable insert
@@ -694,8 +709,8 @@ BEGIN
 			SELECT json_array_elements_text ((value::json->>'catfeatureId')::json) id , (value::json->>'vdefault') vdef FROM config_param_system WHERE parameter like 'epa_shortpipe_vdefault'
 			)a WHERE id = v_customfeature;
 			
-			INSERT INTO inp_shortpipe (node_id, status, minorloss) 
-			VALUES (NEW.node_id,  v_epavdef ->>'status', (v_epavdef ->>'minorloss')::numeric);
+			INSERT INTO inp_shortpipe (node_id, minorloss) 
+			VALUES (NEW.node_id, (v_epavdef ->>'minorloss')::numeric);
 
 				
 		ELSIF (NEW.epa_type = 'INLET') THEN
@@ -928,11 +943,6 @@ BEGIN
 			UPDATE man_tank SET vmax=NEW.vmax, vutil=NEW.vutil, area=NEW.area, chlorination=NEW.chlorination, name=NEW.name,
 			hmax=NEW.hmax
 			WHERE node_id=OLD.node_id;
-			
-			--update config_graph_inlet if exploitation changes
-			IF NEW.expl_id != OLD.expl_id THEN
-				UPDATE config_graph_inlet SET expl_id=NEW.expl_id WHERE node_id=NEW.node_id;
-			END IF;
 	
 		ELSIF v_man_table ='man_pump' THEN
 			UPDATE man_pump SET max_flow=NEW.max_flow, min_flow=NEW.min_flow, nom_flow=NEW.nom_flow, "power"=NEW.power, 
@@ -1081,8 +1091,8 @@ BEGIN
 		-- restore plan_psector_force_delete
 		UPDATE config_param_user SET value = v_force_delete WHERE parameter = 'plan_psector_force_delete' and cur_user = current_user;
 
-		--remove node from config_graph_inlet
-		DELETE FROM config_graph_inlet WHERE node_id=OLD.node_id;
+		--remove node from config_graph_mincut
+		DELETE FROM config_graph_mincut WHERE node_id=OLD.node_id;
 
 		-- Delete childtable addfields (after or before deletion of node, doesn't matter)
         FOR v_addfields IN SELECT * FROM sys_addfields

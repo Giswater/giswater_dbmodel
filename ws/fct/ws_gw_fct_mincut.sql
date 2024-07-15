@@ -151,12 +151,12 @@ BEGIN
 	END IF;     
 
 	INSERT INTO om_mincut_valve (result_id, node_id, unaccess, closed, broken, the_geom) 
-	SELECT result_id_arg, node.node_id, false::boolean, closed, broken, node.the_geom
-	FROM v_om_mincut_selected_valve
-	JOIN node on node.node_id=v_om_mincut_selected_valve.node_id
-	JOIN exploitation ON node.expl_id=exploitation.expl_id
-	WHERE macroexpl_id=macroexpl_id_arg;
-
+	SELECT result_id_arg, n.node_id, false::boolean, closed, broken, n.the_geom
+	FROM cat_feature_node f
+	JOIN v_edit_node n on n.node_type=id
+	JOIN man_valve USING (node_id)
+	WHERE graph_delimiter = 'MINSECTOR';
+	
 	IF v_debug THEN
 		RAISE NOTICE '6-Identify unaccess valves';
 	END IF;
@@ -220,7 +220,7 @@ BEGIN
 					
 				ELSE
 					-- Check if extreme if being a inlet
-					SELECT COUNT(*) INTO controlValue FROM config_graph_inlet WHERE node_id = node_1_aux;
+					SELECT COUNT(*) INTO controlValue FROM config_graph_mincut WHERE node_id = node_1_aux;
 				
 					IF controlValue = 0 THEN
 						-- Compute the tributary area using DFS
@@ -248,7 +248,7 @@ BEGIN
 					END IF;
 				ELSE
 					-- Check if extreme if being a inlet
-					SELECT COUNT(*) INTO controlValue FROM config_graph_inlet WHERE node_id = node_2_aux;
+					SELECT COUNT(*) INTO controlValue FROM config_graph_mincut WHERE node_id = node_2_aux;
 					IF controlValue = 0 THEN
 						-- Compute the tributary area using DFS
 						PERFORM gw_fct_mincut_engine(node_2_aux, result_id_arg);	

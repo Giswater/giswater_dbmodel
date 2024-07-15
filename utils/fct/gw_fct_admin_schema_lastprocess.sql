@@ -155,6 +155,14 @@ BEGIN
             UPDATE config_param_system SET value = (replace(value, 'Random', 'Disable')) WHERE parameter='utils_graphanalytics_style';
             UPDATE config_param_system SET value = (replace(value, 'Stylesheet', 'Disable')) WHERE parameter='utils_graphanalytics_style';
 
+			-- reset sequences
+			IF v_projecttype = 'UD' THEN 
+				ALTER SEQUENCE SCHEMA_NAME.cat_dwf_scenario_id_seq MINVALUE 0;
+				ALTER SEQUENCE SCHEMA_NAME.cat_hydrology_hydrology_id_seq MINVALUE 0;
+				PERFORM setval('SCHEMA_NAME.cat_dwf_scenario_id_seq',0);
+				PERFORM setval('SCHEMA_NAME.cat_hydrology_hydrology_id_seq',0);
+			END IF;
+			
 			-- drop deprecated views
 			IF v_projecttype = 'WS' THEN 
 				DROP VIEW IF EXISTS v_edit_man_varc;
@@ -231,7 +239,7 @@ BEGIN
 				ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_22;
 				ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_23;
 				ALTER TABLE inp_pattern_value DROP COLUMN if exists _factor_24;	
-				ALTER TABLE config_graph_inlet DROP COLUMN if exists _to_arc;
+				ALTER TABLE config_graph_mincut DROP COLUMN if exists _to_arc;
 				ALTER TABLE ext_rtc_hydrometer DROP COLUMN IF EXISTS hydrometer_category;
 				ALTER TABLE ext_rtc_hydrometer DROP COLUMN IF EXISTS cat_hydrometer_id ;
 			ELSE

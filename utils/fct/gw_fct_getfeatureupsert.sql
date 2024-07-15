@@ -74,7 +74,7 @@ v_muni_id integer;
 v_district_id integer;
 v_project_type varchar;
 v_cat_feature_id varchar;
-v_code int8;
+v_code text;
 v_node_proximity double precision;
 v_node_proximity_control boolean;
 v_connec_proximity double precision;
@@ -110,6 +110,7 @@ v_type text;
 v_active_feature text;
 v_promixity_buffer double precision;
 v_sys_raster_dem boolean=false;
+v_connec_autofill_plotcode boolean = false;
 v_edit_insert_elevation_from_dem boolean=false;
 v_noderecord1 record;
 v_noderecord2 record;
@@ -140,9 +141,13 @@ v_epa text;
 v_elevation numeric(12,4);
 v_staticpressure numeric(12,3);
 label_value text;
+v_seq_name text;
+v_seq_code text;
+v_sql text;
 
 v_streetname varchar;
 v_postnumber varchar;
+v_plot_code text;
 
 v_auto_streetvalues_status boolean;
 v_auto_streetvalues_field varchar;
@@ -186,11 +191,13 @@ BEGIN
 	SELECT ((value::json)->>'value') INTO v_gully_proximity FROM config_param_system WHERE parameter='edit_gully_proximity';
 	SELECT ((value::json)->>'activated') INTO v_arc_searchnodes_control FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
-	SELECT value INTO v_samenode_init_end_control FROM config_param_system WHERE parameter = 'edit_arc_samenode_control';
+	SELECT value::boolean INTO v_connec_autofill_plotcode FROM config_param_system WHERE parameter = 'edit_connec_autofill_plotcode';
+	SELECT value::boolean INTO v_samenode_init_end_control FROM config_param_system WHERE parameter = 'edit_arc_samenode_control';
 	SELECT value INTO v_promixity_buffer FROM config_param_system WHERE parameter='edit_feature_buffer_on_mapzone';
 	SELECT value INTO v_use_fire_code_seq FROM config_param_system WHERE parameter='edit_hydrant_use_firecode_seq';
 	SELECT ((value::json)->>'status') INTO v_automatic_ccode FROM config_param_system WHERE parameter='edit_connec_autofill_ccode';
 	SELECT ((value::json)->>'field') INTO v_automatic_ccode_field FROM config_param_system WHERE parameter='edit_connec_autofill_ccode';
+	
 	SELECT json_extract_path_text(value::json,'activated')::boolean INTO v_sys_raster_dem FROM config_param_system WHERE parameter='admin_raster_dem';
 	SELECT (value::json->>'status')::boolean INTO v_auto_streetvalues_status FROM config_param_system WHERE parameter = 'edit_auto_streetvalues';
 	SELECT (value::json->>'field')::text INTO v_auto_streetvalues_field FROM config_param_system WHERE parameter = 'edit_auto_streetvalues';
@@ -285,6 +292,18 @@ BEGIN
 		IF v_catfeature.code_autofill IS TRUE THEN
 			v_code=p_id;
 		END IF;
+	
+		-- check if p_table_id is defined on cat_feature
+		if v_catfeature.id is not null then
+			-- use specific sequence when its name matches featurecat_code_seq
+			EXECUTE 'SELECT concat('||quote_literal(lower(v_catfeature.id))||',''_code_seq'');' INTO v_seq_name;
+			EXECUTE 'SELECT relname FROM pg_catalog.pg_class WHERE relname='||quote_literal(v_seq_name)||';' INTO v_sql;
+
+			IF v_sql IS NOT NULL THEN
+				EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+					v_code=concat(v_catfeature.addparam::json->>'code_prefix',v_seq_code);
+			END IF;
+		end if;
 
 		-- customer code only for connec
 		IF v_automatic_ccode IS TRUE AND v_automatic_ccode_field='connec_id' THEN
@@ -488,6 +507,11 @@ BEGIN
 		IF v_sys_raster_dem AND v_edit_insert_elevation_from_dem AND p_idname IN ('node_id', 'connec_id', 'gully_id') THEN
 			v_elevation = (SELECT ST_Value(rast,1, p_reduced_geometry, true) FROM v_ext_raster_dem WHERE id =
 			(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1));
+		END IF;
+
+		-- plot code from connecs
+		IF p_idname = 'connec_id' AND v_connec_autofill_plotcode THEN
+			v_plot_code = (SELECT plot_code FROM v_ext_plot WHERE st_dwithin(p_reduced_geometry, the_geom, 0) LIMIT 1);
 		END IF;
 
 		-- static pressure
@@ -716,6 +740,10 @@ BEGIN
 				-- staticpressure
 				WHEN 'staticpressure' THEN
 					field_value = v_staticpressure;
+
+				-- plot_code	
+				WHEN 'plot_code' THEN 
+					field_value = v_plot_code;
 
 				-- catalog values
 				WHEN 'cat_dnom' THEN

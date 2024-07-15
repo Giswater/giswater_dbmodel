@@ -37,6 +37,9 @@ v_auto_streetvalues_status boolean;
 v_auto_streetvalues_buffer integer;
 v_auto_streetvalues_field text;
 v_trace_featuregeom boolean;
+v_seq_name text;
+v_seq_code text;
+v_code_prefix text;
 
 BEGIN
 
@@ -345,7 +348,18 @@ BEGIN
 			END IF;
 		END IF;
 
-		SELECT code_autofill INTO v_code_autofill_bool FROM cat_feature WHERE id=NEW.connec_type;
+		-- Code
+		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix' INTO v_code_autofill_bool, v_featurecat, v_code_prefix
+		FROM cat_feature WHERE id=NEW.connec_type;
+	
+		-- use specific sequence for code when its name matches featurecat_code_seq
+		EXECUTE 'SELECT concat('||quote_literal(lower(v_featurecat))||',''_code_seq'');' INTO v_seq_name;
+		EXECUTE 'SELECT relname FROM pg_catalog.pg_class WHERE relname='||quote_literal(v_seq_name)||';' INTO v_sql;
+		
+		IF v_sql IS NOT NULL AND NEW.code IS NULL THEN
+			EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+				NEW.code=concat(v_code_prefix,v_seq_code);
+		END IF;
 
 		--Copy id to code field
 		IF (v_code_autofill_bool IS TRUE) AND NEW.code IS NULL THEN 
@@ -438,6 +452,11 @@ BEGIN
 			NEW.top_elev = (SELECT ST_Value(rast,1,NEW.the_geom,true) FROM v_ext_raster_dem WHERE id =
 				(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));
 		END IF; 
+
+		-- plot_code from plot layer
+		IF (SELECT value::boolean FROM config_param_system WHERE parameter = 'edit_connec_autofill_plotcode') = TRUE THEN
+			NEW.plot_code = (SELECT plot_code FROM v_ext_plot WHERE st_dwithin(the_geom, NEW.the_geom, 0) LIMIT 1);
+		END IF;
 		
 		-- FEATURE INSERT
 		IF v_matfromcat THEN
@@ -538,11 +557,17 @@ BEGIN
 			
 			--update associated geometry of element (if exists) and trace_featuregeom is true
 			v_trace_featuregeom:= (SELECT trace_featuregeom FROM element JOIN element_x_connec using (element_id) 
-                WHERE connec_id=NEW.connec_id AND the_geom IS NOT NULL LIMIT 1);
+			WHERE connec_id=NEW.connec_id AND the_geom IS NOT NULL LIMIT 1);
+			
 			-- if trace_featuregeom is false, do nothing
 			IF v_trace_featuregeom IS TRUE THEN
 				UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001) 
 				AND element_id IN (SELECT element_id FROM element_x_connec WHERE connec_id=NEW.connec_id);
+			END IF;
+
+			-- plot_code from plot layer
+			IF (SELECT value::boolean FROM config_param_system WHERE parameter = 'edit_connec_autofill_plotcode') = TRUE THEN
+				NEW.plot_code = (SELECT plot_code FROM v_ext_plot WHERE st_dwithin(the_geom, NEW.the_geom, 0) LIMIT 1);
 			END IF;
 			
 		END IF;

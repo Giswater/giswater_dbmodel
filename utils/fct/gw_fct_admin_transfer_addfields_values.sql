@@ -76,7 +76,7 @@ BEGIN
                     END IF;
                 ELSE
                     EXECUTE 'CREATE TABLE IF NOT EXISTS ' || v_feature_childtable_name || ' (
-                            '|| lower(rec_sa.feature_type) || '_id '||v_table_id_type||' PRIMARY KEY,
+                            '|| lower(rec_sa.feature_type) || '_id varchar(16) PRIMARY KEY,
                             ' || rec_sa_featurestypes.param_name || ' '||rec_sa_featurestypes.datatype_id||'
                         )';
 
@@ -341,9 +341,10 @@ BEGIN
 
 	RETURN ('{"status":"Accepted", "message":{"level":"3", "text":"Process done successfully"}, "version":"'||v_version||'"}')::json;
 
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+	-- the exception when others need to be disabled because in case of update if it breaks update proces need to be canceled
+	--EXCEPTION WHEN OTHERS THEN
+	--GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	--RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

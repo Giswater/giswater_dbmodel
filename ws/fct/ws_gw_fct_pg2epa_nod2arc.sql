@@ -66,7 +66,7 @@ BEGIN
 				UNION  
 				SELECT a.*, inp_pump.to_arc FROM temp_t_node a JOIN inp_pump ON a.node_id=inp_pump.node_id
 				UNION
-				SELECT a.*, inp_shortpipe.to_arc FROM temp_t_node a JOIN inp_shortpipe ON a.node_id=inp_shortpipe.node_id WHERE inp_shortpipe.to_arc IS NOT NULL';
+				SELECT a.*, s.to_arc FROM temp_t_node a JOIN v_edit_inp_shortpipe s ON a.node_id=s.node_id WHERE s.to_arc IS NOT NULL';
 
 	v_querytext = concat (' INSERT INTO temp_anl_node (num_arcs, arc_id, node_id, elevation, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, the_geom, fid, cur_user, dma_id, presszone_id, dqa_id, minsector_id)
 				SELECT c.numarcs, to_arc, b.node_id, elevation, elev, nodecat_id, sector_id, state, state_type, ''MANDATORY'', demand, the_geom, 124, current_user, dma_id, presszone_id, dqa_id, minsector_id
@@ -75,7 +75,7 @@ BEGIN
 
 	-- query text for non-mandatory node2arcs
 	IF p_only_mandatory_nodarc IS FALSE THEN
-		v_querytext = 'SELECT a.*, inp_shortpipe.to_arc FROM temp_t_node a JOIN inp_shortpipe ON a.node_id=inp_shortpipe.node_id WHERE inp_shortpipe.to_arc IS NULL';
+		v_querytext = 'SELECT a.*, s.to_arc FROM temp_t_node a JOIN v_edit_inp_shortpipe s ON a.node_id=s.node_id WHERE s.to_arc IS NULL';
 
 		v_querytext = concat (' INSERT INTO temp_anl_node (num_arcs, arc_id, node_id, elevation, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, the_geom, fid, cur_user, dma_id, presszone_id, dqa_id, minsector_id)
 				SELECT c.numarcs, to_arc, b.node_id, elevation, elev, nodecat_id, sector_id, state, state_type, ''NOT-MANDATORY'', demand, the_geom, 124, current_user, dma_id, presszone_id, dqa_id, minsector_id
@@ -303,9 +303,30 @@ BEGIN
 		END LOOP;
 	END IF;
 
-	RAISE NOTICE ' Delete old node from node table';
+	
+	RAISE NOTICE ' Delete old node from node table and refactor endpoint shorpipe';
 	EXECUTE ' DELETE FROM temp_t_node WHERE epa_type =''TODELETE''';
 
+	-- get endpoint shorpipes and associated pipes and transform it in a simply node
+	CREATE TEMP TABLE temp_t_arc_endpoint AS
+	WITH query as (SELECT node_id FROM node JOIN
+	(SELECT count(*)as numarcs, node_id FROM node n JOIN 
+	(SELECT node_1 as node_id, arc_id, 'n1' as position FROM v_edit_inp_pipe 
+	UNION 
+	ALL SELECT node_2, arc_id , 'n2' FROM v_edit_inp_pipe) a using (node_id) group by n.node_id) a 
+	USING (node_id) WHERE a.numarcs = 1 AND epa_type ='SHORTPIPE')
+	SELECT arc_id,node_1 AS node_id FROM arc JOIN query ON query.node_id = node_1 
+	UNION
+	SELECT arc_id,node_2 FROM arc JOIN query ON query.node_id = node_2;
+
+	-- delete the nodarc not-used existing arcs
+	DELETE FROM temp_t_arc WHERE arc_id IN (SELECT concat(node_id,'_n2a') FROM temp_t_arc_endpoint);
+	
+	-- delete the nodarc not-used existing nodes
+	DELETE FROM temp_t_node WHERE node_id IN (SELECT concat(node_id,'_n2a_1') 
+	FROM temp_t_arc_endpoint) and node_id not in (select node_1 from temp_t_arc union select node_2 from temp_t_arc);
+	DELETE FROM temp_t_node WHERE node_id IN (SELECT concat(node_id,'_n2a_2') 
+	FROM temp_t_arc_endpoint) and node_id not in (select node_1 from temp_t_arc union select node_2 from temp_t_arc);
 
 	RAISE NOTICE ' Improve diameter';
 	

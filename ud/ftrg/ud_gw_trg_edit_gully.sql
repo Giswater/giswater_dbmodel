@@ -65,6 +65,9 @@ v_auto_streetvalues_status boolean;
 v_auto_streetvalues_buffer integer;
 v_auto_streetvalues_field text;
 v_trace_featuregeom boolean;
+v_seq_name text;
+v_seq_code text;
+v_code_prefix text;
 
 BEGIN
 
@@ -159,9 +162,20 @@ BEGIN
 			END IF;
 		END IF;
 
-		--Copy id to code field
-		v_codeautofill = (SELECT code_autofill FROM cat_feature WHERE id=NEW.gully_type);
-		IF (NEW.code IS NULL AND v_codeautofill) AND NEW.code IS NULL THEN 
+		-- Code
+		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix' INTO v_code_autofill_bool, v_featurecat, v_code_prefix
+		FROM cat_feature WHERE id=NEW.gully_type;
+	
+		-- use specific sequence for code when its name matches featurecat_code_seq
+		EXECUTE 'SELECT concat('||quote_literal(lower(v_featurecat))||',''_code_seq'');' INTO v_seq_name;
+		EXECUTE 'SELECT relname FROM pg_catalog.pg_class WHERE relname='||quote_literal(v_seq_name)||';' INTO v_sql;
+		
+		IF v_sql IS NOT NULL AND NEW.code IS NULL THEN
+			EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+				NEW.code=concat(v_code_prefix,v_seq_code);
+		END IF;
+        
+		IF (v_code_autofill_bool IS TRUE) AND NEW.code IS NULL THEN 
 			NEW.code=NEW.gully_id;
 		END IF;
 				

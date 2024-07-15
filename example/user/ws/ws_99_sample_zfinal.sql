@@ -32,8 +32,6 @@ INSERT INTO om_waterbalance_dma_graph VALUES ('113766',4,-1);
 UPDATE config_param_user SET value = replace(value, '"removeDemandOnDryNodes":false', '"delDryNetwork":false, "removeDemandOnDryNodes":true') 
 WHERE parameter = 'inp_options_debug';
 
-UPDATE inp_shortpipe SET to_arc = '2037', status = 'CV' where node_id = '1092';
-
 UPDATE cat_feature_node SET graph_delimiter ='MINSECTOR' WHERE id = 'SHUTOFF_VALVE';
 UPDATE cat_feature_node SET graph_delimiter ='MINSECTOR' WHERE id = 'CHECK_VALVE';
 UPDATE cat_feature_node SET graph_delimiter ='PRESSZONE' WHERE id in('PUMP', 'PR_REDUC_VALVE','PR_BREAK_VALVE','PR_SUSTA_VALVE');
@@ -54,3 +52,14 @@ WHERE parameter = 'epa_automatic_man2inp_values';
 
 
 UPDATE config_param_system SET value = '{"setArcObsolete":"true","setOldCode":"false"}' WHERE parameter = 'edit_arc_divide';
+
+SELECT gw_fct_setchangefeaturetype($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{"type":"node"}, "data":{"filterFields":{}, "pageInfo":{}, 
+"feature_id":"1082", "feature_type_new":"SHUTOFF_VALVE", "featurecat_id":"SHTFF-VALVE110-PN16"}}$$);
+
+UPDATE cat_feature set active=true where id = 'THROTTLE_VALVE';
+INSERT INTO cat_node VALUES ('THROTTLE_VALVE_200','THROTTLE_VALVE','FD','16','200',200, null, null, 'THROTTLE VALVE 200mm','c:\users\users\catalog.pdf');
+
+SELECT gw_fct_setchangefeaturetype($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{"type":"node"}, "data":{"filterFields":{}, "pageInfo":{}, 
+"feature_id":"1107", "feature_type_new":"THROTTLE_VALVE", "featurecat_id":"THROTTLE_VALVE_200"}}$$);
+
+UPDATE man_valve set broken=false where node_id = '1093';
