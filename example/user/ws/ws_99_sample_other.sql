@@ -52,7 +52,21 @@ doc.id,
 om_visit.id
 FROM doc, om_visit;
 
-INSERT INTO selector_hydrometer (state_id, cur_user) VALUES (1, 'postgres');
+INSERT INTO selector_hydrometer (state_id, cur_user) VALUES (1, current_user);
+
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo1','combo1');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo2','combo2');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo3','combo3');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo4','combo4');
+
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('pressmeter_param_1','1','combo1');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('pressmeter_param_1','2','combo2');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('pressmeter_param_1','3','combo3');
+
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','1','combo1');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','2','combo2');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','3','combo3');
+INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','4','combo4');
 
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"OUTFALL_VALVE"},
 "data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"outfallvalve_param_1", "datatype":"text", 
@@ -152,20 +166,6 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "widgettype":"text", "label":"Hydrant param_2","ismandatory":"False",
 "active":"True", "iseditable":"True","layoutname":"lyt_data_1"}}}$$);
 
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo1','combo1');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo2','combo2');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo3','combo3');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('hydrant_param_1','combo4','combo4');
-
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('pressmeter_param_1','1','combo1');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('pressmeter_param_1','2','combo2');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('pressmeter_param_1','3','combo3');
-
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','1','combo1');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','2','combo2');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','3','combo3');
-INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('shtvalve_param_1','4','combo4');
-
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','hydrant_param_1','man_node_hydrant','hydrant_param_1');
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','shtvalve_param_1','man_node_shutoff_valve','shtvalve_param_1');
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','pressmeter_param_1','man_node_pressure_meter','pressmeter_param_1');
@@ -176,35 +176,39 @@ INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('edit_link_co
 --move closed and broken to the top of lyt_data_2
 UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=0 WHERE columnname = 'closed' AND formname like '%_valve';
 UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=1 WHERE columnname = 'broken' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=2 WHERE columnname = 'arc_id' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=3 WHERE columnname = 'parent_id' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=4 WHERE columnname = 'soilcat_id' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=5 WHERE columnname = 'fluid_type' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=6 WHERE columnname = 'function_type' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=7 WHERE columnname = 'category_type' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=8 WHERE columnname = 'location_type' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=9 WHERE columnname = 'annotation' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=10 WHERE columnname = 'observ' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=11 WHERE columnname = 'descript' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=12 WHERE columnname = 'comment' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=13 WHERE columnname = 'num_value' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=14 WHERE columnname = 'svg' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=15 WHERE columnname = 'rotation' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=16 WHERE columnname = 'hemisphere' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=17 WHERE columnname = 'label' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=18 WHERE columnname = 'label_y' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=19 WHERE columnname = 'label_x' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=20 WHERE columnname = 'label_rotation' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=21 WHERE columnname = 'publish' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=22 WHERE columnname = 'undelete' AND formname like '%_valve';
-UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=23 WHERE columnname = 'inventory' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=2 WHERE columnname = 'to_arc' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=3 WHERE columnname = 'arc_id' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=4 WHERE columnname = 'parent_id' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=5 WHERE columnname = 'soilcat_id' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=6 WHERE columnname = 'fluid_type' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=7 WHERE columnname = 'function_type' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=8 WHERE columnname = 'category_type' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=9 WHERE columnname = 'location_type' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=10 WHERE columnname = 'comment' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=11 WHERE columnname = 'num_value' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=12 WHERE columnname = 'svg' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=13 WHERE columnname = 'rotation' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=14 WHERE columnname = 'hemisphere' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=15 WHERE columnname = 'label' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=16 WHERE columnname = 'label_y' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=17 WHERE columnname = 'label_x' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=18 WHERE columnname = 'label_rotation' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=19 WHERE columnname = 'publish' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=20 WHERE columnname = 'undelete' AND formname like '%_valve';
+UPDATE config_form_fields SET layoutname='lyt_data_2', layoutorder=21 WHERE columnname = 'inventory' AND formname like '%_valve';
 
 -- hidden
 UPDATE config_form_fields SET hidden = true WHERE columnname 
 IN ('undelete', 'publish', 'buildercat_id', 'comment', 'num_value', 'svg', 'macrodqa_id', 'macrosector_id',
 'macroexpl_id', 'custom_length', 'staticpressure1', 'staticpressure2', 'pipe_param_1') and (formname ILIKE 've_arc%' or formname ILIKE 've_node%' or formname ILIKE 've_connec%');
 
+UPDATE config_form_fields SET hidden = true WHERE columnname='arc_id' and formname LIKE 've_node_%';
+
 UPDATE config_form_fields SET hidden = true WHERE columnname IN ('label_x', 'label_y') AND formname LIKE 've_arc%';
+
+-- special changes for air_valve
+UPDATE config_form_fields SET hidden=true WHERE columnname = 'to_arc' AND formname like '%air_valve';
+UPDATE config_form_fields SET hidden=false WHERE columnname = 'arc_id' AND formname like '%air_valve';
 
 
 -- reorder sample
@@ -216,14 +220,6 @@ UPDATE config_form_fields SET layoutorder =70 , layoutname ='lyt_data_1' WHERE c
 UPDATE config_form_fields SET stylesheet ='{"label":"color:red; font-weight:bold"}' WHERE columnname IN ('expl_id', 'sector_id');
 
 SELECT gw_fct_admin_manage_triggers('fk','ALL');
-
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"1"}}$$); -- PRE-PROCESS
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"2"}}$$); -- AUTOREPAIR
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"3"}}$$);-- CHECK DATA
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"4"}}$$); -- STRUCTURE DATA
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"5"}}$$);-- CHECK GRAPH
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"6"}}$$); -- BUILD INP
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1}, "data":{"resultId":"gw_check_project", "step":"7"}}$$); -- POST-PROCESS
 
 UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'audit_project_user_control';
 
@@ -288,9 +284,6 @@ update config_form_fields SET widgettype = 'text' WHERE columnname  = 'macrosect
 
 UPDATE v_edit_node SET nodecat_id = 'CHK-VALVE100-PN16' WHERE node_id = '1092';
 
-INSERT INTO config_graph_checkvalve (node_id, to_arc) VALUES ('1092', '2104');
-
-
 --add tooltips for specific fields
 UPDATE config_form_fields SET tooltip = 'broken - Para establecer si la válvula esta rota o no' WHERE columnname = 'broken' AND tooltip IS NULL;
 UPDATE config_form_fields SET tooltip = 'buried - Para establecer si la válvula esta enterrada o no' WHERE columnname = 'buried' AND tooltip IS NULL;
@@ -350,7 +343,7 @@ UPDATE cat_mat_roughness set roughness  = 0.003;
 DELETE FROM cat_arc WHERE arctype_id = 'VARC' AND id !='VIRTUAL';
 
 UPDATE config_form_fields SET dv_querytext_filterc  = ' AND id ' 
-WHERE formname IN ('upsert_catalog_node', 'upsert_catalog_arc', 'upsert_catalog_connec') AND columnname ='matcat_id';
+WHERE formname IN ('upsert_catalog_node', 'upsert_catalog_arc', 'upsert_catalog_connec') AND columnname ='matcat_id' AND dv_parent_id IS NOT NULL;
 
 UPDATE config_param_system SET value='TRUE' WHERE parameter='sys_raster_dem';
 
@@ -615,11 +608,11 @@ UPDATE config_form_fields SET layoutorder =2 WHERE  formname = 'v_edit_sector' A
 UPDATE config_form_fields SET layoutorder =3 WHERE  formname = 'v_edit_sector' AND columnname = 'macrosector_id';
 UPDATE config_form_fields SET layoutorder =4 WHERE  formname = 'v_edit_sector' AND columnname = 'descript';
 UPDATE config_form_fields SET layoutorder =5 WHERE  formname = 'v_edit_sector' AND columnname = 'undelete';
-UPDATE config_form_fields SET layoutorder =6 WHERE  formname = 'v_edit_sector' AND columnname = 'graphconfig';
-UPDATE config_form_fields SET layoutorder =7 WHERE  formname = 'v_edit_sector' AND columnname = 'stylesheet';
-UPDATE config_form_fields SET layoutorder =8 WHERE  formname = 'v_edit_sector' AND columnname = 'active';
-UPDATE config_form_fields SET layoutorder =9 WHERE  formname = 'v_edit_sector' AND columnname = 'parent_id';
-UPDATE config_form_fields SET layoutorder =10 WHERE  formname = 'v_edit_sector' AND columnname = 'pattern_id';
+UPDATE config_form_fields SET layoutorder =6 WHERE  formname = 'v_edit_sector' AND columnname = 'parent_id';
+UPDATE config_form_fields SET layoutorder =7 WHERE  formname = 'v_edit_sector' AND columnname = 'pattern_id';
+UPDATE config_form_fields SET layoutorder =8, iseditable=false WHERE  formname = 'v_edit_sector' AND columnname = 'graphconfig';
+UPDATE config_form_fields SET layoutorder =9 WHERE  formname = 'v_edit_sector' AND columnname = 'stylesheet';
+UPDATE config_form_fields SET layoutorder =10 WHERE  formname = 'v_edit_sector' AND columnname = 'active';
 
 UPDATE config_form_fields SET layoutname = 'lyt_data_1' where formname = 'v_edit_dma';
 UPDATE config_form_fields SET layoutorder =1 WHERE  formname = 'v_edit_dma' AND columnname = 'dma_id';
@@ -629,24 +622,24 @@ UPDATE config_form_fields SET layoutorder =4 WHERE  formname = 'v_edit_dma' AND 
 UPDATE config_form_fields SET layoutorder =5 WHERE  formname = 'v_edit_dma' AND columnname = 'undelete';
 UPDATE config_form_fields SET layoutorder =6 WHERE  formname = 'v_edit_dma' AND columnname = 'expl_id';
 UPDATE config_form_fields SET layoutorder =7 WHERE  formname = 'v_edit_dma' AND columnname = 'pattern_id';
-UPDATE config_form_fields SET layoutorder =8 WHERE  formname = 'v_edit_dma' AND columnname = 'link';
-UPDATE config_form_fields SET layoutorder =9 WHERE  formname = 'v_edit_dma' AND columnname = 'minc';
-UPDATE config_form_fields SET layoutorder =10 WHERE  formname = 'v_edit_dma' AND columnname = 'maxc';
-UPDATE config_form_fields SET layoutorder =12 WHERE  formname = 'v_edit_dma' AND columnname = 'effc';
-UPDATE config_form_fields SET layoutorder =13 WHERE  formname = 'v_edit_dma' AND columnname = 'graphconfig';
-UPDATE config_form_fields SET layoutorder =14 WHERE  formname = 'v_edit_dma' AND columnname = 'stylesheet';
-UPDATE config_form_fields SET layoutorder =15 WHERE  formname = 'v_edit_dma' AND columnname = 'active';
-UPDATE config_form_fields SET layoutorder =16 WHERE  formname = 'v_edit_dma' AND columnname = 'avg_press';
+UPDATE config_form_fields SET layoutorder =8 WHERE  formname = 'v_edit_dma' AND columnname = 'dma_type';
+UPDATE config_form_fields SET layoutorder =9 WHERE  formname = 'v_edit_dma' AND columnname = 'link';
+UPDATE config_form_fields SET layoutorder =10 WHERE  formname = 'v_edit_dma' AND columnname = 'effc';
+UPDATE config_form_fields SET layoutorder =11 WHERE  formname = 'v_edit_dma' AND columnname = 'avg_press';
+UPDATE config_form_fields SET layoutorder =12, iseditable=false WHERE  formname = 'v_edit_dma' AND columnname = 'graphconfig';
+UPDATE config_form_fields SET layoutorder =13 WHERE  formname = 'v_edit_dma' AND columnname = 'stylesheet';
+UPDATE config_form_fields SET layoutorder =14 WHERE  formname = 'v_edit_dma' AND columnname = 'active';
 
 UPDATE config_form_fields SET layoutname = 'lyt_data_1' where formname = 'v_edit_presszone';
 UPDATE config_form_fields SET layoutorder =1 WHERE  formname = 'v_edit_presszone' AND columnname = 'presszone_id';
 UPDATE config_form_fields SET layoutorder =2 WHERE  formname = 'v_edit_presszone' AND columnname = 'name';
 UPDATE config_form_fields SET layoutorder =3 WHERE  formname = 'v_edit_presszone' AND columnname = 'expl_id';
-UPDATE config_form_fields SET layoutorder =4 WHERE  formname = 'v_edit_presszone' AND columnname = 'graphconfig';
+UPDATE config_form_fields SET layoutorder =4 WHERE  formname = 'v_edit_presszone' AND columnname = 'descript';
 UPDATE config_form_fields SET layoutorder =5 WHERE  formname = 'v_edit_presszone' AND columnname = 'head';
-UPDATE config_form_fields SET layoutorder =6 WHERE  formname = 'v_edit_presszone' AND columnname = 'stylesheet';
-UPDATE config_form_fields SET layoutorder =7 WHERE  formname = 'v_edit_presszone' AND columnname = 'active';
-UPDATE config_form_fields SET layoutorder =8 WHERE  formname = 'v_edit_presszone' AND columnname = 'descript';
+UPDATE config_form_fields SET layoutorder =6 WHERE  formname = 'v_edit_presszone' AND columnname = 'presszone_type';
+UPDATE config_form_fields SET layoutorder =7, iseditable=false WHERE  formname = 'v_edit_presszone' AND columnname = 'graphconfig';
+UPDATE config_form_fields SET layoutorder =8 WHERE  formname = 'v_edit_presszone' AND columnname = 'stylesheet';
+UPDATE config_form_fields SET layoutorder =9 WHERE  formname = 'v_edit_presszone' AND columnname = 'active';
 
 UPDATE config_form_fields SET layoutname = 'lyt_data_1' where formname = 'v_edit_dqa';
 UPDATE config_form_fields SET layoutorder =1 WHERE  formname = 'v_edit_dqa' AND columnname = 'dqa_id';
@@ -658,8 +651,20 @@ UPDATE config_form_fields SET layoutorder =6 WHERE  formname = 'v_edit_dqa' AND 
 UPDATE config_form_fields SET layoutorder =7 WHERE  formname = 'v_edit_dqa' AND columnname = 'pattern_id';
 UPDATE config_form_fields SET layoutorder =8 WHERE  formname = 'v_edit_dqa' AND columnname = 'dqa_type';
 UPDATE config_form_fields SET layoutorder =9 WHERE  formname = 'v_edit_dqa' AND columnname = 'link';
-UPDATE config_form_fields SET layoutorder =10 WHERE  formname = 'v_edit_dqa' AND columnname = 'graphconfig';
-UPDATE config_form_fields SET layoutorder =11 WHERE  formname = 'v_edit_dqa' AND columnname = 'stylesheet';
-UPDATE config_form_fields SET layoutorder =12 WHERE  formname = 'v_edit_dqa' AND columnname = 'active';
+UPDATE config_form_fields SET layoutorder =10 WHERE  formname = 'v_edit_dqa' AND columnname = 'avg_press';
+UPDATE config_form_fields SET layoutorder =11, iseditable=false WHERE  formname = 'v_edit_dqa' AND columnname = 'graphconfig';
+UPDATE config_form_fields SET layoutorder =12 WHERE  formname = 'v_edit_dqa' AND columnname = 'stylesheet';
+UPDATE config_form_fields SET layoutorder =13 WHERE  formname = 'v_edit_dqa' AND columnname = 'active';
 
 UPDATE config_param_system SET value = (replace(value, 'Disable', 'Random')) WHERE parameter='utils_graphanalytics_style';
+
+UPDATE man_hydrant set customer_code = concat('cc', node_id);
+
+INSERT INTO config_style VALUES (106, 'GwSector', NULL, 'role_basic', '{"orderBy":3}', false, true);
+INSERT INTO config_style VALUES (107, 'GwDma', NULL, 'role_basic', '{"orderBy":4}', false, true);
+INSERT INTO config_style VALUES (108, 'GwPresszone', NULL, 'role_basic', '{"orderBy":5}', false, true);
+
+INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 106, 'qml');
+INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 107, 'qml');
+INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 108, 'qml');
+

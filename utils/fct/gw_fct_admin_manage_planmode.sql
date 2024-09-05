@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 3304
 
-CREATE OR REPLACE FUNCTION gw_fct_admin_manage_planmode(p_data json)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_admin_manage_planmode(p_data json)
   RETURNS json AS
 $BODY$
 
@@ -519,6 +519,12 @@ BEGIN
              ',"body":{"form":{}'||
 		     ',"data":{}}'||
 	    '}')::json;
+
+	-- Exception control
+	EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) 
+	||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

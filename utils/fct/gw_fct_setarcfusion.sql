@@ -230,6 +230,9 @@ BEGIN
 				UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'activated', true) WHERE parameter = 'edit_arc_searchnodes';
 
 				UPDATE arc SET node_1=v_new_record.node_1, node_2=v_new_record.node_2 where arc_id=v_new_record.arc_id;
+                
+				-- remove duplicated vertex on new arc because of the fusion
+				UPDATE arc SET the_geom=ST_RemoveRepeatedPoints(the_geom) WHERE arc_id=v_new_record.arc_id;
 
 				v_arc_childtable_name := 'man_arc_' || lower(v_arc_type);
 
@@ -638,28 +641,25 @@ BEGIN
 	v_result_info := COALESCE(v_result, '{}');
 	v_result_info = concat ('{"geometryType":"", "values":',v_result_info, '}');
 
-	v_result_point = '{"geometryType":"", "features":[]}';
-	v_result_line = '{"geometryType":"", "features":[]}';
-	v_result_polygon = '{"geometryType":"", "features":[]}';
-
 	v_status := COALESCE(v_status, '{}');
 	v_level := COALESCE(v_level, '0');
 	v_message := COALESCE(v_message, '{}');
 
 	--  Return
+	
 	RETURN gw_fct_json_create_return(('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
 				',"body":{"form":{}'||
-				',"data":{ "info":'||v_result_info||','||
-				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||','||
-				'"polygon":'||v_result_polygon||'}'||
-				'}'
+				',"data":{"info":'||v_result_info||'}}'
 		'}')::json, 2112, null, null, null);
 
+	-- Exception control
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-END;
+	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) 
+	||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+
+	
+	END;
 $BODY$
 	LANGUAGE plpgsql VOLATILE
 	COST 100;

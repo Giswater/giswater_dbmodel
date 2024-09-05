@@ -54,10 +54,10 @@ BEGIN
 
 	-- the strategy of selector_sector is not used for nodes. The reason is to enable the posibility to export the sector=-1. In addition using this it's impossible to export orphan nodes
 	EXECUTE ' INSERT INTO temp_t_node (node_id, elevation, elev, node_type, nodecat_id, epa_type, sector_id, state, state_type, annotation, the_geom, expl_id, dma_id, presszone_id, dqa_id, minsector_id, age)
-		WITH b AS (SELECT ve_arc.* FROM selector_sector, ve_arc
-		JOIN value_state_type ON ve_arc.state_type = value_state_type.id
-		WHERE ve_arc.sector_id = selector_sector.sector_id AND epa_type !=''UNDEFINED'' AND selector_sector.cur_user = "current_user"()::text 
-		AND ve_arc.sector_id > 0 AND ve_arc.state > 0'
+		WITH b AS (SELECT v_edit_arc.* FROM selector_sector, v_edit_arc
+		JOIN value_state_type ON v_edit_arc.state_type = value_state_type.id
+		WHERE v_edit_arc.sector_id = selector_sector.sector_id AND epa_type !=''UNDEFINED'' AND selector_sector.cur_user = "current_user"()::text 
+		AND v_edit_arc.sector_id > 0 AND v_edit_arc.state > 0'
 		||v_statetype||')
 		SELECT DISTINCT ON (n.node_id)
 		n.node_id, elevation, elevation-depth as elev, nodetype_id, nodecat_id, epa_type, a.sector_id, n.state, n.state_type, n.annotation, n.the_geom, n.expl_id, dma_id, presszone_id, dqa_id, minsector_id,
@@ -106,50 +106,55 @@ BEGIN
 	-- update child param for inp_inlet
 	UPDATE temp_t_node SET
 	addparam=concat('{"pattern_id":"',i.pattern_id,'", "initlevel":"',initlevel,'", "minlevel":"',minlevel,'", "maxlevel":"',maxlevel,'", "diameter":"'
-	,diameter,'", "minvol":"',minvol,'", "curve_id":"',curve_id,'", "overflow":"',overflow,'"}')
+	,diameter,'", "minvol":"',minvol,'", "curve_id":"',curve_id,'", "overflow":"',overflow,'", "mixing_model":"',mixing_model,'", "mixing_fraction":"',mixing_fraction,'", "reaction_coeff":"',reaction_coeff,'", 
+	"init_quality":"',init_quality,'", "source_type":"',source_type,'", "source_quality":"',source_quality,'", "source_pattern_id":"',source_pattern_id,'",
+	"demand":"',i.demand,'", "demand_pattern_id":"',demand_pattern_id,'","emitter_coeff":"',emitter_coeff,'"}')
 	FROM inp_inlet i WHERE temp_t_node.node_id=i.node_id;
 
 	-- update child param for inp_junction
-	UPDATE temp_t_node SET demand=inp_junction.demand, pattern_id=inp_junction.pattern_id FROM inp_junction WHERE temp_t_node.node_id=inp_junction.node_id;
-	UPDATE temp_t_node SET demand=inp_connec.demand, pattern_id=inp_connec.pattern_id FROM inp_connec WHERE temp_t_node.node_id=inp_connec.connec_id;
+	UPDATE temp_t_node SET demand=inp_junction.demand, pattern_id=inp_junction.pattern_id, addparam=concat('{"emitter_coeff":"',emitter_coeff,'"}')
+	FROM inp_junction WHERE temp_t_node.node_id=inp_junction.node_id;
+	
+	UPDATE temp_t_node SET demand=inp_connec.demand, pattern_id=inp_connec.pattern_id, addparam=concat('{"emitter_coeff":"',emitter_coeff,'"}')
+	FROM inp_connec WHERE temp_t_node.node_id=inp_connec.connec_id;
 
 	-- update child param for inp_valve
 	UPDATE temp_t_node SET addparam=concat('{"valv_type":"',valv_type,'", "pressure":"',pressure,'", "diameter":"',custom_dint,'", "flow":"',
 	flow,'", "coef_loss":"',coef_loss,'", "curve_id":"',curve_id,'", "minorloss":"',minorloss,'", "status":"',status,
 	'", "to_arc":"',to_arc,'", "add_settings":"',add_settings,'"}')
-	FROM inp_valve WHERE temp_t_node.node_id=inp_valve.node_id;
+	FROM v_edit_inp_valve v WHERE temp_t_node.node_id=v.node_id;
 
 	-- update addparam for inp_pump
-	UPDATE temp_t_node SET addparam=concat('{"power":"',power,'", "curve_id":"',curve_id,'", "speed":"',speed,'", "pattern":"',inp_pump.pattern_id,'", "status":"',status,'", "to_arc":"',to_arc,
-	'", "energyvalue":"',energyvalue,'", "pump_type":"',pump_type,'"}')
-	FROM inp_pump WHERE temp_t_node.node_id=inp_pump.node_id;
+	UPDATE temp_t_node SET addparam=concat('{"power":"',power,'", "curve_id":"',curve_id,'", "speed":"',speed,'", "pattern":"',p.pattern_id,'", "status":"',status,'", "to_arc":"',to_arc,
+	'", "energy_price":"',energy_price,'", "energy_pattern_id":"',energy_pattern_id,'", "pump_type":"',pump_type,'"}')
+	FROM v_edit_inp_pump p WHERE temp_t_node.node_id=p.node_id;
 
 	raise notice 'inserting arcs on temp_t_arc table';
 	
 	EXECUTE 'INSERT INTO temp_t_arc (arc_id, node_1, node_2, arc_type, arccat_id, epa_type, sector_id, state, state_type, annotation, roughness, 
 		length, diameter, the_geom, expl_id, dma_id, presszone_id, dqa_id, minsector_id, age)
 		SELECT
-		v_arc.arc_id, node_1, node_2, v_arc.cat_arctype_id, arccat_id, epa_type, v_arc.sector_id, v_arc.state, v_arc.state_type, v_arc.annotation,
+		v_edit_arc.arc_id, node_1, node_2, v_edit_arc.arc_type, arccat_id, epa_type, v_edit_arc.sector_id, v_edit_arc.state, v_edit_arc.state_type, v_edit_arc.annotation,
 		CASE WHEN custom_roughness IS NOT NULL THEN custom_roughness ELSE roughness END AS roughness,
-		(CASE WHEN v_arc.custom_length IS NOT NULL THEN custom_length ELSE gis_length END), 
+		(CASE WHEN v_edit_arc.custom_length IS NOT NULL THEN custom_length ELSE gis_length END), 
 		(CASE WHEN inp_pipe.custom_dint IS NOT NULL THEN custom_dint ELSE dint END),  -- diameter is child value but in order to make simple the query getting values from v_edit_arc (dint)...
-		v_arc.the_geom,
-		v_arc.expl_id, dma_id, presszone_id, dqa_id, minsector_id,
-		(case when v_arc.builtdate is not null then (now()::date-v_arc.builtdate)/30 else 0 end)
-		FROM selector_sector, v_arc
+		v_edit_arc.the_geom,
+		v_edit_arc.expl_id, dma_id, presszone_id, dqa_id, minsector_id,
+		(case when v_edit_arc.builtdate is not null then (now()::date-v_edit_arc.builtdate)/30 else 0 end)
+		FROM selector_sector, v_edit_arc
 			LEFT JOIN value_state_type ON id=state_type
-			LEFT JOIN cat_arc ON v_arc.arccat_id = cat_arc.id
+			LEFT JOIN cat_arc ON v_edit_arc.arccat_id = cat_arc.id
 			LEFT JOIN cat_mat_arc ON cat_arc.matcat_id = cat_mat_arc.id
-			LEFT JOIN inp_pipe ON v_arc.arc_id = inp_pipe.arc_id
-			LEFT JOIN inp_virtualpump ON v_arc.arc_id = inp_virtualpump.arc_id
-			LEFT JOIN inp_virtualvalve ON v_arc.arc_id = inp_virtualvalve.arc_id
+			LEFT JOIN inp_pipe ON v_edit_arc.arc_id = inp_pipe.arc_id
+			LEFT JOIN inp_virtualpump ON v_edit_arc.arc_id = inp_virtualpump.arc_id
+			LEFT JOIN inp_virtualvalve ON v_edit_arc.arc_id = inp_virtualvalve.arc_id
 			LEFT JOIN cat_mat_roughness ON cat_mat_roughness.matcat_id = cat_mat_arc.id
 			WHERE (now()::date - (CASE WHEN builtdate IS NULL THEN ''1900-01-01''::date ELSE builtdate END))/365 >= cat_mat_roughness.init_age
 			AND (now()::date - (CASE WHEN builtdate IS NULL THEN ''1900-01-01''::date ELSE builtdate END))/365 < cat_mat_roughness.end_age '
-			||v_statetype||' AND v_arc.sector_id=selector_sector.sector_id AND selector_sector.cur_user=current_user
+			||v_statetype||' AND v_edit_arc.sector_id=selector_sector.sector_id AND selector_sector.cur_user=current_user
 			AND epa_type != ''UNDEFINED''
-			AND v_arc.sector_id > 0 AND v_arc.state > 0
-			AND st_length(v_arc.the_geom) >= '||v_minlength;
+			AND v_edit_arc.sector_id > 0 AND v_edit_arc.state > 0
+			AND st_length(v_edit_arc.the_geom) >= '||v_minlength;
 
 	IF v_networkmode =  4 THEN
 
@@ -201,13 +206,13 @@ BEGIN
 
 	-- update addparam for inp_shortpipe (step 1)
 	UPDATE temp_t_node SET addparam=concat('{"minorloss":"',minorloss,'", "to_arc":"',to_arc,'", "status":"',status,'", "diameter":"", "roughness":"',a.roughness,'"}')
-	FROM v_edit_inp_shortpipe 
+	FROM v_edit_inp_shortpipe JOIN man_valve USING (node_id)
 	JOIN (SELECT node_1 as node_id, diameter, roughness FROM temp_t_arc) a USING (node_id)
 	WHERE temp_t_node.node_id=v_edit_inp_shortpipe.node_id;
  
 	-- update addparam for inp_shortpipe (step 2)
 	UPDATE temp_t_node SET addparam=concat('{"minorloss":"',minorloss,'", "to_arc":"',to_arc,'", "status":"',status,'", "diameter":"", "roughness":"',a.roughness,'"}')
-	FROM v_edit_inp_shortpipe 
+	FROM v_edit_inp_shortpipe JOIN man_valve USING (node_id)
 	JOIN (SELECT node_2 as node_id, diameter, roughness FROM temp_t_arc) a USING (node_id)
 	WHERE temp_t_node.node_id=v_edit_inp_shortpipe.node_id;
 

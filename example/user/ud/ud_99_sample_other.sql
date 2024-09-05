@@ -515,8 +515,6 @@ UPDATE config_form_fields set layoutorder = 2 WHERE formname in ('ve_arc', 've_n
 
 UPDATE config_form_fields set layoutorder = 3 WHERE formname in ('ve_connec') AND columnname = 'district_id';
 
-SELECT gw_fct_setcheckproject($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "version":"0", "fid":1}}$$)::text;
-
 SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catFeature":"CHAMBER"},
 "data":{"action":"CREATE", "multiCreate":"false", "parameters":{"columnname":"chamber_param_1", "datatype":"text", 
 "widgettype":"combo", "label":"Chamber param_1","ismandatory":"False",
@@ -610,6 +608,7 @@ SELECT gw_fct_admin_manage_addfields($${"client":{"lang":"ES"}, "feature":{"catF
 "widgettype":"text", "label":"Weir param_2","ismandatory":"False",
 "active":"True", "iseditable":"True", "layoutname":"lyt_data_1"}}}$$);
 
+
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('sewstorage_param_1','combo1','combo1');
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('sewstorage_param_1','combo2','combo2');
 INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('sewstorage_param_1','combo3','combo3');
@@ -627,21 +626,6 @@ INSERT INTO edit_typevalue(typevalue, id, idval) VALUES('chamber_param_1','4','c
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','sewstorage_param_1','man_node_sewer_storage','sewstorage_param_1');
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','grate_param_1','man_gully_pgully','grate_param_1');
 INSERT INTO sys_foreignkey(typevalue_table, typevalue_name, target_table, target_field) VALUES ('edit_typevalue','chamber_param_1','man_node_chamber','chamber_param_1');
-
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"1"}}$$);
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"2"}}$$);
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"3"}}$$);
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"4"}}$$);
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"5"}}$$);
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"6"}}$$);
-SELECT gw_fct_pg2epa_main($${"client":{"device":4, "infoType":1, "lang":"ES"},
-"data":{"resultId":"test1", "useNetworkGeom":"false", "dumpSubcatch":"true","step":"7"}}$$);
 
 UPDATE config_param_user SET value = 'TRUE' WHERE parameter = 'audit_project_user_control';
 
@@ -910,3 +894,8 @@ UPDATE config_param_system SET value = (replace(value, 'Disable', 'Random')) WHE
 update config_toolbox set inputparams= '[{"widgetname":"graphClass", "label":"Graph class:", "widgettype":"combo","datatype":"text","tooltip": "Graphanalytics method used", "layoutname":"grl_option_parameters","layoutorder":1,"comboIds":["DRAINZONE"],
 "comboNames":["Drainage area (DRAINZONE)"], "selectedId":""},{"widgetname":"exploitation", "label":"Exploitation:","widgettype":"combo","datatype":"text","tooltip": "Choose exploitation to work with", "layoutname":"grl_option_parameters","layoutorder":2, "dvQueryText":"select id, idval from (select -999 as id, ''User selected expl'' AS idval, ''a'' AS sort_order union select expl_id as id, name as idval, ''b'' as sort_order from exploitation where active is not false)a order by sort_order asc, idval asc", "selectedId":""}, {"widgetname":"floodOnlyMapzone", "label":"Flood only one mapzone: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Flood only identified mapzones. The purpose of this is update only network elements affected by this flooding keeping rest of network as is. Recommended to gain performance when mapzones ecosystem is under work", "placeholder":"1001", "layoutname":"grl_option_parameters","layoutorder":3, "value":""}, {"widgetname":"forceOpen", "label":"Force open nodes: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary open closed node(s) in order to force algorithm to continue there", "placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":5, "value":""}, {"widgetname":"forceClosed", "label":"Force closed nodes: (*)","widgettype":"text","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary close open node(s) to force algorithm to stop there","placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":6,"value":""}, {"widgetname":"usePlanPsector", "label":"Use selected psectors:", "widgettype":"check","datatype":"boolean","tooltip":"If true, use selected psectors. If false ignore selected psectors and only works with on-service network" , "layoutname":"grl_option_parameters","layoutorder":7,"value":""}, {"widgetname":"commitChanges", "label":"Commit changes:", "widgettype":"check","datatype":"boolean","tooltip":"If true, changes will be applied to DB. If false, algorithm results will be saved in anl tables" , "layoutname":"grl_option_parameters","layoutorder":8,"value":""}, {"widgetname":"valueForDisconnected", "label":"Value for disconn. and conflict: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Value to use for disconnected features. Usefull for work in progress with dynamic mpzonesnode" , "placeholder":"", "layoutname":"grl_option_parameters","layoutorder":9, "value":""}, {"widgetname":"updateMapZone", "label":"Mapzone constructor method:","widgettype":"combo","datatype":"integer","layoutname":"grl_option_parameters","layoutorder":10,"comboIds":[0,1,2,6], "comboNames":["NONE", "CONCAVE POLYGON", "PIPE BUFFER", "EPA SUBCATCH"], "selectedId":""}, {"widgetname":"geomParamUpdate", "label":"Pipe buffer","widgettype":"text","datatype":"float","tooltip":"Buffer from arcs to create mapzone geometry using [PIPE BUFFER] options. Normal values maybe between 3-20 mts.", "layoutname":"grl_option_parameters","layoutorder":11, "isMandatory":false, "placeholder":"5-30", "value":""}]'::json where id=2768;
 
+INSERT INTO config_style VALUES (107, 'GwSector', NULL, 'role_basic', '{"orderBy":3}', false, true);
+INSERT INTO config_style VALUES (108, 'GwDrainzone', NULL, 'role_basic', '{"orderBy":4}', false, true);
+
+INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 107, 'qml');
+INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 108, 'qml');

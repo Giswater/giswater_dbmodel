@@ -10,6 +10,8 @@ SET search_path = 'SCHEMA_NAME', public, pg_catalog;
 INSERT INTO selector_sector SELECT sector_id, current_user from sector where sector_id > 0 ON CONFLICT (sector_id, cur_user) DO NOTHING;
 DELETE FROM selector_psector;
 
+INSERT INTO selector_municipality SELECT muni_id,current_user FROM ext_municipality where muni_id > 0 ON CONFLICT (muni_id, cur_user) DO NOTHING;
+
 UPDATE cat_feature SET id = 'OVERFLOW_STORAGE' WHERE id = 'OWERFLOW_STORAGE';
 
 INSERT INTO cat_node (id, matcat_id, shape, geom1, geom2, geom3, descript, link, brand, model, svg, estimated_y, cost_unit, "cost", active, "label", node_type, acoeff) VALUES('CHANGE_1', NULL, NULL, 1.00, 1.00, NULL, 'Change', NULL, NULL, NULL, NULL, 2.00, 'u', NULL, true, NULL, 'CHANGE', NULL);
@@ -41,7 +43,7 @@ DELETE FROM inp_flwreg_pump where node_id = '238';
 UPDATE v_edit_arc SET epa_type = 'PUMP' WHERE arc_id = '303';
 UPDATE inp_pump set curve_id = 'PUMP-01', status='OFF', startup=2, shutoff=0.4 WHERE arc_id = '303';
 UPDATE v_edit_arc SET epa_type = 'WEIR' WHERE arc_id = '342';
-UPDATE inp_weir SET weir_type ='TRANSVERSE', offsetval = 17, cd=1.5, geom1=1, geom2=1; 
+UPDATE inp_weir SET weir_type ='TRANSVERSE', offsetval = 17, cd=1.5, geom1=1, geom2=1;
 
 
 -- refactoring flowregulators form node weir of expl_1
@@ -67,3 +69,29 @@ CREATE SEQUENCE circ_manhole_code_seq
 	START 1000
 	CACHE 1
 	NO CYCLE;
+
+-- 12/08/2024
+UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sys_geom', 'the_geom'::text)
+	WHERE parameter IN (
+		'basic_search_v2_tab_network_arc',
+		'basic_search_v2_tab_network_connec',
+		'basic_search_v2_tab_network_gully',
+		'basic_search_v2_tab_network_node'
+	);
+
+UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sys_geom', 's.the_geom'::text)
+	WHERE parameter ='basic_search_v2_tab_address';
+
+-- change default visitability_vdef for cat_arc
+UPDATE cat_arc SET visitability_vdef = 1 WHERE geom1 <= 1.2; -- NO VISITABLE
+UPDATE cat_arc SET visitability_vdef = 2 WHERE geom1 > 1.2 AND geom1 < 1.6; -- SEMI VISITABLE
+UPDATE cat_arc SET visitability_vdef = 3 WHERE geom1 >= 1.6; -- VISITABLE
+
+UPDATE config_param_system SET isenabled = true WHERE parameter = 'basic_selector_tab_municipality';
+
+UPDATE link SET muni_id = c.muni_id FROM connec c WHERE connec_id =  feature_id;
+UPDATE link SET muni_id = g.muni_id FROM gully g WHERE gully_id =  feature_id;
+
+SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"DRAINZONE", "exploitation":"1", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "commitChanges":"true", "valueForDisconnected":null, "updateMapZone":"2", "geomParamUpdate":"8"}, "aux_params":null}}$$);
+
+SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"DRAINZONE", "exploitation":"2", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "commitChanges":"true", "valueForDisconnected":null, "updateMapZone":"2", "geomParamUpdate":"8"}, "aux_params":null}}$$);

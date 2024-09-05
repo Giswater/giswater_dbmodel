@@ -15,13 +15,17 @@ v_expl_id_int integer;
 v_sample_id_seq int8;
 v_count integer;
 v_projectype text;
+v_proximity_buffer double precision;
 
 BEGIN
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
 	v_projectype = (SELECT project_type FROM sys_version ORDER BY id DESC LIMIT 1);
+	v_proximity_buffer = (SELECT "value" FROM config_param_system WHERE parameter='edit_feature_buffer_on_mapzone');
 
+
+	IF v_proximity_buffer IS NULL THEN v_proximity_buffer=0.5; END IF;
 	-- INSERT
 	IF TG_OP = 'INSERT' THEN
 
@@ -52,7 +56,7 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_promixity_buffer) 
+					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer) 
 					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
 				END IF;	
 			END IF;
@@ -60,7 +64,7 @@ BEGIN
 			-- control error when no value
 			IF (NEW.expl_id IS NULL) THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"2012", "function":"1302","debug_msg":"'||NEW.arc_id::text||'"}}$$);';
+				"data":{"message":"2012", "function":"1302","debug_msg":"'||NEW.sample_id::text||'"}}$$);';
 			END IF;            
 		END IF;
 	
@@ -75,22 +79,40 @@ BEGIN
 				NEW.dma_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_dma_vdefault' AND "cur_user"="current_user"());
 			END IF; 
 		END IF;
+
+			
+		-- Sector
+		IF (NEW.sector_id IS NULL) THEN
+			NEW.sector_id := (SELECT sector_id FROM sector WHERE ST_intersects(NEW.the_geom, sector.the_geom) AND active IS TRUE limit 1);
+
+			IF (NEW.sector_id IS NULL) THEN
+				NEW.sector_id := 0;
+			END IF;
+		END IF;
+	
+		-- Municipality
+		IF (NEW.muni_id IS NULL) THEN
+			NEW.muni_id := (SELECT m.muni_id FROM sector, ext_municipality m WHERE ST_intersects(m.the_geom, sector.the_geom) AND sector.active IS TRUE limit 1);
+
+
+		END IF;
+
 				
 		IF v_projectype = 'WS' THEN
 			INSERT INTO samplepoint (sample_id, code, lab_code, feature_id, featurecat_id, dma_id, presszone_id, "state", builtdate, enddate,
 			workcat_id, workcat_id_end, rotation, muni_id, postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, place_name, cabinet, 
-			observations, the_geom, expl_id, verified)
+			observations, the_geom, expl_id, verified, sector_id)
 			VALUES (NEW.sample_id, NEW.code, NEW.lab_code, NEW.feature_id, NEW.featurecat_id,  NEW.dma_id, NEW.presszone_id, NEW."state", NEW.builtdate,
 			NEW.enddate, NEW.workcat_id, NEW.workcat_id_end, NEW.rotation, NEW.muni_id, NEW.postcode, NEW.streetaxis_id, NEW.postnumber, NEW.postcomplement, NEW.streetaxis2_id,
-			NEW.postnumber2, NEW.postcomplement2, NEW.place_name, NEW.cabinet, NEW.observations, NEW.the_geom, NEW.expl_id, NEW.verified);
+			NEW.postnumber2, NEW.postcomplement2, NEW.place_name, NEW.cabinet, NEW.observations, NEW.the_geom, NEW.expl_id, NEW.verified, NEW.sector_id);
 		ELSE
 
 			INSERT INTO samplepoint (sample_id, code, lab_code, feature_id, featurecat_id, dma_id, "state", builtdate, enddate,
 			workcat_id, workcat_id_end, rotation, muni_id, postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, place_name, cabinet, 
-			observations, the_geom, expl_id, verified)
+			observations, the_geom, expl_id, verified, sector_id)
 			VALUES (NEW.sample_id, NEW.code, NEW.lab_code, NEW.feature_id, NEW.featurecat_id,  NEW.dma_id, NEW."state", NEW.builtdate,
 			NEW.enddate, NEW.workcat_id, NEW.workcat_id_end, NEW.rotation, NEW.muni_id, NEW.postcode, NEW.streetaxis_id, NEW.postnumber, NEW.postcomplement, NEW.streetaxis2_id,
-			NEW.postnumber2, NEW.postcomplement2, NEW.place_name, NEW.cabinet, NEW.observations, NEW.the_geom, NEW.expl_id, NEW.verified);
+			NEW.postnumber2, NEW.postcomplement2, NEW.place_name, NEW.cabinet, NEW.observations, NEW.the_geom, NEW.expl_id, NEW.verified, NEW.sector_id);
 
 		END IF;
 
@@ -105,7 +127,7 @@ BEGIN
 			presszone_id=NEW.presszone_id,"state"=NEW."state", rotation=NEW.rotation, builtdate=NEW.builtdate, enddate=NEW.enddate,
 			workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end, muni_id=NEW.muni_id, postcode=NEW.postcode, streetaxis_id=NEW.streetaxis_id, 
 			postnumber=NEW.postnumber, postcomplement=NEW.postcomplement, streetaxis2_id=NEW.streetaxis2_id, postnumber2=NEW.postnumber2, postcomplement2=NEW.postcomplement2,
-			place_name=NEW.place_name, cabinet=NEW.cabinet, observations=NEW.observations, the_geom=NEW.the_geom, expl_id=NEW.expl_id, verified=NEW.verified
+			place_name=NEW.place_name, cabinet=NEW.cabinet, observations=NEW.observations, the_geom=NEW.the_geom, expl_id=NEW.expl_id, verified=NEW.verified, sector_id=NEW.sector_id
 			WHERE sample_id=NEW.sample_id;
 		ELSE
 			UPDATE samplepoint 
@@ -113,7 +135,7 @@ BEGIN
 			"state"=NEW."state", rotation=NEW.rotation, builtdate=NEW.builtdate, enddate=NEW.enddate,
 			workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end, muni_id=NEW.muni_id, postcode=NEW.postcode, streetaxis_id=NEW.streetaxis_id, 
 			postnumber=NEW.postnumber, postcomplement=NEW.postcomplement, streetaxis2_id=NEW.streetaxis2_id, postnumber2=NEW.postnumber2, postcomplement2=NEW.postcomplement2,
-			place_name=NEW.place_name, cabinet=NEW.cabinet, observations=NEW.observations, the_geom=NEW.the_geom, expl_id=NEW.expl_id, verified=NEW.verified
+			place_name=NEW.place_name, cabinet=NEW.cabinet, observations=NEW.observations, the_geom=NEW.the_geom, expl_id=NEW.expl_id, verified=NEW.verified, sector_id=NEW.sector_id
 			WHERE sample_id=NEW.sample_id;
 		END IF;
 

@@ -10,6 +10,8 @@ SET search_path = 'SCHEMA_NAME', public, pg_catalog;
 INSERT INTO selector_sector SELECT sector_id, current_user from sector where sector_id > 0 ON CONFLICT (sector_id, cur_user) DO NOTHING;
 DELETE FROM selector_psector;
 
+INSERT INTO selector_municipality SELECT muni_id,current_user FROM ext_municipality ON CONFLICT (muni_id, cur_user) DO NOTHING;
+
 UPDATE cat_arc SET active=TRUE WHERE arctype_id='VARC' AND id='VIRTUAL';
 
 UPDATE om_visit SET startdate = startdate -  random() * (startdate - timestamp '2022-01-01 10:00:00');
@@ -53,13 +55,34 @@ WHERE parameter = 'epa_automatic_man2inp_values';
 
 UPDATE config_param_system SET value = '{"setArcObsolete":"true","setOldCode":"false"}' WHERE parameter = 'edit_arc_divide';
 
-SELECT gw_fct_setchangefeaturetype($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{"type":"node"}, "data":{"filterFields":{}, "pageInfo":{}, 
-"feature_id":"1082", "feature_type_new":"SHUTOFF_VALVE", "featurecat_id":"SHTFF-VALVE110-PN16"}}$$);
+SELECT gw_fct_setchangefeaturetype($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{"type":"node"}, "data":{"filterFields":{}, "pageInfo":{}, "feature_id":"1082", "feature_type_new":"SHUTOFF_VALVE", "featurecat_id":"SHTFF-VALVE110-PN16"}}$$);
 
 UPDATE cat_feature set active=true where id = 'THROTTLE_VALVE';
 INSERT INTO cat_node VALUES ('THROTTLE_VALVE_200','THROTTLE_VALVE','FD','16','200',200, null, null, 'THROTTLE VALVE 200mm','c:\users\users\catalog.pdf');
 
-SELECT gw_fct_setchangefeaturetype($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{"type":"node"}, "data":{"filterFields":{}, "pageInfo":{}, 
-"feature_id":"1107", "feature_type_new":"THROTTLE_VALVE", "featurecat_id":"THROTTLE_VALVE_200"}}$$);
+SELECT gw_fct_setchangefeaturetype($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{"type":"node"}, "data":{"filterFields":{}, "pageInfo":{}, "feature_id":"1107", "feature_type_new":"THROTTLE_VALVE", "featurecat_id":"THROTTLE_VALVE_200"}}$$);
 
 UPDATE man_valve set broken=false where node_id = '1093';
+
+-- 12/08/2024
+UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sys_geom', 'the_geom'::text)
+	WHERE parameter IN (
+		'basic_search_v2_tab_network_arc',
+		'basic_search_v2_tab_network_connec',
+		'basic_search_v2_tab_network_gully',
+		'basic_search_v2_tab_network_node'
+	);
+
+UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sys_geom', 's.the_geom'::text)
+	WHERE parameter ='basic_search_v2_tab_address';
+	
+UPDATE config_param_system SET isenabled = true WHERE parameter = 'basic_selector_tab_municipality';
+
+UPDATE link SET muni_id = c.muni_id FROM connec c WHERE connec_id =  feature_id;
+
+-- run graphanalytics for presszone
+SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"PRESSZONE", "exploitation":"1", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "commitChanges":"true", "valueForDisconnected":null, "updateMapZone":"2", "geomParamUpdate":"8"}, "aux_params":null}}$$);
+
+SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"PRESSZONE", "exploitation":"2", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "commitChanges":"true", "valueForDisconnected":null, "updateMapZone":"2", "geomParamUpdate":"8"}, "aux_params":null}}$$);
+
+

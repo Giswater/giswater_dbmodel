@@ -102,10 +102,10 @@ BEGIN
 		END IF;
 		
 		--check final nodes related to arc
-		SELECT concat(node_1,',',node_2) INTO v_connect_node FROM v_arc 
-		LEFT JOIN node a ON a.node_id::text = v_arc.node_1::text
-     	LEFT JOIN node b ON b.node_id::text = v_arc.node_2::text 
-     	WHERE v_arc.arc_id = v_feature_id;
+		SELECT concat(node_1,',',node_2) INTO v_connect_node FROM v_edit_arc 
+		LEFT JOIN node a ON a.node_id::text = v_edit_arc.node_1::text
+     	LEFT JOIN node b ON b.node_id::text = v_edit_arc.node_2::text 
+     	WHERE v_edit_arc.arc_id = v_feature_id;
 		
 		IF v_connect_node IS NOT NULL THEN
 				INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Nodes connected with the feature: ',v_connect_node ));
@@ -236,6 +236,7 @@ BEGIN
 	RETURN ('{"status":"Accepted", "version":'||v_version||
             ',"message":{"level":1, "text":""},"body":{"data": {"info":'||v_result_info||'}}}')::json;
 
+	-- Exception control
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
 	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;

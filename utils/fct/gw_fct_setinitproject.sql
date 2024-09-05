@@ -114,6 +114,9 @@ BEGIN
 		INSERT INTO audit_check_data (fid,  criticity, error_message) VALUES (101, 4, v_errortext);
 	END IF;
 
+	-- Force sector selector for 0 values
+	INSERT INTO selector_sector VALUES (0, current_user) ON CONFLICT (sector_id, cur_user) DO NOTHING;
+	
 	-- force hydrometer_selector in case of null values
 	IF (select cur_user FROM selector_hydrometer WHERE cur_user = current_user limit 1) IS NULL THEN
 		INSERT INTO selector_hydrometer (state_id, cur_user)
@@ -130,6 +133,9 @@ BEGIN
 			WHERE parameter =  'inp_options_hydrology_scenario' and value is null;
 		END IF;
 	END IF;
+
+	-- Add user to cat_users if not exists
+	INSERT INTO cat_users (id,name,active) values (v_user, v_user, true) ON CONFLICT (id) DO NOTHING;
 
     --    Control null
 	v_message := COALESCE(v_message, '{}');

@@ -117,6 +117,10 @@ v_arc_type text;
 v_fid integer = 212;
 v_result_id text= 'arc divide';
 
+v_seq_name text;
+v_seq_code text;
+v_code_prefix text;
+
 BEGIN
 
 	-- Search path
@@ -241,24 +245,42 @@ BEGIN
 					SELECT * INTO rec_aux1 FROM arc WHERE arc_id = v_arc_id;
 					SELECT * INTO rec_aux2 FROM arc WHERE arc_id = v_arc_id;
 
+					-- use specific sequence for code when its name matches featurecat_code_seq
+					SELECT addparam::json->>'code_prefix' INTO v_code_prefix FROM cat_feature WHERE id=v_arc_type;
+					EXECUTE 'SELECT concat('||quote_literal(lower(v_arc_type))||',''_code_seq'');' INTO v_seq_name;
+					EXECUTE 'SELECT relname FROM pg_catalog.pg_class WHERE relname='||quote_literal(v_seq_name)||';' INTO v_sql;
+
 					-- Update values of new arc_id (1)
 					rec_aux1.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
 
-					IF v_set_old_code IS TRUE THEN
+					--code
+					IF v_sql IS NOT NULL THEN
+						EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+							rec_aux1.code=concat(v_code_prefix,v_seq_code);
+					ELSIF v_set_old_code IS TRUE THEN
 						rec_aux1.code := v_code;
-					ELSE
+					ELSE						
 						rec_aux1.code := rec_aux1.arc_id;
 					END IF;
+
+					-- node and geom
 					rec_aux1.node_2 := v_node_id ;-- rec_aux1.node_1 take values from original arc
 					rec_aux1.the_geom := v_line1;
 
 					-- Update values of new arc_id (2)
 					rec_aux2.arc_id := nextval('SCHEMA_NAME.urn_id_seq');
-					IF v_set_old_code IS TRUE THEN
+
+					-- code
+					IF v_sql IS NOT NULL THEN
+						EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+							rec_aux2.code=concat(v_code_prefix,v_seq_code);
+					ELSIF v_set_old_code IS TRUE THEN
 						rec_aux2.code := v_code;
-					ELSE
-						rec_aux2.code := rec_aux2.arc_id;
+					ELSE						
+						rec_aux2.code := rec_aux1.arc_id;
 					END IF;
+
+					-- node and geom
 					rec_aux2.node_1 := v_node_id; -- rec_aux2.node_2 take values from original arc
 					rec_aux2.the_geom := v_line2;
 
@@ -269,11 +291,11 @@ BEGIN
 					-- building querytext for man_table
 					v_manquerytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','') FROM (SELECT column_name FROM information_schema.columns
 					WHERE table_name=v_mantable AND table_schema=v_schemaname AND column_name !='arc_id' ORDER BY ordinal_position)a);
-					IF  v_manquerytext IS NULL THEN
+					IF v_manquerytext IS NULL THEN
 						v_manquerytext='';
 					END IF;
-					v_manquerytext1 =  'INSERT INTO '||v_mantable||' SELECT ';
-					v_manquerytext2 =  v_manquerytext||' FROM '||v_mantable||' WHERE arc_id= '||v_arc_id||'::text';
+					v_manquerytext1 = 'INSERT INTO '||v_mantable||' SELECT ';
+					v_manquerytext2 = v_manquerytext||' FROM '||v_mantable||' WHERE arc_id= '||v_arc_id||'::text';
 
 					-- building querytext for epa_table
 					v_epaquerytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','') FROM (SELECT column_name FROM information_schema.columns
@@ -287,20 +309,20 @@ BEGIN
 					IF v_project_type = 'WS' THEN
 
 						--check if final nodes maybe graph delimiters
-						EXECUTE 'SELECT CASE WHEN graph_delimiter IN (''NONE'') THEN NULL ELSE lower(graph_delimiter) END AS graph, node_1 FROM v_edit_arc a 
+						EXECUTE 'SELECT CASE WHEN graph_delimiter IN (''NONE'', ''MINSECTOR'') THEN NULL ELSE lower(graph_delimiter) END AS graph, node_1 FROM v_edit_arc a
 						JOIN v_edit_node n1 ON n1.node_id=node_1
-						JOIN cat_feature_node cf1 ON n1.node_type = cf1.id 
+						JOIN cat_feature_node cf1 ON n1.node_type = cf1.id
 						WHERE a.arc_id='''||v_arc_id||''';'
 						INTO v_node1_graph, v_node_1;
 
-						EXECUTE 'SELECT CASE WHEN graph_delimiter IN (''NONE'') THEN NULL ELSE lower(graph_delimiter) END AS graph,node_2 FROM v_edit_arc a 
+						EXECUTE 'SELECT CASE WHEN graph_delimiter IN (''NONE'', ''MINSECTOR'') THEN NULL ELSE lower(graph_delimiter) END AS graph,node_2 FROM v_edit_arc a
 						JOIN v_edit_node n2 ON n2.node_id=node_2
-						JOIN cat_feature_node cf2 ON n2.node_type = cf2.id 
+						JOIN cat_feature_node cf2 ON n2.node_type = cf2.id
 						WHERE a.arc_id='''||v_arc_id||''';'
 						INTO v_node2_graph, v_node_2;
 
-						EXECUTE 'SELECT CASE WHEN graph_delimiter IN (''NONE'') THEN NULL ELSE lower(graph_delimiter) END AS graph FROM v_edit_node
-						JOIN cat_feature_node cf2 ON node_type = cf2.id 
+						EXECUTE 'SELECT CASE WHEN graph_delimiter IN (''NONE'', ''MINSECTOR'') THEN NULL ELSE lower(graph_delimiter) END AS graph FROM v_edit_node
+						JOIN cat_feature_node cf2 ON node_type = cf2.id
 						WHERE node_id='''||v_node_id||''';'
 						INTO v_new_node_graph;
 
@@ -583,7 +605,7 @@ BEGIN
 							END LOOP;
 						END IF;
 
-						-- reconnect operative node links
+						-- reconnect operative node links from node_1
 						FOR rec_link IN SELECT * FROM v_edit_link WHERE exit_type = 'NODE' AND exit_id = (SELECT node_1 FROM arc WHERE arc_id = rec_aux1.arc_id)
 						LOOP
 							UPDATE link SET exit_id = rec_aux1.arc_id  WHERE link_id = rec_link.link_id;
@@ -593,12 +615,31 @@ BEGIN
 							END IF;
 						END LOOP;
 
-						-- reconnect planned node links
+						-- reconnect operative node links from node_2
+						FOR rec_link IN SELECT * FROM v_edit_link WHERE exit_type = 'NODE' AND exit_id = (SELECT node_2 FROM arc WHERE arc_id = rec_aux2.arc_id)
+						LOOP
+							UPDATE link SET exit_id = rec_aux2.arc_id  WHERE link_id = rec_link.link_id;
+							UPDATE connec SET arc_id = rec_aux2.arc_id WHERE arc_id = v_arc_id AND connec_id = rec_link.feature_id;
+							IF v_project_type ='UD' THEN
+								UPDATE gully SET arc_id = rec_aux2.arc_id WHERE arc_id = v_arc_id AND gully_id = rec_link.feature_id;
+							END IF;
+						END LOOP;
+
+						-- reconnect planned node links from node_1
 						FOR rec_link IN SELECT * FROM v_edit_link WHERE exit_type = 'NODE' AND exit_id = (SELECT node_1 FROM arc WHERE arc_id = rec_aux1.arc_id)
 						LOOP
-							UPDATE plan_psector_x_connec SET arc_id = rec_aux1.arc_id WHERE connec_id = rec_link.feature_id;
+							UPDATE plan_psector_x_connec SET arc_id = rec_aux1.arc_id WHERE link_id = rec_link.link_id;
 							IF v_project_type ='UD' THEN
-								UPDATE plan_psector_x_gully SET arc_id = rec_aux1.arc_id WHERE gully_id = rec_link.feature_id;
+								UPDATE plan_psector_x_gully SET arc_id = rec_aux1.arc_id WHERE link_id = rec_link.feature_id;
+							END IF;
+						END LOOP;
+
+						-- reconnect planned node links from node_2
+						FOR rec_link IN SELECT * FROM v_edit_link WHERE exit_type = 'NODE' AND exit_id = (SELECT node_2 FROM arc WHERE arc_id = rec_aux2.arc_id)
+						LOOP
+							UPDATE plan_psector_x_connec SET arc_id = rec_aux2.arc_id WHERE link_id = rec_link.link_id;
+							IF v_project_type ='UD' THEN
+								UPDATE plan_psector_x_gully SET arc_id = rec_aux2.arc_id WHERE link_id = rec_link.feature_id;
 							END IF;
 						END LOOP;
 
@@ -1104,9 +1145,9 @@ BEGIN
 		       '}'||
 	    '}')::json;
 
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+	--EXCEPTION WHEN OTHERS THEN
+	--GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+	--RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

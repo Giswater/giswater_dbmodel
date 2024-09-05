@@ -70,6 +70,7 @@ v_macrosector_id integer;
 v_expl_id integer;
 v_dma_id integer;
 v_macrodma_id integer;
+v_macrominsector_id integer;
 v_muni_id integer;
 v_district_id integer;
 v_project_type varchar;
@@ -108,7 +109,7 @@ v_max double precision;
 v_widgetcontrols json;
 v_type text;
 v_active_feature text;
-v_promixity_buffer double precision;
+v_proximity_buffer double precision;
 v_sys_raster_dem boolean=false;
 v_connec_autofill_plotcode boolean = false;
 v_edit_insert_elevation_from_dem boolean=false;
@@ -193,7 +194,7 @@ BEGIN
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 	SELECT value::boolean INTO v_connec_autofill_plotcode FROM config_param_system WHERE parameter = 'edit_connec_autofill_plotcode';
 	SELECT value::boolean INTO v_samenode_init_end_control FROM config_param_system WHERE parameter = 'edit_arc_samenode_control';
-	SELECT value INTO v_promixity_buffer FROM config_param_system WHERE parameter='edit_feature_buffer_on_mapzone';
+	SELECT value INTO v_proximity_buffer FROM config_param_system WHERE parameter='edit_feature_buffer_on_mapzone';
 	SELECT value INTO v_use_fire_code_seq FROM config_param_system WHERE parameter='edit_hydrant_use_firecode_seq';
 	SELECT ((value::json)->>'status') INTO v_automatic_ccode FROM config_param_system WHERE parameter='edit_connec_autofill_ccode';
 	SELECT ((value::json)->>'field') INTO v_automatic_ccode_field FROM config_param_system WHERE parameter='edit_connec_autofill_ccode';
@@ -359,6 +360,12 @@ BEGIN
 						ELSIF v_noderecord1.dqa_id::text != v_noderecord2.dqa_id::text THEN
 							v_dqa_id = v_noderecord1.dqa_id;
 						END IF;
+
+						-- getting macrominsector_id by heritage from nodes
+						IF v_noderecord1.macrominsector_id = v_noderecord2.macrominsector_id THEN
+							v_macrominsector_id = v_noderecord1.macrominsector_id;
+						END IF;
+					
 					END IF;
 
 					-- getting sector_id by heritage from nodes
@@ -392,6 +399,11 @@ BEGIN
 						v_expl_id = v_noderecord1.expl_id;
 					ELSIF v_noderecord1.expl_id::text != v_noderecord2.expl_id::text THEN
 						v_expl_id = v_noderecord1.expl_id;
+					END IF;
+
+					-- getting muni_id by heritage from nodes
+					IF v_noderecord1.muni_id = v_noderecord2.muni_id THEN
+						v_muni_id = v_noderecord1.muni_id;
 					END IF;
 
 					-- getting node values in case of arcs (insert)
@@ -442,7 +454,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_presszone_id = (SELECT presszone_id FROM presszone WHERE ST_DWithin(p_reduced_geometry, presszone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_presszone_id =(SELECT presszone_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_presszone_id =(SELECT presszone_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -453,7 +465,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(p_reduced_geometry, sector.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -464,7 +476,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_dma_id = (SELECT dma_id FROM dma WHERE ST_DWithin(p_reduced_geometry, dma.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -475,7 +487,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001)  AND active=true LIMIT 1);
 			ELSE
-				v_expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -487,8 +499,9 @@ BEGIN
 		v_macrosector_id := (SELECT macrosector_id FROM sector WHERE sector_id=v_sector_id);
 
 		-- Municipality
-		v_muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(p_reduced_geometry, ext_municipality.the_geom,0.001)
-		AND active IS TRUE LIMIT 1);
+		IF v_muni_id IS NULL THEN
+			v_muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(p_reduced_geometry, ext_municipality.the_geom,0.001) AND active IS TRUE LIMIT 1);
+		END IF;
 
 		-- District
 		v_district_id := (SELECT district_id FROM ext_district WHERE ST_DWithin(p_reduced_geometry, ext_district.the_geom,0.001) LIMIT 1);
@@ -720,6 +733,8 @@ BEGIN
 					field_value = v_dma_id;
 				WHEN 'dqa_id' THEN
 					field_value = v_dqa_id;
+				WHEN 'macrominsector_id' THEN
+					field_value = v_macrominsector_id;
 
 				-- static mapzones
 				WHEN 'macrosector_id' THEN

@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
---FUNCTION CODE: 2690
+--FUNCTION CODE: 3316
 
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_admin_transfer_addfields_values();
 
@@ -227,11 +227,20 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- insert into log tables those null addfield values
+    insert into audit_log_data (fid, feature_id, feature_type, log_message, addparam)
+    select 525, feature_id, cat_Feature_id, 'Null value on addfield',
+    concat('{"parameter_id": ', parameter_id, '}')::json
+    from _man_addfields_value_ mav
+    join sys_addfields sa ON sa.id = mav.parameter_id
+    where value_param is null;
+
     FOR rec_mav IN
         SELECT mav.feature_id, mav.value_param, mav.parameter_id, sa.param_name, sa.datatype_id, cf.id, cf.feature_type, cf.child_layer
         FROM _man_addfields_value_ mav
         INNER JOIN sys_addfields sa ON sa.id = mav.parameter_id
         INNER JOIN cat_feature cf ON cf.id = sa.cat_feature_id
+        WHERE mav.value_param is not null
         ORDER BY sa.param_name
     LOOP
         v_feature_childtable_name := 'man_' || lower(rec_mav.feature_type) || '_' || lower(rec_mav.id);
@@ -315,27 +324,27 @@ BEGIN
                         execute v_sql;
 
                     elsif v_exists_col is true then
-                    
+
                         -- check if feature_id exists in man_feature_type table (addfield table)
                         v_sql = 'select count(*) from man_'||lower(rec_mav.feature_type)|| '_' || lower(rec_mav.id)||' 
                                  where '||lower(rec_mav.feature_type)||'_id = '||quote_literal(rec_mav.feature_id)||'';
-                        
+
                         execute v_sql into v_count;
-                    
+
                         if v_count = 0 then
-                            
+
                             v_sql = 'insert into man_'||lower(rec_mav.feature_type)|| '_' || lower(rec_mav.id)||' ('||lower(rec_mav.feature_type)||'_id) 
                                      values ('||quote_literal(rec_mav.feature_id)||')';
 
                             execute v_sql;
-                        
+
                         end if;
-                            
+
                         -- insert addfields by updating table
                         v_sql = 'update man_'||lower(rec_mav.feature_type)|| '_' || lower(rec_mav.id)||' 
                                  set '||rec_mav.param_name||' = '||quote_literal(rec_mav.value_param)||'::'||rec_mav.datatype_id||' 
                                  where '||lower(rec_mav.feature_type)||'_id = '||quote_literal(rec_mav.feature_id)||'';
-                                
+
                         execute v_sql;
 
                     end if;
@@ -345,50 +354,6 @@ BEGIN
             end if;
 
         end if;
-
-    END LOOP;
-
-    -- recreate views
-    FOR rec_sys IN
-        SELECT cat_feature_id FROM sys_addfields WHERE cat_feature_id IS NOT NULL
-        GROUP BY cat_feature_id
-    LOOP
-
-        v_cat_feature = ''|| rec_sys.cat_feature_id ||'';
-        v_feature_type = (SELECT lower(feature_type) FROM cat_feature where id=v_cat_feature);
-        v_feature_system_id  = (SELECT lower(system_id) FROM cat_feature where id=v_cat_feature);
-        v_viewname = (SELECT lower(child_layer) FROM cat_feature where id=v_cat_feature);
-        v_feature_childtable_name := 'man_' || v_feature_type || '_' || lower(v_cat_feature);
-
-        --select columns from man_* table without repeating the identifier
-        EXECUTE 'SELECT DISTINCT string_agg(concat(''man_'||v_feature_system_id||'.'',column_name)::text,'', '')
-        FROM information_schema.columns where table_name=''man_'||v_feature_system_id||''' and table_schema='''||v_schemaname||'''
-        and column_name!='''||v_feature_type||'_id'''
-        INTO v_man_fields;
-
-        --select columns from v_feature_childtable_name.* table without repeating the identifiers
-        EXECUTE 'SELECT DISTINCT string_agg(concat('''||v_feature_childtable_name||'.'',column_name)::text,'', '')
-        FROM information_schema.columns where table_name='''||v_feature_childtable_name||''' and table_schema='''||v_schemaname||'''
-        and column_name!=''id'' and column_name!='''||v_feature_type||'_id'''
-        INTO v_feature_childtable_fields;
-
-        IF (v_man_fields IS NULL AND v_project_type='WS') OR
-            (v_man_fields IS NULL AND v_project_type='UD' AND (v_feature_type='arc' OR v_feature_type='node')) THEN
-
-            EXECUTE 'DROP VIEW IF EXISTS '||v_schemaname||'.'||v_viewname||';';
-            v_view_type = 4;
-
-        ELSIF (v_man_fields IS NULL AND v_project_type='UD' AND (v_feature_type='connec' OR v_feature_type='gully')) THEN
-
-            EXECUTE 'DROP VIEW IF EXISTS '||v_schemaname||'.'||v_viewname||';';
-            v_view_type = 5;
-
-        ELSE
-
-            EXECUTE 'DROP VIEW IF EXISTS '||v_schemaname||'.'||v_viewname||';';
-            v_view_type = 6;
-
-        END IF;
 
         v_man_fields := COALESCE(v_man_fields, 'null');
         v_feature_childtable_fields := COALESCE(v_feature_childtable_fields, 'null');

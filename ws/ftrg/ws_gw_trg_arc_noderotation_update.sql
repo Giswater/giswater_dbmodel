@@ -32,7 +32,7 @@ BEGIN
 	
 			FOR rec_node IN SELECT * FROM v_edit_node WHERE NEW.node_1 = node_id OR NEW.node_2 = node_id
 			LOOP
-				SELECT choose_hemisphere INTO hemisphere_rotation_bool FROM v_edit_node JOIN cat_feature_node ON rec_node.nodetype_id=id;
+				SELECT choose_hemisphere INTO hemisphere_rotation_bool FROM v_edit_node JOIN cat_feature_node ON rec_node.node_type=id;
 				SELECT hemisphere INTO hemisphere_rotation_aux FROM v_edit_node WHERE node_id=rec_node.node_id;
 			
 				-- init variables
@@ -43,16 +43,16 @@ BEGIN
 				LOOP
 					IF rec_arc.node_1=rec_node.node_id THEN
 						azm_aux=st_azimuth(st_startpoint(rec_arc.the_geom), ST_LineInterpolatePoint(rec_arc.the_geom,0.01)); 
-						IF azm_aux > 3.14159 THEN
-							azm_aux = azm_aux-3.14159;
+						IF azm_aux > pi() THEN
+							azm_aux = azm_aux-pi();
 						END IF;
 						ang_aux=ang_aux+azm_aux;
 						count=count+1;	
 					END IF;
 					IF rec_arc.node_2=rec_node.node_id  THEN
 						azm_aux=st_azimuth(ST_LineInterpolatePoint(rec_arc.the_geom,0.99),st_endpoint(rec_arc.the_geom)); 
-						IF azm_aux > 3.14159 THEN
-							azm_aux = azm_aux-3.14159;
+						IF azm_aux > pi() THEN
+							azm_aux = azm_aux-pi();
 						END IF;
 						ang_aux=ang_aux+azm_aux;
 						count=count+1;
@@ -64,17 +64,24 @@ BEGIN
 				IF hemisphere_rotation_bool IS true THEN
 		
 					IF (hemisphere_rotation_aux >180)  THEN
-						UPDATE node set rotation=(ang_aux*(180/3.14159)+90) where node_id=rec_node.node_id;
-						UPDATE node set label_rotation=(ang_aux*(180/3.14159)+90) where node_id=rec_node.node_id;	
+						UPDATE node set rotation=(ang_aux*(180/pi())+90) where node_id=rec_node.node_id;
+						UPDATE node set label_rotation=(ang_aux*(180/pi())+90) where node_id=rec_node.node_id;	
 					ELSE		
-						UPDATE node set rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;
-						UPDATE node set label_rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;	
+						UPDATE node set rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;
+						UPDATE node set label_rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;	
 					END IF;
 				ELSE
-					UPDATE node set rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;		
-					UPDATE node set label_rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;		
+					UPDATE node set rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;		
+					UPDATE node set label_rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;		
 				END IF;	
 				
+				-- force positive values for rotation
+				IF (SELECT rotation FROM node where node_id = rec_node.node_id) < 0 then 
+					UPDATE node set rotation = rotation + 360 where node_id =  rec_node.node_id;
+				ELSIF (SELECT rotation FROM node where node_id = rec_node.node_id) > 360 then
+					UPDATE node set rotation = rotation -360 where node_id =  rec_node.node_id;
+				END IF;
+
 			END LOOP;
 
 			RETURN NEW;
@@ -83,7 +90,7 @@ BEGIN
 
 			FOR rec_node IN SELECT * FROM v_edit_node WHERE NEW.node_1 = node_id OR NEW.node_2 = node_id
 			LOOP
-				SELECT choose_hemisphere INTO hemisphere_rotation_bool FROM v_edit_node JOIN cat_feature_node ON rec_node.nodetype_id=id;
+				SELECT choose_hemisphere INTO hemisphere_rotation_bool FROM v_edit_node JOIN cat_feature_node ON rec_node.node_type=id;
 				SELECT hemisphere INTO hemisphere_rotation_aux FROM v_edit_node WHERE node_id=rec_node.node_id;
 		
 				-- init variables
@@ -94,8 +101,8 @@ BEGIN
 				LOOP
 					IF rec_arc.node_1=rec_node.node_id THEN
 						azm_aux=st_azimuth(st_startpoint(rec_arc.the_geom), ST_LineInterpolatePoint(rec_arc.the_geom,0.01)); 
-						IF azm_aux > 3.14159 THEN
-							azm_aux = azm_aux-3.14159;
+						IF azm_aux > pi() THEN
+							azm_aux = azm_aux-pi();
 						END IF;
 						ang_aux=ang_aux+azm_aux;
 						count=count+1;			
@@ -103,8 +110,8 @@ BEGIN
 			
 					IF rec_arc.node_2=rec_node.node_id  THEN
 						azm_aux=st_azimuth(ST_LineInterpolatePoint(rec_arc.the_geom,0.99),st_endpoint(rec_arc.the_geom)); 
-						IF azm_aux > 3.14159 THEN
-							azm_aux = azm_aux-3.14159;
+						IF azm_aux > pi() THEN
+							azm_aux = azm_aux-pi();
 						END IF;
 						ang_aux=ang_aux+azm_aux;
 						count=count+1;
@@ -116,13 +123,20 @@ BEGIN
 				IF hemisphere_rotation_bool IS true THEN
 		
 					IF (hemisphere_rotation_aux >180)  THEN
-						UPDATE node set rotation=(ang_aux*(180/3.14159)+90) where node_id=rec_node.node_id;
+						UPDATE node set rotation=(ang_aux*(180/pi())+90) where node_id=rec_node.node_id;
 					ELSE	
-						UPDATE node set rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;
+						UPDATE node set rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;
 					END IF;
 		
 				ELSE
-					UPDATE node set rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;		
+					UPDATE node set rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;		
+				END IF;
+
+			-- force positive values for rotation
+				IF (SELECT rotation FROM node where node_id = rec_node.node_id) < 0 then 
+					UPDATE node set rotation = rotation + 360 where node_id =  rec_node.node_id;
+				ELSIF (SELECT rotation FROM node where node_id = rec_node.node_id) > 360 then
+					UPDATE node set rotation = rotation -360 where node_id =  rec_node.node_id;
 				END IF;
 			
 			END LOOP;
@@ -133,7 +147,7 @@ BEGIN
    	
 			FOR rec_node IN SELECT node_id,nodetype_id, the_geom FROM v_edit_node WHERE OLD.node_1 = node_id OR OLD.node_2 = node_id
 			LOOP
-				SELECT choose_hemisphere INTO hemisphere_rotation_bool FROM v_edit_node JOIN cat_feature_node ON rec_node.nodetype_id=id;
+				SELECT choose_hemisphere INTO hemisphere_rotation_bool FROM v_edit_node JOIN cat_feature_node ON rec_node.node_type=id;
 				SELECT hemisphere INTO hemisphere_rotation_aux FROM v_edit_node WHERE node_id=rec_node.node_id;
 		
 				-- init variables
@@ -144,16 +158,16 @@ BEGIN
 				LOOP
 					IF rec_arc.node_1=rec_node.node_id THEN
 						azm_aux=st_azimuth(ST_LineInterpolatePoint(rec_arc.the_geom,0.99),st_endpoint(rec_arc.the_geom)); 
-						IF azm_aux > 3.14159 THEN
-							azm_aux = azm_aux-3.14159;
+						IF azm_aux > pi() THEN
+							azm_aux = azm_aux-pi();
 						END IF;
 						ang_aux=ang_aux+azm_aux;
 						count=count+1;	
 					END IF;
 					IF rec_arc.node_2=rec_node.node_id  THEN
 						azm_aux=st_azimuth(ST_LineInterpolatePoint(rec_arc.the_geom,0.99),st_endpoint(rec_arc.the_geom)); 
-						IF azm_aux > 3.14159 THEN
-							azm_aux = azm_aux-3.14159;
+						IF azm_aux > pi() THEN
+							azm_aux = azm_aux-pi();
 						END IF;
 						ang_aux=ang_aux+azm_aux;
 						count=count+1;
@@ -169,15 +183,22 @@ BEGIN
 				IF hemisphere_rotation_bool IS true THEN
 		
 					IF (hemisphere_rotation_aux >180)  THEN
-						UPDATE node set rotation=(ang_aux*(180/3.14159)+90) where node_id=rec_node.node_id;
+						UPDATE node set rotation=(ang_aux*(180/pi())+90) where node_id=rec_node.node_id;
 					ELSE	
-						UPDATE node set rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;
+						UPDATE node set rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;
 					END IF;
 		
 				ELSE
-					UPDATE node set rotation=(ang_aux*(180/3.14159)-90) where node_id=rec_node.node_id;		
+					UPDATE node set rotation=(ang_aux*(180/pi())-90) where node_id=rec_node.node_id;		
 				END IF;
 			
+				-- force positive values for rotation
+				IF (SELECT rotation FROM node where node_id = rec_node.node_id) < 0 then 
+					UPDATE node set rotation = rotation + 360 where node_id =  rec_node.node_id;
+				ELSIF (SELECT rotation FROM node where node_id = rec_node.node_id) > 360 then
+					UPDATE node set rotation = rotation -360 where node_id =  rec_node.node_id;
+				END IF;
+
 			END LOOP;
 	
 			RETURN OLD;
