@@ -14,8 +14,12 @@ v_check_fid integer;
 v_prefix_table text;
 --
 v_rec record;
+v_rec_anl record;
 v_count integer;
+v_geom_type text;
+v_sql text;
 v_text_aux text;
+v_exc_msg text;
 
 BEGIN
 
@@ -31,6 +35,7 @@ select * into v_rec from sys_fprocess where fid = v_check_fid;
 
 -- replace key word by querytable
 v_rec.query_text = replace(v_rec.query_text, 'v_prefix_', v_prefix_table);
+v_exc_msg = v_rec.except_msg;
 
 
 -- count events
@@ -56,7 +61,8 @@ elsif v_count > 1 then
 end if;
 
 
--- insert result
+-- manage result (audit_check_data)
+
 IF v_count > 0 then
 
 	INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
@@ -70,6 +76,26 @@ ELSE
 	values (v_function_fid, 3, v_check_fid, concat('INFO: No ', except_msg), 7777);
 
 END IF;
+
+
+-- manage result (anl_tables)
+v_sql = 'select a.*, '||quote_literal(v_exc_msg)||' from ('||v_rec.query_text||') a';
+
+-- geom_type from result
+execute 'select distinct st_geometrytype(the_geom) from ('||v_sql||')a limit 1' into v_geom_type;
+
+
+if v_geom_type = 'ST_LineString' then
+
+	execute '
+	insert into anl_arc (arc_id, arccat_id, expl_id, fid, the_geom, descript)
+	select arc_id, arccat_id, expl_id, '||v_check_fid||', the_geom, '||quote_literal(v_exc_msg)||' from ('||v_sql||')b';
+	
+elsif v_geom_type = 'ST_Point' then
+
+	v_table = 'anl_node';
+	
+end if;
 
 
 return '{"status": "accepted"}'::json;
