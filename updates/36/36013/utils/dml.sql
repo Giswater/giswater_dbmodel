@@ -36,5 +36,51 @@ INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutn
 
 INSERT INTO sys_function (id, function_name, project_type, function_type, input_params, return_type, descript, sys_role, sample_query, "source") VALUES (3324, 'gw_fct_getfeaturereplace', 'utils', 'function', 'json', 'json', 'Function to get feature type change dialog', 'role_edit', NULL, 'core');
 
-UPDATE sys_fprocess SET fprocess_name='Arc without start-end nodes', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, query_text='SELECT arc_id,arccat_id,the_geom, expl_id FROM v_prefix_arc 
-	WHERE state = 1 AND node_1 IS NULL UNION SELECT arc_id, arccat_id, the_geom, expl_id FROM v_prefix_arc WHERE state = 1 AND node_2 IS NULL', function_name='{gw_fct_om_check_data}', except_level=2, except_msg='arcs withouuuut node_1 or node_2', except_msg_feature=NULL WHERE fid=103;
+UPDATE sys_fprocess SET query_text='SELECT arc_id,arccat_id,the_geom, expl_id FROM v_prefix_arc 
+WHERE state = 1 AND node_1 IS NULL UNION SELECT arc_id, arccat_id, the_geom, expl_id FROM v_prefix_arc WHERE state = 1 AND node_2 IS NULL', 
+function_name='{gw_fct_om_check_data}', except_level=2, except_msg='arcs without node_1 or node_2', except_msg_feature=NULL WHERE fid=103;
+
+UPDATE sys_fprocess SET query_text='SELECT a.arc_id, arccat_id, a.the_geom, expl_id FROM arc a WHERE sys_slope < 0 AND state > 0 AND inverted_slope IS FALSE', 
+function_name='{gw_fct_om_check_data}', except_level=1, except_msg='arcs with inverted slope false and slope negative values. Please, check your data before continue', 
+except_msg_feature=NULL WHERE fid=251;
+
+UPDATE sys_fprocess SET query_text='SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM v_prefix_arc a 
+JOIN v_prefix_node n ON node_1=node_id WHERE a.state =1 AND n.state=0 UNION
+SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM v_prefix_arc a JOIN v_prefix_node n ON node_2=node_id WHERE a.state =1 AND n.state=0', 
+function_name='{gw_fct_om_check_data}', except_level=1, except_msg='arcs with state=1 using extremals nodes with state = 0. Please, check your data before continue', 
+except_msg_feature=NULL WHERE fid=196;
+
+UPDATE sys_fprocess SET query_text='SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM v_prefix_arc a JOIN v_prefix_node n ON node_1=node_id 
+WHERE a.state =1 AND n.state=2 UNION
+SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM v_prefix_arc a JOIN v_prefix_node n ON node_2=node_id WHERE a.state =1 AND n.state=2', 
+function_name='{gw_fct_om_check_data}', except_level=1, except_msg='arcs with state=1 using extremals nodes with state = 2. Please, check your data before continue', 
+except_msg_feature=NULL WHERE fid=197;
+
+UPDATE sys_fprocess SET query_text='SELECT arc_id,arccat_id,the_geom, expl_id FROM v_prefix_arc 
+WHERE state = 1 AND node_1 IS NULL UNION SELECT arc_id, arccat_id, the_geom, expl_id FROM v_prefix_arc WHERE state = 1 AND node_2 IS NULL', 
+function_name='{gw_fct_om_check_data}', except_level=2, except_msg='arcs without node_1 or node_2', 
+except_msg_feature=NULL WHERE fid=103;
+
+UPDATE sys_fprocess SET query_text='SELECT arc_id FROM v_prefix_arc WHERE state > 0 AND state_type IS NULL 
+UNION SELECT node_id FROM v_prefix_node WHERE state > 0 AND state_type IS NULL', function_name='{gw_fct_om_check_data}', 
+except_level=1, except_msg='features (arc, node) with state_type NULL values found.', 
+except_msg_feature='multiple tables' WHERE fid=175;
+
+UPDATE sys_fprocess SET query_text='SELECT node_id, nodecat_id, the_geom, n.expl_id FROM v_prefix_node n JOIN value_state_type s ON id=state_type 
+WHERE n.state > 0 AND s.is_operative IS FALSE AND verified <>''2''', function_name='{gw_fct_om_check_data}', 
+except_level=2, except_msg='nodes with state > 0 and state_type.is_operative on FALSE', 
+except_msg_feature=NULL WHERE fid=187;
+
+UPDATE sys_fprocess SET query_text='SELECT arc_id, arccat_id, the_geom, a.expl_id FROM v_prefix_arc a JOIN value_state_type s ON id=state_type 
+WHERE a.state > 0 AND s.is_operative IS FALSE AND verified <>''2''', function_name='{gw_fct_om_check_data}', except_level=2, 
+except_msg='arcs with state > 0 and state_type.is_operative on FALSE', 
+except_msg_feature=NULL WHERE fid=188;
+
+UPDATE sys_fprocess SET query_text='SELECT node_id, nodecat_id, the_geom FROM v_prefix_node 
+JOIN cat_node ON nodecat_id=cat_node.id
+JOIN cat_feature ON cat_node.nodetype_id = cat_feature.id
+JOIN value_state_type ON state_type = value_state_type.id
+WHERE value_state_type.is_operative IS TRUE AND system_id = ''TANK'' and node_id NOT IN 
+(SELECT node_id FROM config_graph_mincut WHERE active IS TRUE)', function_name='{gw_fct_om_check_data}', except_level=1, 
+except_msg='tanks which are not defined on config_graph_mincut', 
+except_msg_feature=NULL WHERE fid=177;
