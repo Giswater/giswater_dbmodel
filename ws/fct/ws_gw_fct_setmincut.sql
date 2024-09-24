@@ -40,6 +40,7 @@ v_cur_user text;
 v_prev_cur_user text;
 v_device integer;
 v_arc integer;
+v_connec text;
 v_id integer;
 v_node integer;
 v_mincut integer;
@@ -108,26 +109,34 @@ BEGIN
 	IF v_cur_user IS NULL THEN v_cur_user = current_user; END IF;
 
 	-- get arc_id from click
-	IF v_xcoord IS NOT NULL THEN 
+	IF v_xcoord IS NOT NULL THEN
 		EXECUTE 'SELECT (value::json->>''web'')::float FROM config_param_system WHERE parameter=''basic_info_sensibility_factor'''
 		INTO v_sensibility_f;
 		v_sensibility = (v_zoomratio / 500 * v_sensibility_f);
 
 		-- Make point
 		SELECT ST_Transform(ST_SetSRID(ST_MakePoint(v_xcoord,v_ycoord),v_client_epsg),v_epsg) INTO v_point;
-	
+
 		SELECT arc_id INTO v_arc FROM v_edit_arc WHERE ST_DWithin(the_geom, v_point,v_sensibility) LIMIT 1;
+
+		IF v_arc IS NULL THEN
+			SELECT connec_id INTO v_connec FROM v_edit_connec WHERE ST_DWithin(the_geom, v_point,v_sensibility) LIMIT 1;
+		END IF;
 	END IF;
 
 	IF v_action = 'mincutNetwork' THEN
 
 		--create new mincut_id
 		IF v_device = 5 and v_mincut IS NULL THEN
+			IF v_arc IS NULL AND v_connec IS NULL THEN
+				RETURN ('{"status":"Failed", "message":{"level":2, "text":"No arc or connec found."}, "version":"'||v_version||'","body":{"form":{},"data":{ "info":null,"geometry":null, "mincutDetails":null}}}')::json;
+			END IF;
+
 			SELECT setval('om_mincut_seq', COALESCE((SELECT max(id::integer)+1 FROM om_mincut), 1), true) INTO v_mincut;
-			INSERT INTO om_mincut (id) VALUES (v_mincut);
+			INSERT INTO om_mincut (id, mincut_state) VALUES (v_mincut, 4);
 
 			-- Set default values
-			FOR v_default_key, v_default_value IN SELECT * FROM jsonb_each_text(v_vdefault) LOOP
+			FOR v_default_key, v_default_value IN SELECT * FROM jsonb_each_text(v_vdefault::jsonb) LOOP
 				EXECUTE 'UPDATE om_mincut SET '||v_default_key||' = '||v_default_value||' WHERE id = '||v_mincut||';';
 			END LOOP;
 		END IF;
@@ -150,29 +159,58 @@ BEGIN
 		IF v_device = 4 THEN
 			IF v_mincut_version = 5 THEN
 				RETURN gw_fct_mincut_minsector(v_arc::text, v_mincut, v_usepsectors);
-			ELSE 
+			ELSE
 				RETURN gw_fct_mincut(v_arc::text, 'arc'::text, v_mincut, v_usepsectors);
 			END IF;
-            
+
 		ELSIF v_device = 5 THEN
-			IF v_mincut_version = 5 THEN
-				SELECT gw_fct_mincut_minsector(v_arc::text, v_mincut, v_usepsectors)INTO v_response;
-			ELSE 
-				SELECT gw_fct_mincut(v_arc::text, 'arc'::text, v_mincut, v_usepsectors) INTO v_response;
-			END IF;
-		
 			p_data = jsonb_set(p_data::jsonb, '{data,mincutId}', to_jsonb(v_mincut))::json;
-			v_mincut_class = 1;
-			v_querytext = concat('UPDATE om_mincut SET mincut_class = ', v_mincut_class, ', ', 
+
+			IF v_arc IS NOT NULL THEN
+				v_mincut_class = 1;
+				IF v_mincut_version = 5 THEN
+					SELECT gw_fct_mincut_minsector(v_arc::text, v_mincut, v_usepsectors) INTO v_response;
+				ELSE
+					SELECT gw_fct_mincut(v_arc::text, 'arc'::text, v_mincut, v_usepsectors) INTO v_response;
+				END IF;
+
+				v_querytext = concat('UPDATE om_mincut SET mincut_class = ', v_mincut_class, ', ', 
 							'anl_the_geom = ''', ST_SetSRID(ST_Point(v_xcoord, v_ycoord), v_client_epsg), ''', ', 
 							'anl_user = ''', v_cur_user, ''', ', 
 							'anl_feature_type = ''ARC'', ', 
 							'anl_feature_id = ', v_arc, ' ',
 							'WHERE id = ', v_mincut);
+
+			ELSIF v_connec IS NOT NULL THEN
+				v_mincut_class = 2;
+				DELETE FROM om_mincut_connec WHERE result_id = v_mincut;
+				INSERT INTO om_mincut_connec (result_id, connec_id, the_geom, customer_code) VALUES (
+					v_mincut, v_connec,
+					(SELECT the_geom FROM v_edit_connec WHERE connec_id = v_connec),
+					(SELECT customer_code FROM v_edit_connec WHERE connec_id = v_connec)
+				);
+
+				DELETE FROM om_mincut_hydrometer WHERE result_id = v_mincut;
+
+				FOR v_id IN (SELECT hydrometer_id FROM v_rtc_hydrometer WHERE feature_id = v_connec::text) LOOP
+					INSERT INTO om_mincut_hydrometer (result_id, hydrometer_id) VALUES (v_mincut, v_id);
+				END LOOP;
+
+				v_querytext = concat('UPDATE om_mincut SET mincut_class = ', v_mincut_class, ', ', 
+							'expl_id = ', (SELECT expl_id FROM v_edit_connec WHERE connec_id = v_connec), ', ',
+							'macroexpl_id = ', (SELECT macroexpl_id FROM v_edit_connec WHERE connec_id = v_connec), ', ',
+							'muni_id = ', (SELECT muni_id FROM v_edit_connec WHERE connec_id = v_connec), ', ',
+							'anl_the_geom = ''', ST_SetSRID(ST_Point(v_xcoord, v_ycoord), v_client_epsg), ''', ', 
+							'anl_user = ''', v_cur_user, ''', ', 
+							'anl_feature_type = ''CONNEC'', ', 
+							'anl_feature_id = ', v_connec, ' ',
+							'WHERE id = ', v_mincut);
+			END IF;
+
 			EXECUTE v_querytext;
 			RETURN gw_fct_getmincut(p_data);
 		END IF;
-	
+
 	ELSIF v_action = 'startMincut' THEN
 
 		IF v_device = 5 THEN
@@ -185,7 +223,7 @@ BEGIN
 			--reexecuting mincut on clicking start
 			SELECT json_extract_path_text(value::json, 'redoOnStart','days')::integer INTO v_days FROM config_param_system WHERE parameter='om_mincut_settings';
 
-			IF (SELECT date(anl_tstamp) + v_days FROM om_mincut WHERE id=v_mincut) <= date(now()) THEN 
+			IF (SELECT date(anl_tstamp) + v_days FROM om_mincut WHERE id=v_mincut) <= date(now()) THEN
 
 				--check if arc exists in database or look for a new arc_id in the same location
 				IF (SELECT arc_id FROM arc WHERE arc_id::integer=v_arc) IS NULL THEN
@@ -198,7 +236,7 @@ BEGIN
 
 				IF v_mincut_version = 5 THEN
 					SELECT gw_fct_mincut_minsector(v_arc::text, v_mincut, v_usepsectors) INTO v_result;
-				ELSE 
+				ELSE
 					SELECT gw_fct_mincut(v_arc::text, 'arc'::text, v_mincut, v_usepsectors) INTO v_result;
 				END IF;
 
@@ -232,7 +270,7 @@ BEGIN
 		ELSE
 			RETURN v_result;
 		END IF;
-		
+
 	ELSIF v_action IN ('mincutAccept', 'endMincut') THEN
 
 		-- call setfields
@@ -263,13 +301,13 @@ BEGIN
 		IF v_mincut_class = 1 THEN
 
 			UPDATE config_param_user SET value = v_mincut::text WHERE parameter = 'inp_options_valve_mode_mincut_result' AND cur_user = v_cur_user;
-		
+
 			SELECT gw_fct_mincut_result_overlap(p_data) into v_result;
 
 		ELSIF v_mincut_class IN (2, 3) THEN
-		
+
 			SELECT gw_fct_mincut_connec(p_data) into v_result;
-		
+
 		END IF;
 
 		IF v_device = 5 THEN
@@ -286,25 +324,25 @@ BEGIN
 
 	ELSIF v_action = 'mincutCancel' THEN
 		v_message = '{"text": "Mincut to cancel not found.", "level": 2}';
-		IF (SELECT id FROM om_mincut WHERE id = v_mincut) IS NOT NULL THEN 
+		IF (SELECT id FROM om_mincut WHERE id = v_mincut) IS NOT NULL THEN
 			if (select mincut_state from om_mincut where id = v_mincut) = 4 then
 				DELETE FROM om_mincut WHERE id = v_mincut;
-			else 
+			else
 				update om_mincut set mincut_state = 3 where id = v_mincut;
 			end if;
 			v_message = '{"text": "Mincut cancelled.", "level": 1}';
 		END IF;
-	
+
 	ELSIF v_action = 'mincutDelete' THEN
 		v_message = '{"text": "Mincut to delete not found.", "level": 2}';
-		IF (SELECT id FROM om_mincut WHERE id = v_mincut) IS NOT NULL THEN 
+		IF (SELECT id FROM om_mincut WHERE id = v_mincut) IS NOT NULL THEN
 			DELETE FROM om_mincut WHERE id = v_mincut;
 			v_message = '{"text": "Mincut deleted.", "level": 1}';
 		END IF;
 	END IF;
 
 	-- build geojson
-	IF v_device = 5 THEN 
+	IF v_device = 5 THEN
 		--v_om_mincut
 		SELECT jsonb_agg(features.feature) INTO v_result
 			FROM (
@@ -319,7 +357,7 @@ BEGIN
 
 		v_result := COALESCE(v_result, '{}');
 		v_result_init = concat('{"geometryType":"Point", "features":',v_result, '}');
-		
+
 		--v_om_mincut_valve
 		SELECT jsonb_agg(features.feature) INTO v_result
 			FROM (
@@ -404,12 +442,12 @@ BEGIN
 	}');
 
 	return v_response::json;
-	
+
 	--  Exception handling
 	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;  
+	GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;
 	RETURN ('{"status":"Failed", "SQLERR":' || to_json(SQLERRM) || ',"SQLCONTEXT":' || to_json(v_error_context) || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
-	
+
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
