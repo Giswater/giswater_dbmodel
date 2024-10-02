@@ -30,6 +30,7 @@ SELECT * FROM audit_check_data WHERE fid = v_fid
 DECLARE
 
 v_record record;
+v_Rec record;
 v_project_type text;
 v_count integer;
 v_saveondatabase boolean;
@@ -52,6 +53,7 @@ v_node_1 text;
 v_partialquery text;
 v_check_arcdnom integer;
 v_fid integer;
+v_rec_process record;
 
 BEGIN
 
@@ -124,10 +126,30 @@ BEGIN
 
 	
 	RAISE NOTICE '02 - Check node_1 or node_2 nulls (103)';
-	v_querytext = '(SELECT arc_id,arccat_id,the_geom, expl_id FROM '||v_edit||'arc WHERE state = 1 AND node_1 IS NULL UNION SELECT arc_id, arccat_id, the_geom, expl_id FROM '
-	||v_edit||'arc WHERE state = 1 AND node_2 IS NULL) a';
 
-	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
+/*
+	v_querytext = '(SELECT arc_id,arccat_id,the_geom, expl_id FROM '||v_edit||'arc 
+	WHERE state = 1 AND node_1 IS NULL UNION SELECT arc_id, arccat_id, the_geom, expl_id FROM '||v_edit||'arc WHERE state = 1 AND node_2 IS NULL) a';
+
+	select * into v_rec_process from sys_fprocess where fid = 103;
+
+	v_querytext = replace(v_rec_process.query_text, 'v_prefix_', v_edit);
+
+	--raise exception 'v_querytext %', v_querytext;
+
+	--EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
+*/
+	for v_rec in select*from sys_fprocess where query_text is not null --and 'gw_fct_om_check_data' = ANY(function_name) 
+	and (project_type = quote_literal(lower(v_project_type)) or project_type = 'utils')
+	loop
+		raise notice 'v_rec.fid %', v_rec.fid;
+		execute 'select gw_fct_check_fprocess($${"client":{"device":4, "infoType":1, "lang":"ES"}, 
+	    "form":{},"feature":{},"data":{"parameters":{"functionFid": '||v_fid||', "checkFid":"'||v_rec.fid||'", "prefixTable": "'||v_edit||'"}}}$$)';
+   	end loop;
+
+
+/*
+
 	IF v_count > 0 THEN
 		EXECUTE concat ('INSERT INTO temp_anl_arc (fid, arc_id, arccat_id, descript, the_geom, expl_id)
 			SELECT 103, arc_id, arccat_id, ''node_1 or node_2 nulls'', the_geom, expl_id FROM ', v_querytext);
@@ -1473,6 +1495,7 @@ BEGIN
 	END IF;
 
 
+*/
 	-- Removing isaudit false sys_fprocess
 	FOR v_record IN SELECT * FROM sys_fprocess WHERE isaudit is false
 	LOOP

@@ -24,6 +24,7 @@ SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data('{"parameters":{}}')-- when is calle
 
 DECLARE
 
+v_rec record;
 v_record record;
 v_project_type text;
 v_count	integer;
@@ -64,6 +65,8 @@ BEGIN
 		CREATE TEMP TABLE temp_anl_node (LIKE SCHEMA_NAME.anl_node INCLUDING ALL);
 		CREATE TEMP TABLE temp_anl_connec (LIKE SCHEMA_NAME.anl_connec INCLUDING ALL);
 		CREATE TEMP TABLE temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
+	
+		CREATE TEMP TABLE temp_t_arc (LIKE ws_3613_100.temp_arc INCLUDING ALL);
 
 		-- Header
 		INSERT INTO temp_audit_check_data (fid,  criticity, error_message) VALUES (v_fid,  4, 'CHECK GIS DATA QUALITY ACORDING EPA RULES');
@@ -81,6 +84,22 @@ BEGIN
 
 	
 	RAISE NOTICE '1 - Check orphan nodes (fid:  107)';
+
+
+
+	for v_rec in select*from sys_fprocess where query_text is not null --and fprocess_type = 'Check epa-data'
+	and (project_type = quote_literal(lower(v_project_type)) or project_type = 'utils') and addparam is null
+	order by fid asc
+	loop
+		--raise notice 'v_rec.fid %', v_rec.fid;
+		execute 'select gw_fct_check_fprocess($${"client":{"device":4, "infoType":1, "lang":"ES"}, 
+	    "form":{},"feature":{},"data":{"parameters":{"functionFid": '||v_fid||', "prefixTable": "", "checkFid":"'||v_rec.fid||'"}}}$$)';
+   	end loop;
+
+
+/*
+
+
 	v_querytext = '(SELECT node_id, nodecat_id, the_geom, expl_id FROM 
 			(SELECT node_id FROM v_edit_node EXCEPT (SELECT node_1 as node_id FROM v_edit_arc UNION SELECT node_2 FROM v_edit_arc))a 
 			JOIN node USING (node_id)
@@ -923,6 +942,7 @@ BEGIN
         END IF;
     END IF;
 
+*/
 	-- Removing isaudit false sys_fprocess
 	FOR v_record IN SELECT * FROM sys_fprocess WHERE isaudit is false
 	LOOP
