@@ -91,11 +91,33 @@ BEGIN
 	and (project_type = quote_literal(lower(v_project_type)) or project_type = 'utils') and addparam is null
 	order by fid asc
 	loop
+		
+		-- check que los addschemas existan
+		select (addparam::json ->>'addSchema')::text into v_addschema from sys_fprocess where fid = v_rec.fid;
+
+		if v_addschema is not null then
+		
+			-- check if exists
+			select count(*) into v_count from information_schema.tables where table_catalog = current_catalog and table_schema = v_addschema;
+		
+			if v_count = 0 then
+			
+				continue;
+			
+			end if;
+		
+		end if;
+
 		--raise notice 'v_rec.fid %', v_rec.fid;
 		execute 'select gw_fct_check_fprocess($${"client":{"device":4, "infoType":1, "lang":"ES"}, 
 	    "form":{},"feature":{},"data":{"parameters":{"functionFid": '||v_fid||', "prefixTable": "", "checkFid":"'||v_rec.fid||'"}}}$$)';
+		
    	end loop;
 
+
+	update temp_audit_check_data set criticity = 1 where error_message ilike 'INFO:%';
+   	update temp_audit_check_data set criticity = 2 where error_message ilike 'WARNING-%';
+   	update temp_audit_check_data set criticity = 3 where error_message ilike 'ERROR-%';
 
 /*
 
