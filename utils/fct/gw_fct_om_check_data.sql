@@ -54,6 +54,7 @@ v_partialquery text;
 v_check_arcdnom integer;
 v_fid integer;
 v_rec_process record;
+v_addschema text;
 
 BEGIN
 

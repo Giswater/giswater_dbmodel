@@ -41,6 +41,7 @@ v_fid integer;
 v_nodetolerance float;
 v_minlength float;
 v_nodeproximity float;
+v_addschema text;
 
 BEGIN
 	--  Search path	
