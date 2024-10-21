@@ -97,3 +97,17 @@ SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"
 UPDATE arc SET muni_id = 1, streetaxis_id  ='1-9150C' WHERE arc_id = '179';
 
 UPDATE cat_arc SET geom2 = 0 WHERE id = 'EG150';
+
+UPDATE om_visit SET ext_code = concat('EXT', 1000 + id);
+
+UPDATE cat_arc SET geom2 = 0 WHERE id = 'EG150';
+
+UPDATE inp_junction SET ysur=999 WHERE node_id= '302';
+
+UPDATE cat_arc SET id = 'PP030', geom1 = 0.25 WHERE id = 'PP020';
+
+UPDATE inp_dwf SET value = value*6*random();
+
+UPDATE inp_dwf SET pat1 = 'pattern_12';
+
+UPDATE node set ymax = 2 WHERE node_id = '301';
