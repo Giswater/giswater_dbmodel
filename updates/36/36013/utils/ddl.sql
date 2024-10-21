@@ -9,4 +9,5 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fproces
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fprocess", "column":"except_msg_feature", "dataType":"text"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fprocess", "column":"fprocess_name", "dataType":"text"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fprocess", "column":"query_text", "dataType":"text"}}$$);
-
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fprocess", "column":"info_msg", "dataType":"text"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_fprocess", "column":"function_name", "dataType":"text"}}$$);
