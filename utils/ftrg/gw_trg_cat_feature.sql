@@ -189,7 +189,7 @@ BEGIN
 
 						--replace the existing view and drop the old trigger
 						EXECUTE 'CREATE OR REPLACE VIEW '||v_schemaname||'.'||NEW.child_layer||' AS '||v_definition||';';
-						EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(OLD.id)||' ON '||v_viewname||';';
+						EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(replace(OLD.id, ' ', '_'))||' ON '||v_viewname||';';
 
 						EXECUTE 'CREATE TRIGGER gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(NEW.id)||'
 						INSTEAD OF INSERT OR UPDATE OR DELETE ON '||v_viewname||' FOR EACH ROW EXECUTE
@@ -209,7 +209,7 @@ BEGIN
 							VALUES (NEW.child_layer,1,NEW.child_layer);
 						END IF;
 
-						EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(OLD.id)||' ON '||v_viewname||';';
+						EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(replace(OLD.id, ' ', '_'))||' ON '||v_viewname||';';
 					END IF;
 				END IF;
 			END IF;
@@ -238,7 +238,7 @@ BEGIN
 					--replace the existing view
 					EXECUTE 'CREATE OR REPLACE VIEW '||v_schemaname||'.'||v_viewname||' AS '||v_definition||';';
 					EXECUTE 'DROP VIEW IF EXISTS '||v_schemaname||'.'||v_old_child_layer||';';
-					EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(OLD.id)||' ON '||v_viewname||';';
+					EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(replace(OLD.id, ' ', '_'))||' ON '||v_viewname||';';
 
 					EXECUTE 'CREATE TRIGGER gw_trg_edit_'||lower(NEW.feature_type)||'_'||lower(NEW.id)||'
 					INSTEAD OF INSERT OR UPDATE OR DELETE ON '||v_viewname||' FOR EACH ROW EXECUTE
