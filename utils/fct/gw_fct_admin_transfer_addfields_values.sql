@@ -46,6 +46,8 @@ v_feature_childtable_fields text;
 v_data_view json;
 exists_record BOOLEAN;
 v_exists_col boolean;
+rec_feature record;
+v_partialquery text;
 
 BEGIN
 
@@ -355,41 +357,46 @@ BEGIN
 
         end if;
 
-        v_man_fields := COALESCE(v_man_fields, 'null');
-        v_feature_childtable_fields := COALESCE(v_feature_childtable_fields, 'null');
-
-        v_data_view = '{
-        "schema":"'||v_schemaname ||'",
-        "body":{"viewname":"'||v_viewname||'",
-            "feature_type":"'||v_feature_type||'",
-            "feature_system_id":"'||v_feature_system_id||'",
-            "feature_cat":"'||v_cat_feature||'",
-            "feature_childtable_name":"'||v_feature_childtable_name||'",
-            "feature_childtable_fields":"'||v_feature_childtable_fields||'",
-            "man_fields":"'||v_man_fields||'",
-            "view_type":"'||v_view_type||'"
-            }
-        }';
-
-        PERFORM gw_fct_admin_manage_child_views_view(v_data_view);
-
-        --create trigger on view
-        EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_edit_'||v_feature_type||'_'||lower(replace(replace(replace(v_cat_feature, ' ','_'),'-','_'),'.','_'))||' ON '||v_schemaname||'.'||v_viewname||';';
-
-        EXECUTE 'CREATE TRIGGER gw_trg_edit_'||v_feature_type||'_'||lower(replace(replace(replace(v_cat_feature, ' ','_'),'-','_'),'.','_'))||'
-        INSTEAD OF INSERT OR UPDATE OR DELETE ON '||v_schemaname||'.'||v_viewname||'
-        FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_edit_'||v_feature_type||'('''||v_cat_feature||''');';
-
-        INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-        VALUES (218, null, 4, concat('Recreate edition trigger for view ',v_viewname,'.'));
-
-        PERFORM gw_fct_admin_role_permissions();
-
-        INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
-        VALUES (218, null, 4, 'Set role permissions.');
-
-
     END LOOP;
+
+    -- transfer common addfields
+    select count(*) into v_count from node;
+
+    if v_count > 0 then
+
+        if v_project_type = 'UD' then
+
+            v_partialquery = ' union select gully_id as feature_id, ''GULLY''
+            as sys_type, gully_type as feature_type from vu_gully';
+
+        end if;
+
+        for rec_feature in execute '
+                with subq_1 as (
+                select node_id as feature_id, ''NODE'' as sys_type, node_type as feature_type from vu_node union 
+                select arc_id as feature_id, ''ARC'' as sys_type, arc_type as feature_type from vu_arc union 
+                select connec_id as feature_id, ''CONNEC'' as sys_type, connec_type as feature_type from vu_connec
+                '||v_partialquery||'),       
+            subq_2 as (
+                SELECT mav.feature_id, mav.value_param, sa.param_name, sa.datatype_id
+                FROM _man_addfields_value_ mav
+                left JOIN sys_addfields sa ON sa.id = mav.parameter_id
+                left JOIN cat_feature cf ON cf.id = sa.cat_feature_id
+                where sa.feature_type = ''ALL'' and value_param is not null
+                ORDER BY sa.param_name
+            )       
+           select * from subq_2 join subq_1 using (feature_id)'
+        loop
+            v_feature_childtable_name := 'man_' || lower(rec_feature.sys_type) || '_' || lower(rec_feature.feature_type);
+
+            v_sql := 'update ' ||v_feature_childtable_name||
+            ' set '||rec_feature.param_name||' = '||quote_literal(rec_feature.value_param)|| '::' ||rec_feature.datatype_id||
+            ' where  '||lower(rec_feature.sys_type)||'_id = '||quote_literal(rec_feature.feature_id)||'';
+
+            execute v_sql;
+
+        end loop;
+     end if;
 
     -- update sys_foreignkey values
     FOR rec_fgk IN
