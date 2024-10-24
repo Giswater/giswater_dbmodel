@@ -87,3 +87,5 @@ SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"
 
 
 UPDATE ext_rtc_hydrometer SET is_waterbal = false WHERE  id::integer in (3,4);
+
+UPDATE ext_plot set muni_id = 2 where id::integer < 40;
