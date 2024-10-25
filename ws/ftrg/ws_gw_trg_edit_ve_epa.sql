@@ -45,10 +45,12 @@ BEGIN
 		source_quality=NEW.source_quality, source_pattern_id=NEW.source_pattern_id WHERE node_id=OLD.node_id;
 
         ELSIF v_epatype = 'pump' THEN          
-		UPDATE inp_pump SET power=NEW.power, curve_id=NEW.curve_id, speed=NEW.speed, pattern_id=NEW.pattern_id, status=NEW.status, to_arc=NEW.to_arc, 
+		UPDATE inp_pump SET power=NEW.power, curve_id=NEW.curve_id, speed=NEW.speed, pattern_id=NEW.pattern_id, status=NEW.status, 
 		energyparam =NEW.energyparam, energyvalue=NEW.energyvalue, pump_type=NEW.pump_type, effic_curve_id=NEW.effic_curve_id, 
 		energy_price=NEW.energy_price, energy_pattern_id=NEW.energy_pattern_id
 		WHERE node_id=OLD.node_id;
+		
+		UPDATE man_pump SET to_arc=NEW.to_arc WHERE node_id=NEW.node_id;
 
         ELSIF v_epatype = 'pump_additional' THEN          
 		UPDATE inp_pump_additional SET order_id=NEW.order_id, power=NEW.power, curve_id=NEW.curve_id, speed=NEW.speed, pattern_id=NEW.pattern_id, 
@@ -58,8 +60,12 @@ BEGIN
 
         ELSIF v_epatype = 'valve' THEN     
 		UPDATE inp_valve SET valv_type=NEW.valv_type, pressure=NEW.pressure,custom_dint=NEW.custom_dint, flow=NEW.flow, coef_loss=NEW.coef_loss, 
-		curve_id=NEW.curve_id, minorloss=NEW.minorloss, status=NEW.status, to_arc=NEW.to_arc, add_settings = NEW.add_settings,
+		curve_id=NEW.curve_id, minorloss=NEW.minorloss, add_settings = NEW.add_settings,
 		init_quality=NEW.init_quality WHERE node_id=OLD.node_id;
+	
+		update man_valve set closed = true where new.status = 'CLOSED' AND node_id = OLD.node_id;
+		update man_valve set closed = false, active=true where new.status = 'ACTIVE' and node_id = OLD.node_id;
+		update man_valve set closed = false, active = false where new.status = 'OPEN' and node_id = OLD.node_id; 
             
         ELSIF v_epatype = 'shortpipe' THEN     
 		UPDATE inp_shortpipe SET minorloss=NEW.minorloss, bulk_coeff = NEW.bulk_coeff, wall_coeff = NEW.wall_coeff, custom_dint=NEW.custom_dint WHERE node_id=OLD.node_id;  

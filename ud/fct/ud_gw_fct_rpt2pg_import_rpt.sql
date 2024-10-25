@@ -42,6 +42,7 @@ v_result_id text;
 v_error_context text;
 v_epaversion text;
 v_poll text;
+v_count1 integer;
 
 BEGIN
 
@@ -61,6 +62,7 @@ BEGIN
 	-- delete previous data on log table
 	DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=140;
 
+
 	-- Starting process
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (140, v_result_id, concat('IMPORT RPT FILE'));
 	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (140, v_result_id, concat('-----------------------------'));
@@ -70,6 +72,21 @@ BEGIN
 	LOOP
 		EXECUTE 'DELETE FROM '||rpt_rec.tablename||' WHERE result_id='''||v_result_id||''';';
 	END LOOP;
+
+	-- setting rpt_subcatchrunoff_sum
+	SELECT id into v_count1 FROM temp_t_csv WHERE source ='rpt_subcatchrunoff_sum' and csv1 = 'LID';
+	IF v_count1 > 0 THEN 
+		UPDATE temp_t_csv SET source ='rpt_lidperformance_sum' WHERE source ='rpt_subcatchrunoff_sum' and id > v_count1;
+	END IF;
+
+	-- setting rpt_flowrouting_cont
+	SELECT id into v_count1 FROM temp_t_csv WHERE source ='rpt_runoff_quant' and csv1 = 'Continuity';
+	IF v_count1 > 0 THEN 
+		UPDATE temp_t_csv SET source ='rpt_flowrouting_cont' WHERE source ='rpt_runoff_quant ' and id > v_count1;
+	END IF;
+
+	DROP TABLE IF EXISTS t;
+	CREATE TABLE t AS SELECT * FROM temp_t_csv;
 
 	-- delete trash rows
 	DELETE FROM temp_t_csv WHERE source ='rpt_controls_actions_taken' and csv1='Control' and csv2='Actions';
@@ -86,6 +103,11 @@ BEGIN
 	DELETE FROM temp_t_csv WHERE source ='rpt_subcatchrunoff_sum' and csv1='Total' and csv2='Total';
 	DELETE FROM temp_t_csv WHERE source ='rpt_subcatchrunoff_sum' and csv1='Precip' and csv2='Runon';
 	DELETE FROM temp_t_csv WHERE source ='rpt_subcatchrunoff_sum' and csv1='Subcatchment' and csv2='mm';
+	DELETE FROM temp_t_csv WHERE source ='rpt_subcatchrunoff_sum' and csv1='LID';
+
+	DELETE FROM temp_t_csv WHERE source ='rpt_lidperformance_sum' and csv1='Total';
+	DELETE FROM temp_t_csv WHERE source ='rpt_lidperformance_sum' and csv1='Inflow';
+	DELETE FROM temp_t_csv WHERE source ='rpt_lidperformance_sum' and csv1='Subcatchment';
 
 	DELETE FROM temp_t_csv WHERE source ='rpt_subcatchwashoff_sum' and csv1='Subcatchment' and csv2='Washoff';
 	DELETE FROM temp_t_csv WHERE source ='rpt_subcatchwashoff_sum' and csv1='Subcatchment' and csv2='kg';
@@ -145,7 +167,7 @@ BEGIN
 	DELETE FROM temp_t_csv WHERE source ='rpt_flowclass_sum' and csv1='Conduit' and csv2='Length';
 
 	DELETE FROM temp_t_csv WHERE source ='rpt_condsurcharge_sum' and csv1='Conduit' and csv2='Surcharge';
-    DELETE FROM temp_csv WHERE source ='rpt_condsurcharge_sum' and csv2='conduits';
+	DELETE FROM temp_csv WHERE source ='rpt_condsurcharge_sum' and csv2='conduits';
 	DELETE FROM temp_t_csv WHERE source ='rpt_condsurcharge_sum' and csv1='Hours' and csv2='Hours';
 	DELETE FROM temp_t_csv WHERE source ='rpt_condsurcharge_sum' and csv1='Conduit' and csv2='Both';
 	DELETE FROM temp_t_csv WHERE source ='rpt_condsurcharge_sum' and csv1='Pollutant';
@@ -160,12 +182,17 @@ BEGIN
 	DELETE FROM temp_t_csv WHERE source ='rpt_pumping_sum' and csv1='Min' and csv2='Avg';
 	DELETE FROM temp_t_csv WHERE source ='rpt_pumping_sum' and csv1='Percent' and csv2='Number';
 	DELETE FROM temp_t_csv WHERE source ='rpt_pumping_sum' and csv1='Pump' and csv2='Utilized';
+
+	
 	
 	FOR rpt_rec IN SELECT * FROM temp_t_csv order by id
 	LOOP
 		i = 0;
 		IF rpt_rec.csv1 = 'WARNING' THEN
 			type_aux = 'rpt_warning_summary';
+			
+		--ELSIF rpt_rec.csv1 = 'LID' THEN
+			--type_aux = 'rpt_lidperformance_sum';
 		ELSE
 			type_aux = rpt_rec.source;
 		END IF;
@@ -219,12 +246,11 @@ BEGIN
 			ELSE
 				INSERT INTO rpt_arc (result_id, arc_id, resultdate, resulttime, flow, velocity, fullpercent) VALUES (v_result_id, v_id, rpt_rec.csv1, rpt_rec.csv2, rpt_rec.csv3::float, rpt_rec.csv4::float, rpt_rec.csv5::float);
 			END IF;
-			
+	
 		--there are still 3 empty fields on rpt_cat_results, where does the data come from? -- ok
 		ELSIF type_aux='rpt_runoff_quant' then 					
-			IF v_result_id NOT IN (SELECT result_id FROM rpt_runoff_quant) then
-				INSERT INTO rpt_runoff_quant(result_id) VALUES (v_result_id);
-			END IF;
+			INSERT INTO rpt_runoff_quant(result_id) VALUES (v_result_id)
+			ON CONFLICT (result_id) DO NOTHING;
 			
 			IF (rpt_rec.csv4 ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$') THEN
 				UPDATE rpt_runoff_quant set total_prec=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Total';
@@ -237,25 +263,20 @@ BEGIN
 				UPDATE rpt_runoff_quant set cont_error=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Continuity';
 			END IF;
 
-		ELSIF type_aux='rpt_flowrouting_cont' then 			 
-			IF v_result_id NOT IN (SELECT result_id FROM rpt_flowrouting_cont) then
-				INSERT INTO rpt_flowrouting_cont(result_id) VALUES (v_result_id);
-			END IF;
-					
-			UPDATE rpt_flowrouting_cont set dryw_inf=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='Dry Weather';
-			UPDATE rpt_flowrouting_cont set wetw_inf=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='Wet Weather';
-			UPDATE rpt_flowrouting_cont set ground_inf=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='Groundwater Inflow';
-			UPDATE rpt_flowrouting_cont set rdii_inf=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='RDII';
-			UPDATE rpt_flowrouting_cont set ext_inf=rpt_rec.csv4::numeric WHERE result_id=v_result_id 
-			AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='External Inflow';
-			UPDATE rpt_flowrouting_cont set ext_out=rpt_rec.csv4::numeric WHERE result_id=v_result_id 
-			AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='External Outflow';
-			UPDATE rpt_flowrouting_cont set int_out=rpt_rec.csv4::numeric WHERE result_id=v_result_id 
-			AND concat(rpt_rec.csv1,' ',rpt_rec.csv2)='Internal Outflow';
-			UPDATE rpt_flowrouting_cont set stor_loss=rpt_rec.csv4::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Storage Losses';
-			UPDATE rpt_flowrouting_cont set initst_vol=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Initial';
-			UPDATE rpt_flowrouting_cont set finst_vol=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Final';
-			UPDATE rpt_flowrouting_cont set cont_error=rpt_rec.csv5::numeric WHERE result_id=v_result_id AND rpt_rec.csv1='Continuity';
+			INSERT INTO rpt_flowrouting_cont(result_id) VALUES (v_result_id)
+			ON CONFLICT (result_id) DO NOTHING;
+
+			IF rpt_rec.csv1 ='Dry'THEN UPDATE rpt_flowrouting_cont set dryw_inf=rpt_rec.csv5::numeric WHERE result_id=v_result_id; END IF;
+			IF rpt_rec.csv1 ='Wet'THEN UPDATE rpt_flowrouting_cont set wetw_inf=rpt_rec.csv5::numeric WHERE result_id=v_result_id; END IF;
+			IF rpt_rec.csv1 ='Groundwater'THEN UPDATE rpt_flowrouting_cont set ground_inf=rpt_rec.csv4::numeric WHERE result_id=v_result_id; END IF;
+			IF rpt_rec.csv1 ='RDII'THEN UPDATE rpt_flowrouting_cont set rdii_inf=rpt_rec.csv4::numeric WHERE result_id=v_result_id ; END IF;
+			IF concat(rpt_rec.csv1,' ',rpt_rec.csv2)='External Inflow' THEN UPDATE rpt_flowrouting_cont set ext_inf=rpt_rec.csv4::numeric WHERE result_id=v_result_id; END IF;
+			IF concat(rpt_rec.csv1,' ',rpt_rec.csv2)='External Outflow' THEN UPDATE rpt_flowrouting_cont set ext_out=rpt_rec.csv4::numeric WHERE result_id=v_result_id; END IF;
+			IF concat(rpt_rec.csv1,' ',rpt_rec.csv2)='Internal Outflow' THEN UPDATE rpt_flowrouting_cont set int_out=rpt_rec.csv4::numeric WHERE result_id=v_result_id; END IF;
+			IF rpt_rec.csv1 ='Flooding'THEN UPDATE rpt_flowrouting_cont set int_out=rpt_rec.csv4::numeric WHERE result_id=v_result_id; END IF;
+			IF rpt_rec.csv1 ='Initial'THEN UPDATE rpt_flowrouting_cont set initst_vol=rpt_rec.csv5::numeric WHERE result_id=v_result_id; END IF;
+			IF rpt_rec.csv1 ='Final'THEN UPDATE rpt_flowrouting_cont set finst_vol=rpt_rec.csv5::numeric WHERE result_id=v_result_id; END IF;
+
 			
 		ELSIF type_aux='rpt_high_conterrors' AND rpt_rec.csv1 = 'Node' then 
 			INSERT INTO rpt_high_conterrors(result_id, text)
@@ -288,6 +309,12 @@ BEGIN
 				rpt_rec.csv7::numeric,rpt_rec.csv8::numeric,rpt_rec.csv9::numeric,rpt_rec.csv10::numeric,rpt_rec.csv11::numeric,rpt_rec.csv12::numeric,
 				rpt_rec.csv13::numeric,rpt_rec.csv14::numeric);
 			END IF;
+
+		ELSIF type_aux='rpt_lidperformance_sum' then
+		
+			INSERT INTO rpt_lidperformance_sum(result_id, subc_id, lidco_id, tot_inflow, evap_loss, infil_loss, surf_outf, drain_outf, init_stor, final_stor, per_error)
+			VALUES  (v_result_id,rpt_rec.csv1,rpt_rec.csv2,rpt_rec.csv3::numeric,rpt_rec.csv4::numeric,rpt_rec.csv5::numeric,rpt_rec.csv6::numeric,rpt_rec.csv7::numeric,
+			rpt_rec.csv8::numeric,rpt_rec.csv9::numeric,rpt_rec.csv10::numeric);
 
 		ELSIF  type_aux='rpt_subcatchwashoff_sum' then 
 		

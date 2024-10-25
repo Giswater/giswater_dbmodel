@@ -101,7 +101,7 @@ BEGIN
 		v_sql := concat('SELECT ', v_feature_type, '_type FROM v_edit_', v_feature_type, ' WHERE ', v_feature_type, '_id = ''', v_feature_id, '''');
 		EXECUTE v_sql INTO v_current_featurecat_id;
 
-		
+
 		v_sql := concat('SELECT json_build_object(
 	    ''location_type'', location_type,
 	    ''function_type'', function_type,
@@ -110,7 +110,7 @@ BEGIN
 		) AS combined_data
 		FROM v_edit_', v_feature_type, ' WHERE ', v_feature_type, '_id = ''', v_feature_id, '''');
 		EXECUTE v_sql INTO v_feature_type_values;
-		
+
 		-- get default new feature type
 		SELECT id into v_new_featurecat_id_default FROM cat_feature WHERE parent_layer = v_table_name AND active is True AND id != v_current_featurecat_id  order by 1 limit 1;
 
@@ -132,11 +132,11 @@ BEGIN
         FOREACH aux_json IN ARRAY v_fields_array
         LOOP
             array_index := array_index + 1;
-			
+
 			if v_feature_type_values is not null then
 				field_value := (v_feature_type_values ->> (aux_json->>'columnname'));
 			end if;
-			
+
             IF (aux_json->>'columnname') = 'feature_type' THEN
 				field_value := v_current_featurecat_id;
             END IF;
@@ -179,7 +179,7 @@ BEGIN
             END IF;
 
 			IF (aux_json->>'columnname') = 'location_type' THEN
-				
+
 			 	select array_agg(location_type order by location_type nulls first) into v_locations from (
 				select location_type from man_type_location where lower(feature_type) = v_feature_type
 				union select null)a;

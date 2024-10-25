@@ -11,7 +11,6 @@ RETURNS json AS
 $BODY$
 
 
-
 /*EXAMPLE
 SELECT SCHEMA_NAME.gw_fct_create_hydrology_scenario_empty($${"client":{"device":4, "infoType":1, "lang":"ES"}, "data":{"parameters":{"target":"1", "copyFrom":"2", "action":"DELETE-COPY"}}}$$)
 -- fid: 438
@@ -94,7 +93,7 @@ BEGIN
 
 	INSERT INTO cat_hydrology (name, infiltration, text, expl_id, active, log)
 	VALUES (v_name, v_infiltration, v_text, v_expl_id, v_active, concat('Created by ',current_user,' on ',substring(now()::text,0,20)))
-	ON CONFLICT DO NOTHING
+	ON CONFLICT (name) DO NOTHING
 	RETURNING hydrology_id INTO v_scenarioid;
 
 	IF v_scenarioid IS NULL THEN
@@ -102,8 +101,12 @@ BEGIN
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, null, 3, concat('ERROR: The hydrology scenario ( ',v_scenarioid,' ) already exists with proposed name ',v_name ,'. Please try another one.'));
 	ELSE
+		-- setting current dwf for user
+		UPDATE config_param_user SET value = v_scenarioid WHERE cur_user = current_user AND parameter = 'inp_options_hydrology_scenario';
 
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 1, 'The new dscenario have been created sucessfully');
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 1, concat('This new hydrology scenario is now your current scenario.'));
+
 	END IF;
 
 	-- insert spacers
