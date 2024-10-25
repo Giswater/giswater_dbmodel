@@ -37,6 +37,7 @@ DELETE FROM inp_pump;
 
 UPDATE cat_mat_arc SET n = null;
 
+DELETE FROM inp_dwf;
 DELETE FROM inp_pattern;
 DELETE FROM inp_curve;
 
