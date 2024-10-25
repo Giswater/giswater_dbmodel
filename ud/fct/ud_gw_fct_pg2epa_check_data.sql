@@ -18,8 +18,8 @@ $BODY$
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":127}}}$$)-- when is called from go2epa_main
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":101}}}$$)-- when is called from checkproject
 
--- fid: main: 255,
-	other: 106,107,111,113,164,175,187,188,294,295,379,427,430,440,480, 522
+-- fid: main: 225,
+	other: 106,107,111,113,164,175,187,188,294,295,379,427,430,440,480,522,528,529,530
 
 SELECT * FROM audit_check_data WHERE fid = v_fid
 
@@ -67,6 +67,7 @@ BEGIN
 		CREATE TEMP TABLE temp_anl_arc (LIKE SCHEMA_NAME.anl_arc INCLUDING ALL);
 		CREATE TEMP TABLE temp_anl_node (LIKE SCHEMA_NAME.anl_node INCLUDING ALL);
 		CREATE TEMP TABLE temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
+		CREATE TEMP TABLE temp_anl_polygon (LIKE SCHEMA_NAME.anl_polygon INCLUDING ALL);
 		
 		-- Header
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, v_result_id, 4, concat('DATA QUALITY ANALYSIS ACORDING EPA RULES'));
@@ -373,7 +374,7 @@ BEGIN
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id, 3, '106' ,concat('WARNING-106 (anl_node): There is/are ',v_count,' nodes with less proximity than minimum configured (',v_nodetolerance,').'),v_count);
+		VALUES (v_fid, v_result_id, 2, '106' ,concat('WARNING-106 (anl_node): There is/are ',v_count,' nodes with less proximity than minimum configured (',v_nodetolerance,').'),v_count);
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 1, '106','INFO: All nodes has the minimum distance among them acording with the configured value ',v_count);
@@ -557,9 +558,9 @@ BEGIN
 	SELECT q1.* FROM query q1 
 	LEFT JOIN 
 	(SELECT * FROM (
-	SELECT subc_id, outlet_id, the_geom from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
+	SELECT 440, subc_id, outlet_id, the_geom from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
 	UNION
-	SELECT subc_id, unnest(outlet_id::text[]), the_geom AS outlet_id from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text)a)b
+	SELECT 440, subc_id, unnest(outlet_id::text[]), the_geom AS outlet_id from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text)a)b
 	USING (outlet_id)
 	WHERE b.subc_id IS NULL';
 
@@ -580,26 +581,27 @@ BEGIN
 	END IF;	
 
 	RAISE NOTICE '24 - Check percentage of arcs with custom_length values';
-	WITH cust_len AS (SELECT count(*) FROM v_edit_arc WHERE custom_length IS NOT NULL), arcs AS (SELECT count(*) FROM v_edit_arc)
-	SELECT cust_len.count::numeric / arcs.count::numeric *100 INTO v_count FROM arcs, cust_len;
+	SELECT count(*) FROM v_edit_arc into v_count;
 
-	IF v_count > (SELECT json_extract_path_text(value::json,'customLength','maxPercent')::NUMERIC FROM config_param_system WHERE parameter = 'epa_outlayer_values') THEN
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '482', 2, concat('WARNING-482: Over ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
-	ELSIF v_count=0 THEN
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
+	IF v_count>0 then
+		WITH cust_len AS (SELECT count(*) FROM v_edit_arc WHERE custom_length IS NOT NULL), arcs AS (SELECT count(*) FROM v_edit_arc)
+		SELECT cust_len.count::numeric / arcs.count::numeric *100 INTO v_count FROM arcs, cust_len;
+	
+		IF v_count > (SELECT json_extract_path_text(value::json,'customLength','maxPercent')::NUMERIC FROM config_param_system WHERE parameter = 'epa_outlayer_values') THEN
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '482', 2, concat('WARNING-482: Over ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
+		ELSIF v_count=0 THEN
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
+		ELSE
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, '482', 1, concat('INFO: Less then ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
+		END IF;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, '482', 1, concat('INFO: Less then ',round(v_count::numeric,2),' percent of arcs have value on custom_length.'),round(v_count::numeric,2));
+		VALUES (v_fid, '482', 1, 'INFO: No arcs have value on custom_length.',round(v_count::numeric,2));
 	END IF;
 	v_count=0;
-
-	IF v_result_id IS NULL THEN
-		UPDATE temp_audit_check_data SET result_id = table_id WHERE cur_user="current_user"() AND fid=v_fid AND result_id IS NULL;
-		UPDATE temp_audit_check_data SET table_id = NULL WHERE cur_user="current_user"() AND fid=v_fid; 
-	END IF;
-	
 
 	RAISE NOTICE '25 - Check shape with null values on arc catalog';
 	SELECT count(*) INTO v_count FROM cat_arc WHERE shape is null;
@@ -624,22 +626,97 @@ BEGIN
 	v_count=0;
 
 	RAISE NOTICE '27 - Check if outfalls have more than 1 connected arc';
-	with n as (select node_id from node, arc where node.epa_type='OUTFALL' and st_dwithin(node.the_geom, arc.the_geom, 0.01) group by node_id having count(node_id)>1)
-	select count(*) from n into v_count;
+	select count(*) into v_count 
+	from (select node_2 from v_edit_inp_conduit a join v_edit_inp_outfall n on node_2 = node_id group by node_2 having count(*) > 1)a;   
 	
 	IF v_count>0 then
-		INSERT INTO temp_audit_check_data (result_id, criticity, error_message, fcount)
-		VALUES ('522', 3, concat('ERROR-522: There is/are ',v_count,' outfalls with more than 1 arc connected.'),v_count);
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '522', 3, concat('ERROR-522: There is/are ',v_count,' outfalls with more than 1 arc connected.'),v_count);
 		
 		EXECUTE 'INSERT INTO temp_anl_node (fid, node_id, descript, the_geom, expl_id, nodecat_id) 
 		select 522, node.node_id, ''Outfall with more than 1 arc'', node.the_geom, node.expl_id, node.nodecat_id 
 		from node, arc where node.epa_type=''OUTFALL'' and st_dwithin(node.the_geom, arc.the_geom, 0.01) 
 		group by node.node_id having count(node.node_id)>1';
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '522', 1, 'INFO: All outlets have a valid number of connected arcs.',v_count);
 	END IF;
 	v_count=0;
 
+	RAISE NOTICE '528 - Check if outlet_id exists in v_edit_junction (if outlet_id is a node) or in v_edit_inp_subcatchment (if outlet_id is a subcathment)';
+	
+	v_querytext = '(select outlet_id from v_edit_inp_subc2outlet
+			LEFT JOIN (
+			select node_id from v_edit_inp_junction 
+			UNION select node_id from v_edit_inp_outfall
+			UNION select node_id from v_edit_inp_storage 
+			UNION select node_id from v_edit_inp_netgully
+			) a on outlet_id = node_id
+			where outlet_type in (''JUNCTION'') and node_id is null
+			union
+			select a.outlet_id from v_edit_inp_subc2outlet a LEFT JOIN v_edit_inp_subcatchment s on a.outlet_id = s.subc_id
+			where outlet_type = ''SUBCATCHMENT'' and s.subc_id is null)';
+	
+	EXECUTE concat('SELECT count(*) FROM ',v_querytext, 'a') INTO v_count;
+	
+	IF v_count>0 then
+		EXECUTE concat ('INSERT INTO temp_anl_polygon (fid, pol_id, descript, the_geom) 
+		SELECT 528, subc_id, ''Non-existing outlet_id related to subcatchment'', the_geom from v_edit_inp_subcatchment where outlet_id in ', v_querytext);
+		
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '528', 3, concat('ERROR-528 (anl_node): There is/are ',v_count,' non-existing node_id or subc_id as an outlet_id.'),v_count);
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '528', 1, 'INFO: All subcatchments have an existing outlet_id',v_count);
+	END IF;
+	v_count=0;
+	
+	RAISE NOTICE '529 - Check null values on inp_weir';
+	v_querytext='(select arc_id, weir_type, cd, geom1, geom2, offsetval from v_edit_inp_weir 
+	where weir_type is null or cd is null or geom1 is null or geom2 is null or offsetval is null)';
 
+	execute concat('select count(*) from ', v_querytext, 'a') into v_count;
+	
+	IF v_count>0 then 
+		EXECUTE 'INSERT INTO temp_anl_arc (fid, arc_id, descript, the_geom) 
+		SELECT 529, arc_id, ''Missing values on some data of Inp Weir (weir_type, cd, geom1, geom2, offsetval)'', the_geom from v_edit_inp_weir 
+		where weir_type is null or cd is null or geom1 is null or geom2 is null or offsetval is null';
+		
+	
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '529', 3, concat('ERROR-529: There is/are ',v_count,' null values on table Inp Weir (weir_type, cd, geom1, geom2, offsetval)'), v_count);
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '529', 1, 'INFO: No missing data on Inp Weir.', v_count);
+	END IF;
+	v_count=0;
+	
+	
+	RAISE NOTICE '530 - Check null values on inp_orifice';
+	v_querytext='(select ori_type, geom1, offsetval from v_edit_inp_orifice
+	where ori_type is null or geom1 is null or offsetval is null)';
 
+	execute concat('select count(*) from ', v_querytext, 'a') into v_count;
+	
+	IF v_count>0 then 
+	
+		EXECUTE 'INSERT INTO temp_anl_arc (fid, arc_id, descript, the_geom) 
+		SELECT 530, arc_id, ''Missing values on some data of Inp Orifice (ori_type, geom1, offsetval)'', the_geom from v_edit_inp_orifice
+		where ori_type is null or geom1 is null or offsetval is null';
+	
+	
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '530', 3, concat('ERROR-530: There is/are ',v_count,' null values on table Inp Orifice (ori_type, geom1, offsetval)'), v_count);
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '530', 1, 'INFO: No missing data on Inp Orifice.', v_count);
+	END IF;
+	v_count=0;
+
+	IF v_result_id IS NULL THEN
+		UPDATE temp_audit_check_data SET result_id = table_id WHERE cur_user="current_user"() AND fid=v_fid AND result_id IS NULL;
+		UPDATE temp_audit_check_data SET table_id = NULL WHERE cur_user="current_user"() AND fid=v_fid; 
+	END IF;
 	
 	-- Removing isaudit false sys_fprocess
 	FOR v_record IN SELECT * FROM sys_fprocess WHERE isaudit is false
@@ -656,6 +733,10 @@ BEGIN
 	INSERT INTO temp_audit_check_data (fid, criticity, error_message) VALUES (v_fid, 2, '');
 	INSERT INTO temp_audit_check_data (fid, criticity, error_message) VALUES (v_fid, 1, ''); 
 
+	-- 101 - checkproject
+	-- 127 - go2epa main
+	-- 225 - triggered alone
+	
 	IF v_fid = 225 THEN
 			
 		DELETE FROM anl_arc WHERE fid =225 AND cur_user=current_user;
@@ -665,11 +746,10 @@ BEGIN
 		INSERT INTO anl_arc SELECT * FROM temp_anl_arc;
 		INSERT INTO anl_node SELECT * FROM temp_anl_node;
 		INSERT INTO audit_check_data SELECT * FROM temp_audit_check_data;
+		INSERT INTO anl_polygon SELECT * FROM temp_anl_polygon;
 
 	ELSIF  v_fid = 101 THEN 
 		UPDATE temp_audit_check_data SET fid = 225;
-		UPDATE temp_anl_arc SET fid = 225;
-		UPDATE temp_anl_node SET fid = 225;
 
 		INSERT INTO project_temp_anl_arc SELECT * FROM temp_anl_arc;
 		INSERT INTO project_temp_anl_node SELECT * FROM temp_anl_node;
@@ -680,7 +760,7 @@ BEGIN
 	-- info
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
 	FROM (SELECT error_message as message FROM temp_audit_check_data WHERE cur_user="current_user"() 
-	AND fid=255 order by criticity desc, id asc) row;
+	AND fid=225 order by criticity desc, id asc) row;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 	
@@ -694,7 +774,7 @@ BEGIN
 	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
-	FROM (SELECT DISTINCT ON (node_id) id, node_id, nodecat_id, state, expl_id, descript,fid, the_geom
+	FROM (SELECT node_id, nodecat_id, state, expl_id, descript,fid, the_geom
 	FROM  temp_anl_node WHERE cur_user="current_user"() AND fid IN (106, 107, 111, 113, 164, 187, 294, 379)) row) features;
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_point = concat ('{"geometryType":"Point",  "features":',v_result, '}'); 
@@ -708,13 +788,24 @@ BEGIN
 	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
 	'properties', to_jsonb(row) - 'the_geom'
 	) AS feature
-	FROM (SELECT DISTINCT ON (arc_id) id, arc_id, arccat_id, state, expl_id, descript, the_geom, fid
-	FROM  temp_anl_arc WHERE cur_user="current_user"() AND fid IN (188, 284, 295, 427,430, 522)) row) features;
+	FROM (SELECT arc_id, arccat_id, state, expl_id, descript, the_geom, fid
+	FROM  temp_anl_arc WHERE cur_user="current_user"() AND fid IN (188, 284, 295, 427,430, 522, 529, 530)) row) features;
 
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_line = concat ('{"geometryType":"LineString", "features":',v_result,'}'); 
 
-	
+	-- polygon
+	v_result = null;
+	SELECT jsonb_agg(features.feature) INTO v_result
+	FROM (
+	SELECT jsonb_build_object(
+	'type',       'Feature',
+	'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+	'properties', to_jsonb(row) - 'the_geom'
+	) AS feature
+	FROM (SELECT pol_id, pol_type, state, expl_id, descript, the_geom, fid
+	FROM  temp_anl_polygon WHERE cur_user="current_user"() AND fid IN (528)) row) features;
+
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_polygon = concat ('{"geometryType":"Polygon", "features":',v_result, '}');
 
@@ -729,6 +820,7 @@ BEGIN
 		DROP TABLE IF EXISTS temp_anl_arc;
 		DROP TABLE IF EXISTS temp_anl_node ;
 		DROP TABLE IF EXISTS temp_audit_check_data;
+		DROP TABLE IF EXISTS temp_anl_polygon;
 	END IF;
 
 	--  Return
@@ -741,11 +833,6 @@ BEGIN
 				'}'||
 			'}'||
 		'}')::json, 2431, null, null, null);
-
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

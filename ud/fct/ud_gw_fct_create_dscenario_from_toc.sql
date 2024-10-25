@@ -17,6 +17,10 @@ SELECT SCHEMA_NAME.gw_fct_create_dscenario_from_toc($${"client":{"device":4, "la
 "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]}, 
 "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{"name":"test", "type":"CONDUIT"}}}$$);
 
+SELECT SCHEMA_NAME.gw_fct_create_dscenario_from_toc($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, 
+"feature":{"tableName":"v_edit_inp_storage", "featureType":"NODE", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, 
+"selectionMode":"wholeSelection","parameters":{"name":"storage", "type":"STORAGE", "exploitation":"1", "descript":"test"}, "aux_params":null}}$$);
+
 */
 
 
@@ -63,9 +67,6 @@ BEGIN
 
 	-- get user parameters
 	v_lidco :=  (SELECT value FROM config_param_user WHERE parameter = 'epa_lidco_vdefault' AND cur_user = current_user);
-	IF v_lidco IS NULL THEN 
-		v_lidco := (SELECT DISTINCT lidco_id FROM inp_lid LIMIT 1);
-	END IF;
 	
 	-- get input parameters
 	v_name :=  ((p_data ->>'data')::json->>'parameters')::json->>'name';
@@ -156,7 +157,7 @@ BEGIN
 			v_columns = v_scenarioid||', rg_id, form_type, intvl, scf, rgage_type, timser_id, fname, sta, units';
 	 		
 		ELSIF v_targettable = 'inp_dscenario_storage' THEN
-			v_columns = v_scenarioid||', node_id, storage_type, curve_id, a1, a2, a0, fevap, sh, hc, imd, y0, ysur, apond';
+			v_columns = v_scenarioid||', node_id, elev, ymax, storage_type, curve_id, a1, a2, a0, fevap, sh, hc, imd, y0, ysur, apond';
 
 	 	ELSIF v_targettable = 'inp_dscenario_treatment' THEN
 			v_columns = v_scenarioid||', node_id, poll_id, function';
@@ -164,7 +165,7 @@ BEGIN
 		ELSE 
 			INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '');
 			INSERT INTO audit_check_data (fid, result_id, criticity, error_message)	
-			VALUES (v_fid, null, 3, concat('ERROR: The table choosed does not fit with any epa dscenario. Please try another one.'));
+			VALUES (v_fid, null, 3, concat('ERROR: The table chosen does not fit with any epa dscenario. Please try another one.'));
 			v_finish = true;
 			
 			DELETE FROM cat_dscenario WHERE dscenario_id = v_scenarioid;
@@ -236,11 +237,6 @@ BEGIN
 		     ',"data":{ "info":'||v_result_info||
 			'}}'||
 	    '}')::json, 3042, null, null, null); 
-
-	-- manage exceptions
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

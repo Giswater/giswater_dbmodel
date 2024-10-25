@@ -32,7 +32,7 @@ SELECT SCHEMA_NAME.gw_fct_getreport($${"client":{"device":4, "lang":"en_US", "in
 
 SELECT SCHEMA_NAME.gw_fct_getreport($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "filter":[{"filterName": "code", "filterValue": "6"}, {"filterName": "dma_id", "filterValue": "5"}], "listId":"102"}}$$);
 
-SELECT SCHEMA_NAME.gw_fct_getreport($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":5367}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "filter":[{"filterName": "init", "filterValue": null}], "listId":"902"}}$$);
+SELECT SCHEMA_NAME.gw_fct_getreport($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "filter":[{"filterName": "init", "filterValue": null}], "listId":"902"}}$$);
 
 SELECT SCHEMA_NAME.gw_fct_getreport($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "filter":[{"filterName": "Exploitation", "filterValue": "expl_01", "filterSign": "=", "filterWithMissedColumn": null}, {"filterName": "Dma", "filterValue": "", "filterSign": "=", "filterWithMissedColumn": null}, {"filterName": "Period", "filterValue": "", "filterSign": "=", "filterWithMissedColumn": null}], "listId":"102"}}$$);
 
@@ -119,6 +119,10 @@ BEGIN
 			IF v_filtersign  IS NULL THEN
 				v_filtersign='=';
 			END IF;
+            
+			IF v_filtervalue = 'None' THEN
+				v_filtervalue = '';
+			END IF;
 			
 			IF v_filtername != '' AND v_filtervalue != '' THEN
 			
@@ -195,7 +199,7 @@ BEGIN
 
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+	RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 'SQLCONTEXT', v_error_context)::json;
 
 END;
 $BODY$

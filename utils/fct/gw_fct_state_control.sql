@@ -293,9 +293,35 @@ BEGIN
 				{"name":"get_selector","parameters":{"current_tab":"tab_psector"}}]} ,"user":"'||current_user||'","schema":"'||v_schemaname||'"}');		
 			END IF;
 
-			-- TODO: check for nodes in order to disconnect arcs
-			-- TODO: check for arcs in order to disconnect links and vnodes
+			IF feature_type_aux='NODE' AND v_old_state = 1 THEN
 
+				-- look for operative arcs related to node
+				SELECT count(*) INTO v_num_feature FROM (SELECT * FROM arc WHERE state = 1 AND node_1 = feature_id_aux UNION SELECT * FROM arc WHERE state = 1 AND node_2 = feature_id_aux)a;
+				IF v_num_feature > 0 THEN 
+					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+					"data":{"message":"3258", "function":"2130","debug_msg":null, "is_process":true}}$$);';
+				END IF;
+			
+			ELSIF feature_type_aux='ARC' AND v_old_state = 1 THEN
+
+				-- look for operative connecs related arc
+				SELECT count(*) INTO v_num_feature FROM connec WHERE state = 1 AND arc_id = feature_id_aux;
+				IF v_num_feature> 0 THEN 
+					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+					"data":{"message":"3254", "function":"2130","debug_msg":null, "is_process":true}}$$);';
+				END IF;
+
+				-- look for operative gullies related arc
+				IF v_project_type = 'UD' THEN
+				
+					SELECT count(*) INTO v_num_feature FROM gully WHERE state = 1 AND arc_id = feature_id_aux;
+					IF v_num_feature > 0 THEN 
+						EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+						"data":{"message":"3256", "function":"2130","debug_msg":null, "is_process":true}}$$);';
+					END IF;
+				END IF;
+			END IF;
+			
 		ELSIF state_aux<2 AND v_old_state=2 THEN
 
 			-- check user's role

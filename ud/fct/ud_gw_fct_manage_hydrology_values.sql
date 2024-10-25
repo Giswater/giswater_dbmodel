@@ -61,6 +61,8 @@ BEGIN
 
 	IF v_sectors = -999 THEN
 		SELECT array_agg(sector_id) INTO v_sector_list FROM  sector JOIN selector_sector USING (sector_id) WHERE cur_user = current_user;
+	ELSIF v_sectors = -998 THEN
+		SELECT array_agg(sector_id) INTO v_sector_list from sector;
 	ELSE
 		SELECT array_agg(sector_id) INTO v_sector_list FROM  sector WHERE sector_id = v_sectors;
 	END IF;
@@ -201,10 +203,6 @@ BEGIN
 			     ',"data":{ "info":'||v_result_info||
 				'}}'||
 		    '}')::json, 3100, null, null, null); 
-
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

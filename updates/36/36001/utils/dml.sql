@@ -7,6 +7,7 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
+
 delete from config_form_fields where columnname in (
 select columnname from config_form_fields group by formname, columnname having count(*)>1
 ) and tabname='data';
@@ -144,10 +145,10 @@ INSERT INTO config_typevalue VALUES('layout_name_typevalue', 'lyt_hydro_val_2', 
 INSERT INTO config_typevalue VALUES('layout_name_typevalue', 'lyt_hydro_val_3', 'lyt_hydro_val_3','lytHydroVal3');
 
 INSERT INTO config_form_list(listname, query_text, device, listtype, listclass)
-    VALUES ('tbl_hydrometer_value', 'SELECT * FROM v_ui_hydroval_x_connec WHERE hydrometer_id IS NOT NULL', 4, 'tab', 'list');
+VALUES ('tbl_hydrometer_value', 'SELECT * FROM v_ui_hydroval_x_connec WHERE hydrometer_id IS NOT NULL', 4, 'tab', 'list');
 
 INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutname, layoutorder, "datatype", widgettype, "label", tooltip, placeholder, ismandatory, isparent, iseditable, isautoupdate, isfilter, dv_querytext, dv_orderby_id, dv_isnullvalue, dv_parent_id, dv_querytext_filterc, stylesheet, widgetcontrols, widgetfunction, linkedobject, hidden, web_layoutorder) 
-    VALUES('connec', 'form_feature', 'hydro_val', 'cat_period_id', 'lyt_hydro_val_1', 0, 'string', 'typeahead', 'Cat period filter:', NULL, NULL, false, false, true, false, true, 'SELECT id, id as idval FROM ext_cat_period AS t1 ORDER BY idval', NULL, true, NULL, 'WHERE connec_id ', NULL, NULL, '{"functionName": "filter_table", "parameters":{}}'::json, 'tbl_hydrometer_value', false, 1);
+    VALUES('connec', 'form_feature', 'hydro_val', 'cat_period_id', 'lyt_hydro_val_1', 0, 'string', 'typeahead', 'Cat period filter:', NULL, NULL, false, false, true, false, true, 'SELECT id, id as idval FROM ext_cat_period AS t1', NULL, true, NULL, 'WHERE connec_id ', NULL, NULL, '{"functionName": "filter_table", "parameters":{}}'::json, 'tbl_hydrometer_value', false, 1);
 INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutname, layoutorder, "datatype", widgettype, "label", tooltip, placeholder, ismandatory, isparent, iseditable, isautoupdate, isfilter, dv_querytext, dv_orderby_id, dv_isnullvalue, dv_parent_id, dv_querytext_filterc, stylesheet, widgetcontrols, widgetfunction, linkedobject, hidden, web_layoutorder) 
     VALUES('connec', 'form_feature', 'hydro_val', 'hydrometer_customer_code', 'lyt_hydro_val_1', 2, 'string', 'typeahead', 'Customer code:', NULL, NULL, false, false, true, false, true, 'SELECT hydrometer_customer_code as id, hydrometer_customer_code as idval FROM v_rtc_hydrometer ', NULL, true, NULL, 'WHERE connec_id ', NULL, NULL, '{"functionName": "filter_table", "parameters":{}}'::json, 'tbl_hydrometer_value', false, 2);
 INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutname, layoutorder, widgettype, ismandatory, isparent, iseditable, isautoupdate)
@@ -417,13 +418,13 @@ INSERT INTO sys_function(id, function_name, project_type, function_type, input_p
 VALUES(3232, 'gw_trg_dscenario_demand_feature', 'ws', 'function trigger', NULL, NULL, 'Trigger that controls if node or connec set as feature_id exists on inventory tables', 'role_epa', NULL, 'core');
 
 INSERT INTO sys_message(id, error_message, hint_message, log_level, show_user, project_type, "source")
-VALUES(3230, 'Inserted feature_id does not exist on node/connec table', 'Review your data', 2, true, 'utils', 'core');
+VALUES(3230, 'Inserted feature_id does not exist on node/connec table', 'Review your data', 2, true, 'utils', 'core') ON CONFLICT DO NOTHING;
 
 INSERT INTO config_param_system("parameter", value, descript, "label", dv_querytext, dv_filterbyfield, isenabled, layoutorder, project_type, dv_isparent, isautoupdate, "datatype", widgettype, ismandatory, iseditable, dv_orderby_id, dv_isnullvalue, stylesheet, widgetcontrols, placeholder, standardvalue, layoutname)
 VALUES('edit_link_check_arcdnom', '{"status":false , "diameter":250}', 'If true, inserted links could not connect to arcs with diameter bigger or equal than the configured', 'Links check arc diameter', NULL, NULL, false, NULL, 'ws', NULL, NULL, 'json', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 INSERT INTO sys_message(id, error_message, hint_message, log_level, show_user, project_type, "source")
-VALUES(3232, 'It''s not possible to connect to this arc because it exceed the maximum diameter configured:', 'Connect to a smaller arc or change system configuration', 2, true, 'utils', 'core');
+VALUES(3232, 'It''s not possible to connect to this arc because it exceed the maximum diameter configured:', 'Connect to a smaller arc or change system configuration', 2, true, 'utils', 'core') ON CONFLICT DO NOTHING;
 
 UPDATE config_param_system
 SET value='{"rowsColor":true}'
@@ -480,7 +481,9 @@ UPDATE config_function SET id=3228 WHERE function_name='gw_fct_anl_node_proximit
 
 INSERT INTO sys_message(id, error_message, hint_message, log_level, show_user, project_type, "source")
 VALUES(3234, 'The inserted feature has a diferent exploitation than the psector',
-'Only features with the same exploitation as the psector are allowed', 2, true, 'utils', 'core');
+'Only features with the same exploitation as the psector are allowed', 2, true, 'utils', 'core')
+on conflict (id) do nothing;
+
 
 -- code reservation for gw_fct_setepacorporate_val
 --INSERT INTO sys_function(id) VALUES (3240);
@@ -752,4 +755,3 @@ INSERT INTO config_typevalue (typevalue,id,idval)
 INSERT INTO config_form_list
 (listname, query_text, device, listtype, listclass, vdefault, addparam)
 VALUES('om_visit_event_photo', 'SELECT  value as url FROM om_visit_event_photo WHERE id IS NOT NULL', 5, 'tab', 'iconList', '{"orderBy":"1", "orderType": "DESC"}'::json, NULL);
-

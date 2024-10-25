@@ -143,7 +143,7 @@ BEGIN
 		END IF;
 
 		-- Get feature
-		v_sql = concat('SELECT DISTINCT(layer_id), orderby+100 orderby, addparam->>''geomType'' as geomtype, lower(headertext) as feature_type FROM  ',quote_ident(v_config_layer),' JOIN cat_feature ON parent_layer=layer_id  ORDER BY orderby');
+		v_sql = concat('SELECT DISTINCT(layer_id), orderby+100 orderby, cl.addparam->>''geomType'' as geomtype, lower(headertext) as feature_type FROM  ',quote_ident(v_config_layer),' cl JOIN cat_feature cf ON parent_layer=layer_id  ORDER BY orderby');
 
 		FOR v_layer IN EXECUTE v_sql
 		loop
@@ -338,9 +338,7 @@ BEGIN
 					END IF;
 				END IF;
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'selectedId', COALESCE(field_value, ''));
-			ELSIF (aux_json->>'widgettype')='button' and json_extract_path_text(aux_json,'widgetcontrols','text') IS NOT NULL THEN
-				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'value', json_extract_path_text(aux_json,'widgetcontrols','text'));
-			ELSE
+			ELSIF (aux_json->>'widgettype') !='button' THEN
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'value', COALESCE(field_value, ''));
 			END IF;
 
@@ -413,10 +411,6 @@ BEGIN
 	      }
 	    }
 	  }')::JSON;
-
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_errcontext = pg_exception_context;
-	RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || ',"MSGERR": '|| to_json(v_msgerr::json ->> 'MSGERR') ||'}')::json;
 
 END;
 $function$

@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2578
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_getinfocrossection(json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getinfocrossection(json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getinfocrossection(p_data json)
   RETURNS json AS
 $BODY$
@@ -86,7 +86,7 @@ BEGIN
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN 
-    RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+    RETURN json_build_object('status', 'Failed','NOSQLERR', SQLERRM, 'version', v_version, 'SQLSTATE', SQLSTATE)::json;
 
 END;
 $BODY$

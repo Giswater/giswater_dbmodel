@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2602
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_gettypeahead(p_data json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_gettypeahead(p_data json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_gettypeahead(p_data json)
   RETURNS json AS
 $BODY$
@@ -106,7 +106,7 @@ BEGIN
 
 	--EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+	RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 'SQLCONTEXT', v_error_context)::json;
 
 
 	

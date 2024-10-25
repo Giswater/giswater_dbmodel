@@ -198,7 +198,7 @@ BEGIN
 	   FROM inp_coverage
 	     JOIN v_edit_inp_subcatchment ON inp_coverage.subc_id::text = v_edit_inp_subcatchment.subc_id::text
 	     LEFT JOIN ( SELECT DISTINCT ON (a.subc_id) a.subc_id,
-		    v_node.node_id
+		    v_edit_node.node_id
 		   FROM ( SELECT unnest(inp_subcatchment.outlet_id::text[]) AS node_array,
 			    inp_subcatchment.subc_id,
 			    inp_subcatchment.outlet_id,
@@ -233,7 +233,7 @@ BEGIN
 			    inp_subcatchment.descript
 			   FROM inp_subcatchment
 			  WHERE "left"(inp_subcatchment.outlet_id::text, 1) = '{'::text) a
-		     JOIN v_node ON v_node.node_id::text = a.node_array) b ON v_edit_inp_subcatchment.subc_id::text = b.subc_id::text;
+		     JOIN v_edit_node ON v_edit_node.node_id::text = a.node_array) b ON v_edit_inp_subcatchment.subc_id::text = b.subc_id::text;
 
 
 	 CREATE OR REPLACE TEMP VIEW vi_t_dividers AS
@@ -351,7 +351,7 @@ BEGIN
 	   FROM v_edit_inp_subcatchment
 	     JOIN inp_groundwater ON inp_groundwater.subc_id::text = v_edit_inp_subcatchment.subc_id::text
 	     LEFT JOIN ( SELECT DISTINCT ON (a.subc_id) a.subc_id,
-		    v_node.node_id
+		    v_edit_node.node_id
 		   FROM ( SELECT unnest(inp_subcatchment.outlet_id::text[]) AS node_array,
 			    inp_subcatchment.subc_id,
 			    inp_subcatchment.outlet_id,
@@ -386,7 +386,7 @@ BEGIN
 			    inp_subcatchment.descript
 			   FROM inp_subcatchment
 			  WHERE "left"(inp_subcatchment.outlet_id::text, 1) = '{'::text) a
-		     JOIN v_node ON v_node.node_id::text = a.node_array) b ON v_edit_inp_subcatchment.subc_id::text = b.subc_id::text;
+		     JOIN v_edit_node ON v_edit_node.node_id::text = a.node_array) b ON v_edit_inp_subcatchment.subc_id::text = b.subc_id::text;
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_gully AS
@@ -407,21 +407,6 @@ BEGIN
 	    temp_t_gully.efficiency
 	   FROM temp_t_gully;
 
-
-	CREATE OR REPLACE TEMP VIEW vi_t_gully2node AS
-	 SELECT a.gully_id,
-	    n.node_id,
-	    st_makeline(a.the_geom, n.the_geom) AS the_geom
-	   FROM ( SELECT g.gully_id,
-			CASE
-			    WHEN g.pjoint_type::text = 'NODE'::text THEN g.pjoint_id
-			    ELSE a_1.node_2
-			END AS node_id,
-		    a_1.expl_id,
-		    g.the_geom
-		   FROM v_edit_inp_gully g
-		     LEFT JOIN arc a_1 USING (arc_id)) a
-	     JOIN node n USING (node_id);
 
 	CREATE OR REPLACE TEMP VIEW vi_t_gwf AS
 	 SELECT inp_groundwater.subc_id,
@@ -926,7 +911,7 @@ BEGIN
 		   FROM ( SELECT unnest(inp_subcatchment.outlet_id::character varying[]) AS outlet_id,
 			    inp_subcatchment.subc_id
 			   FROM inp_subcatchment
-			     JOIN temp_node ON inp_subcatchment.outlet_id::text = temp_node.node_id::text
+			     LEFT JOIN temp_t_node ON inp_subcatchment.outlet_id::text = temp_t_node.node_id::text
 			  WHERE "left"(inp_subcatchment.outlet_id::text, 1) = '{'::text
 			UNION
 			 SELECT inp_subcatchment.outlet_id,
@@ -1030,8 +1015,8 @@ BEGIN
 	    cat_arc_shape.epa AS shape,
 	    cat_arc.geom1::text AS other1,
 	    cat_arc.geom2::text AS other2,
-	    cat_arc.geom3::text AS other3,
-	    cat_arc.geom4::text AS other4,
+	    coalesce(cat_arc.geom3::text,'0') AS other3,
+	    coalesce (cat_arc.geom4::text,'0') AS other4,
 	    temp_t_arc.barrels AS other5,
 	    temp_t_arc.culvert::text AS other6
 	   FROM temp_t_arc
@@ -1058,8 +1043,8 @@ BEGIN
 	    temp_t_arc_flowregulator.shape,
 	    temp_t_arc_flowregulator.geom1::text AS other1,
 	    temp_t_arc_flowregulator.geom2::text AS other2,
-	    temp_t_arc_flowregulator.geom3::text AS other3,
-	    temp_t_arc_flowregulator.geom4::text AS other4,
+	    coalesce(temp_t_arc_flowregulator.geom3::text,'0') AS other3,
+	    coalesce(temp_t_arc_flowregulator.geom4::text,'0') AS other4,
 	    NULL::integer AS other5,
 	    NULL::text AS other6
 	   FROM temp_t_arc_flowregulator
@@ -1102,7 +1087,6 @@ BEGIN
 	     JOIN (select pattern_id FROM vi_t_aquifers UNION select monthly_adj FROM vi_t_adjustments UNION select pattern_id FROM vi_t_inflows UNION 
 		  select pat1 FROM vi_t_dwf UNION select pat2 FROM vi_t_dwf UNION select pat3 FROM vi_t_dwf UNION select pat4 FROM vi_t_dwf) a USING (pattern_id)  
 	     WHERE p.active AND p.expl_id = s.expl_id AND s.cur_user = "current_user"()::text 
-		 WHERE p.active AND p.expl_id = s.expl_id AND s.cur_user = "current_user"()::text 
 	     union 
 	      SELECT p.pattern_id,
 	    p.pattern_type,
@@ -1282,7 +1266,11 @@ BEGIN
 	FOR rec_table IN SELECT * FROM config_fprocess WHERE fid=v_fid order by orderby
 	LOOP
 		-- insert header
-		IF rec_table.tablename IN ('vi_t_gully','vi_t_grate','vi_t_link','vi_t_lxsections') AND v_exportmode = 1 THEN
+		IF rec_table.tablename IN ('vi_t_gully') AND v_exportmode = 1 THEN
+			-- nothing because this targets does not to be exported
+
+		ELSIF rec_table.tablename IN ('vi_t_subareas', 'vi_t_subcatchments', 'vi_t_infiltration', 'vi_t_raingages', 'vi_t_landuses', 'vi_t_coverages', 'vi_t_buildup', 'vi_t_washoff', 
+		'vi_t_lid_controls', 'vi_t_lid_usage', 'vi_t_snowpacks') AND v_exportmode = 2 THEN
 			-- nothing because this targets does not to be exported
 
 		ELSE
@@ -1397,7 +1385,6 @@ BEGIN
 	DROP VIEW IF EXISTS vi_t_files;
 	DROP VIEW IF EXISTS vi_t_groundwater;
 	DROP VIEW IF EXISTS vi_t_gully;
-	DROP VIEW IF EXISTS vi_t_gully2node;
 	DROP VIEW IF EXISTS vi_t_gwf;
 	DROP VIEW IF EXISTS vi_t_hydrographs;
 	DROP VIEW IF EXISTS vi_t_infiltration;

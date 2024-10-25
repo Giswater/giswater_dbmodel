@@ -151,12 +151,12 @@ BEGIN
 	END IF;     
 
 	INSERT INTO om_mincut_valve (result_id, node_id, unaccess, closed, broken, the_geom) 
-	SELECT result_id_arg, node.node_id, false::boolean, closed, broken, node.the_geom
-	FROM v_om_mincut_selected_valve
-	JOIN node on node.node_id=v_om_mincut_selected_valve.node_id
-	JOIN exploitation ON node.expl_id=exploitation.expl_id
-	WHERE macroexpl_id=macroexpl_id_arg;
-
+	SELECT result_id_arg, n.node_id, false::boolean, closed, broken, n.the_geom
+	FROM cat_feature_node f
+	JOIN v_edit_node n on n.node_type=id
+	JOIN man_valve USING (node_id)
+	WHERE graph_delimiter = 'MINSECTOR';
+	
 	IF v_debug THEN
 		RAISE NOTICE '6-Identify unaccess valves';
 	END IF;
@@ -220,7 +220,7 @@ BEGIN
 					
 				ELSE
 					-- Check if extreme if being a inlet
-					SELECT COUNT(*) INTO controlValue FROM config_graph_inlet WHERE node_id = node_1_aux;
+					SELECT COUNT(*) INTO controlValue FROM config_graph_mincut WHERE node_id = node_1_aux;
 				
 					IF controlValue = 0 THEN
 						-- Compute the tributary area using DFS
@@ -248,7 +248,7 @@ BEGIN
 					END IF;
 				ELSE
 					-- Check if extreme if being a inlet
-					SELECT COUNT(*) INTO controlValue FROM config_graph_inlet WHERE node_id = node_2_aux;
+					SELECT COUNT(*) INTO controlValue FROM config_graph_mincut WHERE node_id = node_2_aux;
 					IF controlValue = 0 THEN
 						-- Compute the tributary area using DFS
 						PERFORM gw_fct_mincut_engine(node_2_aux, result_id_arg);	
@@ -319,17 +319,17 @@ BEGIN
 	INSERT INTO om_mincut_hydrometer (result_id, hydrometer_id)
 	SELECT result_id_arg,rtc_hydrometer_x_connec.hydrometer_id FROM rtc_hydrometer_x_connec 
 	JOIN om_mincut_connec ON rtc_hydrometer_x_connec.connec_id=om_mincut_connec.connec_id 
-	JOIN v_rtc_hydrometer ON v_rtc_hydrometer.hydrometer_id=rtc_hydrometer_x_connec.hydrometer_id
-	JOIN v_edit_connec ON om_mincut_connec.connec_id=v_edit_connec.connec_id
-	WHERE result_id=result_id_arg AND v_edit_connec.is_operative=TRUE AND v_rtc_hydrometer.feature_id=om_mincut_connec.connec_id;
+	JOIN connec ON om_mincut_connec.connec_id=connec.connec_id
+	JOIN value_state_type v ON state_type = v.id
+	WHERE result_id=result_id_arg AND v.is_operative=TRUE AND rtc_hydrometer_x_connec.connec_id=om_mincut_connec.connec_id;
 
 	-- insert hydrometer from node
 	INSERT INTO om_mincut_hydrometer (result_id, hydrometer_id)
 	SELECT result_id_arg,rtc_hydrometer_x_node.hydrometer_id FROM rtc_hydrometer_x_node 
 	JOIN om_mincut_node ON rtc_hydrometer_x_node.node_id=om_mincut_node.node_id 
-	JOIN v_rtc_hydrometer ON v_rtc_hydrometer.hydrometer_id=rtc_hydrometer_x_node.hydrometer_id
-	JOIN v_edit_node ON om_mincut_node.node_id=v_edit_node.node_id
-	WHERE result_id=result_id_arg AND v_edit_node.is_operative=TRUE AND v_rtc_hydrometer.feature_id=om_mincut_node.node_id;
+	JOIN node ON om_mincut_node.node_id=node.node_id
+	JOIN value_state_type v ON state_type = v.id
+	WHERE result_id=result_id_arg AND v.is_operative=TRUE AND rtc_hydrometer_x_node.node_id=om_mincut_node.node_id;
 
 	-- fill connnec & hydrometer details on om_mincut.output
 	-- count arcs
@@ -424,7 +424,7 @@ BEGIN
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json; 
+	RETURN json_build_object('status', 'Failed','NOSQLERR', SQLERRM, 'version', v_version, 'SQLSTATE', SQLSTATE)::json; 
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

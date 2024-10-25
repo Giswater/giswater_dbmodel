@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2824
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_getdimensioning(p_data json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getdimensioning(p_data json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getdimensioning(p_data json)
   RETURNS json AS
 $BODY$
@@ -143,7 +143,7 @@ BEGIN
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN 
-	RETURN ('{"status":"Failed","message":' || to_json(SQLERRM) || ', "version":'|| v_version ||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM),  'version', v_version, 'SQLSTATE', SQLSTATE)::json;
 
 END;
 $BODY$

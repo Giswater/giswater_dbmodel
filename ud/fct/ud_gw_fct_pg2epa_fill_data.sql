@@ -8,7 +8,7 @@ This version of Giswater is provided by Giswater Association
 
 DROP FUNCTION IF EXISTS "SCHEMA_NAME".gw_fct_pg2epa_fill_data(varchar);
 CREATE OR REPLACE FUNCTION "SCHEMA_NAME".gw_fct_pg2epa_fill_data(result_id_var varchar)
-RETURNS integer AS 
+RETURNS integer AS
 $BODY$
 
 /*
@@ -20,7 +20,7 @@ select * from temp_t_arc
 	select * from temp_t_node where epa_type = 'DIVIDER'
 
 
-*/ 
+*/
 
 -- fid: 113
 
@@ -52,7 +52,7 @@ BEGIN
 	v_isoperative = (SELECT value::json->>'onlyIsOperative' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
 
 	v_networkmode = (SELECT value FROM config_param_user WHERE parameter='inp_options_networkmode' AND cur_user=current_user);
-	
+
 	IF v_rainfall IS NOT NULL THEN
 		UPDATE raingage SET timser_id=v_rainfall, rgage_type='TIMESERIES' WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user=current_user);
 	END IF;
@@ -75,8 +75,11 @@ BEGIN
 	FROM selector_sector, node
 		LEFT JOIN v_edit_node USING (node_id) -- we need to use v_edit_node to work with sys_* fields
 		JOIN inp_junction ON node.node_id=inp_junction.node_id
-		JOIN (SELECT node_1 AS node_id FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||
-		v_statetype ||' UNION SELECT node_2 FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||v_statetype ||')a ON node.node_id=a.node_id
+		JOIN (
+		SELECT node_1 AS node_id FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||' UNION 
+		SELECT node_2 FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||')a ON node.node_id=a.node_id
 	UNION
 	SELECT '||quote_literal(result_id_var)||',
 	node.node_id, sys_top_elev, sys_ymax, v_edit_node.sys_elev, node.node_type, node.nodecat_id, node.epa_type, node.sector_id, node.state, 
@@ -84,8 +87,11 @@ BEGIN
 	FROM selector_sector, node 
 		LEFT JOIN v_edit_node USING (node_id) 
 		JOIN inp_divider ON node.node_id=inp_divider.node_id
-		JOIN (SELECT node_1 AS node_id FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||
-		v_statetype ||' UNION SELECT node_2 FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||v_statetype ||')a ON node.node_id=a.node_id
+		JOIN (
+		SELECT node_1 AS node_id FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||' UNION 
+		SELECT node_2 FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||')a ON node.node_id=a.node_id
 	UNION
 	SELECT '||quote_literal(result_id_var)||',
 	node.node_id, sys_top_elev, sys_ymax, v_edit_node.sys_elev, node.node_type, node.nodecat_id, node.epa_type, node.sector_id, 
@@ -93,8 +99,11 @@ BEGIN
 	FROM selector_sector, node 
 		LEFT JOIN v_edit_node USING (node_id) 	
 		JOIN inp_storage ON node.node_id=inp_storage.node_id
-		JOIN (SELECT node_1 AS node_id FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||
-		v_statetype ||' UNION SELECT node_2 FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||v_statetype ||')a ON node.node_id=a.node_id
+		JOIN (
+		SELECT node_1 AS node_id FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||' UNION 
+		SELECT node_2 FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||')a ON node.node_id=a.node_id
 	UNION
 	SELECT '||quote_literal(result_id_var)||',
 	node.node_id, sys_top_elev, sys_ymax, v_edit_node.sys_elev, node.node_type, node.nodecat_id, node.epa_type, node.sector_id, 
@@ -102,8 +111,11 @@ BEGIN
 	FROM selector_sector, node 
 		LEFT JOIN v_edit_node USING (node_id)
 		JOIN inp_outfall ON node.node_id=inp_outfall.node_id
-		JOIN (SELECT node_1 AS node_id FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||
-		v_statetype ||' UNION SELECT node_2 FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||v_statetype ||')a ON node.node_id=a.node_id
+		JOIN (
+		SELECT node_1 AS node_id FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||' UNION 
+		SELECT node_2 FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||')a ON node.node_id=a.node_id
 	UNION
 	SELECT '||quote_literal(result_id_var)||',
 	node.node_id, sys_top_elev, sys_ymax, v_edit_node.sys_elev, node.node_type, node.nodecat_id, node.epa_type, node.sector_id, 
@@ -111,13 +123,16 @@ BEGIN
 	FROM selector_sector, node 
 		LEFT JOIN v_edit_node USING (node_id)
 		JOIN inp_netgully ON node.node_id=inp_netgully.node_id
-		JOIN (SELECT node_1 AS node_id FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||
-		v_statetype ||' UNION SELECT node_2 FROM vi_parent_arc JOIN value_state_type ON id=state_type WHERE sector_id > 0 AND epa_type !=''UNDEFINED'' '||v_statetype ||')a ON node.node_id=a.node_id';
-		
+		JOIN (
+		SELECT node_1 AS node_id FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||' UNION 
+		SELECT node_2 FROM selector_sector s, v_edit_arc a JOIN value_state_type ON id=state_type WHERE a.sector_id > 0 AND a.sector_id = s.sector_id and current_user = cur_user AND epa_type !=''UNDEFINED'' '||
+		v_statetype ||')a ON node.node_id=a.node_id';
 
-	-- node onfly transformation of junctions to outfalls (when outfallparam is fill and junction is node sink)
-	PERFORM gw_fct_anl_node_sink($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"tableName":"v_edit_inp_junction"},"data":{"parameters":{"saveOnDatabase":true}}}$$);
-	
+
+	-- node on the fly transformation of junctions to outfalls (when outfallparam is fill and junction is node sink)
+	-- PERFORM gw_fct_anl_node_sink($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"tableName":"v_edit_node"},"data":{"parameters":{"saveOnDatabase":true}}}$$);
+
 	-- update child param for divider
 	UPDATE temp_t_node SET addparam=concat('{"divider_type":"',divider_type,'", "arc_id":"',arc_id,'", "curve_id":"',curve_id,'", "qmin":"',
 	qmin,'", "ht":"',ht,'", "cd":"',cd,'"}')
@@ -132,7 +147,7 @@ BEGIN
 	UPDATE temp_t_node SET addparam=concat('{"outfall_type":"',outfall_type,'", "state":"',state,'", "curve_id":"',curve_id,'", "timser_id":"',timser_id,'", "gate":"',gate,'"}')
 	FROM inp_outfall WHERE temp_t_node.node_id=inp_outfall.node_id;
 
-	UPDATE temp_t_node SET epa_type='OUTFALL' FROM anl_node a JOIN inp_junction USING (node_id) 
+	UPDATE temp_t_node SET epa_type='OUTFALL' FROM anl_node a JOIN inp_junction USING (node_id)
 	WHERE outfallparam IS NOT NULL AND fid = 113 AND cur_user=current_user
 	AND temp_t_node.node_id=a.node_id;
 
@@ -141,7 +156,7 @@ BEGIN
 
 	INSERT INTO temp_t_node_other (node_id, type, timser_id, poll_id, other, mfactor, sfactor, base, pattern_id)
 	SELECT node_id, 'POLLUTANT', timser_id, poll_id, form_type, mfactor, sfactor, base, pattern_id FROM v_edit_inp_inflows_poll;
-	
+
 	INSERT INTO temp_t_node_other (node_id, type, poll_id, other)
 	SELECT node_id, 'TREATMENT', poll_id, function FROM v_edit_inp_treatment;
 
@@ -167,7 +182,7 @@ BEGIN
 	barrels,
 	slope,
 	culvert, kentry, kexit, kavg, flap, seepage, (now()::date-a.builtdate)/30
-	FROM selector_sector, v_arc a
+	FROM selector_sector, v_edit_arc a
 		LEFT JOIN value_state_type ON id=state_type
 		LEFT JOIN cat_mat_arc ON matcat_id = cat_mat_arc.id
 		LEFT JOIN inp_conduit ON a.arc_id = inp_conduit.arc_id
@@ -178,12 +193,12 @@ BEGIN
 	-- todo: UPDATE childparam for inp_weir, inp_orifice, inp_outlet, inp_pump
 
 	-- fill temp_t_gully in order to work with 1D/2D
-	IF v_networkmode = 2 THEN
+	IF v_networkmode = 2 or v_networkmode = 3 THEN
 
 		-- netgully
 		EXECUTE 'INSERT INTO temp_t_gully 
 		SELECT 
-		concat(''NG'',node_id), g.node_type, gratecat_id, null, g.node_id, g.sector_id, g.state, g.state_type, 
+		concat(''NG'',node_id), g.node_type, gullycat_id, null, g.node_id, g.sector_id, g.state, g.state_type, 
 		case when custom_top_elev is null then top_elev else custom_top_elev end, 
 		units, units_placement, outlet_type,
 		case when custom_width is null then total_width else custom_width end, 
@@ -200,7 +215,7 @@ BEGIN
 		-- gully
 		EXECUTE 'INSERT INTO temp_t_gully 
 		SELECT 
-		gully_id, g.gully_type, gratecat_id, g.arc_id, 
+		gully_id, g.gully_type, gullycat_id, g.arc_id, 
 		case when pjoint_type = ''NODE'' then pjoint_id else a.node_2 END AS node_id, 
 		g.sector_id, g.state, g.state_type, 
 		case when custom_top_elev is null then top_elev else custom_top_elev end, 
@@ -216,16 +231,16 @@ BEGIN
 		LEFT JOIN arc a USING (arc_id)
 		LEFT JOIN value_state_type ON id=g.state_type
 		WHERE arc_id IS NOT NULL AND g.sector_id > 0 '||v_statetype||';';
-		
+
 	END IF;
 
 	-- orifice
 	INSERT INTO temp_t_arc_flowregulator (arc_id, type, ori_type, offsetval, cd, orate, flap, shape, geom1, geom2, geom3, geom4, close_time)
-	SELECT arc_id, 'ORIFICE', ori_type, offsetval, cd, orate, flap, shape, geom1, geom2, geom3, geom4, close_time
+	SELECT arc_id, 'ORIFICE', ori_type, offsetval, cd, orate, flap, shape, geom1, geom2, 0, 0, close_time
 	FROM v_edit_inp_orifice;
 
 	INSERT INTO temp_t_arc_flowregulator (arc_id, type, ori_type, offsetval, cd, orate, flap, shape, geom1, geom2, geom3, geom4, close_time)
-	SELECT nodarc_id, 'ORIFICE', ori_type, offsetval, cd, orate, flap, shape, geom1, geom2, geom3, geom4, close_time
+	SELECT nodarc_id, 'ORIFICE', ori_type, offsetval, cd, orate, flap, shape, geom1, geom2, 0, 0, close_time
 	FROM v_edit_inp_flwreg_orifice;
 
 	-- outlet
@@ -241,28 +256,28 @@ BEGIN
 	INSERT INTO temp_t_arc_flowregulator (arc_id, type, curve_id, status, startup, shutoff)
 	SELECT arc_id, 'PUMP', curve_id, status, startup, shutoff
 	FROM v_edit_inp_pump;
-	
+
 	INSERT INTO temp_t_arc_flowregulator (arc_id, type, curve_id, status, startup, shutoff)
 	SELECT nodarc_id, 'PUMP', curve_id, status, startup, shutoff
 	FROM v_edit_inp_flwreg_pump;
 
 	-- weir
-	INSERT INTO temp_t_arc_flowregulator (arc_id, type, weir_type, offsetval, cd, ec, cd2, flap, shape, geom1, geom2, geom3, geom4, road_width, 
+	INSERT INTO temp_t_arc_flowregulator (arc_id, type, weir_type, offsetval, cd, ec, cd2, flap, shape, geom1, geom2, geom3, geom4, road_width,
 	road_surf, coef_curve, surcharge)
-	SELECT arc_id, 'WEIR', weir_type, offsetval, cd, ec, cd2, flap, inp_typevalue.descript, geom1, geom2, geom3, geom4, road_width, 
+	SELECT arc_id, 'WEIR', weir_type, offsetval, cd, ec, cd2, flap, inp_typevalue.descript, geom1, geom2, geom3, geom4, road_width,
 	road_surf, coef_curve, surcharge
 	FROM v_edit_inp_weir
 	LEFT JOIN inp_typevalue ON inp_typevalue.id::text = v_edit_inp_weir.weir_type::text
 	WHERE inp_typevalue.typevalue::text = 'inp_value_weirs';
-	
-	INSERT INTO temp_t_arc_flowregulator (arc_id, type, weir_type, offsetval, cd, ec, cd2, flap, shape, geom1, geom2, geom3, geom4, road_width, 
+
+	INSERT INTO temp_t_arc_flowregulator (arc_id, type, weir_type, offsetval, cd, ec, cd2, flap, shape, geom1, geom2, geom3, geom4, road_width,
 	road_surf, coef_curve, surcharge)
-	SELECT nodarc_id, 'WEIR', weir_type, offsetval, cd, ec, cd2, flap, inp_typevalue.descript, geom1, geom2, geom3, geom4, road_width, 
+	SELECT nodarc_id, 'WEIR', weir_type, offsetval, cd, ec, cd2, flap, inp_typevalue.descript, geom1, geom2, geom3, geom4, road_width,
 	road_surf, coef_curve, surcharge
 	FROM v_edit_inp_flwreg_weir
 	LEFT JOIN inp_typevalue ON inp_typevalue.id::text = v_edit_inp_flwreg_weir.weir_type::text
 	WHERE inp_typevalue.typevalue::text = 'inp_value_weirs';
-	
+
 	-- filling empty values
 	UPDATE temp_t_node SET y0=0 where y0 IS NULL;
 	UPDATE temp_t_node SET ysur=0 where ysur IS NULL;
@@ -273,7 +288,7 @@ BEGIN
 	INSERT INTO temp_rpt_inp_raingage
 	SELECT result_id_var, * FROM v_edit_raingage;
 
-	RETURN 1;	
+	RETURN 1;
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

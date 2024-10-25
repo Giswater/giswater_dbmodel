@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2580
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_getinfofromcoordinates(p_data json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getinfofromcoordinates(p_data json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getinfofromcoordinates(p_data json)
   RETURNS json AS
 $BODY$
@@ -169,12 +169,12 @@ BEGIN
 	SELECT ST_Transform(ST_SetSRID(ST_MakePoint(v_xcoord,v_ycoord),v_client_epsg),v_epsg) INTO v_point;
 		
 	-- Get feature
-	v_sql = concat('SELECT layer_id, 0 as orderby, addparam->>''geomType'' as geomtype FROM  ',quote_ident(v_config_layer),' WHERE layer_id = ',quote_literal(v_activelayer),'::text 
-		AND (addparam->>''forceWhenActive'')::boolean IS TRUE
+	v_sql = concat('SELECT layer_id, 0 as orderby, a.addparam->>''geomType'' as geomtype FROM  ',quote_ident(v_config_layer),' a WHERE layer_id = ',quote_literal(v_activelayer),'::text 
+		AND (a.addparam->>''forceWhenActive'')::boolean IS TRUE
 		UNION
-		SELECT layer_id, orderby , addparam->>''geomType'' as geomtype FROM  ',quote_ident(v_config_layer),' WHERE layer_id = any(',quote_literal(v_visiblelayer),'::text[]) 
+		SELECT layer_id, orderby , b.addparam->>''geomType'' as geomtype FROM  ',quote_ident(v_config_layer),' b WHERE layer_id = any(',quote_literal(v_visiblelayer),'::text[]) 
 		UNION 
-		SELECT DISTINCT ON (layer_id) layer_id, orderby+100, addparam->>''geomType'' as geomtype FROM  ',quote_ident(v_config_layer),' JOIN cat_feature ON parent_layer=layer_id 
+		SELECT DISTINCT ON (layer_id) layer_id, orderby+100, c.addparam->>''geomType'' as geomtype FROM  ',quote_ident(v_config_layer),' c JOIN cat_feature ON parent_layer=layer_id 
 		WHERE child_layer = any(',quote_literal(v_visiblelayer),'::text[]) ORDER BY orderby');
 	v_debug_vars := json_build_object('v_config_layer', v_config_layer, 'v_activelayer', v_activelayer, 'v_visiblelayer', v_visiblelayer);
 	v_debug := json_build_object('querystring', v_sql, 'vars', v_debug_vars, 'funcname', 'gw_fct_getinfofromcoordinates', 'flag', 10);
@@ -317,7 +317,7 @@ BEGIN
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_errcontext = pg_exception_context;  
-	 RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || ',"MSGERR": '|| to_json(v_msgerr::json ->> 'MSGERR') ||'}')::json;
+	 RETURN json_build_object('status', 'Failed','NOSQLERR', SQLERRM, 'version', v_version, 'SQLSTATE', SQLSTATE, 'MSGERR', (v_msgerr::json ->> 'MSGERR'))::json;
 
 END;
 $BODY$

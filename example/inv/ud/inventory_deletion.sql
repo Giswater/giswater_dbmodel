@@ -32,7 +32,10 @@ DELETE FROM inp_flwreg_pump;
 DELETE FROM inp_flwreg_orifice;
 DELETE FROM inp_flwreg_outlet;
 
-update cat_mat_arc SET n = null;
+DELETE FROM inp_weir;
+DELETE FROM inp_pump;
+
+UPDATE cat_mat_arc SET n = null;
 
 DELETE FROM inp_pattern;
 DELETE FROM inp_curve;
@@ -46,3 +49,7 @@ DELETE FROM rpt_cat_result;
 
 UPDATE config_param_user SET value = false where parameter = 'plan_psector_force_delete';
 UPDATE inp_gully SET outlet_type =null,  "method"  = null, weir_cd =null , orifice_cd =null , efficiency =null ;
+
+DELETE FROM raingage;
+DELETE from inp_timeseries;
+DELETE from inp_lid;

@@ -7,8 +7,8 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 2560
 
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_get_featureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean);
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_get_featureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean, text, text);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getfeatureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getfeatureupsert(character varying, character varying, public.geometry, integer, integer, character varying, boolean, text, text);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getfeatureupsert(
     p_table_id character varying,
     p_id character varying,
@@ -55,7 +55,7 @@ DECLARE
 v_state_value integer;
 v_fields json;
 v_fields_array json[];
-aux_json json;    
+aux_json json;
 combo_json json;
 schemas_array name[];
 array_index integer DEFAULT 0;
@@ -70,11 +70,12 @@ v_macrosector_id integer;
 v_expl_id integer;
 v_dma_id integer;
 v_macrodma_id integer;
+v_macrominsector_id integer;
 v_muni_id integer;
 v_district_id integer;
 v_project_type varchar;
 v_cat_feature_id varchar;
-v_code int8;
+v_code text;
 v_node_proximity double precision;
 v_node_proximity_control boolean;
 v_connec_proximity double precision;
@@ -95,7 +96,6 @@ v_catfeature record;
 v_codeautofill boolean=true;
 v_values_array json;
 v_record record;
-v_gislength float;
 v_catalog text;
 v_dnom text;
 v_pnom text;
@@ -109,13 +109,14 @@ v_max double precision;
 v_widgetcontrols json;
 v_type text;
 v_active_feature text;
-v_promixity_buffer double precision;
+v_proximity_buffer double precision;
 v_sys_raster_dem boolean=false;
+v_connec_autofill_plotcode boolean = false;
 v_edit_insert_elevation_from_dem boolean=false;
 v_noderecord1 record;
 v_noderecord2 record;
 v_input json;
-v_presszone_id text;
+v_presszone_id int;
 v_widgetvalues json;
 v_automatic_ccode boolean;
 v_automatic_ccode_field text;
@@ -129,7 +130,7 @@ v_dqa_id integer;
 v_arc_insert_automatic_endpoint boolean;
 v_current_id text;
 v_current_idval text;
-v_new_id text; 
+v_new_id text;
 v_selected_id text;
 v_selected_idval text;
 v_errcontext text;
@@ -138,13 +139,16 @@ v_debug_vars json;
 v_debug json;
 v_msgerr json;
 v_epa text;
-v_elevation float;
-v_staticpressure float;
+v_elevation numeric(12,4);
+v_staticpressure numeric(12,3);
 label_value text;
+v_seq_name text;
+v_seq_code text;
+v_sql text;
 
 v_streetname varchar;
-v_postnumber integer;
-v_postcomplement varchar;
+v_postnumber varchar;
+v_plot_code text;
 
 v_auto_streetvalues_status boolean;
 v_auto_streetvalues_field varchar;
@@ -160,7 +164,7 @@ v_addparam json;
 v_pkeyfield text;
 v_schemaname text;
 
-p_idname_aux text;
+v_idname_aux text;
 
 BEGIN
 
@@ -188,11 +192,13 @@ BEGIN
 	SELECT ((value::json)->>'value') INTO v_gully_proximity FROM config_param_system WHERE parameter='edit_gully_proximity';
 	SELECT ((value::json)->>'activated') INTO v_arc_searchnodes_control FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
-	SELECT value INTO v_samenode_init_end_control FROM config_param_system WHERE parameter = 'edit_arc_samenode_control';
-	SELECT value INTO v_promixity_buffer FROM config_param_system WHERE parameter='edit_feature_buffer_on_mapzone';
+	SELECT value::boolean INTO v_connec_autofill_plotcode FROM config_param_system WHERE parameter = 'edit_connec_autofill_plotcode';
+	SELECT value::boolean INTO v_samenode_init_end_control FROM config_param_system WHERE parameter = 'edit_arc_samenode_control';
+	SELECT value INTO v_proximity_buffer FROM config_param_system WHERE parameter='edit_feature_buffer_on_mapzone';
 	SELECT value INTO v_use_fire_code_seq FROM config_param_system WHERE parameter='edit_hydrant_use_firecode_seq';
 	SELECT ((value::json)->>'status') INTO v_automatic_ccode FROM config_param_system WHERE parameter='edit_connec_autofill_ccode';
 	SELECT ((value::json)->>'field') INTO v_automatic_ccode_field FROM config_param_system WHERE parameter='edit_connec_autofill_ccode';
+
 	SELECT json_extract_path_text(value::json,'activated')::boolean INTO v_sys_raster_dem FROM config_param_system WHERE parameter='admin_raster_dem';
 	SELECT (value::json->>'status')::boolean INTO v_auto_streetvalues_status FROM config_param_system WHERE parameter = 'edit_auto_streetvalues';
 	SELECT (value::json->>'field')::text INTO v_auto_streetvalues_field FROM config_param_system WHERE parameter = 'edit_auto_streetvalues';
@@ -230,20 +236,20 @@ BEGIN
 
 	-- Manage primary key
 	EXECUTE 'SELECT addparam FROM sys_table WHERE id = $1' INTO v_addparam USING v_tablename;
-	v_idname_array := string_to_array(p_idname_aux, ', ');
+	v_idname_array := string_to_array(v_addparam ->> 'pkey', ', ');
 	if v_idname_array is null THEN
 		EXECUTE 'SELECT gw_fct_getpkeyfield('''||v_tablename||''');' INTO v_pkeyfield;
-		p_idname_aux = v_pkeyfield;
+		v_idname_aux = v_pkeyfield;
 		v_idname_array := string_to_array(v_pkeyfield, ', ');
 	else
-		p_idname_aux = v_addparam ->> 'pkey';
+		v_idname_aux = v_idname_array;
 	end if;
 
 	v_id_array := string_to_array(p_id, ', ');
 
 
 	if v_idname_array is not null then
-		p_idname = p_idname_aux;
+		p_idname = v_idname_aux;
 		FOREACH idname IN ARRAY v_idname_array LOOP
 			EXECUTE 'SELECT pg_catalog.format_type(a.atttypid, a.atttypmod) FROM pg_attribute a
 			    JOIN pg_class t on a.attrelid = t.oid
@@ -288,6 +294,19 @@ BEGIN
 			v_code=p_id;
 		END IF;
 
+		-- check if p_table_id is defined on cat_feature
+		if v_catfeature.id is not null then
+			-- use specific sequence when its name matches featurecat_code_seq
+			EXECUTE 'SELECT concat('||quote_literal(lower(v_catfeature.id))||',''_code_seq'');' INTO v_seq_name;
+			EXECUTE 'SELECT relname FROM pg_catalog.pg_class WHERE relname='||quote_literal(v_seq_name)||' 
+			AND relkind = ''S'' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '||quote_literal(v_schemaname)||');' INTO v_sql;
+
+			IF v_sql IS NOT NULL THEN
+				EXECUTE 'SELECT nextval('||quote_literal(v_seq_name)||');' INTO v_seq_code;
+					v_code=concat(v_catfeature.addparam::json->>'code_prefix',v_seq_code);
+			END IF;
+		end if;
+
 		-- customer code only for connec
 		IF v_automatic_ccode IS TRUE AND v_automatic_ccode_field='connec_id' THEN
 			v_customercode = p_id;
@@ -324,11 +343,11 @@ BEGIN
 						-- getting presszone by heritage from nodes
 						IF v_noderecord1.presszone_id = v_noderecord2.presszone_id THEN
 							v_presszone_id = v_noderecord1.presszone_id;
-						ELSIF v_noderecord1.presszone_id = 0::text THEN
+						ELSIF v_noderecord1.presszone_id = 0 THEN
 							v_presszone_id = v_noderecord2.presszone_id;
-						ELSIF v_noderecord2.presszone_id = 0::text THEN
+						ELSIF v_noderecord2.presszone_id = 0 THEN
 							v_presszone_id = v_noderecord1.presszone_id;
-						ELSIF v_noderecord1.presszone_id::text != v_noderecord2.presszone_id::text THEN
+						ELSIF v_noderecord1.presszone_id != v_noderecord2.presszone_id THEN
 							v_presszone_id = v_noderecord1.presszone_id;
 						END IF;
 
@@ -342,6 +361,12 @@ BEGIN
 						ELSIF v_noderecord1.dqa_id::text != v_noderecord2.dqa_id::text THEN
 							v_dqa_id = v_noderecord1.dqa_id;
 						END IF;
+
+						-- getting macrominsector_id by heritage from nodes
+						IF v_noderecord1.macrominsector_id = v_noderecord2.macrominsector_id THEN
+							v_macrominsector_id = v_noderecord1.macrominsector_id;
+						END IF;
+
 					END IF;
 
 					-- getting sector_id by heritage from nodes
@@ -377,6 +402,11 @@ BEGIN
 						v_expl_id = v_noderecord1.expl_id;
 					END IF;
 
+					-- getting muni_id by heritage from nodes
+					IF v_noderecord1.muni_id = v_noderecord2.muni_id THEN
+						v_muni_id = v_noderecord1.muni_id;
+					END IF;
+
 					-- getting node values in case of arcs (insert)
 					v_node1 = v_noderecord1.node_id;
 					v_node2 = v_noderecord2.node_id;
@@ -393,9 +423,6 @@ BEGIN
 						v_status = false;
 					END IF;
 				END IF;
-
-				--getting 1st approach of gis length
-				v_gislength = (SELECT st_length(p_reduced_geometry))::numeric(12,0);
 
 			ELSIF upper(v_catfeature.feature_type) ='CONNEC' THEN
 				v_numnodes := (SELECT COUNT(*) FROM connec WHERE ST_DWithin(p_reduced_geometry, connec.the_geom, v_connec_proximity) AND connec.connec_id != p_id AND connec.state!=0);
@@ -428,7 +455,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_presszone_id = (SELECT presszone_id FROM presszone WHERE ST_DWithin(p_reduced_geometry, presszone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_presszone_id =(SELECT presszone_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_presszone_id =(SELECT presszone_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -439,7 +466,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(p_reduced_geometry, sector.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -450,7 +477,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_dma_id = (SELECT dma_id FROM dma WHERE ST_DWithin(p_reduced_geometry, dma.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -461,7 +488,7 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(p_reduced_geometry, exploitation.the_geom,0.001)  AND active=true LIMIT 1);
 			ELSE
-				v_expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_promixity_buffer)
+				v_expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(p_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
 				order by ST_Distance (p_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
@@ -473,8 +500,9 @@ BEGIN
 		v_macrosector_id := (SELECT macrosector_id FROM sector WHERE sector_id=v_sector_id);
 
 		-- Municipality
-		v_muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(p_reduced_geometry, ext_municipality.the_geom,0.001)
-		AND active IS TRUE LIMIT 1);
+		IF v_muni_id IS NULL THEN
+			v_muni_id := (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(p_reduced_geometry, ext_municipality.the_geom,0.001) AND active IS TRUE LIMIT 1);
+		END IF;
 
 		-- District
 		v_district_id := (SELECT district_id FROM ext_district WHERE ST_DWithin(p_reduced_geometry, ext_district.the_geom,0.001) LIMIT 1);
@@ -489,14 +517,15 @@ BEGIN
 						where ST_DWithin(p_reduced_geometry, ext_address.the_geom, v_auto_streetvalues_buffer)
 						order by ST_Distance(p_reduced_geometry, ext_address.the_geom) LIMIT 1);
 
-		v_postcomplement := (select ext_address.postnumber from ext_address
-						where ST_DWithin(p_reduced_geometry, ext_address.the_geom, v_auto_streetvalues_buffer)
-						order by ST_Distance(p_reduced_geometry, ext_address.the_geom) LIMIT 1);
-
 		-- Dem elevation
 		IF v_sys_raster_dem AND v_edit_insert_elevation_from_dem AND p_idname IN ('node_id', 'connec_id', 'gully_id') THEN
 			v_elevation = (SELECT ST_Value(rast,1, p_reduced_geometry, true) FROM v_ext_raster_dem WHERE id =
-			(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1))::numeric (12,3);
+			(SELECT id FROM v_ext_raster_dem WHERE st_dwithin (envelope, p_reduced_geometry, 1) LIMIT 1));
+		END IF;
+
+		-- plot code from connecs
+		IF p_idname = 'connec_id' AND v_connec_autofill_plotcode THEN
+			v_plot_code = (SELECT plot_code FROM v_ext_plot WHERE st_dwithin(p_reduced_geometry, the_geom, 0) LIMIT 1);
 		END IF;
 
 		-- static pressure
@@ -617,7 +646,7 @@ BEGIN
 
 		-- getting propierties from feature catalog value
 		SELECT (a->>'vdef'), (a->>'param') INTO v_catalog, v_catalogtype FROM json_array_elements(v_values_array) AS a
-			WHERE (a->>'param') = 'arccat_id' OR (a->>'param') = 'nodecat_id' OR (a->>'param') = 'connecat_id' OR (a->>'param') = 'gratecat_id';
+			WHERE (a->>'param') = 'arccat_id' OR (a->>'param') = 'nodecat_id' OR (a->>'param') = 'conneccat_id' OR (a->>'param') = 'gullycat_id';
 
 		IF v_project_type ='WS' AND v_catfeature.feature_type IS NOT NULL AND v_catfeature.feature_type != 'LINK' THEN
 			v_querystring = concat('SELECT pnom::integer, dnom::integer, matcat_id FROM cat_',lower(v_catfeature.feature_type),' WHERE id=',quote_nullable(v_catalog));
@@ -628,7 +657,7 @@ BEGIN
 
 		ELSIF v_project_type ='UD' AND v_catfeature.feature_type IS NOT NULL AND v_catfeature.feature_type != 'LINK'THEN
 			IF (v_catfeature.feature_type) ='GULLY' THEN
-				v_querystring = concat('SELECT matcat_id FROM cat_grate WHERE id=',quote_nullable(v_catalog));
+				v_querystring = concat('SELECT matcat_id FROM cat_gully WHERE id=',quote_nullable(v_catalog));
 				v_debug_vars := json_build_object('v_catalog', v_catalog);
 				v_debug := json_build_object('querystring', v_querystring, 'vars', v_debug_vars, 'funcname', 'gw_fct_getfeatureupsert', 'flag', 50);
 				SELECT gw_fct_debugsql(v_debug) INTO v_msgerr;
@@ -683,8 +712,6 @@ BEGIN
 					field_value = v_noderecord1.node_id;
 				WHEN 'node_2' THEN
 					field_value = v_noderecord2.node_id;
-				WHEN 'gis_length' THEN
-					field_value = v_gislength;
 				WHEN 'epa_type' THEN
 				    if v_catfeature.feature_type != 'LINK' then
                         v_querystring = concat('SELECT epa_default FROM cat_feature_',(v_catfeature.feature_type),' WHERE id = ', quote_nullable(v_catfeature.id));
@@ -707,6 +734,8 @@ BEGIN
 					field_value = v_dma_id;
 				WHEN 'dqa_id' THEN
 					field_value = v_dqa_id;
+				WHEN 'macrominsector_id' THEN
+					field_value = v_macrominsector_id;
 
 				-- static mapzones
 				WHEN 'macrosector_id' THEN
@@ -728,6 +757,10 @@ BEGIN
 				WHEN 'staticpressure' THEN
 					field_value = v_staticpressure;
 
+				-- plot_code
+				WHEN 'plot_code' THEN
+					field_value = v_plot_code;
+
 				-- catalog values
 				WHEN 'cat_dnom' THEN
 					field_value = v_dnom;
@@ -744,10 +777,6 @@ BEGIN
 				WHEN concat(lower(v_catfeature.feature_type),'cat_id') THEN
 					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
 					 WHERE a->>'parameter' = concat('feat_', lower(v_catfeature.id), '_vdefault');
-				WHEN 'connecat_id' THEN
-					SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
-					WHERE a->>'parameter' = concat('feat_', lower(v_catfeature.id), '_vdefault');
-
 
 				-- *_type
 				WHEN 'category_type' THEN
@@ -823,6 +852,21 @@ BEGIN
 						EXECUTE 'SELECT date(now())' INTO field_value;
 					END IF;
 
+				WHEN 'inventory' THEN
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_inventory_sysvdefault') IS TRUE THEN
+						field_value = (SELECT value::boolean FROM config_param_system WHERE parameter='edit_inventory_sysvdefault');
+					END IF;
+
+				WHEN 'publish' THEN
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_publish_sysvdefault') IS TRUE THEN
+						field_value = (SELECT value::boolean FROM config_param_system WHERE parameter='edit_publish_sysvdefault');
+					END IF;
+
+				WHEN 'uncertain' THEN
+					IF (SELECT value::boolean FROM config_param_system WHERE parameter='edit_uncertain_sysvdefault') IS TRUE THEN
+						field_value = (SELECT value::boolean FROM config_param_system WHERE parameter='edit_uncertain_sysvdefault');
+					END IF;
+
 				WHEN 'streetname' THEN
 					IF (v_auto_streetvalues_status is true) then
 						field_value = v_streetname;
@@ -860,7 +904,7 @@ BEGIN
 						field_value =v_noderecord2.sys_ymax;
 					WHEN 'sys_elev2' THEN
 						field_value =v_noderecord2.sys_elev;
-					WHEN 'gratecat_id' THEN
+					WHEN 'gullycat_id' THEN
 						SELECT (a->>'vdef') INTO field_value FROM json_array_elements(v_values_array) AS a
 						WHERE a->>'parameter' = concat('feat_', lower(v_catfeature.id), '_vdefault');
 					ELSE
@@ -901,7 +945,7 @@ BEGIN
 
 					v_current_id =json_extract_path_text(v_fields_array[array_index],'comboIds');
 
-					IF v_current_id='[]' THEN
+					IF v_current_id='[]' and v_selected_id is not null then
 						--case when list is empty
 						EXECUTE concat('SELECT  array_to_json(''{',v_selected_id,'}''::text[])')
 						INTO v_new_id;
@@ -923,7 +967,7 @@ BEGIN
                             select string_agg(quote_ident(a),',') into v_new_id from json_array_elements_text(v_current_id::json) a ;
                             --remove current combo names from return json
                             v_fields_array[array_index] = v_fields_array[array_index]::jsonb - 'comboNames'::text;
-                            EXECUTE 'SELECT  array_to_json(''{'||v_selected_idval||'}''::text[])'
+                            EXECUTE 'SELECT  array_to_json(ARRAY['||quote_literal(v_selected_idval)||'])::text'
                             INTO v_new_id;
                             --add new combo names to return json
                             v_fields_array[array_index] = gw_fct_json_object_set_key(v_fields_array[array_index],'comboNames',v_new_id::json);
@@ -931,9 +975,7 @@ BEGIN
 					END IF;
 				END IF;
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'selectedId', COALESCE(field_value, ''));
-			ELSIF (aux_json->>'widgettype')='button' and json_extract_path_text(aux_json,'widgetcontrols','text') IS NOT NULL THEN
-				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'value', json_extract_path_text(aux_json,'widgetcontrols','text'));
-			ELSE
+			ELSIF (aux_json->>'widgettype') !='button' THEN
 
 				v_fields_array[array_index] := gw_fct_json_object_set_key(v_fields_array[array_index], 'value', COALESCE(field_value, ''));
 

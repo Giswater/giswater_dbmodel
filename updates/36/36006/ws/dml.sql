@@ -14,7 +14,6 @@ INSERT INTO config_form_tableview (location_type, project_type, objectname, colu
 INSERT INTO config_form_tableview (location_type, project_type, objectname, columnname, columnindex, visible, width, alias, "style", addparam) VALUES('netscenario manager', 'ws', 'plan_netscenario_valve', 'netscenari_id', 0, false, NULL, NULL, NULL, NULL);
 
 -- 27/10/23
-UPDATE cat_feature_node SET epa_default='UNDEFINED', isarcdivide=false WHERE id='AIR_VALVE';
 UPDATE config_form_fields SET hidden=false, iseditable=true, label = 'Exit elevation' where formname = 'v_edit_link' and columnname = 'exit_topelev';
 
 -- 30/10/23
@@ -81,7 +80,6 @@ WHERE formname in ('v_edit_inp_dscenario_shortpipe') and columnname ='status';
 UPDATE config_form_fields set dv_isnullvalue =True  WHERE formname in ('ve_epa_shortpipe', 'v_edit_inp_shortpipe') and columnname ='status';
 
 INSERT INTO inp_typevalue (typevalue, id, idval, descript, addparam) VALUES('inp_value_status_shortpipe', 'CV', 'CV', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
-INSERT INTO inp_typevalue (typevalue, id, idval, descript, addparam) VALUES('inp_value_status_shortpipe', ' ', ' ', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
 
 INSERT INTO inp_typevalue (typevalue, id, idval, descript, addparam) VALUES('inp_value_status_shortpipe_dscen', 'CV', 'CV', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
 INSERT INTO inp_typevalue (typevalue, id, idval, descript, addparam) VALUES('inp_value_status_shortpipe_dscen', 'OPEN', 'OPEN', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;

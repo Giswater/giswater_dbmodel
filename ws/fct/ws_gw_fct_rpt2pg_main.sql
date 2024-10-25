@@ -26,6 +26,7 @@ v_file json;
 v_import json;
 v_return json;
 v_step integer = 0;
+v_error_context text;
 
 BEGIN
 
@@ -135,8 +136,12 @@ BEGIN
 		RETURN gw_fct_rpt2pg_log(v_result, v_import);
 
 	END IF;
-	
-		
+
+    -- Exception handling
+    EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+    RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 'SQLCONTEXT', v_error_context)::json;
+
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

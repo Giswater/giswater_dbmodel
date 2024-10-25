@@ -263,8 +263,7 @@ BEGIN
 		FOREACH rec_schema IN ARRAY v_gw_schema_array LOOP
 			--remove values for user from all the selectors and delete user
 			FOR rec IN EXECUTE 'SELECT * FROM information_schema.tables 
-			WHERE table_name ilike ''%selector%'' AND table_name!=''config_graph_valve'' 
-			AND table_schema= '''||rec_schema||'''' LOOP
+			WHERE table_name ilike ''%selector%'' AND table_schema= '''||rec_schema||'''' LOOP
 
 				EXECUTE 'DELETE FROM '||rec_schema||'.'||rec.table_name||' WHERE cur_user = '''||v_user_id||''';';
 			END LOOP;
@@ -335,10 +334,6 @@ BEGIN
 			      '}}}')::json;
 
 	RETURN v_return;
-
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
  

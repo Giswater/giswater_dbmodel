@@ -7,7 +7,6 @@ This version of Giswater is provided by Giswater Association
 --FUNCTION CODE: 2242
 
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_cad_add_relative_point(geometry,float, float, integer, boolean);
-
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_cad_add_relative_point(geom1_aux geometry,geom2_aux geometry,x_var double precision,
 y_var double precision,start_point integer,del_previous_bool boolean)
 RETURNS geometry AS
@@ -28,6 +27,7 @@ rec record;
 v_angle0 float;
 v_x0coord float;
 v_y0coord float;
+v_error_context text;
 
 BEGIN
 
@@ -100,6 +100,12 @@ BEGIN
     INSERT INTO temp_table (fid, geom_point)  VALUES (127, v_point_result);
 
 	RETURN v_point_result;
-        
+
+    -- Exception handling
+    EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+    RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 'SQLCONTEXT', v_error_context)::json;
+
+
 END;$BODY$
   LANGUAGE plpgsql VOLATILE

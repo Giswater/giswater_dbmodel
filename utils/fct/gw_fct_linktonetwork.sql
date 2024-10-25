@@ -12,6 +12,7 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_linktonetwork(p_data json)
 RETURNS json AS
 $BODY$
 
+
 /*
 GOAL
 ----
@@ -32,8 +33,7 @@ EXAMPLES
 --------
 SELECT SCHEMA_NAME.gw_fct_setlinktonetwork($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"id":["3201","3200"]},"data":{"feature_type":"CONNEC", "forcedArcs":["2001","2002"]}}$$);
 
-SELECT SCHEMA_NAME.gw_fct_setlinktonetwork($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"id":["3136"]},"data":{"feature_type":"CONNEC"}}$$);
-
+SELECT SCHEMA_NAME.gw_fct_setlinktonetwork($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"id":["3209"]},"data":{"feature_type":"CONNEC"}}$$);
 
 SELECT SCHEMA_NAME.gw_fct_setlinktonetwork($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{"id":["100013"]},"data":{"feature_type":"CONNEC", "forcedArcs":["221"]}}$$);
 
@@ -42,7 +42,6 @@ SELECT SCHEMA_NAME.gw_fct_setlinktonetwork($${"client":{"device":4, "infoType":1
 
 SELECT SCHEMA_NAME.gw_fct_setlinktonetwork($${"client":{"device":4, "infoType":1,"lang":"ES"},"feature":
 {"id":"SELECT array_to_json(array_agg(connec_id::text)) FROM v_edit_connec WHERE connec_id IS NOT NULL AND state=1"},"data":{"feature_type":"CONNEC"}}$$);
-
 
 --fid: 217
 
@@ -110,7 +109,6 @@ v_check_arcdnom integer;
 v_checkeddiam text;
 v_querytext text;
 
-
 BEGIN
 
 
@@ -139,6 +137,14 @@ BEGIN
 
 	--profilactic values
 	IF v_forceendpoint IS NULL THEN v_forceendpoint = FALSE; END IF;
+
+	--control v_check_arcdnom status and value
+	IF v_projecttype = 'WS' AND v_check_arcdnom_status IS TRUE THEN	
+		IF v_check_arcdnom <= (SELECT min(cat_dnom::integer) FROM vu_arc) THEN
+	        EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+	        "data":{"message":"3260", "function":"3188","debug_msg":'||v_check_arcdnom||', "is_process":true}}$$);';
+		END IF;
+	END IF;
 
 	-- create query text for forced arcs
 	IF v_forcedarcs IS NULL THEN
@@ -185,9 +191,9 @@ BEGIN
 
 		RAISE NOTICE '% - %', v_i, v_connect_id;
 
-	    IF v_isforcedarcs IS FALSE THEN
-	    	v_forcedarcs= '';
-	    END IF; 
+		IF v_isforcedarcs IS FALSE THEN
+			v_forcedarcs= '';
+		END IF; 
 
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (217, null, 4, concat('Trying to connect ', lower(v_feature_type),' with id ',v_connect_id,'.'));
@@ -234,13 +240,14 @@ BEGIN
 		-- Use connect.arc_id as forced arcs in case of exists
 		IF v_connect.arc_id IS NOT NULL AND v_isforcedarcs is False THEN
 			v_forcedarcs = concat (' AND arc_id::integer = ',v_connect.arc_id,' ');
+			
 			-- check if forced arc diameter is smaller than configured
-            IF v_projecttype  ='WS' THEN
-                IF (SELECT cat_dnom::integer FROM vu_arc WHERE arc_id=v_connect.arc_id) >= v_check_arcdnom AND v_check_arcdnom_status IS TRUE THEN
-                    EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-                    "data":{"message":"3232", "function":"3188","debug_msg":'||v_check_arcdnom||', "is_process":true}}$$);';
-                END IF;
-            END IF;
+			IF v_projecttype  ='WS' THEN
+				IF (SELECT cat_dnom::integer FROM vu_arc WHERE arc_id=v_connect.arc_id) >= v_check_arcdnom AND v_check_arcdnom_status IS TRUE THEN
+					EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+					"data":{"message":"3232", "function":"3188","debug_msg":'||v_check_arcdnom||', "is_process":true}}$$);';
+				END IF;
+			END IF;
 		END IF;	
 		
 		IF v_arc.arc_id IS NOT NULL THEN
@@ -250,7 +257,7 @@ BEGIN
 
 			-- Use check arc diameter variable 
 			IF v_projecttype = 'WS' AND v_check_arcdnom_status IS TRUE THEN	
-				v_checkeddiam = concat(' AND cat_dnom::integer<',v_check_arcdnom,' ');
+				v_checkeddiam = concat(' AND cat_dnom::integer <',v_check_arcdnom,' ');
 			ELSE v_checkeddiam = '';
 			END IF;
 		
@@ -268,13 +275,13 @@ BEGIN
 				SELECT arc_id FROM index_query ORDER BY distance limit 1'
 				INTO v_connect.arc_id;
 				
-			IF v_connect.arc_id IS NULL and v_forcedarcs is not null THEN -- looking for closest arc from connect
-				EXECUTE 'WITH index_query AS(
-				SELECT ST_Distance(the_geom, '||quote_literal(v_connect.the_geom::text)||') as distance, arc_id FROM arc WHERE state > 0 '||v_forcedarcs||')
-				SELECT arc_id FROM index_query ORDER BY distance limit 1'
-				INTO v_connect.arc_id;
-			end if;
-
+				IF v_connect.arc_id IS NULL and v_forcedarcs is not null THEN -- looking for closest arc from connect
+					EXECUTE 'WITH index_query AS(
+					SELECT ST_Distance(the_geom, '||quote_literal(v_connect.the_geom::text)||') as distance, arc_id FROM arc WHERE state > 0 '||v_forcedarcs||')
+					SELECT arc_id FROM index_query ORDER BY distance limit 1'
+					INTO v_connect.arc_id;
+				END IF;
+			
 			END IF;
 
 			-- get v_edit_arc information
@@ -404,10 +411,14 @@ BEGIN
 						v_link.the_geom = ST_SetPoint(v_link.the_geom, (ST_NumPoints(v_link.the_geom) - 1),v_point_aux);
 					END IF;
 
+				-- when we are forcing arc_id for those links coming from connec, guly, node
 				ELSIF v_link.the_geom IS NOT NULL AND v_pjointtype !='ARC' AND (v_forcedarcs IS NOT NULL AND v_forcedarcs !='') AND v_forceendpoint IS TRUE THEN
 
-					-- when we are forcing arc_id for those links coming from connec, guly, node
-					v_link.the_geom = ST_SetPoint(v_link.the_geom, (ST_NumPoints(v_link.the_geom) - 1),v_point_aux);
+					IF st_dwithin(v_link.the_geom, v_arc.the_geom,0) is true then
+						-- do not modify geometry of link
+					ELSE 
+						v_link.the_geom = ST_SetPoint(v_link.the_geom, (ST_NumPoints(v_link.the_geom) - 1),v_point_aux);
+					END IF;
 					v_pjointtype='ARC';
 					v_endfeature_geom = v_arc.the_geom;
 					v_link.exit_type = 'ARC';
@@ -435,14 +446,14 @@ BEGIN
 
 				IF v_projecttype = 'WS' THEN
 					INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, dma_id,
-					presszone_id, dqa_id, minsector_id, fluid_type)
+					presszone_id, dqa_id, minsector_id, fluid_type, muni_id)
 					VALUES (v_link.link_id, v_link.the_geom, v_connect_id, v_feature_type, v_link.exit_type, v_link.exit_id,
-					 v_connect.state, v_arc.expl_id, v_arc.sector_id, v_dma_value, v_arc.presszone_id, v_arc.dqa_id, v_arc.minsector_id, v_fluidtype_value);
+					 v_connect.state, v_arc.expl_id, v_arc.sector_id, v_dma_value, v_arc.presszone_id, v_arc.dqa_id, v_arc.minsector_id, v_fluidtype_value, v_connect.muni_id);
 
 				ELSIF v_projecttype = 'UD' THEN
-					INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, dma_id, fluid_type)
+					INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, dma_id, fluid_type, muni_id)
 					VALUES (v_link.link_id, v_link.the_geom, v_connect_id, v_feature_type, v_link.exit_type, v_link.exit_id,
-					v_connect.state, v_arc.expl_id, v_arc.sector_id, v_dma_value, v_fluidtype_value);
+					v_connect.state, v_arc.expl_id, v_arc.sector_id, v_dma_value, v_fluidtype_value, v_connect.muni_id);
 				END IF;
 			ELSE
 				UPDATE link SET the_geom=v_link.the_geom, exit_type=v_link.exit_type, exit_id=v_link.exit_id, dma_id = v_dma_value, fluid_type = v_fluidtype_value WHERE link_id = v_link.link_id;

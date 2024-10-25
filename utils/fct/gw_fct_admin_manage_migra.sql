@@ -69,18 +69,8 @@ BEGIN
 	-- Return
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Process done succesfully"}, "version":"'||v_version||'"'||
 			 ',"body":{"form":{}'||
-			 ',"data":{ "info":'||v_result_info||','||
-				'"point":{"geometryType":"", "values":[]}'||','||
-				'"line":{"geometryType":"", "values":[]}'||','||
-				'"polygon":{"geometryType":"", "values":[]}'||
-			   '}}'||
+			 ',"data":{ "info":'||v_result_info||'}}'||
 		'}')::json, 3130, null, null, null);
-
-	
-	-- Exception handling
-	EXCEPTION WHEN OTHERS THEN 
-	RETURN ('{"status":"Failed","message":' || to_json(SQLERRM) || ', "version":'|| v_version ||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
-
 	
 END;
 $BODY$

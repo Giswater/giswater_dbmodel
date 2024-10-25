@@ -31,6 +31,21 @@ BEGIN
 			END IF;
 		END IF;
 
+	
+		-- Sector
+		IF (NEW.sector_id IS NULL) THEN
+			NEW.sector_id := (SELECT sector_id FROM sector WHERE ST_intersects(NEW.the_geom, sector.the_geom) AND active IS TRUE limit 1);
+
+			IF (NEW.sector_id IS NULL) THEN
+				NEW.sector_id := 0;
+			END IF;
+		END IF;
+	
+		-- Municipality
+		IF (NEW.muni_id IS NULL) THEN
+			NEW.muni_id := (SELECT m.muni_id FROM ext_municipality m WHERE ST_DWithin(m.the_geom, NEW.the_geom,0) limit 1);
+		END IF;
+	
 		-- State
 		IF (NEW.state IS NULL) THEN
 			NEW.state := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_state_vdefault' AND "cur_user"="current_user"());
@@ -51,9 +66,9 @@ BEGIN
 		
 		-- Insert
 		INSERT INTO dimensions (id, distance, depth, the_geom, x_label, y_label, rotation_label, offset_label, direction_arrow, x_symbol, y_symbol, 
-			feature_id, feature_type, state, expl_id, observ, comment)
+			feature_id, feature_type, state, expl_id, observ, comment, sector_id, muni_id)
 		VALUES (NEW.id, NEW.distance, NEW.depth, NEW.the_geom, NEW.x_label, NEW.y_label, NEW.rotation_label, NEW.offset_label, NEW.direction_arrow, 
-			NEW.x_symbol, NEW.y_symbol, NEW.feature_id, NEW.feature_type, NEW.state, NEW.expl_id, NEW.observ, NEW.comment);
+			NEW.x_symbol, NEW.y_symbol, NEW.feature_id, NEW.feature_type, NEW.state, NEW.expl_id, NEW.observ, NEW.comment, NEW.sector_id, NEW.muni_id);
 
 	
 		RETURN NEW;
@@ -65,7 +80,7 @@ BEGIN
 		SET id=NEW.id, distance=NEW.distance, depth=NEW.depth, the_geom=NEW.the_geom, x_label=NEW.x_label, y_label=NEW.y_label, 
 		rotation_label=NEW.rotation_label, offset_label=NEW.offset_label, direction_arrow=NEW.direction_arrow, x_symbol=NEW.x_symbol, 
 		y_symbol=NEW.y_symbol, feature_id=NEW.feature_id, feature_type=NEW.feature_type, 
-		expl_id=NEW.expl_id, observ=NEW.observ, state=NEW.state, comment=NEW.comment, lastupdate=now(), lastupdate_user = current_user
+		expl_id=NEW.expl_id, observ=NEW.observ, state=NEW.state, comment=NEW.comment, lastupdate=now(), lastupdate_user = current_user, sector_id=NEW.sector_id, muni_id=NEW.muni_id
 		WHERE id=NEW.id;
 
 		RETURN NEW;

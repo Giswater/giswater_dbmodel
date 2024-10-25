@@ -41,7 +41,7 @@ v_insertnode boolean;
 v_projecttype text;
 rec record;
 v_nodecat text;
-v_nodetype_id text;
+v_node_type text;
 v_isarcdivide boolean;
 
 v_workcat text;
@@ -51,6 +51,10 @@ v_builtdate date;
 v_nodecat_id text;
 v_arclist json;
 v_count integer;
+v_node_id text;
+v_selection_mode text;
+v_id text;
+v_querytext text;
 
 BEGIN
 
@@ -60,7 +64,7 @@ BEGIN
 	-- select version
 	SELECT giswater, project_type INTO v_version, v_projecttype FROM sys_version ORDER BY id DESC LIMIT 1;
 
-	-- getting input data   
+	-- getting input data
 	v_expl :=  ((p_data ->>'data')::json->>'parameters')::json->>'exploitation';
 	v_buffer := ((p_data ->>'data')::json->>'parameters')::json->>'nodeTolerance';
 	v_insertnode := ((p_data ->>'data')::json->>'parameters')::json->>'insertIntoNode';
@@ -68,11 +72,22 @@ BEGIN
 	v_workcat := ((p_data ->>'data')::json->>'parameters')::json->>'workcatId'::text;
 	v_state_type := ((p_data ->>'data')::json->>'parameters')::json->>'stateType'::text;
 	v_builtdate := ((p_data ->>'data')::json->>'parameters')::json->>'builtdate'::text;
-	v_nodetype_id := ((p_data ->>'data')::json->>'parameters')::json->>'nodeType'::text;
+	v_node_type := ((p_data ->>'data')::json->>'parameters')::json->>'nodeType'::text;
 	v_nodecat_id := ((p_data ->>'data')::json->>'parameters')::json->>'nodeCat'::text;
+	v_selection_mode := (p_data ->>'data')::json->>'selectionMode'::text;
+	v_id := (p_data ->>'feature')::json->>'id'::text;
+
+	select replace(replace(replace(v_id, '[', ''), ']', ''), '"', '''') into v_id;
+
+	if v_selection_mode = 'previousSelection' then
+		v_querytext = ' AND arc_id in ('||v_id||')';
+	else
+		v_querytext = '';
+	end if;
+
 
 	select state into v_state from value_state_type where id=v_state_type;
-	
+
 	--  Reset values
 	DELETE FROM temp_table WHERE cur_user=current_user AND fid = 116;
 	DELETE FROM anl_node WHERE cur_user=current_user AND fid = 116;
@@ -82,51 +97,49 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (116, null, 4, '-------------------------------------------------------------');
 
 	-- inserting all extrem nodes on temp_node
-	INSERT INTO temp_table (fid, geom_point)
-	SELECT 	116, ST_StartPoint(the_geom) AS the_geom FROM v_edit_arc WHERE expl_id=v_expl and (state=1 or state=2)
+	EXECUTE 'INSERT INTO temp_table (fid, text_column, geom_point)
+	SELECT 	116, arc_id, ST_StartPoint(the_geom) AS the_geom FROM v_edit_arc WHERE expl_id='||v_expl||' and (state=1 or state=2) '||v_querytext||'
 	UNION 
-	SELECT 	116, ST_EndPoint(the_geom) AS the_geom FROM v_edit_arc WHERE expl_id=v_expl and (state=1 or state=2);
-		
+	SELECT 	116, arc_id, ST_EndPoint(the_geom) AS the_geom FROM v_edit_arc WHERE expl_id='||v_expl||' and (state=1 or state=2) '||v_querytext||'';
+
+   -- disable arc divide because new nodes are on start/end vertices
+	ALTER TABLE node DISABLE TRIGGER gw_trg_node_arc_divide;
+
 	-- inserting into node table
 	FOR rec_table IN SELECT * FROM temp_table WHERE cur_user=current_user AND fid = 116
 	LOOP
-	    -- Check existing nodes  
+	    -- Check existing nodes
 	    numNodes:= 0;
 		numNodes:= (SELECT COUNT(*) FROM node WHERE st_dwithin(node.the_geom, rec_table.geom_point, v_buffer));
 		IF numNodes = 0 THEN
 			IF v_insertnode THEN
-				INSERT INTO v_edit_node (expl_id, workcat_id, state, state_type, builtdate, node_type, the_geom, nodecat_id) 
-				VALUES (v_expl, v_workcat, v_state, v_state_type, v_builtdate, v_nodetype_id, rec_table.geom_point, v_nodecat_id);
+				INSERT INTO v_edit_node (expl_id, workcat_id, state, state_type, builtdate, node_type, the_geom, nodecat_id)
+				VALUES (v_expl, v_workcat, v_state, v_state_type, v_builtdate, v_node_type, rec_table.geom_point, v_nodecat_id)
+				RETURNING node_id INTO v_node_id;
 
-				INSERT INTO anl_node (the_geom, state, fid, expl_id, nodecat_id) 
-				VALUES (rec_table.geom_point, v_state, 116, v_expl, v_nodecat_id);
+				INSERT INTO anl_node (node_id, the_geom, state, fid, expl_id, nodecat_id)
+				VALUES (v_node_id, rec_table.geom_point, v_state, 116, v_expl, v_nodecat_id);
 
-			ELSE 
-				INSERT INTO anl_node (the_geom, state, fid, expl_id, nodecat_id) 
+			ELSE
+				INSERT INTO anl_node (the_geom, state, fid, expl_id, nodecat_id)
 				VALUES (rec_table.geom_point, v_state, 116,v_expl, v_nodecat_id);
 			END IF;
-		ELSE
-
 		END IF;
 	END LOOP;
-		
+
 	-- repair arcs
 	IF v_insertnode THEN
-	
-		-- set isarcdivide of chosed nodetype on falsea
-		SELECT isarcdivide INTO v_isarcdivide FROM cat_feature_node WHERE id=v_nodetype_id;
-		UPDATE cat_feature_node SET isarcdivide=FALSE WHERE id=v_nodetype_id;	
-		
+
 		EXECUTE 'SELECT array_to_json(array_agg(arc_id::text)) FROM arc WHERE expl_id='||v_expl||' AND (node_1 IS NULL OR node_2 IS NULL)'
 		INTO v_arclist;
 		-- execute function
 		EXECUTE 'SELECT gw_fct_arc_repair($${"client":{"device":4, "infoType":1,"lang":"ES"},"feature":{"id":'||v_arclist||'},
 		"data":{}}$$);';
 
-		-- restore isarcdivide to previous value
-		UPDATE cat_feature_node SET isarcdivide=v_isarcdivide WHERE id=v_nodetype_id;	
-		
-	END IF;	
+	END IF;
+
+    -- enable arc divide
+    ALTER TABLE node ENABLE TRIGGER gw_trg_node_arc_divide;
 
 	-- get log
 	SELECT count(*) INTO v_count FROM anl_node WHERE cur_user="current_user"() AND fid=116;
@@ -135,18 +148,18 @@ BEGIN
 		INSERT INTO audit_check_data(fid,  error_message, fcount)
 		VALUES (116,  'There are no nodes to be repaired.', 0);
 	ELSE
-			INSERT INTO audit_check_data(fid,  error_message, fcount)
-			VALUES (116,  concat (v_count,' nodes have been created to repair topology'), v_count);
+		INSERT INTO audit_check_data(fid,  error_message, fcount)
+		VALUES (116,  concat (v_count,' nodes have been created to repair topology'), v_count);
 
-			INSERT INTO audit_check_data(fid,  error_message, fcount)
-			SELECT 116,  concat ('Node_id: ',string_agg(node_id, ', '), '.' ), v_count 
-			FROM anl_node WHERE cur_user="current_user"() AND fid=116;
+		INSERT INTO audit_check_data(fid,  error_message, fcount)
+		SELECT 116,  concat ('Node_id: ',string_agg(node_id, ', '), '.' ), v_count
+		FROM anl_node WHERE cur_user="current_user"() AND fid=116;
 	END IF;
-	
+
 	-- info
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result
 	FROM (SELECT id, error_message as message FROM audit_check_data WHERE cur_user="current_user"() AND fid = 116) row;
-	v_result := COALESCE(v_result, '{}'); 
+	v_result := COALESCE(v_result, '{}');
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 
 	--points
@@ -161,10 +174,10 @@ BEGIN
   	FROM (SELECT id, node_id, nodecat_id, state, expl_id, descript,fid, the_geom
   	FROM  anl_node WHERE cur_user="current_user"() AND fid=116) row) features;
 
-  	v_result := COALESCE(v_result, '{}'); 
-	v_result_point = concat ('{"geometryType":"Point", "features":',v_result, '}'); 
+  	v_result := COALESCE(v_result, '{}');
+	v_result_point = concat ('{"geometryType":"Point", "features":',v_result, '}');
 
-  	IF v_saveondatabase IS FALSE THEN 
+  	IF v_saveondatabase IS FALSE THEN
 		-- delete previous results
 		DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=116;
 	ELSE
@@ -172,24 +185,19 @@ BEGIN
 		DELETE FROM selector_audit WHERE fid=116 AND cur_user=current_user;
 		INSERT INTO selector_audit (fid,cur_user) VALUES (116, current_user);
 	END IF;
-		
+
 	-- Control nulls
-	v_result_info := COALESCE(v_result_info, '{}'); 
-	v_result_point := COALESCE(v_result_point, '{}'); 
+	v_result_info := COALESCE(v_result_info, '{}');
+	v_result_point := COALESCE(v_result_point, '{}');
 
 	-- Return
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Process done successfully"}, "version":"'||v_version||'"'||
              ',"body":{"form":{}'||
-		     ',"data":{ "info":'||v_result_info||','||	
+		     ',"data":{ "info":'||v_result_info||','||
 				'"point":'||v_result_point||'}}'||
 	    '}')::json, 2118, null, null, null);
-	
-	-- Exception handling
-	EXCEPTION WHEN OTHERS THEN 
-    RETURN ('{"status":"Failed","message":' || (to_json(SQLERRM)) || ', "version":"'||v_version||'"'||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
-	
+
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
- 

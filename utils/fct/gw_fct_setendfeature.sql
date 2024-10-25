@@ -104,16 +104,16 @@ BEGIN
 				v_count_feature = v_count_feature + 1;
 				--remove links related to arc
 				EXECUTE 'DELETE FROM link
-				WHERE link_id IN (SELECT link_id FROM link l JOIN connec c ON c.connec_id = l.feature_id WHERE c.arc_id = '|| quote_literal(v_feature_id_value)||')';
+				WHERE link_id IN (SELECT link_id FROM link l JOIN connec c ON c.connec_id = l.feature_id WHERE c.state = 1 AND c.arc_id = '|| quote_literal(v_feature_id_value)||')';
 
-				EXECUTE 'UPDATE connec SET arc_id = NULL WHERE arc_id = '|| quote_literal(v_feature_id_value)||';';
+				EXECUTE 'UPDATE connec SET arc_id = NULL WHERE state = 1 AND arc_id = '|| quote_literal(v_feature_id_value)||';';
 
 				IF v_projecttype = 'UD' THEN
 					--remove links related to arc
 					EXECUTE 'DELETE FROM link
-					WHERE link_id IN (SELECT link_id FROM link l JOIN gully g ON g.gully_id = l.feature_id WHERE g.arc_id = '|| quote_literal(v_feature_id_value)||')';
+					WHERE link_id IN (SELECT link_id FROM link l JOIN gully g ON g.gully_id = l.feature_id WHERE g.state = 1 AND g.arc_id = '|| quote_literal(v_feature_id_value)||')';
 
-					EXECUTE 'UPDATE gully SET arc_id = NULL WHERE arc_id = '|| quote_literal(v_feature_id_value)||'';
+					EXECUTE 'UPDATE gully SET arc_id = NULL WHERE state = 1 AND arc_id = '|| quote_literal(v_feature_id_value)||'';
 				END IF;
 
 				-- specific log for arcs which have elements associated to other features
@@ -340,7 +340,7 @@ BEGIN
 
 	--EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
+	RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 'SQLCONTEXT', v_error_context)::json;
 
 END;
 $function$

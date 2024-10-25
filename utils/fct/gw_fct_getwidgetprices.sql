@@ -28,6 +28,7 @@ v_fields_array json[];
 v_tablename text;
 v_psector_id text;
 v_currency text;
+v_error_context text;
 
 BEGIN
 
@@ -64,6 +65,12 @@ BEGIN
 		/*', "layoutname":"price_layout"'||||*/
 		', "fields":' || v_fields ||
 		'}')::json;
+
+	-- Exception handling
+    EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
+    RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 'SQLCONTEXT', v_error_context)::json;
+
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

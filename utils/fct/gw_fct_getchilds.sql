@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2572
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_getchilds(json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getchilds(json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getchilds(p_data json)
   RETURNS json AS
 $BODY$
@@ -243,7 +243,7 @@ BEGIN
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_errcontext = pg_exception_context;
-	RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version || ',"SQLSTATE":' || to_json(SQLSTATE) || ',"MSGERR": '|| to_json(v_msgerr::json ->> 'MSGERR') ||'}')::json;
+	RETURN json_build_object('status', 'Failed','NOSQLERR', SQLERRM, 'version', v_version, 'SQLSTATE', SQLSTATE, 'MSGERR', (v_msgerr::json ->> 'MSGERR'))::json;
 
 END;
 $BODY$

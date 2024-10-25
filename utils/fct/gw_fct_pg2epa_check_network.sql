@@ -57,10 +57,12 @@ v_version text;
 v_networkstats json;
 v_sumlength numeric (12,2);
 v_linkoffsets text;
-v_delnetwork boolean;
+v_deldisconnetwork boolean;
+v_deldrynetwork boolean;
 v_removedemands boolean;
 v_minlength float;
 v_demand numeric (12,4);
+v_networkmode integer;
 
 BEGIN
 	-- Search path
@@ -77,10 +79,12 @@ BEGIN
 	-- get options data
 	SELECT value INTO v_linkoffsets FROM config_param_user WHERE parameter = 'inp_options_link_offsets' AND cur_user = current_user;
 	SELECT value INTO v_minlength FROM config_param_user WHERE parameter = 'inp_options_minlength' AND cur_user = current_user;
+	v_networkmode = (SELECT value FROM config_param_user WHERE parameter='inp_options_networkmode' AND cur_user=current_user);
 
 
 	-- get user variables
-	v_delnetwork = (SELECT value::json->>'delDisconnNetwork' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
+	v_deldisconnetwork = (SELECT value::json->>'delDisconnNetwork' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
+	v_deldrynetwork = (SELECT value::json->>'delDryNetwork' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
 	v_removedemands = (SELECT value::json->>'removeDemandOnDryNodes' FROM config_param_user WHERE parameter='inp_options_debug' AND cur_user=current_user)::boolean;
 	
 	-- manage no found results
@@ -133,25 +137,6 @@ BEGIN
 	INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message) VALUES (139, v_result_id, 1, '-------');
 	
 
-	RAISE NOTICE '1 - Check result orphan nodes on rpt tables (fid:  228)';
-	v_querytext = '(SELECT node_id, nodecat_id, the_geom FROM (
-			SELECT node_id FROM temp_t_node where sector_id > 0 EXCEPT 
-			(SELECT node_1 as node_id FROM temp_t_arc  UNION
-			SELECT node_2 FROM temp_t_arc ))a
-			JOIN temp_t_node USING (node_id)) b';
-	
-	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
-	IF v_count > 0  THEN
-		EXECUTE concat ('INSERT INTO temp_anl_node (fid, node_id, nodecat_id, descript, the_geom)
-		SELECT 228, node_id, nodecat_id, ''Orphan node'', the_geom FROM ', v_querytext);
-		INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-		VALUES (v_fid, 3, v_result_id, concat('ERROR-228: There is/are ',v_count,
-		' orphan node''s on this result. This could be because closests arcs maybe UNDEFINED among others.'),v_count);
-	ELSE
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity,  error_message, fcount)
-		VALUES (v_fid, v_result_id, 1, 'INFO: No orphan node(s) found on this result. ', v_count);
-	END IF;
-
 	RAISE NOTICE '2 - Check node_1 or node_2 nulls on on temp_table (454)';
 	v_querytext = '(SELECT arc_id, arccat_id, the_geom, expl_id FROM temp_t_arc WHERE node_1 IS NULL UNION SELECT arc_id, 
 	arccat_id, the_geom, expl_id FROM temp_t_arc WHERE node_2 IS NULL) a';
@@ -187,17 +172,20 @@ BEGIN
 
 	RAISE NOTICE '3 - Check links over nodarcs (404)';
 
-	SELECT count(*) INTO v_count FROM v_edit_link l, temp_t_arc a WHERE st_dwithin(st_endpoint(l.the_geom), a.the_geom, 0.001) AND a.epa_type NOT IN ('CONDUIT', 'PIPE', 'VIRTUALVALVE');
-	
-	IF v_count > 0 THEN
-		EXECUTE 'INSERT INTO temp_anl_arc (fid, arc_id, arccat_id, state, expl_id, the_geom, descript)
-			SELECT 404, link_id, ''LINK'', l.state, l.expl_id, l.the_geom, ''Link over nodarc'' FROM v_edit_link l, temp_t_arc a 
-			WHERE st_dwithin(st_endpoint(l.the_geom), a.the_geom, 0.001) AND a.epa_type NOT IN (''CONDUIT'', ''PIPE'', ''VIRTUALVALVE'')';
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, v_result_id, 3, concat('ERROR-404: There is/are ',v_count,' link(s) with endpoint over nodarcs.'),v_count);
-	ELSE
-		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
-		VALUES (v_fid, v_result_id, 1,'INFO: No endpoint links checked over nodarcs on this result.',v_count);
+	IF v_networkmode > 2 THEN
+
+		SELECT count(*) INTO v_count FROM v_edit_link l, temp_t_arc a WHERE st_dwithin(st_endpoint(l.the_geom), a.the_geom, 0.001) AND a.epa_type NOT IN ('CONDUIT', 'PIPE', 'VIRTUALVALVE');
+		
+		IF v_count > 0 THEN
+			EXECUTE 'INSERT INTO temp_anl_arc (fid, arc_id, arccat_id, state, expl_id, the_geom, descript)
+				SELECT 404, link_id, ''LINK'', l.state, l.expl_id, l.the_geom, ''Link over nodarc'' FROM v_edit_link l, temp_t_arc a 
+				WHERE st_dwithin(st_endpoint(l.the_geom), a.the_geom, 0.001) AND a.epa_type NOT IN (''CONDUIT'', ''PIPE'', ''VIRTUALVALVE'')';
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, v_result_id, 3, concat('ERROR-404: There is/are ',v_count,' link(s) with endpoint over nodarcs.'),v_count);
+		ELSE
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+			VALUES (v_fid, v_result_id, 1,'INFO: No endpoint links checked over nodarcs on this result.',v_count);
+		END IF;
 	END IF;
 	
 	
@@ -273,7 +261,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 3, concat('ERROR-',v_fid,': There is/are ',v_count,' arc(s) topological disconnected from any ', v_boundaryelem
-		,'. Main reasons maybe: state_type, epa_type, sector_id or expl_id or some node not connected'));
+		,'. The reason should be: state_type, epa_type, sector_id or expl_id or some node not connected'));
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1, concat('INFO: No arcs topological disconnected found on this result from any ', v_boundaryelem));
@@ -388,7 +376,7 @@ BEGIN
 
 
 	-- updating values on result
-	IF v_delnetwork THEN
+	IF v_deldisconnetwork THEN
 		DELETE FROM temp_t_arc WHERE arc_id IN (SELECT arc_id FROM temp_anl_arc WHERE fid = 139 AND cur_user=current_user);
 		GET DIAGNOSTICS v_count = row_count;
 
@@ -403,13 +391,32 @@ BEGIN
 		END IF;
 
 		DELETE FROM temp_t_node WHERE node_id IN (SELECT node_id FROM temp_anl_node WHERE fid = 139 AND cur_user=current_user);
-		DELETE FROM temp_audit_check_data WHERE fid = 227 AND error_message like '%topological disconnected from any%' AND cur_user = current_user;
 	END IF;
 
+	-- updating values on result
+	IF v_deldrynetwork THEN
+		DELETE FROM temp_t_arc WHERE arc_id IN (SELECT arc_id FROM temp_anl_arc WHERE fid = 232 AND cur_user=current_user);
+		GET DIAGNOSTICS v_count = row_count;
+
+		IF v_count > 0 THEN
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result, 2, 
+			concat('WARNING-227: {delDryNetwork} is enabled and ',v_count,' arcs have been removed.'));
+		ELSE
+			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
+			VALUES (v_fid, v_result, 1, 
+			concat('INFO: {delDryNetwork} is enabled but nothing have been removed.'));
+		END IF;
+
+		DELETE FROM temp_t_node WHERE node_id IN (SELECT node_id FROM temp_anl_node WHERE fid = 232 AND cur_user=current_user);
+	END IF;
+
+
 	IF v_removedemands THEN
-		UPDATE temp_t_node n SET demand = 0, addparam = gw_fct_json_object_set_key(addparam::json, 'removedDemand'::text, true::boolean) 
+		UPDATE temp_t_node n SET demand = 0, addparam = gw_fct_json_object_set_key(a.addparam::json, 'removedDemand'::text, true::boolean) 
 		FROM temp_anl_node a WHERE fid = 233 AND a.cur_user = current_user AND a.node_id = n.node_id;
 		GET DIAGNOSTICS v_count = row_count;
+		
 		IF v_count > 0 THEN
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
 			VALUES (v_fid, v_result, 2, concat(
@@ -550,11 +557,6 @@ BEGIN
 		       '}}'||
 	    '}')::json, 2680, null, null, null);
 
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
-	
 END;
 $BODY$
   LANGUAGE plpgsql VOLATILE

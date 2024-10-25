@@ -24,7 +24,7 @@ SELECT * FROM SCHEMA_NAME.audit_check_data where fid::text  = 227::text
 	DELETE FROM anl_node WHERE fid IN (159) AND cur_user=current_user;
 	DELETE FROM anl_arc WHERE fid IN (103) AND cur_user=current_user;
 
--- fid: 114,227,416
+-- fid: 369,370,396,401,402,455,456,457,458
 
 */
 
@@ -129,7 +129,7 @@ BEGIN
 	v_hydroscenarioval = (SELECT name FROM config_param_user JOIN cat_hydrology c ON value = hydrology_id::text WHERE parameter = 'inp_options_hydrology_scenario' AND cur_user = current_user);
 	v_dwfscenarioval = (SELECT idval FROM config_param_user JOIN cat_dwf_scenario c ON value = c.id::text WHERE parameter = 'inp_options_dwfscenario' AND cur_user = current_user);
 	IF v_dwfscenarioval IS NULL THEN
-		v_dwfscenarioval = 'No dwf scenario choosed';
+		v_dwfscenarioval = 'No dwf scenario chosen';
 	END IF;
 
 	-- get settings values
@@ -434,7 +434,7 @@ BEGIN
 
 		FOR object_rec IN SELECT 
 		json_array_elements_text('["junction", "conduit", "raingage", "flwreg_orifice", "flwreg_weir", "flwreg_outlet", "flwreg_outlet", "storage",  "outfall",  "treatment", "lid_usage" ]'::json) as tabname, 
-		json_array_elements_text('["node_id" , "arc_id",  "rg_id",    "nodarc_id",      "nodarc_id",   "nodarc_id",     "nodarc_id",     "node_id",  "node_id",  "node_id",   "lidco_id"]'::json) as colname,
+		json_array_elements_text('["node_id" , "arc_id",  "rg_id",    "nodarc_id",      "nodarc_id",   "nodarc_id",     "nodarc_id",     "node_id",  "node_id",  "node_id",   "subc_id"]'::json) as colname,
  		json_array_elements_text('["anl_node" ,"anl_arc", "",        "anl_nodarc",     "anl_nodarc",  "anl_nodarc",    "anl_nodarc",    "anl_node", "anl_node", "anl_node",  "anl_polygon"]'::json) as tablename
 		LOOP
 
@@ -463,7 +463,7 @@ BEGIN
 
 				ELSIF object_rec.tablename = 'anl_polygon' THEN
 
-					EXECUTE 'INSERT INTO anl_polygon (pol_id, pol_type, fid, descript, the_geom)
+					EXECUTE 'INSERT INTO anl_polygon (pol_id, fid, descript, the_geom)
 					SELECT '||object_rec.colname||', 396, concat(''Present on '',count(*),'' enabled dscenarios''), the_geom FROM v_edit_inp_dscenario_'||object_rec.tabname||
 					' GROUP BY '||object_rec.colname||', the_geom  having count(*) > 1';
 
@@ -547,7 +547,7 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, concat('INFO: All CONTROLS has correct arc id values.'));
 	END IF;
 
-	IF v_networkmode = 2 THEN
+	IF v_networkmode = 2 or v_networkmode = 3 THEN
 	
 		RAISE NOTICE '6 - Check arc_id null for gully (455)';
 		SELECT count(*) INTO v_count FROM (SELECT * FROM v_edit_gully g,  selector_sector s 
@@ -672,11 +672,6 @@ BEGIN
 				'"line":'||v_result_line||'}'||
 			'}'||
 		'}')::json, 2858, null, null, null);
-
-	--  Exception handling
-	EXCEPTION WHEN OTHERS THEN
-	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN ('{"status":"Failed","NOSQLERR":' || to_json(SQLERRM) || ',"SQLSTATE":' || to_json(SQLSTATE) ||',"SQLCONTEXT":' || to_json(v_error_context) || '}')::json;
 
 END;
 $BODY$

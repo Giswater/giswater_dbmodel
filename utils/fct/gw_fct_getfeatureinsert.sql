@@ -6,7 +6,7 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2574
 
-DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_api_getfeatureinsert(p_data json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getfeatureinsert(p_data json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getfeatureinsert(p_data json)
   RETURNS json AS
 $BODY$
@@ -70,7 +70,7 @@ BEGIN
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN 
-	RETURN ('{"status":"Failed","SQLERR":' || to_json(SQLERRM) || ', "version":'|| v_version ||',"SQLSTATE":' || to_json(SQLSTATE) || '}')::json;
+	RETURN json_build_objects('status', 'Failed', 'NOSQLERR', SQLERRM, 'version', v_version, 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM))::json;
 
 END;
 $BODY$
