@@ -296,10 +296,9 @@ BEGIN
 	END IF;
 
 	RAISE NOTICE '11 - check if drawn arc direction is the same as defined node_1, node_2 (223)';
-
-	v_querytext = 'SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a, '||v_edit||'node n WHERE st_dwithin(st_startpoint(a.the_geom), n.the_geom, 0.0001) and node_2 = node_id
+	v_querytext = 'SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a, node n WHERE st_dwithin(st_startpoint(a.the_geom), n.the_geom, 0.0001) and node_2 = node_id
 			UNION
-			SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id  FROM '||v_edit||'arc a, '||v_edit||'node n WHERE st_dwithin(st_endpoint(a.the_geom), n.the_geom, 0.0001) and node_1 = node_id';
+			SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id  FROM '||v_edit||'arc a, node n WHERE st_dwithin(st_endpoint(a.the_geom), n.the_geom, 0.0001) and node_1 = node_id';
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,') a ') INTO v_count;
 
@@ -775,18 +774,11 @@ BEGIN
 		VALUES (v_fid, 1,'265', 'INFO: No automatic links with out-of-range Longitude found.',v_count);
 	END IF;
 
-    RAISE NOTICE '26 - Duplicated ID values between arc, node, connec, gully(266)';
+	RAISE NOTICE '26 - Duplicated ID values between arc, node, connec, gully(266)';
 	IF v_project_type = 'WS' THEN
-		v_querytext = 'SELECT node_id AS feature_id FROM '||v_edit||'node n JOIN '||v_edit||'arc a ON a.arc_id=n.node_id
-					UNION SELECT node_id FROM '||v_edit||'node n JOIN '||v_edit||'connec c ON c.connec_id=n.node_id
-					UNION SELECT a.arc_id FROM '||v_edit||'arc a JOIN '||v_edit||'connec c ON c.connec_id=a.arc_id';	
+		v_querytext = 'SELECT * from (	SELECT node_id FROM node UNION ALL  SELECT arc_id FROM arc UNION ALL SELECT connec_id FROM connec )a group by node_id having count(*) = 1';	
 	ELSIF v_project_type = 'UD' THEN
-		v_querytext = 'SELECT node_id AS feature_id FROM '||v_edit||'node n JOIN '||v_edit||'arc a ON a.arc_id=n.node_id
-					UNION SELECT node_id FROM '||v_edit||'node n JOIN '||v_edit||'connec c ON c.connec_id=n.node_id
-					UNION SELECT node_id FROM '||v_edit||'node n JOIN '||v_edit||'gully g ON g.gully_id=n.node_id
-					UNION SELECT connec_id FROM '||v_edit||'connec c JOIN '||v_edit||'gully g ON g.gully_id=c.connec_id
-					UNION SELECT a.arc_id FROM '||v_edit||'arc a JOIN '||v_edit||'connec c ON c.connec_id=a.arc_id	
-					UNION SELECT a.arc_id FROM '||v_edit||'arc a JOIN '||v_edit||'gully g ON g.gully_id=a.arc_id';	
+		v_querytext = 'SELECT * from (	SELECT node_id FROM node UNION ALL  SELECT arc_id FROM arc UNION ALL SELECT connec_id FROM connec UNION ALL SELECT gully_id FROM gully )a group by node_id having count(*) = 1';	
 	END IF;
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
@@ -1315,7 +1307,7 @@ BEGIN
 	v_querytext = ' (SELECT arc_id, arccat_id, state1, arc_id_aux, node_1, node_2, expl_id, the_geom FROM (
 	SELECT DISTINCT t1.arc_id, t1.arccat_id, t1.state as state1, t2.arc_id as arc_id_aux,
 	t2.state as state2, t1.node_1, t1.node_2, t1.expl_id, t1.the_geom
-	FROM '||v_edit||'arc AS t1, '||v_edit||'arc AS t2
+	FROM '||v_edit||'arc AS t1, arc AS t2
 	WHERE St_equals(t1.the_geom,t2.the_geom)
 	AND t1.arc_id != t2.arc_id
 	ORDER BY arc_id ) a where a.state1 > 0 AND a.state2 > 0) a';
