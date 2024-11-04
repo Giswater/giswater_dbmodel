@@ -296,9 +296,11 @@ BEGIN
 	END IF;
 
 	RAISE NOTICE '11 - check if drawn arc direction is the same as defined node_1, node_2 (223)';
-	v_querytext = 'SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a, node n WHERE st_dwithin(st_startpoint(a.the_geom), n.the_geom, 0.0001) and node_2 = node_id
-			UNION
-			SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id  FROM '||v_edit||'arc a, node n WHERE st_dwithin(st_endpoint(a.the_geom), n.the_geom, 0.0001) and node_1 = node_id';
+	v_querytext = 'SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a
+    JOIN node n ON node_2 = node_id WHERE st_dwithin(st_startpoint(a.the_geom), n.the_geom, 0.0001)
+    UNION
+    SELECT a.arc_id , arccat_id, a.the_geom, a.expl_id  FROM '||v_edit||'arc a
+    JOIN node n ON node_1 = node_id WHERE st_dwithin(st_endpoint(a.the_geom), n.the_geom, 0.0001)';
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,') a ') INTO v_count;
 
@@ -776,9 +778,9 @@ BEGIN
 
 	RAISE NOTICE '26 - Duplicated ID values between arc, node, connec, gully(266)';
 	IF v_project_type = 'WS' THEN
-		v_querytext = 'SELECT * from (	SELECT node_id FROM node UNION ALL  SELECT arc_id FROM arc UNION ALL SELECT connec_id FROM connec )a group by node_id having count(*) = 1';	
+		v_querytext = 'SELECT * from (SELECT node_id FROM node UNION ALL SELECT arc_id FROM arc UNION ALL SELECT connec_id FROM connec)a group by node_id having count(*) > 1';
 	ELSIF v_project_type = 'UD' THEN
-		v_querytext = 'SELECT * from (	SELECT node_id FROM node UNION ALL  SELECT arc_id FROM arc UNION ALL SELECT connec_id FROM connec UNION ALL SELECT gully_id FROM gully )a group by node_id having count(*) = 1';	
+		v_querytext = 'SELECT * from (SELECT node_id FROM node UNION ALL SELECT arc_id FROM arc UNION ALL SELECT connec_id FROM connec UNION ALL SELECT gully_id FROM gully)a group by node_id having count(*) > 1';
 	END IF;
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
