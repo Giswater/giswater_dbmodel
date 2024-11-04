@@ -60,26 +60,28 @@ BEGIN
 	EXECUTE 'SELECT total_vol FROM rpt_outfallflow_sum WHERE result_id = '||quote_literal(v_eparesult)||' AND node_id !=''System'' AND node_id::integer IN ('||v_wwtpoutfalls||')'	INTO v_wwtp;
 
 	IF v_wwtp IS NULL THEN
-		RAISE EXCEPTION 'This result does not have the specified nodes as outfalls. Please check your data before continue';
+	
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) 
+		VALUES (v_fid, null, 4,  'ERROR: This result does not have the specified nodes as OUTFALLS. Please check your data before continue');
+	ELSE 
+
+		v_inf = 10*(SELECT infil_loss FROM rpt_runoff_quant WHERE result_id = v_eparesult);
+		v_rain = 10*(SELECT total_prec FROM rpt_runoff_quant WHERE result_id = v_eparesult);
+		v_dwf = 10*(SELECT dryw_inf FROM rpt_flowrouting_cont WHERE result_id = v_eparesult);
+		
+		v_performance = (v_inf + v_wwtp)/(v_rain + v_dwf);
+
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Result_id: ',v_eparesult));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('WWTP outfall_id''s: ',v_wwtpoutfalls));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('--------------------------'));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '');
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total precipitation volume: ',v_rain,'  10^6 LTS'));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total DWF volume: ',v_dwf,'  10^6 LTS'));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total infil.losses volume: ',v_inf,'  10^6 LTS'));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total WWTP volume: ',v_wwtp,'  10^6 LTS'));
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '');
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Hydraulic performance for this result: ',(100*v_performance)::numeric(12,2),' %'));
 	END IF;
-
-	v_inf = 10*(SELECT infil_loss FROM rpt_runoff_quant WHERE result_id = v_eparesult);
-	v_rain = 10*(SELECT total_prec FROM rpt_runoff_quant WHERE result_id = v_eparesult);
-	v_dwf = 10*(SELECT dryw_inf FROM rpt_flowrouting_cont WHERE result_id = v_eparesult);
-	
-	v_performance = (v_inf + v_wwtp)/(v_rain + v_dwf);
-
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Result_id: ',v_eparesult));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('WWTP outfall_id''s: ',v_wwtpoutfalls));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('--------------------------'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '');
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total precipitation volume: ',v_rain,'  10^6 LTS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total DWF volume: ',v_dwf,'  10^6 LTS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total infil.losses volume: ',v_inf,'  10^6 LTS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Total WWTP volume: ',v_wwtp,'  10^6 LTS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '');
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Hydraulic performance for this result: ',(100*v_performance)::numeric(12,2),' %'));
-	
 
 	-- get results
 	-- info
@@ -88,7 +90,7 @@ BEGIN
 	v_result := COALESCE(v_result, '{}'); 
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 	
-	--    Control nulls
+	-- Control nulls
 	v_result_info := COALESCE(v_result_info, '{}'); 
 
 	--  Return
