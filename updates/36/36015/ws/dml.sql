@@ -16,3 +16,12 @@ update config_toolbox SET inputparams =
 {"widgetname":"pattern", "label":"Feature pattern:","widgettype":"combo","tooltip":"This value will be stored on pattern_id of inp_dscenario_demand table in order to be used on the inp file exportation ONLY with the pattern method FEATURE PATTERN.", "datatype":"text","layoutname":"grl_option_parameters","layoutorder":7,"comboIds":[1,2,3,4,5,6,7], "comboNames":["NONE", "SECTOR-DEFAULT", "DMA-DEFAULT", "DMA-PERIOD","HYDROMETER-PERIOD","HYDROMETER-CATEGORY", "FEATURE-PATTERN"], "selectedId":""}, 
 {"widgetname":"demandUnits", "label":"Demand units:","tooltip": "Choose units to insert volume data on demand column. <br> This value need to be the same that flow units used on EPANET. On the other hand, it is assumed that volume from hydrometer data table is expresed on m3/period and column period_seconds is filled.", "widgettype":"combo","datatype":"text","layoutname":"grl_option_parameters","layoutorder":8 ,"comboIds":["LPS","LPM","MLD","CMH","CMD","CFS","GPM","MGD","AFD"], "comboNames":["LPS","LPM","MLD","CMH","CMD","CFS","GPM","MGD","AFD"], "selectedId":""}]'
 where id = 3110;
+
+
+DELETE FROM config_form_fields WHERE columnname like 'real_press%' and formtype IN ('form_list_footer', 'form_list_header', 'form_print', 'form_catalog', 'form_visit');
+
+UPDATE sys_table SET id='config_graph_mincut', descript='Table to configure the inlets of the network. Optionally, you can set if any of its arc is an inlet arc' WHERE id='config_graph_inlet';
+
+INSERT INTO sys_message (id, error_message, hint_message, log_level, show_user, project_type, "source")
+VALUES(3274, 'There isn''t any node configured on config_graph_mincut for the selected macroexploitation',
+'Fill config_graph_mincut with the inlets before executing the mincut', 2, true, 'utils', 'core') on conflict (id) do nothing;

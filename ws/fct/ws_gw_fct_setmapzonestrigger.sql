@@ -185,7 +185,7 @@ BEGIN
 			v_message = '{"status": "Accepted", "level": 0, "text": "Valve status have been succesfully updated. Nothing to do because automatic trigger is not enabled to recalculate DYNAMIC MAPZONES"}';			
 		END IF;
 	ELSE
-		v_message = '{"status": "Accepted", "level": 0, "text": "Nothing to do because it is not a valve"}';
+        v_message = '{"status": "Accepted", "level": 0, "text": "Nothing to do because it is not a valid valve. Only those valves with cat_feature_node.graph_delimiter different than NONE are valid"}';
 	END IF;
 
 	-- Return
