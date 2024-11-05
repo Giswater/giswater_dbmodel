@@ -20,6 +20,8 @@ SELECT SCHEMA_NAME.gw_fct_om_check_data($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "feature":{},"data":{"parameters":{"selectionMode":"wholeSystem"}}}$$)
 
+SELECT SCHEMA_NAME.gw_fct_om_check_data($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"selectionMode":"userSelectors"}, "aux_params":null}}$$);
+
 
 SELECT * FROM audit_check_data WHERE fid = v_fid
 
@@ -178,9 +180,9 @@ BEGIN
 	END IF;
 
 	RAISE NOTICE '05 - Check state 1 arcs with state 2 nodes (197)';
-	v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN '||v_edit||'node n ON node_1=node_id 
+	v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN node n ON node_1=node_id 
 			WHERE a.state =1 AND n.state=2 UNION
-			SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN '||v_edit||'node n ON node_2=node_id WHERE a.state =1 AND n.state=2) a';
+			SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN node n ON node_2=node_id WHERE a.state =1 AND n.state=2) a';
 			
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
 	IF v_count > 0 THEN
@@ -512,8 +514,8 @@ BEGIN
 					AND connec_id NOT IN (SELECT feature_id FROM link)
 					EXCEPT 
 					SELECT connec_id, connecat_id, c.the_geom, c.expl_id FROM '||v_edit||'connec c
-					LEFT JOIN '||v_edit||'arc a USING (arc_id) WHERE c.state= 1 
-					AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)';
+					JOIN arc a USING (arc_id) WHERE c.state= 1 
+					AND st_dwithin(c.the_geom, a.the_geom, 0.1)';
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
@@ -956,16 +958,19 @@ BEGIN
 		FROM link l JOIN connec c ON feature_id = connec_id WHERE l.state = 1 and l.feature_type = 'CONNEC';
 
 		UPDATE temp_t_arc t SET node_1 = connec_id, state = 9 FROM (
-		SELECT l.link_id, c.connec_id, (ST_Distance(c.the_geom, ST_startpoint(l.the_geom))) as d FROM connec c, link l
-		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.05) group by 1,2,3 ORDER BY 1 DESC,3 DESC
+		SELECT l.link_id, c.connec_id FROM connec c, link l
+		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.01) group by 1,2 ORDER BY 1 DESC
 		)a where t.arc_id = a.link_id::text AND t.node_1 = a.connec_id;
 	ELSE
 		INSERT INTO temp_t_arc (arc_id, node_1, result_id, sector_id, state, the_geom) SELECT link_id, feature_id, '417', l.sector_id, l.state, l.the_geom 
 		FROM link l JOIN v_edit_connec c ON feature_id = connec_id WHERE l.state > 0 and l.feature_type = 'CONNEC';
 
 		UPDATE temp_t_arc t SET node_1 = connec_id, state = 9 FROM (
-		SELECT l.link_id, c.connec_id, (ST_Distance(c.the_geom, ST_startpoint(l.the_geom))) as d FROM v_edit_connec c, link l
-		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.05) group by 1,2,3 ORDER BY 1 DESC,3 DESC
+		SELECT l.link_id, c.connec_id FROM link l, connec c, selector_sector, selector_expl
+		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.01) 
+		AND selector_sector.sector_id = c.sector_id AND selector_sector.cur_user = current_user
+		AND selector_expl.expl_id = c.expl_id AND selector_expl.cur_user = current_user
+		group by 1,2 ORDER BY 1 DESC
 		)a where t.arc_id = a.link_id::text AND t.node_1 = a.connec_id;
 	END IF;
 
