@@ -194,7 +194,7 @@ AS SELECT a.node_id,
      JOIN selector_sector s USING (sector_id)
      LEFT JOIN selector_municipality m USING (muni_id)
   WHERE s.cur_user = CURRENT_USER AND (m.cur_user = CURRENT_USER OR a.muni_id IS NULL);
-     
+
 
 CREATE OR REPLACE VIEW v_edit_inp_dwf
 AS SELECT i.dwfscenario_id,
@@ -209,8 +209,8 @@ AS SELECT i.dwfscenario_id,
     inp_dwf i
      JOIN node USING (node_id)
   WHERE c.cur_user::name = CURRENT_USER AND c.parameter::text = 'inp_options_dwfscenario'::text AND c.value::integer = i.dwfscenario_id;
-  
- 
+
+
 CREATE OR REPLACE VIEW v_edit_raingage
 AS SELECT raingage.rg_id,
     raingage.form_type,
@@ -228,7 +228,7 @@ AS SELECT raingage.rg_id,
   WHERE raingage.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::text;
 
 
-CREATE OR REPLACE VIEW v_edit_inp_subcatchment AS 
+CREATE OR REPLACE VIEW v_edit_inp_subcatchment AS
  SELECT a.* from (SELECT inp_subcatchment.hydrology_id,
     inp_subcatchment.subc_id,
     inp_subcatchment.outlet_id,
@@ -265,7 +265,149 @@ CREATE OR REPLACE VIEW v_edit_inp_subcatchment AS
    FROM inp_subcatchment
    LEFT JOIN node ON node_id = outlet_id
    ) a, config_param_user, selector_sector, selector_municipality
-   WHERE a.sector_id = selector_sector.sector_id AND selector_sector.cur_user = "current_user"()::text 
+   WHERE a.sector_id = selector_sector.sector_id AND selector_sector.cur_user = "current_user"()::text
    AND ((a.muni_id = selector_municipality.muni_id AND selector_municipality.cur_user = "current_user"()::text) or a.muni_id is null)
-   AND a.hydrology_id = config_param_user.value::integer AND config_param_user.cur_user::text = "current_user"()::text 
+   AND a.hydrology_id = config_param_user.value::integer AND config_param_user.cur_user::text = "current_user"()::text
    AND config_param_user.parameter::text = 'inp_options_hydrology_scenario'::text;
+
+-- 20/11/2024
+CREATE OR REPLACE VIEW vu_gully
+AS WITH streetaxis AS (
+         SELECT v_ext_streetaxis.id,
+            v_ext_streetaxis.descript
+           FROM v_ext_streetaxis
+        ), inp_netw_mode AS (
+         WITH inp_netw_mode_aux AS (
+                 SELECT count(*) AS t
+                   FROM config_param_user
+                  WHERE config_param_user.parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER
+                )
+         SELECT
+                CASE
+                    WHEN inp_netw_mode_aux.t > 0 THEN ( SELECT config_param_user.value
+                       FROM config_param_user
+                      WHERE config_param_user.parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER)
+                    ELSE NULL::text
+                END AS value
+           FROM inp_netw_mode_aux
+        )
+ SELECT gully.gully_id,
+    gully.code,
+    gully.top_elev,
+    gully.ymax,
+    gully.sandbox,
+    gully.matcat_id,
+    gully.gully_type,
+    cat_feature.system_id AS sys_type,
+    gully.gratecat_id,
+    cat_grate.matcat_id AS cat_grate_matcat,
+    cat_grate.width AS grate_width,
+    cat_grate.length AS grate_length,
+    gully.units,
+    gully.groove,
+    gully.groove_height,
+    gully.groove_length,
+    gully.siphon,
+    gully.connec_arccat_id,
+    gully.connec_length,
+    gully.top_elev - gully.ymax + gully.sandbox AS connec_y1,
+    gully.connec_y2,
+        CASE
+            WHEN ((gully.top_elev - gully.ymax + gully.sandbox + gully.connec_y2) / 2::numeric) IS NOT NULL THEN ((gully.top_elev - gully.ymax + gully.sandbox + gully.connec_y2) / 2::numeric)::numeric(12,3)
+            ELSE gully.connec_depth
+        END AS connec_depth,
+    gully.arc_id,
+    gully.epa_type,
+    gully.expl_id,
+    exploitation.macroexpl_id,
+    gully.sector_id,
+    sector.macrosector_id,
+    sector.sector_type,
+    gully.drainzone_id,
+    drainzone.drainzone_type,
+    gully.state,
+    gully.state_type,
+    gully.annotation,
+    gully.observ,
+    gully.comment,
+    gully.dma_id,
+    dma.macrodma_id,
+    dma.dma_type,
+    gully.soilcat_id,
+    gully.function_type,
+    gully.category_type,
+    gully.fluid_type,
+    gully.location_type,
+    gully.workcat_id,
+    gully.workcat_id_end,
+    gully.workcat_id_plan,
+    gully.buildercat_id,
+    gully.builtdate,
+    gully.enddate,
+    gully.ownercat_id,
+    gully.muni_id,
+    gully.postcode,
+    gully.district_id,
+    c.descript::character varying(100) AS streetname,
+    gully.postnumber,
+    gully.postcomplement,
+    d.descript::character varying(100) AS streetname2,
+    gully.postnumber2,
+    gully.postcomplement2,
+    mu.region_id,
+    mu.province_id,
+    gully.descript,
+    cat_grate.svg,
+    gully.rotation,
+    concat(cat_feature.link_path, gully.link) AS link,
+    gully.verified,
+    gully.undelete,
+    cat_grate.label,
+    gully.label_x,
+    gully.label_y,
+    gully.label_rotation,
+    gully.label_quadrant,
+    gully.publish,
+    gully.inventory,
+    gully.uncertain,
+    gully.num_value,
+    gully.pjoint_id,
+    gully.pjoint_type,
+    gully.asset_id,
+        CASE
+            WHEN gully.connec_matcat_id IS NULL THEN cc.matcat_id::text
+            ELSE gully.connec_matcat_id
+        END AS connec_matcat_id,
+    gully.gratecat2_id,
+    gully.units_placement,
+    gully.expl_id2,
+    vst.is_operative,
+    gully.minsector_id,
+    gully.macrominsector_id,
+    gully.adate,
+    gully.adescript,
+    gully.siphon_type,
+    gully.odorflap,
+    gully.placement_type,
+    gully.access_type,
+    date_trunc('second'::text, gully.tstamp) AS tstamp,
+    gully.insert_user,
+    date_trunc('second'::text, gully.lastupdate) AS lastupdate,
+    gully.lastupdate_user,
+    gully.the_geom,
+        CASE
+            WHEN gully.sector_id > 0 AND vst.is_operative = true AND gully.epa_type::text = 'GULLY'::character varying(16)::text AND cpu.value = '2'::text THEN gully.epa_type
+            ELSE NULL::character varying(16)
+        END AS inp_type
+   FROM (SELECT inp_netw_mode.value FROM inp_netw_mode) cpu, gully
+     LEFT JOIN cat_grate ON gully.gratecat_id::text = cat_grate.id::text
+     LEFT JOIN dma ON gully.dma_id = dma.dma_id
+     LEFT JOIN sector ON gully.sector_id = sector.sector_id
+     LEFT JOIN exploitation ON gully.expl_id = exploitation.expl_id
+     LEFT JOIN cat_feature ON gully.gully_type::text = cat_feature.id::text
+     LEFT JOIN streetaxis c ON c.id::text = gully.streetaxis_id::text
+     LEFT JOIN streetaxis d ON d.id::text = gully.streetaxis2_id::text
+     LEFT JOIN cat_connec cc ON cc.id::text = gully.connec_arccat_id::text
+     LEFT JOIN value_state_type vst ON vst.id = gully.state_type
+     LEFT JOIN ext_municipality mu ON gully.muni_id = mu.muni_id
+     LEFT JOIN drainzone USING (drainzone_id);
