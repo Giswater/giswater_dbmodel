@@ -9,7 +9,7 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 -- 2024/11/11
 CREATE OR REPLACE VIEW v_edit_node AS
- SELECT a.node_id,
+ SELECT DISTINCT ON (a.node_id) a.node_id,
     a.code,
     a.elevation,
     a.depth,
