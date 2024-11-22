@@ -407,18 +407,6 @@ BEGIN
 		-- update temp_t_connec in order to get correct arc_id (for planified features, arc_id from parent layer is NULL)
 		UPDATE temp_t_connec t SET arc_id=c.arc_id FROM v_edit_connec c WHERE t.connec_id=c.connec_id;
 
-		IF v_class = 'SECTOR' THEN
-			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND sector_id IN (SELECT distinct '||v_field||' FROM temp_t_arc)';
-		ELSE
-			IF v_netscenario IS NOT NULL THEN
-				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM plan_netscenario_'||v_table||' WHERE active is true AND netscenario_id = '||v_netscenario;
-			ELSE
-				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND expl_id IN('||v_expl_id||')';
-			END IF;
-		END IF;
-
-		EXECUTE 'UPDATE temp_'||v_table||' SET the_geom = null';
-
 		-- reset elements to 0
 		IF v_floodonlymapzone IS NULL THEN
 			v_querytext = 'UPDATE temp_t_arc a SET '||quote_ident(v_field)||' = 0 WHERE a.expl_id IN('||v_expl_id||')';
@@ -740,6 +728,18 @@ BEGIN
 			-- update link table
 			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g WHERE g.gully_id=feature_id';
 		END IF;
+
+		IF v_class = 'SECTOR' THEN
+			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND sector_id IN (SELECT distinct '||v_field||' FROM temp_t_arc)';
+		ELSE
+			IF v_netscenario IS NOT NULL THEN
+				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM plan_netscenario_'||v_table||' WHERE active is true AND netscenario_id = '||v_netscenario;
+			ELSE
+				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND expl_id IN('||v_expl_id||')';
+			END IF;
+		END IF;
+
+		EXECUTE 'UPDATE temp_'||v_table||' SET the_geom = null';
 
 		IF v_islastupdate IS TRUE THEN
 
