@@ -623,8 +623,7 @@ AS SELECT om_mincut_arc.id,
     om_mincut.work_order,
     om_mincut_arc.arc_id,
     om_mincut_arc.the_geom
-   FROM selector_mincut_result,
-    om_mincut_arc
+   FROM om_mincut_arc
      JOIN om_mincut ON om_mincut_arc.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
  
@@ -636,8 +635,7 @@ AS SELECT om_mincut_connec.id,
     om_mincut_connec.connec_id,
     om_mincut_connec.customer_code,
     om_mincut_connec.the_geom
-   FROM selector_mincut_result,
-    om_mincut_connec
+   FROM om_mincut_connec
      JOIN om_mincut ON om_mincut_connec.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
   
@@ -650,8 +648,7 @@ AS SELECT om_mincut_hydrometer.id,
     ext_rtc_hydrometer.code AS hydrometer_customer_code,
     rtc_hydrometer_x_connec.connec_id,
     connec.code AS connec_code
-   FROM selector_mincut_result,
-    om_mincut_hydrometer
+   FROM om_mincut_hydrometer
      JOIN ext_rtc_hydrometer ON om_mincut_hydrometer.hydrometer_id::text = ext_rtc_hydrometer.id::text
      JOIN rtc_hydrometer_x_connec ON om_mincut_hydrometer.hydrometer_id::text = rtc_hydrometer_x_connec.hydrometer_id::text
      JOIN connec ON rtc_hydrometer_x_connec.connec_id::text = connec.connec_id::text
@@ -666,8 +663,7 @@ AS SELECT om_mincut_node.id,
     om_mincut_node.node_id,
     om_mincut_node.node_type,
     om_mincut_node.the_geom
-   FROM selector_mincut_result,
-    om_mincut_node
+   FROM om_mincut_node
      JOIN om_mincut ON om_mincut_node.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
   
@@ -708,8 +704,7 @@ AS SELECT om_mincut.id,
     om_mincut.exec_appropiate,
     om_mincut.notified,
     om_mincut.output
-   FROM selector_mincut_result,
-    om_mincut
+   FROM om_mincut
      LEFT JOIN om_typevalue a ON a.id::integer = om_mincut.mincut_state AND a.typevalue = 'mincut_state'::text
      LEFT JOIN om_typevalue b ON b.id::integer = om_mincut.mincut_class AND b.typevalue = 'mincut_class'::text
      LEFT JOIN om_typevalue c ON c.id::integer = om_mincut.anl_cause::integer AND c.typevalue = 'mincut_cause'::text
@@ -720,113 +715,6 @@ AS SELECT om_mincut.id,
     WHERE om_mincut.mincut_state = 1;
 	
 	
-	
-	
-CREATE OR REPLACE VIEW ws.v_om_mincut_current_arc
-AS SELECT om_mincut_arc.id,
-    om_mincut_arc.result_id,
-    om_mincut.work_order,
-    om_mincut_arc.arc_id,
-    om_mincut_arc.the_geom
-   FROM ws.selector_mincut_result,
-    ws.om_mincut_arc
-     JOIN ws.om_mincut ON om_mincut_arc.result_id = om_mincut.id
-  WHERE om_mincut.mincut_state = 1;
- 
- 
-CREATE OR REPLACE VIEW ws.v_om_mincut_current_connec
-AS SELECT om_mincut_connec.id,
-    om_mincut_connec.result_id,
-    om_mincut.work_order,
-    om_mincut_connec.connec_id,
-    om_mincut_connec.customer_code,
-    om_mincut_connec.the_geom
-   FROM ws.selector_mincut_result,
-    ws.om_mincut_connec
-     JOIN ws.om_mincut ON om_mincut_connec.result_id = om_mincut.id
-  WHERE om_mincut.mincut_state = 1;
-  
- 
- CREATE OR REPLACE VIEW ws.v_om_mincut_current_hydrometer
-AS SELECT om_mincut_hydrometer.id,
-    om_mincut_hydrometer.result_id,
-    om_mincut.work_order,
-    om_mincut_hydrometer.hydrometer_id,
-    ext_rtc_hydrometer.code AS hydrometer_customer_code,
-    rtc_hydrometer_x_connec.connec_id,
-    connec.code AS connec_code
-   FROM ws.selector_mincut_result,
-    ws.om_mincut_hydrometer
-     JOIN ws.ext_rtc_hydrometer ON om_mincut_hydrometer.hydrometer_id::text = ext_rtc_hydrometer.id::text
-     JOIN ws.rtc_hydrometer_x_connec ON om_mincut_hydrometer.hydrometer_id::text = rtc_hydrometer_x_connec.hydrometer_id::text
-     JOIN ws.connec ON rtc_hydrometer_x_connec.connec_id::text = connec.connec_id::text
-     JOIN ws.om_mincut ON om_mincut_hydrometer.result_id = om_mincut.id
-  WHERE om_mincut.mincut_state = 1;
-  
- 
- 
-CREATE OR REPLACE VIEW ws.v_om_mincut_current_node
-AS SELECT om_mincut_node.id,
-    om_mincut_node.result_id,
-    om_mincut.work_order,
-    om_mincut_node.node_id,
-    om_mincut_node.node_type,
-    om_mincut_node.the_geom
-   FROM ws.selector_mincut_result,
-    ws.om_mincut_node
-     JOIN ws.om_mincut ON om_mincut_node.result_id = om_mincut.id
-  WHERE om_mincut.mincut_state = 1;
- 
- 
- 
-CREATE OR REPLACE VIEW ws.v_om_mincut_current_initpoint
-AS SELECT om_mincut.id,
-    om_mincut.work_order,
-    a.idval AS state,
-    b.idval AS class,
-    om_mincut.mincut_type,
-    om_mincut.received_date,
-    om_mincut.expl_id,
-    exploitation.name AS expl_name,
-    macroexploitation.name AS macroexpl_name,
-    om_mincut.macroexpl_id,
-    om_mincut.muni_id,
-    ext_municipality.name AS muni_name,
-    om_mincut.postcode,
-    om_mincut.streetaxis_id,
-    ext_streetaxis.name AS street_name,
-    om_mincut.postnumber,
-    c.idval AS anl_cause,
-    om_mincut.anl_tstamp,
-    om_mincut.anl_user,
-    om_mincut.anl_descript,
-    om_mincut.anl_feature_id,
-    om_mincut.anl_feature_type,
-    om_mincut.anl_the_geom,
-    om_mincut.forecast_start,
-    om_mincut.forecast_end,
-    om_mincut.assigned_to,
-    om_mincut.exec_start,
-    om_mincut.exec_end,
-    om_mincut.exec_user,
-    om_mincut.exec_descript,
-    om_mincut.exec_from_plot,
-    om_mincut.exec_depth,
-    om_mincut.exec_appropiate,
-    om_mincut.notified,
-    om_mincut.output
-   FROM ws.selector_mincut_result,
-    ws.om_mincut
-     LEFT JOIN ws.om_typevalue a ON a.id::integer = om_mincut.mincut_state AND a.typevalue = 'mincut_state'::text
-     LEFT JOIN ws.om_typevalue b ON b.id::integer = om_mincut.mincut_class AND b.typevalue = 'mincut_class'::text
-     LEFT JOIN ws.om_typevalue c ON c.id::integer = om_mincut.anl_cause::integer AND c.typevalue = 'mincut_cause'::text
-     LEFT JOIN ws.exploitation ON om_mincut.expl_id = exploitation.expl_id
-     LEFT JOIN ws.ext_streetaxis ON om_mincut.streetaxis_id::text = ext_streetaxis.id::text
-     LEFT JOIN ws.macroexploitation ON om_mincut.macroexpl_id = macroexploitation.macroexpl_id
-     LEFT JOIN ws.ext_municipality ON om_mincut.muni_id = ext_municipality.muni_id
-    WHERE om_mincut.mincut_state = 1;
-          
-     
 CREATE OR REPLACE VIEW v_edit_sector
 AS SELECT vu_sector.sector_id,
     vu_sector.name,
