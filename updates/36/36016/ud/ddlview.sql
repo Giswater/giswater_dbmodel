@@ -1035,3 +1035,146 @@ AS SELECT a.arc_id,
      JOIN selector_sector s USING (sector_id)
      LEFT JOIN selector_municipality m USING (muni_id)
   WHERE s.cur_user = CURRENT_USER AND (m.cur_user = CURRENT_USER OR a.muni_id IS NULL);
+  
+  
+  
+CREATE OR REPLACE VIEW v_edit_connec AS
+SELECT  c.* FROM (
+WITH s AS (
+         SELECT selector_expl.expl_id
+           FROM selector_expl
+          WHERE selector_expl.cur_user = CURRENT_USER
+        )
+ SELECT vu_connec.connec_id,
+    vu_connec.code,
+    vu_connec.customer_code,
+    vu_connec.top_elev,
+    vu_connec.y1,
+    vu_connec.y2,
+    vu_connec.connecat_id,
+    vu_connec.connec_type,
+    vu_connec.sys_type,
+    vu_connec.private_connecat_id,
+    vu_connec.matcat_id,
+	vu_connec.state,
+    vu_connec.state_type,
+    vu_connec.expl_id,
+    vu_connec.macroexpl_id,
+        CASE
+            WHEN a.sector_id IS NULL THEN vu_connec.sector_id
+            ELSE a.sector_id
+        END AS sector_id,
+    vu_connec.sector_type,
+        CASE
+            WHEN a.macrosector_id IS NULL THEN vu_connec.macrosector_id
+            ELSE a.macrosector_id
+        END AS macrosector_id,
+    vu_connec.drainzone_id,
+    vu_connec.drainzone_type,
+    vu_connec.demand,
+    vu_connec.connec_depth,
+    vu_connec.connec_length,
+    v_state_connec.arc_id,
+    vu_connec.annotation,
+    vu_connec.observ,
+    vu_connec.comment,
+        CASE
+            WHEN a.dma_id IS NULL THEN vu_connec.dma_id
+            ELSE a.dma_id
+        END AS dma_id,
+        CASE
+            WHEN a.macrodma_id IS NULL THEN vu_connec.macrodma_id
+            ELSE a.macrodma_id
+        END AS macrodma_id,
+    vu_connec.dma_type,
+    vu_connec.soilcat_id,
+    vu_connec.function_type,
+    vu_connec.category_type,
+    vu_connec.fluid_type,
+    vu_connec.location_type,
+    vu_connec.workcat_id,
+    vu_connec.workcat_id_end,
+    vu_connec.buildercat_id,
+    vu_connec.builtdate,
+    vu_connec.enddate,
+    vu_connec.ownercat_id,
+    vu_connec.muni_id,
+    vu_connec.postcode,
+    vu_connec.district_id,
+    vu_connec.streetname,
+    vu_connec.postnumber,
+    vu_connec.postcomplement,
+    vu_connec.streetname2,
+    vu_connec.postnumber2,
+    vu_connec.postcomplement2,
+	vu_connec.region_id,
+    vu_connec.province_id,
+    vu_connec.descript,
+    vu_connec.svg,
+    vu_connec.rotation,
+    vu_connec.link,
+    vu_connec.verified,
+    vu_connec.undelete,
+    vu_connec.label,
+    vu_connec.label_x,
+    vu_connec.label_y,
+    vu_connec.label_rotation,
+    vu_connec.label_quadrant,
+    vu_connec.accessibility,
+    vu_connec.diagonal,
+    vu_connec.publish,
+    vu_connec.inventory,
+    vu_connec.uncertain,
+    vu_connec.num_value,
+        CASE
+            WHEN a.exit_id IS NULL THEN vu_connec.pjoint_id
+            ELSE a.exit_id
+        END AS pjoint_id,
+        CASE
+            WHEN a.exit_type IS NULL THEN vu_connec.pjoint_type
+            ELSE a.exit_type
+        END AS pjoint_type,
+    vu_connec.tstamp,
+    vu_connec.insert_user,
+    vu_connec.lastupdate,
+    vu_connec.lastupdate_user,
+    vu_connec.the_geom,
+    vu_connec.workcat_id_plan,
+    vu_connec.asset_id,
+    vu_connec.expl_id2,
+    vu_connec.is_operative,
+    vu_connec.minsector_id,
+    vu_connec.macrominsector_id,
+    vu_connec.adate,
+    vu_connec.adescript,
+    vu_connec.plot_code,
+    vu_connec.placement_type,
+    vu_connec.access_type
+   FROM s,
+    vu_connec
+     JOIN v_state_connec USING (connec_id)
+     LEFT JOIN ( SELECT DISTINCT ON (vu_link.feature_id) vu_link.link_id,
+            vu_link.feature_type,
+            vu_link.feature_id,
+            vu_link.exit_type,
+            vu_link.exit_id,
+            vu_link.state,
+            vu_link.expl_id,
+            vu_link.sector_id,
+            vu_link.dma_id,
+            vu_link.exit_topelev,
+            vu_link.exit_elev,
+            vu_link.fluid_type,
+            vu_link.gis_length,
+            vu_link.the_geom,
+            vu_link.sector_name,
+            vu_link.macrosector_id,
+            vu_link.macrodma_id
+           FROM v_edit_link vu_link,
+            s s_1
+          WHERE (vu_link.expl_id = s_1.expl_id OR vu_link.expl_id2 = s_1.expl_id) AND vu_link.state = 2) a ON a.feature_id::text = vu_connec.connec_id::text
+	WHERE vu_connec.expl_id = s.expl_id OR vu_connec.expl_id2 = s.expl_id) c
+	join selector_sector s using (sector_id)
+	LEFT JOIN selector_municipality m using (muni_id)
+	where s.cur_user = current_user
+	and (m.cur_user = current_user or c.muni_id is null);
