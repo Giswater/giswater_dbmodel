@@ -1,6 +1,6 @@
--- DROP FUNCTION ws_3612_70.gw_fct_check_fprocess(json);
+-- DROP FUNCTION ws_msg_trad_1.gw_fct_check_fprocess(json);
 
-CREATE OR REPLACE FUNCTION ws_3612_70.gw_fct_check_fprocess(p_data json)
+CREATE OR REPLACE FUNCTION ws_msg_trad_1.gw_fct_check_fprocess(p_data json)
  RETURNS json
  LANGUAGE plpgsql
 AS $function$
@@ -83,7 +83,7 @@ end if;
 raise notice 'v_rec.query_text %', v_rec.query_text;
 -- manage result (audit_check_data)
 
-IF v_count > 0 then
+IF v_count > 0 and v_rec.except_level > 1 then
 
 	INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
 	values (v_function_fid, v_rec.except_level, v_check_fid, concat(
