@@ -409,7 +409,7 @@ UPDATE sys_fprocess SET fprocess_name='Check connecs with more than 1 link on se
 (SELECT feature_id FROM link WHERE state=1 GROUP BY feature_id HAVING count(*) > 1)', info_msg='No connects with more than 1 link on service', function_name='{gw_fct_om_check_data}' WHERE fid=480;
 UPDATE sys_fprocess SET fprocess_name='Check arcs with value of custom length', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=2, except_msg='percent of arcs have value on custom_length.', except_msg_feature=NULL, query_text='WITH cust_len AS (SELECT count(*) FROM v_edit_arc WHERE custom_length IS NOT NULL), 
 		arcs AS (SELECT count(*) FROM v_edit_arc),
-		thres as (SELECT json_extract_path_text(value::json,'customLength','maxPercent')::NUMERIC as t FROM config_param_system WHERE parameter = 'epa_outlayer_values')
+		thres as (SELECT json_extract_path_text(value::json,''customLength'',''maxPercent'')::NUMERIC as t FROM config_param_system WHERE parameter = ''epa_outlayer_values'')
 		SELECT round(cust_len.count::numeric / arcs.count::numeric *100, 2) FROM arcs, cust_len, thres
 		where round(cust_len.count::numeric / arcs.count::numeric *100, 2) > t', info_msg='No arcs have value on custom_length.', function_name='{gw_fct_pg2epa_check_data}' WHERE fid=482;
 UPDATE sys_fprocess SET fprocess_name='Check connecs related to arcs with diameter bigger than defined value', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=2, except_msg='connecs related to arcs with diameter bigger than defined value.', except_msg_feature=NULL, query_text='WITH subq_1 AS (
