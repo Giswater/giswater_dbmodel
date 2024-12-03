@@ -276,5 +276,6 @@ BEGIN
 	    '}}')::json, 2670, null, null, null);
 
 END;
-$function$
-;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
