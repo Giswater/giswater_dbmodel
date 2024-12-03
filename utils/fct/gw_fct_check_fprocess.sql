@@ -127,10 +127,20 @@ if v_rec.query_text ilike '%the_geom%' then
 		
 	elsif v_geom_type = 'ST_Point' then
 	
-		execute '
-		insert into anl_node (node_id, nodecat_id, expl_id, fid, the_geom, descript)
-		select node_id, nodecat_id, expl_id, '||v_check_fid||', the_geom, '||quote_literal(v_exc_msg)||' from ('||v_sql||')b';
-	
+		if v_rec.query_text ilike 'SELECT node_id%' then
+		
+			execute '
+			insert into anl_node (node_id, nodecat_id, expl_id, fid, the_geom, descript)
+			select node_id, nodecat_id, expl_id, '||v_check_fid||', the_geom, '||quote_literal(v_exc_msg)||' from ('||v_sql||')b';
+		
+		elsif v_rec.query_text ilike '% SELECT connec_id%' then
+		
+			execute '
+			insert into anl_connec (connec_id, connecat_id, expl_id, fid, the_geom, descript)
+			select connec_id, connecat_id, expl_id, '||v_check_fid||', the_geom, '||quote_literal(v_exc_msg)||' from ('||v_sql||')b';
+
+		end if;
+
 	elsif v_geom_type = 'ST_MultiPolygon' then
 	
 		execute '
