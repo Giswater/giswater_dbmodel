@@ -46,10 +46,12 @@ raise notice 'v_rec %', v_rec;
 
 if v_rec.query_text ilike '%v_prefix_%' then
 	v_rec.query_text = replace(v_rec.query_text, 'v_prefix_', v_prefix_table);
+	v_rec.info_msg = replace(v_rec.info_msg, 'v_prefix_', v_prefix_table);
 end if;
 
 if v_rec.query_text ilike '%v_graphclass%' then
 	v_rec.query_text = replace(v_rec.query_text, 'v_graphclass', v_graphclass);
+	v_rec.info_msg = replace(v_rec.info_msg, 'v_graphclass', v_graphclass);
 end if;
 
 v_exc_msg = v_rec.except_msg;
