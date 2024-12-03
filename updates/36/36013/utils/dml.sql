@@ -116,6 +116,29 @@ INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source"
 SELECT v_graphclass_id, (graphconfig->''use''->0->>''nodeParent'')::text as node_id FROM v_prefix_v_graphclass)b 
 WHERE node_id::text not in (select node_id FROM node WHERE state=1)', 'All nodes defined as nodeParent on v_prefix_v_graphclass exists on DB.', '[gw_fct_graphanalytics_check_data]');
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(535, 'State not according with state_type', 'ws', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with state without concordance with state_type. Please, check your data before continue features with state without concordance with state_type. Please, check your data before continue', NULL, 'SELECT arc_id as id, a.state, state_type FROM v_edit_arc a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
+SELECT node_id as id, a.state, state_type FROM v_edit_node a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
+SELECT connec_id as id, a.state, state_type FROM v_edit_connec a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
+SELECT element_id as id, a.state, state_type FROM v_edit_element a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state', 'No features without concordance against state and state_type.', '[gw_fct_om_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(536, 'Features with code null', 'utils', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with code with NULL values. Please, check your data before continue with code with NULL values. Please, check your data before continue', NULL, 'SELECT arc_id, arccat_id, the_geom FROM v_prefix_arc WHERE code IS NULL UNION 
+SELECT node_id, nodecat_id, the_geom FROM v_prefix_node WHERE code IS NULL UNION 
+SELECT connec_id, connecat_id, the_geom FROM v_prefix_connec WHERE code IS NULL UNION 
+SELECT element_id, elementcat_id, the_geom FROM v_prefix_element WHERE code IS NULL', 'No features (arc, node, connec, element) with NULL values on code found.', '[gw_fct_om_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(537, 'Features state=1 and end date', 'utils', NULL, 'core', true, 'Check om-data', NULL, 2, 'features on service with value of end date.', NULL, 'SELECT arc_id as feature_id from v_prefix_arc where state = 1 and enddate is not null UNION 
+SELECT node_id from v_prefix_node where state = 1 and enddate is not null UNION 
+SELECT connec_id from v_prefix_connec where state = 1 and enddate is not null', 'No features on service have value of end date', '[gw_fct_om_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(538, 'Features state=0 without end date', 'utils', NULL, 'core', true, 'Check om-data', NULL, 2, 'features with state 0 without value of end date.', NULL, 'SELECT arc_id as feature_id from v_prefix_arc where state = 0 and enddate is null UNION 
+SELECT node_id from v_prefix_node where state = 0 and enddate is null UNION 
+SELECT connec_id from v_prefix_connec where state = 0 and enddate is null', 'No features with state 0 are missing the end date', '[gw_fct_om_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(539, 'Features state=1 and end date before start date', 'utils', NULL, 'core', true, 'Check om-data', NULL, 2, 'features with end date earlier than built date.', NULL, 'SELECT arc_id as feature_id from v_prefix_arc where enddate < builtdate and state = 1 UNION 
+SELECT node_id from v_prefix_node where enddate < builtdate and state = 1 UNION 
+SELECT connec_id from v_prefix_connec where enddate < builtdate and state = 1', 'No features with end date earlier than built date', '[gw_fct_om_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(540, 'Orphan polygons', 'utils', NULL, 'core', true, 'Check om-topology', NULL, 2, 'polygons without parent. Check your data before continue. polygons without parent. Check your data before continue.', NULL, 'SELECT pol_id FROM polygon WHERE feature_id IS NULL OR feature_id NOT IN (SELECT node_id FROM node UNION SELECT connec_id FROM connec)', 'No polygons without parent feature found.', '[gw_fct_om_check_data]');
 
 
 UPDATE sys_fprocess SET fprocess_name='Arc without start-end nodes', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=3, except_msg='arcs with state=1 and without node_1 or node_2.', except_msg_feature=NULL, query_text='SELECT arc_id,arccat_id,the_geom, expl_id FROM v_prefix_arc WHERE state = 1 AND node_1 IS NULL UNION 
