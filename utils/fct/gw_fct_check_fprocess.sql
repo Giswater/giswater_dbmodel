@@ -99,6 +99,8 @@ else
 end if;
 
 -- get text variables according to singular/plural values
+v_exc_msg = v_rec.except_msg;
+
 if v_count = 1 then 
 
 	v_text_aux = 'There is ';
@@ -114,9 +116,6 @@ elsif v_count > 1 then
 
 	v_text_aux = 'There are ';
 
-else
-
-	v_exc_msg = v_rec.except_msg;
 
 end if;
 
