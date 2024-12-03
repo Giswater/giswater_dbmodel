@@ -44,15 +44,41 @@ raise notice 'v_rec %', v_rec;
 -- replace key word by querytable
 --select v_rec.query_text from v_rec where query_text ilike '%v_prefix_%';
 
+if lower(v_graphclass) = 'all' then 
+
+	execute 'SELECT gw_fct_check_fprocess($${"data":{"parameters":{"functionFid": 125, "checkFid":"'||v_check_fid||'", "prefixTable": "", 
+	"graphClass":"DMA"}}}$$)';
+
+	execute 'SELECT gw_fct_check_fprocess($${"data":{"parameters":{"functionFid": 125, "checkFid":"'||v_check_fid||'", "prefixTable": "", 
+	"graphClass":"DQA"}}}$$)';
+
+	execute 'SELECT gw_fct_check_fprocess($${"data":{"parameters":{"functionFid": 125, "checkFid":"'||v_check_fid||'", "prefixTable": "", 
+	"graphClass":"SECTOR"}}}$$)';
+
+	execute 'SELECT gw_fct_check_fprocess($${"data":{"parameters":{"functionFid": 125, "checkFid":"'||v_check_fid||'", "prefixTable": "", 
+	"graphClass":"PRESSZONE"}}}$$)';
+
+end if;
+
+if lower(v_graphclass) = 'all' then 
+
+	return '{"status": "accepted"}'::json;
+
+end if;
+
+if v_rec.query_text ilike '%v_graphclass%' then
+
+		v_rec.query_text = replace(v_rec.query_text, 'v_graphclass', lower(v_graphclass));
+		v_rec.info_msg = replace(v_rec.info_msg, 'v_graphclass', lower(v_graphclass));
+	
+end if;
+
+
 if v_rec.query_text ilike '%v_prefix_%' then
 	v_rec.query_text = replace(v_rec.query_text, 'v_prefix_', v_prefix_table);
 	v_rec.info_msg = replace(v_rec.info_msg, 'v_prefix_', v_prefix_table);
 end if;
 
-if v_rec.query_text ilike '%v_graphclass%' then
-	v_rec.query_text = replace(v_rec.query_text, 'v_graphclass', v_graphclass);
-	v_rec.info_msg = replace(v_rec.info_msg, 'v_graphclass', v_graphclass);
-end if;
 
 
 
