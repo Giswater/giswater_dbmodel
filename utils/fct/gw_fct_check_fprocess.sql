@@ -54,7 +54,7 @@ if v_rec.query_text ilike '%v_graphclass%' then
 	v_rec.info_msg = replace(v_rec.info_msg, 'v_graphclass', v_graphclass);
 end if;
 
-v_exc_msg = v_rec.except_msg;
+
 
 
 
@@ -79,14 +79,18 @@ if v_count = 1 then
 
 	v_exc_msg =
 	concat(
-        substring(split_part(v_exc_msg, ' ', 1) FROM 1 FOR length(split_part(v_exc_msg, ' ', 1)) - 1),
+        substring(split_part(v_rec.except_msg, ' ', 1) FROM 1 FOR length(split_part(v_rec.except_msg, ' ', 1)) - 1),
         ' ',
-        substring(v_exc_msg FROM length(split_part(v_exc_msg, ' ', 1)) + 2)
+        substring(v_rec.except_msg FROM length(split_part(v_rec.except_msg, ' ', 1)) + 2)
     );
 
 elsif v_count > 1 then 
 
 	v_text_aux = 'There are ';
+
+else
+
+	v_exc_msg = v_rec.except_msg;
 
 end if;
 
