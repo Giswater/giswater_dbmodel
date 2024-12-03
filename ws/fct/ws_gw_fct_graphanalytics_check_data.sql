@@ -143,8 +143,8 @@ BEGIN
 
 
 	update temp_audit_check_data set criticity = 1 where error_message ilike 'INFO:%';
-   	update temp_audit_check_data set criticity = 3 where error_message ilike 'WARNING-%';
-   	update temp_audit_check_data set criticity = 2 where error_message ilike 'ERROR-%';
+   	update temp_audit_check_data set criticity = 2 where error_message ilike 'WARNING-%';
+   	update temp_audit_check_data set criticity = 3 where error_message ilike 'ERROR-%';
 
 
 
