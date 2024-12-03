@@ -107,23 +107,23 @@ BEGIN
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message) VALUES (114, p_result, 1, '-----------------------');
 
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
-			SELECT 114, p_result, 1, concat ('MAX. FLOW : Max.(',max(max_flow)::numeric(12,3), ') , Avg.(', avg(max_flow)::numeric(12,3), ') , Standard dev.(', stddev(max_flow)::numeric(12,3)
+			SELECT 114, 'stats', '1', concat ('MAX. FLOW : Max.(',max(max_flow)::numeric(12,3), ') , Avg.(', avg(max_flow)::numeric(12,3), ') , Standard dev.(', stddev(max_flow)::numeric(12,3)
 			, ') , Min.(', min (max_flow)::numeric(12,3),').') FROM rpt_arcflow_sum WHERE result_id = p_result;
 
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
-			SELECT 114, p_result, 1, concat ('VELOCITY : Max.(',max(max_veloc)::numeric(12,3), ') , Avg.(', avg(max_veloc)::numeric(12,3), ') , Standard dev.(', stddev(max_veloc)::numeric(12,3)
+			SELECT 114, 'stats', 1, concat ('VELOCITY : Max.(',max(max_veloc)::numeric(12,3), ') , Avg.(', avg(max_veloc)::numeric(12,3), ') , Standard dev.(', stddev(max_veloc)::numeric(12,3)
 			, ') , Min.(', min (max_veloc)::numeric(12,3),').') FROM rpt_arcflow_sum WHERE result_id = p_result;
 
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
-			SELECT 114, p_result, 1, concat ('FULL PERCENT. : Max.(',max(mfull_dept)::numeric(12,3), ') , Avg.(', avg(mfull_dept)::numeric(12,3), ') , Standard dev.(', stddev(mfull_dept)::numeric(12,3)
+			SELECT 114, 'stats', 1, concat ('FULL PERCENT. : Max.(',max(mfull_dept)::numeric(12,3), ') , Avg.(', avg(mfull_dept)::numeric(12,3), ') , Standard dev.(', stddev(mfull_dept)::numeric(12,3)
 			, ') , Min.(', min (mfull_dept)::numeric(12,3),').') FROM rpt_arcflow_sum WHERE result_id = p_result;
 
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
-			SELECT 114, p_result, 1, concat ('NODE SURCHARGE : Number of nodes (', count(*)::integer,').') 
+			SELECT 114, 'stats', 1, concat ('NODE SURCHARGE : Number of nodes (', count(*)::integer,').') 
 			FROM rpt_nodesurcharge_sum WHERE result_id = p_result;
 
 			INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
-			SELECT 114, p_result, 1, concat ('NODE FLOODING: Number of nodes (', count(*)::integer,'), Max. rate (',max(max_rate)::numeric(12,3), '), Total flood (' ,sum(tot_flood), 
+			SELECT 114, 'stats', 1, concat ('NODE FLOODING: Number of nodes (', count(*)::integer,'), Max. rate (',max(max_rate)::numeric(12,3), '), Total flood (' ,sum(tot_flood), 
 			'), Max. flood (', max(tot_flood),').')
 			FROM rpt_nodeflooding_sum WHERE result_id = p_result;
 
@@ -146,7 +146,7 @@ BEGIN
 		v_stats = (SELECT array_to_json(array_agg(error_message)) FROM temp_audit_check_data WHERE result_id='stats' AND fid=114 AND cur_user=current_user);
 
 		UPDATE rpt_cat_result SET rpt_stats = v_stats WHERE result_id=p_result;
-
+	
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message)
 		SELECT 114, p_result, 1, concat(csv1,' ',csv2, ' ',csv3, ' ',csv4, ' ',csv5, ' ',csv6, ' ',csv7, ' ',csv8, ' ',csv9, ' ',csv10, ' ',csv11, ' ',csv12) from temp_csv
 		where fid = 11 and source='rpt_cat_result' and cur_user=current_user;
