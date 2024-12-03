@@ -68,7 +68,6 @@ BEGIN
 		CREATE TEMP TABLE temp_anl_arc (LIKE ws_msg_trad_1.anl_arc INCLUDING ALL);
 		CREATE TEMP TABLE temp_anl_node (LIKE ws_msg_trad_1.anl_node INCLUDING ALL);
 		CREATE TEMP TABLE temp_anl_connec (LIKE ws_msg_trad_1.anl_connec INCLUDING ALL);
-		CREATE TEMP TABLE temp_audit_check_data (LIKE ws_msg_trad_1.audit_check_data INCLUDING ALL);
 		
 	END IF;
 
