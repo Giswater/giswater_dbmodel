@@ -23,3 +23,12 @@ UPDATE config_form_fields SET widgetcontrols='{
     "featurecat_id"
   ]
 }'::json WHERE formname='generic' AND formtype='form_featuretype_change' AND columnname='feature_type_new' AND tabname='tab_none';
+
+-- 3/12/24
+update arc set muni_id  = 0 WHERE muni_id is null;
+update node set muni_id  = 0 WHERE muni_id is null;
+update connec set muni_id  = 0 WHERE muni_id is null;
+update element set muni_id  = 0 WHERE muni_id is null;
+update dimensions set muni_id  = 0 WHERE muni_id is null;
+
+
