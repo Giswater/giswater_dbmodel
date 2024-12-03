@@ -6,6 +6,9 @@ CREATE OR REPLACE FUNCTION ws_msg_trad_1.gw_fct_check_fprocess(p_data json)
 AS $function$
 /*
 select gw_fct_check_fprocess($${"data":{"parameters":{"functionFid": '||v_fid||', "checkFid":"103", "prefixTable": "'||v_edit||'"}}}$$)';
+
+select gw_fct_check_fprocess($${"data":{"parameters":{"functionFid": '||v_fid||', "checkFid":"103", "prefixTable": "'||v_edit||'", 
+"graphClass":"DMA"}}}$$)';
 */
 
 DECLARE
@@ -20,6 +23,8 @@ v_geom_type text;
 v_sql text;
 v_text_aux text;
 v_exc_msg text;
+v_iscount boolean;
+v_graphclass text;
 
 BEGIN
 
@@ -27,6 +32,7 @@ BEGIN
 v_function_fid := (((p_data ->>'data')::json->>'parameters')::json->>'functionFid')::integer;
 v_check_fid := (((p_data ->> 'data')::json->>'parameters')::json->> 'checkFid')::integer;
 v_prefix_table := (((p_data ->> 'data')::json->>'parameters')::json->> 'prefixTable')::text;
+v_graphclass := (((p_data ->> 'data')::json->>'parameters')::json->> 'graphClass')::text;
 
 
 -- get fprocess data
@@ -39,16 +45,19 @@ raise notice 'v_rec %', v_rec;
 --select v_rec.query_text from v_rec where query_text ilike '%v_prefix_%';
 
 if v_rec.query_text ilike '%v_prefix_%' then
-
 	v_rec.query_text = replace(v_rec.query_text, 'v_prefix_', v_prefix_table);
+end if;
 
+if v_rec.query_text ilike '%v_graphclass%' then
+	v_rec.query_text = replace(v_rec.query_text, 'v_graphclass', v_graphclass);
 end if;
 
 v_exc_msg = v_rec.except_msg;
 
-	-- count events
-if v_rec.query_text ilike '%string_agg%' then
-	raise notice 'dins';
+
+
+if v_rec.query_text ilike '%string_agg%' and v_rec.fid <> 317 then
+	
 	execute 'with mec as ('||v_rec.query_text||'),
 	b as (select unnest(string_to_array("string_agg", ''; '')) as "string_agg" from mec)
 	select count(*) from b' 
