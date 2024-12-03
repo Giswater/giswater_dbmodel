@@ -13,3 +13,13 @@ VALUES(3328, 'gw_trg_edit_municipality', 'utils', 'function', 'json', 'json', 'T
 
 UPDATE config_toolbox SET inputparams='[{"widgetname":"updateValues", "label":"Values to update:","widgettype":"combo","datatype":"text","layoutname":"grl_option_parameters","layoutorder":1,
 "comboIds":["allValues", "nullValues"], "comboNames":["ALL VALUES", "NULL ELEVATION VALUES"], "selectedId":"nullValues"}]'::json WHERE id=2760;
+
+UPDATE config_form_fields SET widgetcontrols='{
+  "reloadFields": [
+    "fluid_type",
+    "location_type",
+    "category_type",
+    "function_type",
+    "featurecat_id"
+  ]
+}'::json WHERE formname='generic' AND formtype='form_featuretype_change' AND columnname='feature_type_new' AND tabname='tab_none';
