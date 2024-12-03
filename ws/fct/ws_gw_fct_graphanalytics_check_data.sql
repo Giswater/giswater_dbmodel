@@ -137,7 +137,7 @@ BEGIN
 		--raise notice 'v_rec.fid %', v_rec.fid;
 		execute 'select gw_fct_check_fprocess($${"client":{"device":4, "infoType":1, "lang":"ES"}, 
 	    "form":{},"feature":{},"data":{"parameters":{"functionFid": '||v_fid||', 
-		"prefixTable": "", "checkFid":"'||v_rec.fid||'", "graphClass":"'||lower(v_graphclass)||'"}}}$$)';
+		"prefixTable": "'||v_edit||'", "checkFid":"'||v_rec.fid||'", "graphClass":"'||lower(v_graphclass)||'"}}}$$)';
 		
    	end loop;
 
