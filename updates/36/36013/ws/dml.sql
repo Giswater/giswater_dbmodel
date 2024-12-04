@@ -265,13 +265,18 @@ UPDATE sys_fprocess SET fprocess_name='Check orphan documents', project_type='ws
 (select distinct  doc_id from doc_x_arc UNION 
 select distinct  doc_id from doc_x_connec UNION 
 select distinct  doc_id from doc_x_node)', info_msg='All documents are related to the features.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=497;
-UPDATE sys_fprocess SET fprocess_name='Check orphan visits', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=2, except_msg='visits not related to any feature and without geometry.', except_msg_feature=NULL, query_text='select id, the_geom from om_visit where the_geom is null and id not in 
-(select distinct visit_id from om_visit_x_arc UNION 
-select distinct visit_id from om_visit_x_connec UNION 
-select distinct visit_id from om_visit_x_node)', info_msg='All visits are related to the features or have geometry.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=498;
-UPDATE sys_fprocess SET fprocess_name='Check orphan elements', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=2, except_msg='elements not related to any feature and without geometry.', except_msg_feature=NULL, query_text='select element_id, the_geom from element where the_geom is null and element_id not in (select distinct element_id from element_x_arc UNION 
-select distinct element_id from element_x_connec UNION 
-select distinct element_id from element_x_node)', info_msg='All elements are related to the features or have geometry.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=499;
+UPDATE sys_fprocess SET fprocess_name='Check orphan visits', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=2, except_msg='visits not related to any feature and without geometry.', except_msg_feature=NULL, query_text='select id from om_visit where the_geom is null and id not in (
+with mec as (
+select distinct visit_id from om_visit_x_arc UNION
+select distinct visit_id from om_visit_x_connec UNION
+select distinct visit_id from om_visit_x_node)
+select a.visit_id from mec a left join om_visit b on a.visit_id = id
+)', info_msg='All visits are related to the features or have geometry.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=498;
+UPDATE sys_fprocess SET fprocess_name='Check orphan elements', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=2, except_msg='elements not related to any feature and without geometry.', except_msg_feature=NULL, query_text='select element_id from element where the_geom is null and element_id not in (
+with mec as (select distinct element_id from element_x_arc UNION
+select distinct element_id from element_x_connec UNION
+select distinct element_id from element_x_node)
+select a.element_id from mec a left join "element" b using (element_id))', info_msg='All elements are related to the features or have geometry.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=499;
 UPDATE sys_fprocess SET fprocess_name='Import valve status', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=500;
 UPDATE sys_fprocess SET fprocess_name='Import dscenario demands', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=501;
 UPDATE sys_fprocess SET fprocess_name='Set dscenario demand using netscenario', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=502;

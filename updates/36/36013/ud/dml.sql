@@ -209,5 +209,9 @@ UPDATE sys_fprocess SET fprocess_name='Import istram arcs', project_type='ud', p
 UPDATE sys_fprocess SET fprocess_name='Check minimun length for arcs', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-network', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=431;
 UPDATE sys_fprocess SET fprocess_name='Check outlet_id assigned to subcatchments', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=440;
 
+UPDATE sys_fprocess SET fprocess_name='Check redundant values on y-top_elev-elev', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=NULL, except_msg='nodes with redundancy on ymax, top_elev & elev values.', except_msg_feature=NULL, query_text='SELECT node_id, nodecat_id, the_geom, expl_id FROM v_prefix_node WHERE (ymax is not null or custom_ymax is not null) 
+and (top_elev is not null or custom_top_elev is not null) and (elev is not null or custom_elev is not null)', info_msg='There are no nodes with redundancy on ymax, top_elev & elev values.', function_name='[gw_fct_om_check_data]' WHERE fid=461;
 
-
+UPDATE sys_fprocess SET fprocess_name='Links without gully on startpoint', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=NULL, except_msg='links with wrong topology. Startpoint does not fit with connec.', except_msg_feature=NULL, query_text='with subq1 as (SELECT l.link_id, c.connec_id, c.the_geom FROM connec c, link l
+WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.01) group by 1,2 ORDER BY 1 DESC)
+select connec_id, the_geom From subq1 where connec_id not in (select connec_id from connec)', info_msg='All connec links has connec on startpoint', function_name='[gw_fct_om_check_data]' WHERE fid=418;
