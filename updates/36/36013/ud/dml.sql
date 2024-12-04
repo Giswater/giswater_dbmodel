@@ -75,7 +75,55 @@ ELSE 0 END as feature_id, ''NODE'' as type, nodecat_id as featurecat,the_geom, e
 UNION SELECT CASE WHEN connec_id~E''^\\d+$'' THEN CAST (connec_id AS INTEGER)
 ELSE 0 END as feature_id, ''CONNEC'' as type, connecat_id as featurecat,the_geom, expl_id FROM v_prefix_connec
 UNION SELECT CASE WHEN gully_id~E''^\\d+$'' THEN CAST (gully_id AS INTEGER)
-ELSE 0 END as feature_id, ''GULLY'' as type, gratecat_id as featurecat,the_geom, expl_id FROM v_prefix_gully', 'All features with id integer.', '[gw_fct_om_check_data, gw_fct_admin_check_data]');
+ELSE 0 END as feature_id, ''GULLY'' as type, gratecat_id as featurecat,the_geom, expl_id FROM v_prefix_gully', 'All features with id integer.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(543, 'Gully chain with different arc_id than the final connec/gully', 'ud', NULL, 'core', true, 'Check om-data', NULL, NULL, 'chained connecs/gullys without links or gullies over arc without arc_id.', NULL, 'with c as (
+Select v_prefix_connec.connec_id as id, arc_id as arc, v_prefix_connec.connecat_id as 
+feature_catalog, the_geom, v_prefix_connec.expl_id from v_prefix_connec
+UNION select v_prefix_gully.gully_id as id, arc_id as arc, v_prefix_gully.gratecat_id, 
+the_geom, v_prefix_gully.expl_id  from v_prefix_gully
+)
+select c1.id, c1.feature_catalog, c1.the_geom,  c1.expl_id
+from link a
+left join c c1 on a.feature_id = c1.id
+left join c c2 on a.exit_id = c2.id
+where (a.exit_type =''CONNEC'' OR a.exit_type =''GULLY'')
+and c1.arc <> c2.arc', 'All chained connecs and gullies have the same arc_id.', '[gw_fct_om_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(544, 'Features state=2 are involved in psector', 'ud', NULL, 'core', true, 'Check plan-config', NULL, NULL, 'features with state=2 without psector assigned. Please, check your data before continue.', NULL, 'SELECT a.arc_id FROM v_prefix_arc a RIGHT JOIN plan_psector_x_arc USING (arc_id) WHERE a.state = 2 AND a.arc_id IS NULL
+UNION
+SELECT a.node_id FROM v_prefix_node a RIGHT JOIN plan_psector_x_node USING (node_id) WHERE a.state = 2 AND a.node_id IS NULL
+UNION
+SELECT a.connec_id FROM v_prefix_connec a RIGHT JOIN plan_psector_x_connec USING (connec_id) WHERE a.state = 2 AND a.connec_id IS NULL
+UNION 
+SELECT a.gully_id FROM v_prefix_gully a RIGHT JOIN plan_psector_x_gully USING (gully_id) WHERE a.state = 2 AND a.gully_id IS NULL', 'No features with state=2 without psector assigned.', '[gw_fct_om_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(545, 'State not according with state_type', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with state without concordance with state_type. Please, check your data before continue features with state without concordance with state_type. Please, check your data before continue', NULL, 'SELECT arc_id as id, a.state, state_type FROM v_prefix_arc a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state
+UNION SELECT node_id as id, a.state, state_type FROM v_prefix_node a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state
+UNION SELECT connec_id as id, a.state, state_type FROM v_prefix_connec a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state
+UNION SELECT gully_id as id, a.state, state_type FROM v_prefix_gully a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state	
+UNION SELECT element_id as id, a.state, state_type FROM v_prefix_element a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state', 'No features without concordance against state and state_type.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(546, 'Features with code null', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with code with NULL values. Please, check your data before continue', NULL, 'SELECT arc_id, arccat_id, the_geom FROM v_prefix_arc WHERE code IS NULL 
+UNION SELECT node_id, nodecat_id, the_geom FROM v_prefix_node WHERE code IS NULL
+UNION SELECT connec_id, connecat_id, the_geom FROM v_prefix_connec WHERE code IS NULL
+UNION SELECT gully_id, gratecat_id, the_geom FROM v_prefix_gully WHERE code IS NULL
+UNION SELECT element_id, elementcat_id, the_geom FROM v_prefix_element WHERE code IS NULL', 'No features (arc, node, connec, gully, element) with NULL values on code found', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(547, 'Check fluid_type values exists on man_ table', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with fluid_type does not exists on man_type_fluid table.', NULL, 'SELECT ''ARC'', arc_id, fluid_type FROM v_prefix_arc WHERE fluid_type NOT IN (SELECT fluid_type FROM man_type_fluid WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND fluid_type IS NOT NULL
+UNION
+SELECT ''NODE'', node_id, fluid_type FROM v_prefix_node WHERE fluid_type NOT IN (SELECT fluid_type FROM man_type_fluid WHERE feature_type is null or feature_type = ''NODE'' or featurecat_id IS NOT NULL) AND fluid_type IS NOT NULL
+UNION
+SELECT ''CONNEC'', connec_id, fluid_type FROM v_prefix_connec WHERE fluid_type NOT IN (SELECT fluid_type FROM man_type_fluid WHERE feature_type is null or feature_type = ''CONNEC'' or featurecat_id IS NOT NULL) AND fluid_type IS NOT NULL
+UNION
+SELECT ''GULLY'', gully_id, fluid_type FROM v_prefix_gully WHERE fluid_type NOT IN (SELECT fluid_type FROM man_type_fluid WHERE feature_type is null or feature_type = ''GULLY'' or featurecat_id IS NOT NULL) AND fluid_type IS NOT NULL', 'All features has fluid_type informed on man_type_fluid table', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+
+
+
+
+
 
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
