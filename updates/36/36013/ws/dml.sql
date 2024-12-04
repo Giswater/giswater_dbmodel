@@ -24,10 +24,6 @@ INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source"
 SELECT v_graphclass_id, graphconfig::json->''use''->0->>''nodeParent'' as node_id FROM v_prefix_v_graphclass)b 
 WHERE node_id::text not in (select node_id FROM node WHERE state=1)', 'All nodes defined as nodeParent on v_prefix_v_graphclass exists on DB.', '[gw_fct_graphanalytics_check_data]') ON CONFLICT (fid) DO NOTHING;
 
-INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(535, 'State not according with state_type', 'ws', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with state without concordance with state_type. Please, check your data before continue features with state without concordance with state_type. Please, check your data before continue', NULL, 'SELECT arc_id as id, a.state, state_type FROM v_edit_arc a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
-SELECT node_id as id, a.state, state_type FROM v_edit_node a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
-SELECT connec_id as id, a.state, state_type FROM v_edit_connec a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
-SELECT element_id as id, a.state, state_type FROM v_edit_element a JOIN value_state_type b ON id=state_type WHERE a.state <> b.state', 'No features without concordance against state and state_type.   No features without concordance against state and state_type.', '[gw_fct_om_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 
 UPDATE sys_fprocess SET fprocess_name='OM check data', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=125;
@@ -133,7 +129,7 @@ JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION
 SELECT connec_id as id, a.state, state_type FROM v_prefix_connec a 
 JOIN value_state_type b ON id=state_type WHERE a.state <> b.state UNION 
 SELECT element_id as id, a.state, state_type FROM v_prefix_element a 
-JOIN value_state_type b ON id=state_type WHERE a.state <> b.state', info_msg='No features without concordance against state and state_type.   No features without concordance against state and state_type.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=253;
+JOIN value_state_type b ON id=state_type WHERE a.state <> b.state', info_msg='No features without concordance against state and state_type.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=253;
 UPDATE sys_fprocess SET fprocess_name='Features with code null', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=3, except_msg='features with code with NULL values. Please, check your data before continue with code with NULL values. Please, check your data before continue', except_msg_feature=NULL, query_text='SELECT arc_id, arccat_id, the_geom FROM v_prefix_arc WHERE code IS NULL UNION 
 SELECT node_id, nodecat_id, the_geom FROM v_prefix_node WHERE code IS NULL UNION 
 SELECT connec_id, connecat_id, the_geom FROM v_prefix_connec WHERE code IS NULL UNION 
