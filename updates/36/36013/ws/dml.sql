@@ -97,11 +97,7 @@ UPDATE sys_fprocess SET fprocess_name='Set to_arc values for graph delimiters', 
 UPDATE sys_fprocess SET fprocess_name='feature which id is not an integer', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=3, except_msg='which id is not an integer. Please, check your data before continue', except_msg_feature=NULL, query_text='SELECT CASE WHEN arc_id~E''^\\d+$'' THEN CAST (arc_id AS INTEGER)  ELSE 0 END  as feature_id, ''ARC'' as type, arccat_id as featurecat, expl_id FROM v_prefix_arc UNION 
 SELECT CASE WHEN node_id~E''^\\d+$'' THEN CAST (node_id AS INTEGER) ELSE 0 END as feature_id, ''NODE'' as type, nodecat_id as featurecat, expl_id FROM v_prefix_node UNION 
 SELECT CASE WHEN connec_id~E''^\\d+$'' THEN CAST (connec_id AS INTEGER) ELSE 0 END as feature_id, ''CONNEC'' as type, connecat_id as featurecat, expl_id FROM v_prefix_connec', info_msg='All features with id integer.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=202;
-UPDATE sys_fprocess SET fprocess_name='Connec without link', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=2, except_msg='connecs without links or connecs over arc without arc_id. gullies without links or gullies over arc without arc_id.', except_msg_feature=NULL, query_text='SELECT connec_id, connecat_id, c.the_geom, c.expl_id from v_prefix_connec c WHERE c.state= 1 
-AND connec_id NOT IN (SELECT feature_id FROM link) EXCEPT  
-SELECT connec_id, connecat_id, c.the_geom, c.expl_id FROM v_prefix_connec c 
-LEFT JOIN arc a USING (arc_id) WHERE c.state= 1 
-AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)', info_msg='All connecs have links or are over arc with arc_id. All gullies have links or are over arc with arc_id.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=204;
+
 UPDATE sys_fprocess SET fprocess_name='Connec chain with different arc_id ', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=2, except_msg='chained connecs or gullies with different arc_id. chained connecs with different arc_id.', except_msg_feature=NULL, query_text='with c as 
 (select v_prefix_connec.connec_id as id, arc_id as arc, 
 v_prefix_connec.connecat_id as feature_catalog, the_geom, v_prefix_connec.expl_id from v_prefix_connec)     
