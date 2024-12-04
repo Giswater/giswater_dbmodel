@@ -362,3 +362,9 @@ UPDATE sys_fprocess SET fprocess_name='Node rotation update', project_type='util
 UPDATE sys_fprocess SET fprocess_name='Set end feature', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=518;
 UPDATE sys_fprocess SET fprocess_name='Psector merge', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=520;
 UPDATE sys_fprocess SET fprocess_name='Set repair psector', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=521;
+
+UPDATE sys_fprocess SET fprocess_name='Connec without link', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=2, except_msg='connecs without links or connecs over arc without arc_id.', except_msg_feature=NULL, query_text='SELECT connec_id, connecat_id, c.the_geom, c.expl_id from v_prefix_connec c WHERE c.state= 1 
+AND connec_id NOT IN (SELECT feature_id FROM link) EXCEPT  
+SELECT connec_id, connecat_id, c.the_geom, c.expl_id FROM v_prefix_connec c 
+LEFT JOIN arc a USING (arc_id) WHERE c.state= 1 
+AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)', info_msg='All connecs have links or are over arc with arc_id.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=204;

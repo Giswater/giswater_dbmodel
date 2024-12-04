@@ -61,6 +61,21 @@ AND (SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and
 
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(598, 'Node orphan with isarcdivide=FALSE (OM)', 'ud', NULL, 'core', true, 'Check om-topology', NULL, 2, 'orphan nodes with isarcdivide=FALSE.', NULL, 'SELECT  * FROM v_edit_node a JOIN cat_feature_node ON id = a.node_type WHERE a.state>0 AND isarcdivide=false', 'There are no orphan nodes with isarcdivide=FALSE', '[gw_fct_om_check_data]') ON CONFLICT (fid) DO NOTHING;
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(541, 'Gully without link', 'ud', NULL, 'core', true, 'Check om-data', NULL, NULL, 'gullys without links or gullies over arc without arc_id.', NULL, 'SELECT gully_id, gratecat_id, c.the_geom, c.expl_id from v_prefix_gully c WHERE c.state= 1 
+AND gully_id NOT IN (SELECT feature_id FROM link)
+EXCEPT 
+SELECT gully_id, gratecat_id, c.the_geom, c.expl_id FROM v_prefix_gully c
+LEFT JOIN v_prefix_arc a USING (arc_id) WHERE c.state= 1 
+AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)', 'All gullies have links or are over arc with arc_id.', '[gw_fct_om_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(542, 'feature which id is not an integer', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'which id is not an integer. Please, check your data before continue', NULL, 'SELECT CASE WHEN arc_id~E''^\\d+$'' THEN CAST (arc_id AS INTEGER)
+ELSE 0 END  as feature_id, ''ARC'' as type, arccat_id as featurecat,the_geom, expl_id  FROM v_prefix_arc
+UNION SELECT CASE WHEN node_id~E''^\\d+$'' THEN CAST (node_id AS INTEGER)
+ELSE 0 END as feature_id, ''NODE'' as type, nodecat_id as featurecat,the_geom, expl_id FROM v_prefix_node
+UNION SELECT CASE WHEN connec_id~E''^\\d+$'' THEN CAST (connec_id AS INTEGER)
+ELSE 0 END as feature_id, ''CONNEC'' as type, connecat_id as featurecat,the_geom, expl_id FROM v_prefix_connec
+UNION SELECT CASE WHEN gully_id~E''^\\d+$'' THEN CAST (gully_id AS INTEGER)
+ELSE 0 END as feature_id, ''GULLY'' as type, gratecat_id as featurecat,the_geom, expl_id FROM v_prefix_gully', 'All features with id integer.', '[gw_fct_om_check_data, gw_fct_admin_check_data]');
 
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
