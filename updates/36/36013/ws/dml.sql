@@ -24,6 +24,11 @@ INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source"
 SELECT v_graphclass_id, graphconfig::json->''use''->0->>''nodeParent'' as node_id FROM v_prefix_v_graphclass)b 
 WHERE node_id::text not in (select node_id FROM node WHERE state=1)', 'All nodes defined as nodeParent on v_prefix_v_graphclass exists on DB.', '[gw_fct_graphanalytics_check_data]') ON CONFLICT (fid) DO NOTHING;
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(532, 'Check for inp_arc tables and epa_type consistency', 'ws', NULL, 'core', true, 'Check epa-data', NULL, 3, 'arcs features with epa_type not according with epa table. Check your data before continue.', NULL, 'with sub1 as (SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_pipe table'') AS epa_table, a.the_geom, a.sector_id FROM v_edit_inp_virtualvalve JOIN arc a USING (arc_id) WHERE epa_type !=''VIRTUAL''
+		UNION
+		SELECT 295, a.arc_id, a.arccat_id,  concat(epa_type, '' using inp_virtualvalve table'') AS epa_table, a.the_geom, a.sector_id FROM v_edit_inp_pipe JOIN arc a USING (arc_id) WHERE epa_type !=''PIPE''
+) select*from sub1', 'Epa type for arcs features checked. No inconsistencies aganints epa table found.Epa type for connec features checked. No inconsistencies aganints epa table found.', '[gw_fct_pg2epa_check_data]') ON CONFLICT (fid) DO NOTHING;
+
 
 
 UPDATE sys_fprocess SET fprocess_name='OM check data', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=125;

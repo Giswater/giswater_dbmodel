@@ -179,6 +179,37 @@ INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source"
 WHERE a.sector_id = s.sector_id and cur_user=current_user 
 AND a.matcat_id IS NULL AND sys_type !=''VARC''', 'All arcs have matcat_id filled.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(570, 'Check for inp_arc tables and epa_type consistency', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'arcs features with epa_type not according with epa table. Check your data before continue.', NULL, 'SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_pump table'') AS epa_table, a.the_geom FROM v_edit_inp_pump JOIN arc a USING (arc_id) WHERE epa_type !=''PUMP''
+UNION
+SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_conduit table'') AS epa_table, a.the_geom FROM v_edit_inp_conduit JOIN arc a USING (arc_id) WHERE epa_type !=''CONDUIT''
+UNION
+SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_outlet table'') AS epa_table, a.the_geom FROM v_edit_inp_outlet JOIN arc a USING (arc_id) WHERE epa_type !=''OUTLET''
+UNION
+SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_orifice table'') AS epa_table, a.the_geom FROM v_edit_inp_orifice JOIN arc a USING (arc_id) WHERE epa_type !=''ORIFICE''
+UNION
+SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_weir table'') AS epa_table, a.the_geom FROM v_edit_inp_weir JOIN arc a USING (arc_id) WHERE epa_type !=''WEIR''
+UNION
+SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_virtual table'') AS epa_table, a.the_geom FROM v_edit_inp_virtual JOIN arc a USING (arc_id) WHERE epa_type !=''VIRTUAL''', 'Epa type for arcs features checked. No inconsistencies aganints epa table found.', '[gw_fct_pg2epa_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(571, 'Arcs less than 20 cm.', 'ud', NULL, 'core', true, 'Check epa-topology', NULL, 2, 'pipes with length less than node proximity distance configured.', NULL, 'SELECT * FROM v_edit_inp_conduit WHERE st_length(the_geom) < (SELECT value::json->>''value'' FROM config_param_system WHERE parameter = ''edit_node_proximity'')::float', 'Standard minimun length checked. No values less than node proximity distance configured.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(572, 'arcs less than 5 cm.', 'ud', NULL, 'core', true, 'Check epa-topology', NULL, 3, 'conduits with length less than configured minimum length.', NULL, 'SELECT the_geom, st_length(the_geom) AS length FROM v_edit_inp_conduit WHERE st_length(the_geom) < (SELECT value FROM config_param_system WHERE parameter = ''epa_arc_minlength'')::float', 'Critical minimun length checked. No values less than configured minimum length found.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(272, 'Missing data on inp tables', 'utils', NULL, 'core', true, 'Check epa-data', NULL, 3, 'missed features on inp tables. Please, check your data before continue', NULL, 'SELECT arc_id, ''arc'' FROM v_edit_arc LEFT JOIN    
+(SELECT arc_id from inp_conduit UNION SELECT arc_id FROM inp_virtual UNION SELECT arc_id FROM inp_pump) b using (arc_id)   
+WHERE b.arc_id IS NULL AND state > 0 AND epa_type !=''UNDEFINED'' 
+UNION 
+SELECT node_id, ''node'' FROM v_edit_node LEFT JOIN
+(select node_id from inp_shortpipe UNION select node_id from inp_valve ç
+UNION select node_id from inp_tank 
+UNION select node_id FROM inp_reservoir 
+UNION select node_id FROM inp_pump
+UNION SELECT node_id from inp_inlet
+UNION SELECT node_id from inp_junction) b USING (node_id)
+WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', 'No features missed on inp_tables found.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]');
+
+
+
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
 UPDATE sys_fprocess SET fprocess_name='Arc inverted', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=110;
