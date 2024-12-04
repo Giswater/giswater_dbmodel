@@ -119,11 +119,68 @@ SELECT ''CONNEC'', connec_id, fluid_type FROM v_prefix_connec WHERE fluid_type N
 UNION
 SELECT ''GULLY'', gully_id, fluid_type FROM v_prefix_gully WHERE fluid_type NOT IN (SELECT fluid_type FROM man_type_fluid WHERE feature_type is null or feature_type = ''GULLY'' or featurecat_id IS NOT NULL) AND fluid_type IS NOT NULL', 'All features has fluid_type informed on man_type_fluid table', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(548, 'Check orphan elements', 'ud', NULL, 'core', true, 'Function process', NULL, 2, 'elements not related to any feature and without geometry.', NULL, 'select element_id from element where the_geom is null and element_id not in (
+select distinct element_id from element_x_arc UNION
+select distinct element_id from element_x_connec UNION
+select distinct element_id from element_x_node UNION
+select distinct element_id from element_x_gully)', 'All elements are related to the features or have geometry.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(549, 'Node orphan with isarcdivide=TRUE (OM)', 'ud', NULL, 'core', true, 'Check om-topology', NULL, 2, 'orphan nodes with isarcdivide=TRUE.', NULL, 'SELECT * FROM v_prefix_node a JOIN cat_feature_node ON id = a.node_type WHERE a.state>0 AND isarcdivide= ''true'' 
+AND (SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and arc.state>0) = 0', 'There are no orphan nodes with isarcdivide=TRUE', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 
 
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(550, 'Check function_type values exists on man_ table', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with function_type does not exists on man_type_function table.', NULL, 'SELECT ''ARC'', arc_id, function_type FROM v_prefix_arc WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL
+UNION
+SELECT ''NODE'', node_id, function_type FROM v_prefix_node WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''NODE'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL
+UNION
+SELECT ''CONNEC'', connec_id, function_type FROM v_prefix_connec WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''CONNEC'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL
+UNION
+SELECT ''GULLY'', gully_id, function_type FROM v_prefix_gully WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''GULLY'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL', 'All features has function_type informed on man_type_function table', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(551, 'Features state=1 and end date', 'ud', NULL, 'core', true, 'Check om-data', NULL, 2, 'features on service with value of end date.', NULL, 'SELECT arc_id as feature_id from v_prefix_arc where state = 1 and enddate is not null
+UNION SELECT node_id as feature_id from v_prefix_node where state = 1 and enddate is not null
+UNION SELECT connec_id as feature_id from v_prefix_connec where state = 1 and enddate is not null
+UNION SELECT gully_id as feature_id from v_prefix_gully where state = 1 and enddate is not null', 'No features on service have value of end date', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(552, 'Gully without or with wrong arc_id', 'ud', NULL, 'core', true, 'Check om-data', NULL, 2, 'gullies without or with incorrect arc_id.', NULL, 'SELECT c.gully_id, c.gratecat_id, c.the_geom, c.expl_id, l.feature_type, link_id 
+FROM arc a, link l
+JOIN v_prefix_gully c ON l.feature_id = c.gully_id 
+WHERE st_dwithin(a.the_geom, st_endpoint(l.the_geom), 0.01)
+AND exit_type = ''ARC''
+AND (a.arc_id <> c.arc_id or c.arc_id is null) 
+AND l.feature_type = ''GULLY'' AND a.state=1 and c.state = 1 and l.state=1
+EXCEPT
+SELECT c.gully_id, c.gratecat_id, c.the_geom, c.expl_id, l.feature_type, link_id
+FROM node n, link l
+JOIN v_prefix_gully c ON l.feature_id = c.gully_id 
+WHERE st_dwithin(n.the_geom, st_endpoint(l.the_geom), 0.01)
+AND exit_type IN (''NODE'', ''ARC'')
+AND l.feature_type = ''GULLY'' AND n.state=1 and c.state = 1 and l.state=1
+ORDER BY feature_type, link_id', 'All connecs have correct arc_id. All gullies have correct arc_id.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(553, 'Features with code null', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with code with NULL values. Please, check your data before continue with code with NULL values. Please, check your data before continue', NULL, 'SELECT arc_id, arccat_id, the_geom FROM v_prefix_arc WHERE code IS NULL 
+UNION SELECT node_id, nodecat_id, the_geom FROM v_prefix_node WHERE code IS NULL
+UNION SELECT connec_id, connecat_id, the_geom FROM v_prefix_connec WHERE code IS NULL
+UNION SELECT gully_id, gratecat_id, the_geom FROM v_prefix_gully WHERE code IS NULL
+UNION SELECT element_id, elementcat_id, the_geom FROM v_prefix_element WHERE code IS NULL', 'No features (arc, node, connec, element, gully) with NULL values on code found.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(554, 'Features state=0 without end date', 'ud', NULL, 'core', true, 'Check om-data', NULL, 2, 'features with state 0 without value of end date.', NULL, 'SELECT arc_id as feature_id from v_prefix_arc where state = 0 and enddate is null
+UNION SELECT node_id from v_prefix_node where state = 0 and enddate is null
+UNION SELECT connec_id from v_prefix_connec where state = 0 and enddate is null
+UNION SELECT gully_id from v_prefix_gully where state = 0 and enddate is null', 'No features with state 0 are missing the end date', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(555, 'Check connecs with more than 1 link on service', 'ud', NULL, 'core', true, 'Check om-data', NULL, 2, 'connecs with more than 1 link on service', NULL, 'SELECT connec_id, connecat_id, the_geom, expl_id FROM v_prefix_connec WHERE connec_id 
+IN (SELECT feature_id FROM link WHERE state=1 GROUP BY feature_id HAVING count(*) > 1)
+UNION SELECT gully_id, gratecat_id, the_geom, expl_id FROM v_prefix_gully WHERE gully_id 
+IN (SELECT feature_id FROM link WHERE state=1 GROUP BY feature_id HAVING count(*) > 1)', 'No connects with more than 1 link on service', '[gw_fct_om_check_data, gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(556, 'Check orphan visits', 'ud', NULL, 'core', true, 'Function process', NULL, 2, 'visits not related to any feature and without geometry.', NULL, 'select id from om_visit where the_geom is null and id not in (
+select distinct visit_id from om_visit_x_arc UNION
+select distinct visit_id from om_visit_x_connec UNION
+select distinct visit_id from om_visit_x_node UNION
+select distinct visit_id from om_visit_x_gully)', 'All visits are related to the features or have geometry.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
