@@ -209,6 +209,17 @@ UNION SELECT node_id from inp_junction) b USING (node_id)
 WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', 'No features missed on inp_tables found.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]');
 
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(528, 'Check outlet_id existance in inp_subcatchment and inp_junction', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'non-existing outlet_id related to subcatchment.', NULL, 'select outlet_id from v_edit_inp_subc2outlet
+LEFT JOIN (
+select node_id from v_edit_inp_junction 
+UNION select node_id from v_edit_inp_outfall
+UNION select node_id from v_edit_inp_storage 
+UNION select node_id from v_edit_inp_netgully
+) a on outlet_id = node_id
+where outlet_type in (''JUNCTION'') and node_id is null
+union
+select a.outlet_id from v_edit_inp_subc2outlet a LEFT JOIN v_edit_inp_subcatchment s on a.outlet_id = s.subc_id
+where outlet_type = ''SUBCATCHMENT'' and s.subc_id is null', 'All subcatchments have an existing outlet_id', NULL) ON CONFLICT (fid) DO NOTHING;
 
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
@@ -249,3 +260,7 @@ and (top_elev is not null or custom_top_elev is not null) and (elev is not null 
 UPDATE sys_fprocess SET fprocess_name='Links without gully on startpoint', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=NULL, except_msg='links with wrong topology. Startpoint does not fit with connec.', except_msg_feature=NULL, query_text='with subq1 as (SELECT l.link_id, c.connec_id, c.the_geom FROM connec c, link l
 WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.01) group by 1,2 ORDER BY 1 DESC)
 select connec_id, the_geom From subq1 where connec_id not in (select connec_id from connec)', info_msg='All connec links has connec on startpoint', function_name='[gw_fct_om_check_data]' WHERE fid=418;
+
+UPDATE sys_fprocess SET fprocess_name='Check outfalls with more than 1 arc', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg='outfalls with more than 1 arc.', except_msg_feature=NULL, query_text='select node.node_id, node.the_geom, node.expl_id, node.nodecat_id 
+from node, arc where node.epa_type=''OUTFALL'' and st_dwithin(node.the_geom, arc.the_geom, 0.01) 
+group by node.node_id having count(node.node_id)>1', info_msg='All outfalls have a valid number of connected arcs.', function_name=NULL WHERE fid=522;
