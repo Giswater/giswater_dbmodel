@@ -66,7 +66,7 @@ AND gully_id NOT IN (SELECT feature_id FROM link)
 EXCEPT 
 SELECT gully_id, gratecat_id, c.the_geom, c.expl_id FROM v_prefix_gully c
 LEFT JOIN v_prefix_arc a USING (arc_id) WHERE c.state= 1 
-AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)', 'All gullies have links or are over arc with arc_id.', '[gw_fct_om_check_data]');
+AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)', 'All gullies have links or are over arc with arc_id.', '[gw_fct_om_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(542, 'feature which id is not an integer', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'which id is not an integer. Please, check your data before continue', NULL, 'SELECT CASE WHEN arc_id~E''^\\d+$'' THEN CAST (arc_id AS INTEGER)
 ELSE 0 END  as feature_id, ''ARC'' as type, arccat_id as featurecat,the_geom, expl_id  FROM v_prefix_arc
