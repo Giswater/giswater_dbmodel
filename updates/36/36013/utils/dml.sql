@@ -141,18 +141,7 @@ UPDATE sys_fprocess SET fprocess_name='Vnode inconsistency - vnode without link'
 UPDATE sys_fprocess SET fprocess_name='Link without feature_id', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=3, except_msg='links with state > 0 without feature_id.', except_msg_feature=NULL, query_text='SELECT link_id, the_geom FROM v_prefix_link where feature_id is null and state > 0', info_msg='All links state > 0 have feature_id.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=260;
 UPDATE sys_fprocess SET fprocess_name='Link without exit_id', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=3, except_msg='links with state > 0 without exit_id.', except_msg_feature=NULL, query_text='SELECT link_id, the_geom FROM v_prefix_link where exit_id is null and state > 0', info_msg='All links state > 0 have exit_id.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=261;
 UPDATE sys_fprocess SET fprocess_name='Automatic links with more than 100m', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=2, except_msg='automatic links with longitude out-of-range found.', except_msg_feature=NULL, query_text='SELECT * FROM v_prefix_link where st_length(the_geom) > 100', info_msg='No automatic links with out-of-range Longitude found.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=265;
-UPDATE sys_fprocess SET fprocess_name='Missing data on inp tables', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='missed features on inp tables. Please, check your data before continue', except_msg_feature=NULL, query_text='SELECT arc_id, ''arc'' FROM v_edit_arc LEFT JOIN    
-(SELECT arc_id from inp_pipe UNION SELECT arc_id FROM inp_virtualvalve UNION SELECT arc_id FROM inp_virtualpump) b using (arc_id)   
-WHERE b.arc_id IS NULL AND state > 0 AND epa_type !=''UNDEFINED'' 
-UNION 
-SELECT node_id, ''node'' FROM v_edit_node LEFT JOIN
-(select node_id from inp_shortpipe UNION select node_id from inp_valve ç
-UNION select node_id from inp_tank 
-UNION select node_id FROM inp_reservoir 
-UNION select node_id FROM inp_pump
-UNION SELECT node_id from inp_inlet
-UNION SELECT node_id from inp_junction) b USING (node_id)
-WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
+
 UPDATE sys_fprocess SET fprocess_name='Store psector values for specific user', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=288;
 UPDATE sys_fprocess SET fprocess_name='Store exploitation values for especific user', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=289;
 UPDATE sys_fprocess SET fprocess_name='Duplicated node on temp_table', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-result', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=290;

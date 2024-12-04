@@ -294,4 +294,15 @@ UPDATE sys_fprocess SET fprocess_name='fprocess to set cost for removed material
 
 UPDATE sys_fprocess SET fprocess_name='Check matcat null for arcs', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='arcs without matcat_id informed.''', except_msg_feature=NULL, query_text='SELECT * FROM selector_sector s, v_edit_arc a JOIN cat_arc c ON c.id = a.cat_matcat_id  
 WHERE a.sector_id = s.sector_id and cur_user=current_user 
-AND a.cat_matcat_id IS NULL AND sys_type !=''VARC''', info_msg='All arcs have matcat_id filled.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=430;
+AND a.cat_matcat_id IS NULL AND sys_type !=''VARC''', info_msg='All arcs have matcat_id filled.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=430;UPDATE sys_fprocess SET fprocess_name='Missing data on inp tables', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='missed features on inp tables. Please, check your data before continue', except_msg_feature=NULL, query_text='SELECT arc_id, ''arc'' FROM v_edit_arc LEFT JOIN    
+(SELECT arc_id from inp_pipe UNION SELECT arc_id FROM inp_virtualvalve UNION SELECT arc_id FROM inp_virtualpump) b using (arc_id)   
+WHERE b.arc_id IS NULL AND state > 0 AND epa_type !=''UNDEFINED'' 
+UNION 
+SELECT node_id, ''node'' FROM v_edit_node LEFT JOIN
+(select node_id from inp_shortpipe UNION select node_id from inp_valve ç
+UNION select node_id from inp_tank 
+UNION select node_id FROM inp_reservoir 
+UNION select node_id FROM inp_pump
+UNION SELECT node_id from inp_inlet
+UNION SELECT node_id from inp_junction) b USING (node_id)
+WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
