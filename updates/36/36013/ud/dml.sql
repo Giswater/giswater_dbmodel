@@ -88,7 +88,7 @@ JOIN v_prefix_gully c ON l.feature_id = c.gully_id
 WHERE st_dwithin(n.the_geom, st_endpoint(l.the_geom), 0.01)
 AND exit_type IN (''NODE'', ''ARC'')
 AND l.feature_type = ''GULLY'' AND n.state=1 and c.state = 1 and l.state=1
-ORDER BY feature_type, link_id', 'All connecs have correct arc_id. All gullies have correct arc_id.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+ORDER BY feature_type, link_id', 'All gullies have correct arc_id.', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(553, 'Features with code null', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with code with NULL values. Please, check your data before continue with code with NULL values. Please, check your data before continue', NULL, 'SELECT arc_id, arccat_id, the_geom FROM v_prefix_arc WHERE code IS NULL 
 UNION SELECT node_id, nodecat_id, the_geom FROM v_prefix_node WHERE code IS NULL
@@ -143,7 +143,7 @@ SELECT a.node_id FROM v_prefix_node a RIGHT JOIN plan_psector_x_node USING (node
 UNION
 SELECT a.connec_id FROM v_prefix_connec a RIGHT JOIN plan_psector_x_connec USING (connec_id) WHERE a.state = 2 AND a.connec_id IS NULL
 UNION 
-SELECT a.gully_id FROM v_prefix_gully a RIGHT JOIN plan_psector_x_gully USING (gully_id) WHERE a.state = 2 AND a.gully_id IS NULL', 'There are no features with state=2 without psector.', '[gw_fct_plan_check_data, gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
+SELECT a.gully_id FROM v_prefix_gully a RIGHT JOIN plan_psector_x_gully USING (gully_id) WHERE a.state = 2 AND a.gully_id IS NULL', 'There are no features with state=2 without psector.', '[gw_fct_plan_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(563, 'Connec or gully with different expl_id than arc', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'connecs with exploitation different than the exploitation of the related arc', NULL, 'SELECT DISTINCT connec_id, connecat_id, c.the_geom, c.expl_id FROM v_prefix_connec c JOIN v_prefix_arc b using (arc_id) 
 WHERE b.expl_id::text != c.expl_id::text
