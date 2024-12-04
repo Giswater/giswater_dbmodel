@@ -175,6 +175,9 @@ UNION
 SELECT ''GULLY'', gully_id, category_type FROM v_prefix_gully WHERE category_type NOT IN (SELECT category_type FROM man_type_category WHERE feature_type is null or feature_type = ''GULLY'' or featurecat_id IS NOT NULL) AND category_type IS NOT NULL', 'All features has category_type informed on man_type_category table', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(569, 'Check matcat null for arcs', 'ud', NULL, 'core', true, 'Check epa-config', NULL, 3, 'arcs without matcat_id informed.''', NULL, 'SELECT * FROM selector_sector s, v_edit_arc a JOIN cat_arc c ON c.id = a.matcat_id  
+WHERE a.sector_id = s.sector_id and cur_user=current_user 
+AND a.matcat_id IS NULL AND sys_type !=''VARC''', 'All arcs have matcat_id filled.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
