@@ -58,9 +58,6 @@ select a.element_id from mec a left join "element" b using (element_id))', 'All 
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(549, 'Node orphan with isarcdivide=TRUE (OM)', 'ud', NULL, 'core', true, 'Check om-topology', NULL, 2, 'orphan nodes with isarcdivide=TRUE.', NULL, 'SELECT * FROM v_prefix_node a JOIN cat_feature_node ON id = a.node_type WHERE a.state>0 AND isarcdivide= ''true'' 
 AND (SELECT COUNT(*) FROM arc WHERE node_1 = a.node_id OR node_2 = a.node_id and arc.state>0) = 0', 'There are no orphan nodes with isarcdivide=TRUE', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
-
-
-
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(550, 'Check function_type values exists on man_ table', 'ud', NULL, 'core', true, 'Check om-data', NULL, 3, 'features with function_type does not exists on man_type_function table.', NULL, 'SELECT ''ARC'', arc_id, function_type FROM v_prefix_arc WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''ARC'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL
 UNION
 SELECT ''NODE'', node_id, function_type FROM v_prefix_node WHERE function_type NOT IN (SELECT function_type FROM man_type_function WHERE feature_type is null or feature_type = ''NODE'' or featurecat_id IS NOT NULL) AND function_type IS NOT NULL
@@ -174,7 +171,6 @@ SELECT ''CONNEC'', connec_id, category_type FROM v_prefix_connec WHERE category_
 UNION
 SELECT ''GULLY'', gully_id, category_type FROM v_prefix_gully WHERE category_type NOT IN (SELECT category_type FROM man_type_category WHERE feature_type is null or feature_type = ''GULLY'' or featurecat_id IS NOT NULL) AND category_type IS NOT NULL', 'All features has category_type informed on man_type_category table', '[gw_fct_om_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
-
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(569, 'Check matcat null for arcs', 'ud', NULL, 'core', true, 'Check epa-config', NULL, 3, 'arcs without matcat_id informed.''', NULL, 'SELECT * FROM selector_sector s, v_edit_arc a JOIN cat_arc c ON c.id = a.matcat_id  
 WHERE a.sector_id = s.sector_id and cur_user=current_user 
 AND a.matcat_id IS NULL AND sys_type !=''VARC''', 'All arcs have matcat_id filled.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
@@ -208,7 +204,6 @@ UNION SELECT node_id from inp_inlet
 UNION SELECT node_id from inp_junction) b USING (node_id)
 WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', 'No features missed on inp_tables found.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]');
 
-
 INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(528, 'Check outlet_id existance in inp_subcatchment and inp_junction', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'non-existing outlet_id related to subcatchment.', NULL, 'select outlet_id from v_edit_inp_subc2outlet
 LEFT JOIN (
 select node_id from v_edit_inp_junction 
@@ -221,12 +216,55 @@ union
 select a.outlet_id from v_edit_inp_subc2outlet a LEFT JOIN v_edit_inp_subcatchment s on a.outlet_id = s.subc_id
 where outlet_type = ''SUBCATCHMENT'' and s.subc_id is null', 'All subcatchments have an existing outlet_id', NULL) ON CONFLICT (fid) DO NOTHING;
 
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(573, 'y0 on storage data', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'storages with null values at least on mandatory columns for initial status (y0).', NULL, 'SELECT * FROM v_edit_inp_storage where (y0 is null)', 'No y0 column without values for storages.', '[gw_fct_pg2epa_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(574, 'Check missed values for storage volume', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'storages with null values at least on mandatory columns to define volume parameters (a1,a2,a0 for FUNCTIONAL or curve_id for TABULAR).', NULL, 'SELECT * FROM v_edit_inp_storage where (a1 is null and a2 is null and a0 is null AND storage_type=''FUNCTIONAL'') OR (curve_id IS NULL AND storage_type=''TABULAR'')', 'Mandatory colums for volume values used on storage type have been checked without any values missed.', NULL);
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(575, 'Check missed values for cat_mat.arc n used on real arcs', 'ud', NULL, 'core', true, 'Check epa-config', NULL, 3, 'materials with null values on manning coefficient column used on a real arc wich manning is needed.', NULL, 'SELECT DISTINCT cat_mat_arc.* FROM cat_mat_arc JOIN v_edit_arc ON matcat_id = id where sys_type !=''VARC'' AND n is null', 'Manning coefficient on cat_mat_arc is filled for those materials used on real arcs (not varcs).', '[gw_fct_pg2epa_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(576, 'Check flow regulator length fits on destination arc (orifice)', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'orifice flow regulator wich his length do not respect the minimum length for target arc.', NULL, 'SELECT nodarc_id, f.the_geom FROM selector_sector s, v_edit_inp_flwreg_orifice f
+JOIN node n USING (node_id) JOIN arc a ON a.arc_id = to_arc 
+WHERE n.sector_id = s.sector_id 
+AND cur_user=current_user AND 
+flwreg_length + (SELECT value::numeric FROM config_param_user WHERE parameter = ''inp_options_minlength'' AND cur_user = current_user) > st_length(a.the_geom)', 'All orifice flow regulators has lengh wich fits target arc.', '[gw_fct_pg2epa_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(577, 'Check flow regulator length fits on destination arc (weir)', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'weir flow regulator length do not respect the minimum length for target arc', NULL, 'SELECT nodarc_id, f.the_geom FROM selector_sector s, v_edit_inp_flwreg_weir f
+JOIN node n USING (node_id) JOIN arc a ON a.arc_id = to_arc 
+WHERE n.sector_id = s.sector_id AND cur_user=current_user AND flwreg_length + 
+(SELECT value::numeric FROM config_param_user WHERE parameter = ''inp_options_minlength'' AND cur_user = current_user) > st_length(a.the_geom)', 'All weir flow regulators has lengh wich fits target arc.', '[gw_fct_pg2epa_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(578, 'Check flow regulator length fits on destination arc (outlet)', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'outlet flow regulator length do not respect the minimum length for target arc', NULL, 'SELECT nodarc_id, f.the_geom FROM selector_sector s, v_edit_inp_flwreg_pump f
+JOIN node n USING (node_id) JOIN arc a ON a.arc_id = to_arc 
+WHERE n.sector_id = s.sector_id AND cur_user=current_user AND flwreg_length + 
+(SELECT value::numeric FROM config_param_user WHERE parameter = ''inp_options_minlength'' AND cur_user = current_user) > st_length(a.the_geom)', 'All outlet flow regulators has lengh wich fits target arc.', '[gw_fct_pg2epa_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(579, 'Check flow regulator length fits on destination arc (pump)', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'pump flow regulator length do not respect the minimum length for target arc.', NULL, 'SELECT nodarc_id, f.the_geom FROM selector_sector s, v_edit_inp_flwreg_pump f
+JOIN node n USING (node_id) JOIN arc a ON a.arc_id = to_arc 
+WHERE n.sector_id = s.sector_id AND cur_user=current_user AND flwreg_length + 
+(SELECT value::numeric FROM config_param_user WHERE parameter = ''inp_options_minlength'' AND cur_user = current_user) > st_length(a.the_geom)', 'All pump flow regulators has lengh wich fits target arc.', '[gw_fct_pg2epa_check_data]');
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(580, 'Check valid relative timeseries', 'ud', NULL, 'core', true, 'Check epa-data', NULL, 3, 'columns on relative timeserires related to this exploitation with errors.', NULL, 'SELECT id, a.timser_id, case when a.time is not null then a.time end as time FROM v_edit_inp_timeseries_value a 
+JOIN
+	(SELECT id-1 as id, timser_id, case when time is not null then time end as time FROM v_edit_inp_timeseries_value)b USING (id)
+	where a.time::time - b.time::time > ''0 seconds'' AND a.timser_id = b.timser_id', 'All relative timeseries related ot this exploitation are correctly defined.', '[gw_fct_pg2epa_check_data]');
 
 UPDATE sys_fprocess SET fprocess_name='Arc intersection', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=109;
 UPDATE sys_fprocess SET fprocess_name='Arc inverted', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=110;
-UPDATE sys_fprocess SET fprocess_name='Node exit upper intro', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=111;
+
+UPDATE ud_msg_trad_1.sys_fprocess SET fprocess_name='Node exit upper intro', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=2, except_msg='junctions with exits upper intro', except_msg_feature=NULL, query_text='SELECT node_id, nodecat_id, sector_id, a.the_geom 
+	FROM ( SELECT node_id, max(sys_elev1) AS max_exit, nodecat_id, node.sector_id, node.the_geom FROM v_edit_arc JOIN node ON node_1 = node_id JOIN cat_feature_node ON node_type = id
+	WHERE isexitupperintro = 0 GROUP BY node_id, node.sector_id )a
+	JOIN ( SELECT node_id, max(sys_elev2) AS max_entry FROM v_edit_arc JOIN node ON node_2 = node_id JOIN cat_feature_node ON node_type = id WHERE isexitupperintro = 0 GROUP BY node_id )b USING (node_id)
+	JOIN selector_sector USING (sector_id) 
+	WHERE max_entry < max_exit AND cur_user = current_user', info_msg='Any junction have been detected with exits upper intro.', function_name=NULL WHERE fid=111;
+	
 UPDATE sys_fprocess SET fprocess_name='Node flow regulator', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=112;
-UPDATE sys_fprocess SET fprocess_name='Node sink', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=113;
+UPDATE sys_fprocess SET fprocess_name='Node sink', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=2, except_msg='junctions type sink which means that junction only have entry arcs without any exit arc (FORCE_MAIN is not valid).', except_msg_feature=NULL, query_text='SELECT node_id, nodecat_id, v_edit_node.the_geom, ''Node sink'' FROM v_edit_node WHERE epa_type !=''UNDEFINED'' AND node_id IN
+	(SELECT node_1 FROM (SELECT arc_id, node_1, node_2 FROM v_edit_arc JOIN cat_arc c ON c.id = arccat_id 
+	JOIN selector_sector USING (sector_id) JOIN cat_arc_shape s ON c.shape = s.id WHERE slope < 0 AND s.epa != ''FORCE_MAIN'')a
+	EXCEPT 
+	SELECT node_1 FROM (SELECT arc_id, node_1, node_2 FROM v_edit_arc JOIN cat_arc c ON c.id = arccat_id 
+	JOIN selector_sector USING (sector_id) JOIN cat_arc_shape s ON c.shape = s.id WHERE slope > 0)a)', info_msg='Any junction have been swiched on the fly to OUTFALL.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=113;
 UPDATE sys_fprocess SET fprocess_name='EDIT check data', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=116;
 UPDATE sys_fprocess SET fprocess_name='SYS check data', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Not used', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=126;
 UPDATE sys_fprocess SET fprocess_name='Flow trace', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=220;
@@ -236,13 +274,20 @@ UPDATE sys_fprocess SET fprocess_name='Slope consistency', project_type='ud', pa
 UPDATE sys_fprocess SET fprocess_name='Conduits with negative slope and inverted slope', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=3, except_msg='arcs with inverted slope false and slope negative values. Please, check your data before continue', except_msg_feature=NULL, query_text='SELECT a.arc_id, arccat_id, a.the_geom, expl_id FROM arc a WHERE sys_slope < 0 AND state > 0 AND inverted_slope IS FALSE', info_msg='No arcs with inverted slope checked found.', function_name='[gw_fct_om_check_data]' WHERE fid=251;
 UPDATE sys_fprocess SET fprocess_name='Orphan polygons', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=2, except_msg='polygons without parent. Check your data before continue. polygons without parent. Check your data before continue.', except_msg_feature=NULL, query_text='SELECT pol_id FROM polygon WHERE feature_id IS NULL OR feature_id NOT IN (SELECT gully_id FROM gully UNION
 SELECT node_id FROM node UNION SELECT connec_id FROM connec)', info_msg='No polygons without parent feature found.', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=255;
-UPDATE sys_fprocess SET fprocess_name='Arcs without elevation', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=284;
-UPDATE sys_fprocess SET fprocess_name='Null values on raingage', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=285;
-UPDATE sys_fprocess SET fprocess_name='Null values on raingage timeseries', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=286;
-UPDATE sys_fprocess SET fprocess_name='Null values on raingage file', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=287;
+
+UPDATE sys_fprocess SET fprocess_name='Arcs without elevation', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='nodes EPA without sys_elevation values.', except_msg_feature=NULL, query_text='SELECT node_id, nodecat_id, the_geom FROM v_edit_node JOIN selector_sector USING (sector_id) 
+WHERE epa_type !=''UNDEFINED'' AND sys_elev IS NULL AND cur_user = current_user', info_msg='No nodes with null values on field elevation have been found.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=284;
+
+UPDATE sys_fprocess SET fprocess_name='Null values on raingage', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='raingages with null values at least on mandatory columns for rain type (form_type, intvl, rgage_type).', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_raingage where (form_type is null) OR (intvl is null) OR (rgage_type is null)', info_msg='Mandatory colums for raingage (form_type, intvl, rgage_type) have been checked without any values missed.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=285;
+
+UPDATE sys_fprocess SET fprocess_name='Null values on raingage timeseries', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='raingages with null values on the mandatory column for ''TIMESERIES'' raingage type', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_raingage where rgage_type=''TIMESERIES'' AND timser_id IS NULL', info_msg='Mandatory colums for ''TIMESERIES'' raingage type have been checked without any values missed.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=286;
+
+UPDATE sys_fprocess SET fprocess_name='Null values on raingage file', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='raingages with null values at least on mandatory columns for ''FILE'' raingage type (fname, sta, units).', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_raingage where rgage_type=''FILE'' AND (fname IS NULL or sta IS NULL or units IS NULL)', info_msg=' Mandatory colums (fname, sta, units) for ''FILE'' raingage type have been checked without any values missed.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=287;
+
 UPDATE sys_fprocess SET fprocess_name='Check cat_feature_node field isexitupperintro', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check admin', addparam=NULL, except_level=3, except_msg='nodes without value on field "isexitupperintro" from cat_feature_node.', except_msg_feature=NULL, query_text='SELECT * FROM cat_feature_node WHERE isexitupperintro IS NULL', info_msg='All nodes have value on field "isexitupperintro"', function_name='[gw_fct_admin_check_data]' WHERE fid=308;
 UPDATE sys_fprocess SET fprocess_name='Check cat_node field estimated_y', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check plan-config', addparam=NULL, except_level=2, except_msg='rows without values on cat_node.estimated_y column.', except_msg_feature=NULL, query_text='SELECT * FROM cat_node WHERE estimated_y IS NULL and active=TRUE', info_msg='There is/are no rows without values on cat_node.estimated_y column.', function_name='[gw_fct_plan_check_data]' WHERE fid=331;
 UPDATE sys_fprocess SET fprocess_name='Check cat_grate field active', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check plan-config', addparam=NULL, except_level=3, except_msg='rows without values on cat_grate.active column.', except_msg_feature=NULL, query_text='SELECT * FROM cat_grate WHERE active IS NULL', info_msg='There is/are no rows without values on cat_grate.active column.', function_name='[gw_fct_plan_check_data]' WHERE fid=344;
+/*
 UPDATE sys_fprocess SET fprocess_name='Check cat_grate field cost_ut', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check plan-config', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=345;
 UPDATE sys_fprocess SET fprocess_name='Check subcatchment configuration', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=369;
 UPDATE sys_fprocess SET fprocess_name='Check features with sector_id=0', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=370;
@@ -252,7 +297,23 @@ UPDATE sys_fprocess SET fprocess_name='Check gully duplicated', project_type='ud
 UPDATE sys_fprocess SET fprocess_name='Import istram nodes', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=408;
 UPDATE sys_fprocess SET fprocess_name='Import istram arcs', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=409;
 UPDATE sys_fprocess SET fprocess_name='Check minimun length for arcs', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-network', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=431;
-UPDATE sys_fprocess SET fprocess_name='Check outlet_id assigned to subcatchments', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=440;
+*/
+UPDATE ud_msg_trad_1.sys_fprocess SET fprocess_name='Check outlet_id assigned to subcatchments', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='outlets defined on subcatchments view, that are not present on junction, outfall, storage, divider or subcatchment view.', except_msg_feature=NULL, query_text='WITH query AS (SELECT * FROM (SELECT 440 as fid, subc_id, outlet_id, st_centroid(the_geom) from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
+	UNION
+	SELECT 440, subc_id, unnest(outlet_id::text[]), st_centroid(the_geom) from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text
+	)a
+	WHERE outlet_id not in 
+	(select node_id FROM v_edit_inp_junction UNION select node_id FROM v_edit_inp_outfall UNION
+	select node_id FROM v_edit_inp_storage UNION select node_id FROM v_edit_inp_divider UNION
+	select subc_id FROM v_edit_inp_subcatchment))
+	SELECT q1.* FROM query q1 
+	LEFT JOIN 
+	(SELECT * FROM (
+	SELECT 440, subc_id, outlet_id, the_geom from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
+	UNION
+	SELECT 440, subc_id, unnest(outlet_id::text[]), the_geom AS outlet_id from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text)a)b
+	USING (outlet_id)
+	WHERE b.subc_id IS NULL', info_msg='All outlets set on subcatchments are correctly defined.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=440;
 
 UPDATE sys_fprocess SET fprocess_name='Check redundant values on y-top_elev-elev', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=NULL, except_msg='nodes with redundancy on ymax, top_elev & elev values.', except_msg_feature=NULL, query_text='SELECT node_id, nodecat_id, the_geom, expl_id FROM v_prefix_node WHERE (ymax is not null or custom_ymax is not null) 
 and (top_elev is not null or custom_top_elev is not null) and (elev is not null or custom_elev is not null)', info_msg='There are no nodes with redundancy on ymax, top_elev & elev values.', function_name='[gw_fct_om_check_data]' WHERE fid=461;
@@ -264,3 +325,9 @@ select connec_id, the_geom From subq1 where connec_id not in (select connec_id f
 UPDATE sys_fprocess SET fprocess_name='Check outfalls with more than 1 arc', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Function process', addparam=NULL, except_level=NULL, except_msg='outfalls with more than 1 arc.', except_msg_feature=NULL, query_text='select node.node_id, node.the_geom, node.expl_id, node.nodecat_id 
 from node, arc where node.epa_type=''OUTFALL'' and st_dwithin(node.the_geom, arc.the_geom, 0.01) 
 group by node.node_id having count(node.node_id)>1', info_msg='All outfalls have a valid number of connected arcs.', function_name=NULL WHERE fid=522;
+
+UPDATE sys_fprocess SET fprocess_name='Check missing data in Inp Weir', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='values missing on some data of Inp Weir (weir_type, cd, geom1, geom2, offsetval)', except_msg_feature=NULL, query_text='SELECT  arc_id,  the_geom from v_edit_inp_weir 
+		where weir_type is null or cd is null or geom1 is null or geom2 is null or offsetval is null', info_msg='No missing data on Inp Weir.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=529;
+		
+UPDATE sys_fprocess SET fprocess_name='Check missing data in Inp Orifice', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='values missing on some data of Inp Orifice (ori_type, geom1, offsetval)', except_msg_feature=NULL, query_text='SELECT arc_id, the_geom from v_edit_inp_orifice
+where ori_type is null or geom1 is null or offsetval is null', info_msg='No missing data on Inp Orifice.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=530;
