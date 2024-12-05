@@ -312,3 +312,6 @@ UNION select node_id FROM inp_pump
 UNION SELECT node_id from inp_inlet
 UNION SELECT node_id from inp_junction) b USING (node_id)
 WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
+
+UPDATE sys_fprocess SET fprocess_name='Check for inp_connec tables and epa_type consistency', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='connecs features with epa_type not according with epa table. Check your data before continue.', except_msg_feature=NULL, query_text='SELECT * FROM (SELECT count(*) as c1, null AS c2 FROM connec UNION SELECT null, count(*) FROM inp_connec)a1 WHERE c1 > c2', info_msg='Epa type for arc features checked. No inconsistencies aganints epa table found.Epa type for connec features checked. No inconsistencies aganints epa table found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=295;
+WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
