@@ -24,10 +24,23 @@ INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source"
 SELECT v_graphclass_id, graphconfig::json->''use''->0->>''nodeParent'' as node_id FROM v_prefix_v_graphclass)b 
 WHERE node_id::text not in (select node_id FROM node WHERE state=1)', 'All nodes defined as nodeParent on v_prefix_v_graphclass exists on DB.', '[gw_fct_graphanalytics_check_data]') ON CONFLICT (fid) DO NOTHING;
 
-INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(532, 'Check for inp_arc tables and epa_type consistency', 'ws', NULL, 'core', true, 'Check epa-data', NULL, 3, 'arcs features with epa_type not according with epa table. Check your data before continue.', NULL, 'with sub1 as (SELECT 295, a.arc_id, a.arccat_id, concat(epa_type, '' using inp_pipe table'') AS epa_table, a.the_geom, a.sector_id FROM v_edit_inp_virtualvalve JOIN arc a USING (arc_id) WHERE epa_type !=''VIRTUAL''
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(532, 'Check for inp_arc tables and epa_type consistency', 'ws', NULL, 'core', true, 'Check epa-data', NULL, 3, 'arcs features with epa_type not according with epa table. Check your data before continue.', NULL, 'with sub1 as (SELECT a.arc_id, a.arccat_id, concat(epa_type, '' using inp_pipe table'') AS epa_table, a.the_geom, a.sector_id FROM v_edit_inp_virtualvalve JOIN arc a USING (arc_id) WHERE epa_type !=''VIRTUAL''
 		UNION
-		SELECT 295, a.arc_id, a.arccat_id,  concat(epa_type, '' using inp_virtualvalve table'') AS epa_table, a.the_geom, a.sector_id FROM v_edit_inp_pipe JOIN arc a USING (arc_id) WHERE epa_type !=''PIPE''
+		SELECT a.arc_id, a.arccat_id,  concat(epa_type, '' using inp_virtualvalve table'') AS epa_table, a.the_geom, a.sector_id FROM v_edit_inp_pipe JOIN arc a USING (arc_id) WHERE epa_type !=''PIPE''
 ) select*from sub1', 'Epa type for arcs features checked. No inconsistencies aganints epa table found.Epa type for connec features checked. No inconsistencies aganints epa table found.', '[gw_fct_pg2epa_check_data]') ON CONFLICT (fid) DO NOTHING;
+
+INSERT INTO sys_fprocess (fid, fprocess_name, project_type, parameters, "source", isaudit, fprocess_type, addparam, except_level, except_msg, except_msg_feature, query_text, info_msg, function_name) VALUES(272, 'Missing data on inp tables', 'ws', NULL, 'core', true, 'Check epa-data', NULL, 3, 'missed features on inp tables. Please, check your data before continue', NULL, 'SELECT arc_id, ''arc'' FROM v_edit_arc LEFT JOIN    
+(SELECT arc_id from inp_conduit UNION SELECT arc_id FROM inp_virtual UNION SELECT arc_id FROM inp_pump) b using (arc_id)   
+WHERE b.arc_id IS NULL AND state > 0 AND epa_type !=''UNDEFINED'' 
+UNION 
+SELECT node_id, ''node'' FROM v_edit_node LEFT JOIN
+(select node_id from inp_shortpipe UNION select node_id from inp_valve ç
+UNION select node_id from inp_tank 
+UNION select node_id FROM inp_reservoir 
+UNION select node_id FROM inp_pump
+UNION SELECT node_id from inp_inlet
+UNION SELECT node_id from inp_junction) b USING (node_id)
+WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', 'No features missed on inp_tables found.', '[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]') ON CONFLICT (fid) DO NOTHING;
 
 
 
@@ -314,4 +327,16 @@ UNION SELECT node_id from inp_junction) b USING (node_id)
 WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
 
 UPDATE sys_fprocess SET fprocess_name='Check for inp_connec tables and epa_type consistency', project_type='ws', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='connecs features with epa_type not according with epa table. Check your data before continue.', except_msg_feature=NULL, query_text='SELECT * FROM (SELECT count(*) as c1, null AS c2 FROM connec UNION SELECT null, count(*) FROM inp_connec)a1 WHERE c1 > c2', info_msg='Epa type for arc features checked. No inconsistencies aganints epa table found.Epa type for connec features checked. No inconsistencies aganints epa table found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=295;
+
+UPDATE sys_fprocess SET fprocess_name='Missing data on inp tables', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='missed features on inp tables. Please, check your data before continue', except_msg_feature=NULL, query_text='SELECT arc_id, ''arc'' FROM v_edit_arc LEFT JOIN    
+(SELECT arc_id from inp_conduit UNION SELECT arc_id FROM inp_virtual UNION SELECT arc_id FROM inp_pump) b using (arc_id)   
+WHERE b.arc_id IS NULL AND state > 0 AND epa_type !=''UNDEFINED'' 
+UNION 
+SELECT node_id, ''node'' FROM v_edit_node LEFT JOIN
+(select node_id from inp_shortpipe UNION select node_id from inp_valve ç
+UNION select node_id from inp_tank 
+UNION select node_id FROM inp_reservoir 
+UNION select node_id FROM inp_pump
+UNION SELECT node_id from inp_inlet
+UNION SELECT node_id from inp_junction) b USING (node_id)
 WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
