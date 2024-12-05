@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
-insert into sys_fprocess (fid, "project_type") select generate_series(1,899), 'flag_update' on conflict (fid) do nothing;
+insert into sys_fprocess (fid, "source") select generate_series(1,899), 'flag_update' on conflict (fid) do nothing;
 
 UPDATE sys_fprocess SET fid=533, fprocess_name='Check that EPA OBJECTS (patterns) name do not contain spaces', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='patterns name with spaces. Please fix it!', except_msg_feature=NULL, query_text='SELECT * FROM inp_pattern WHERE pattern_id like''% %''', info_msg='All patterns checked have names without spaces.', function_name='[gw_fct_pg2epa_check_data]';
 UPDATE sys_fprocess SET fid=538, fprocess_name='Features state=0 without end date', project_type='utils', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-data', addparam=NULL, except_level=2, except_msg='features with state 0 without value of end date.', except_msg_feature=NULL, query_text='SELECT arc_id as feature_id from v_prefix_arc where state = 0 and enddate is null UNION 

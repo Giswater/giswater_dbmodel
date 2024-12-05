@@ -334,4 +334,4 @@ UNION SELECT node_id from inp_junction) b USING (node_id)
 WHERE b.node_id IS NULL AND state >0 AND epa_type !=''UNDEFINED''', info_msg='No features missed on inp_tables found.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=272;
 
 -- end
-delete from sys_fprocess where project_type = 'flag_update';
+delete from sys_fprocess where "source" = 'flag_update';

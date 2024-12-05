@@ -303,4 +303,4 @@ UPDATE sys_fprocess SET fid=584, fprocess_name='Nodes without elevation', projec
 
 
 -- end
-delete from sys_fprocess where project_type = 'flag_update';
+delete from sys_fprocess where "source" = 'flag_update';
