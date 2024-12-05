@@ -247,8 +247,9 @@ BEGIN
 		'}')::json, 2431, null, null, null);
 
 END;
-$function$
-;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
 
 -- Permissions
 
