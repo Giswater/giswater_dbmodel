@@ -170,7 +170,7 @@ SELECT ''CONNEC'', connec_id, category_type FROM v_prefix_connec WHERE category_
 UNION
 SELECT ''GULLY'', gully_id, category_type FROM v_prefix_gully WHERE category_type NOT IN (SELECT category_type FROM man_type_category WHERE feature_type is null or feature_type = ''GULLY'' or featurecat_id IS NOT NULL) AND category_type IS NOT NULL', info_msg='All features has category_type informed on man_type_category table', function_name='[gw_fct_om_check_data, gw_fct_admin_check_data]' WHERE fid=568;
 
-UPDATE sys_fprocess SET fprocess_name='Check matcat null for arcs', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='arcs without matcat_id informed.''', except_msg_feature=NULL, query_text='SELECT * FROM selector_sector s, v_edit_arc a JOIN cat_arc c ON c.id = a.matcat_id  
+UPDATE sys_fprocess SET fprocess_name='Check matcat null for arcs', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='arcs without matcat_id informed.', except_msg_feature=NULL, query_text='SELECT * FROM selector_sector s, v_edit_arc a JOIN cat_arc c ON c.id = a.matcat_id  
 WHERE a.sector_id = s.sector_id and cur_user=current_user 
 AND a.matcat_id IS NULL AND sys_type !=''VARC''', info_msg='All arcs have matcat_id filled.', function_name='[gw_fct_pg2epa_check_data, gw_fct_admin_check_data]' WHERE fid=569;
 
@@ -270,7 +270,7 @@ UPDATE sys_fprocess SET fprocess_name='Null values on raingage', project_type='u
 
 UPDATE sys_fprocess SET fprocess_name='Null values on raingage timeseries', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='raingages with null values on the mandatory column for ''TIMESERIES'' raingage type', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_raingage where rgage_type=''TIMESERIES'' AND timser_id IS NULL', info_msg='Mandatory colums for ''TIMESERIES'' raingage type have been checked without any values missed.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=286;
 
-UPDATE sys_fprocess SET fprocess_name='Null values on raingage file', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='raingages with null values at least on mandatory columns for ''FILE'' raingage type (fname, sta, units).', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_raingage where rgage_type=''FILE'' AND (fname IS NULL or sta IS NULL or units IS NULL)', info_msg=' Mandatory colums (fname, sta, units) for ''FILE'' raingage type have been checked without any values missed.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=287;
+UPDATE sys_fprocess SET fprocess_name='Null values on raingage file', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='raingages with null values at least on mandatory columns for ''FILE'' raingage type (fname, sta, units).', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_raingage where rgage_type=''FILE'' AND (fname IS NULL or sta IS NULL or units IS NULL)', info_msg='Mandatory colums (fname, sta, units) for ''FILE'' raingage type have been checked without any values missed.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=287;
 
 UPDATE sys_fprocess SET fprocess_name='Check cat_feature_node field isexitupperintro', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check admin', addparam=NULL, except_level=3, except_msg='nodes without value on field "isexitupperintro" from cat_feature_node.', except_msg_feature=NULL, query_text='SELECT * FROM cat_feature_node WHERE isexitupperintro IS NULL', info_msg='All nodes have value on field "isexitupperintro"', function_name='[gw_fct_admin_check_data]' WHERE fid=308;
 
@@ -289,22 +289,27 @@ UPDATE sys_fprocess SET fprocess_name='Import istram arcs', project_type='ud', p
 UPDATE sys_fprocess SET fprocess_name='Check minimun length for arcs', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-network', addparam=NULL, except_level=NULL, except_msg=NULL, except_msg_feature=NULL, query_text=NULL, info_msg=NULL, function_name=NULL WHERE fid=431;
 */
 
-UPDATE sys_fprocess SET fprocess_name='Check outlet_id assigned to subcatchments', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='outlets defined on subcatchments view, that are not present on junction, outfall, storage, divider or subcatchment view.', except_msg_feature=NULL, query_text='WITH query AS (SELECT * FROM (SELECT 440 as fid, subc_id, outlet_id, st_centroid(the_geom) from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
+UPDATE sys_fprocess SET fprocess_name='Check outlet_id assigned to subcatchments', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-config', addparam=NULL, except_level=3, except_msg='outlets defined on subcatchments view, that are not present on junction, outfall, storage, divider or subcatchment view.', except_msg_feature=NULL, query_text='WITH query AS (SELECT * FROM 
+(SELECT subc_id, outlet_id, st_centroid(the_geom) as the_geom from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
 	UNION
-	SELECT 440, subc_id, unnest(outlet_id::text[]), st_centroid(the_geom) from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text
-	)a
-	WHERE outlet_id not in 
-	(select node_id FROM v_edit_inp_junction UNION select node_id FROM v_edit_inp_outfall UNION
-	select node_id FROM v_edit_inp_storage UNION select node_id FROM v_edit_inp_divider UNION
-	select subc_id FROM v_edit_inp_subcatchment))
-	SELECT q1.* FROM query q1 
-	LEFT JOIN 
-	(SELECT * FROM (
-	SELECT 440, subc_id, outlet_id, the_geom from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
-	UNION
-	SELECT 440, subc_id, unnest(outlet_id::text[]), the_geom AS outlet_id from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text)a)b
-	USING (outlet_id)
-	WHERE b.subc_id IS NULL', info_msg='All outlets set on subcatchments are correctly defined.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=440;
+	SELECT subc_id, unnest(outlet_id::text[]), st_centroid(the_geom) from v_edit_inp_subcatchment where left(outlet_id::text, 1) = ''{''::text
+	)a WHERE outlet_id not in (
+		select node_id FROM v_edit_inp_junction UNION 
+		select node_id FROM v_edit_inp_outfall UNION
+		select node_id FROM v_edit_inp_storage UNION 
+		select node_id FROM v_edit_inp_divider UNION
+		select subc_id FROM v_edit_inp_subcatchment
+	))
+	SELECT q1.*, u.expl_id FROM query q1 
+		LEFT JOIN 
+		(SELECT * FROM (
+		SELECT 440, subc_id, outlet_id, the_geom from v_edit_inp_subcatchment where left(outlet_id::text, 1) != ''{''::text 
+		UNION
+		SELECT 440, subc_id, unnest(outlet_id::text[]), the_geom AS outlet_id from v_edit_inp_subcatchment 
+		where left(outlet_id::text, 1) = ''{''::text)a)b
+		USING (outlet_id) 
+		left join node u on q1.outlet_id = u.node_id
+		WHERE b.subc_id IS NULL', info_msg='All outlets set on subcatchments are correctly defined.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=440;
 
 UPDATE sys_fprocess SET fprocess_name='Check redundant values on y-top_elev-elev', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check om-topology', addparam=NULL, except_level=NULL, except_msg='nodes with redundancy on ymax, top_elev & elev values.', except_msg_feature=NULL, query_text='SELECT node_id, nodecat_id, the_geom, expl_id FROM v_prefix_node WHERE (ymax is not null or custom_ymax is not null) 
 and (top_elev is not null or custom_top_elev is not null) and (elev is not null or custom_elev is not null)', info_msg='There are no nodes with redundancy on ymax, top_elev & elev values.', function_name='[gw_fct_om_check_data]' WHERE fid=461;
@@ -337,6 +342,11 @@ where outlet_type = ''SUBCATCHMENT'' and s.subc_id is null', info_msg='All subca
 
 UPDATE sys_fprocess SET fprocess_name='Nodes without elevation', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='EPA nodes without sys_elevation values.', except_msg_feature=NULL, query_text='SELECT * FROM v_edit_node JOIN selector_sector USING (sector_id) WHERE epa_type !=''UNDEFINED'' AND sys_elev IS NULL AND cur_user = current_user', info_msg='No nodes with null values on field elevation have been found.', function_name='[gw_fct_pg2epa_check_data]' WHERE  fid=584;
 
+UPDATE sys_fprocess SET fprocess_name='Check that EPA OBJECTS (pollutants) do not contain spaces', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='pollutants have name with spaces. Please fix it!', except_msg_feature=NULL, query_text='SELECT * FROM inp_pollutant WHERE poll_id like''% %''', info_msg='All pollutants checked have names without spaces.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=585;
+
+UPDATE sys_fprocess SET fprocess_name='Check that EPA OBJECTS (snowpacks) do not contain spaces', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='snowpacks have name with spaces. Please fix it!', except_msg_feature=NULL, query_text='SELECT * FROM inp_snowpack WHERE snow_id like''% %''', info_msg='All snowpacks checked have names without spaces.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=586;
+
+UPDATE sys_fprocess SET fprocess_name='Check that EPA OBJECTS (lids) do not contain spaces', project_type='ud', parameters=NULL, "source"='core', isaudit=true, fprocess_type='Check epa-data', addparam=NULL, except_level=3, except_msg='lids have name with spaces. Please fix it!', except_msg_feature=NULL, query_text='SELECT * FROM inp_lid WHERE lidco_id like''% %''', info_msg='All lids checked have names without spaces.', function_name='[gw_fct_pg2epa_check_data]' WHERE fid=587;
 
 -- end
 delete from sys_fprocess where "source" = 'flag_update';
