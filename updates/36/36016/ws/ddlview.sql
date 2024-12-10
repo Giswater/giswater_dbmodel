@@ -626,8 +626,8 @@ AS SELECT om_mincut_arc.id,
    FROM om_mincut_arc
      JOIN om_mincut ON om_mincut_arc.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
- 
- 
+
+
 CREATE OR REPLACE VIEW v_om_mincut_current_connec
 AS SELECT om_mincut_connec.id,
     om_mincut_connec.result_id,
@@ -638,8 +638,8 @@ AS SELECT om_mincut_connec.id,
    FROM om_mincut_connec
      JOIN om_mincut ON om_mincut_connec.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
-  
- 
+
+
  CREATE OR REPLACE VIEW v_om_mincut_current_hydrometer
 AS SELECT om_mincut_hydrometer.id,
     om_mincut_hydrometer.result_id,
@@ -654,8 +654,8 @@ AS SELECT om_mincut_hydrometer.id,
      JOIN connec ON rtc_hydrometer_x_connec.connec_id::text = connec.connec_id::text
      JOIN om_mincut ON om_mincut_hydrometer.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
-  
- 
+
+
 CREATE OR REPLACE VIEW v_om_mincut_current_node
 AS SELECT om_mincut_node.id,
     om_mincut_node.result_id,
@@ -666,8 +666,8 @@ AS SELECT om_mincut_node.id,
    FROM om_mincut_node
      JOIN om_mincut ON om_mincut_node.result_id = om_mincut.id
   WHERE om_mincut.mincut_state = 1;
-  
-  
+
+
 CREATE OR REPLACE VIEW v_om_mincut_current_initpoint
 AS SELECT om_mincut.id,
     om_mincut.work_order,
@@ -713,8 +713,8 @@ AS SELECT om_mincut.id,
      LEFT JOIN macroexploitation ON om_mincut.macroexpl_id = macroexploitation.macroexpl_id
      LEFT JOIN ext_municipality ON om_mincut.muni_id = ext_municipality.muni_id
     WHERE om_mincut.mincut_state = 1;
-	
-	
+
+
 CREATE OR REPLACE VIEW v_edit_sector
 AS SELECT vu_sector.sector_id,
     vu_sector.name,
@@ -737,230 +737,11 @@ AS SELECT vu_sector.sector_id,
     case when active is true then vu_sector.the_geom else null::geometry(MultiPolygon,SRID_VALUE) end the_geom
    FROM vu_sector, selector_sector
   WHERE vu_sector.sector_id = selector_sector.sector_id AND selector_sector.cur_user = "current_user"()::text;
-  
-  
-  
-  
-CREATE OR REPLACE VIEW v_edit_connec AS 
-SELECT  c.* FROM (
-    WITH s AS (
-    SELECT selector_expl.expl_id
-   FROM selector_expl
-  WHERE selector_expl.cur_user = CURRENT_USER
-)
-SELECT vu_connec.connec_id,
-    vu_connec.code,
-    vu_connec.elevation,
-    vu_connec.depth,
-    vu_connec.connec_type,
-    vu_connec.sys_type,
-    vu_connec.connecat_id,
-	vu_connec.cat_matcat_id,
-    vu_connec.cat_pnom,
-    vu_connec.cat_dnom,
-	vu_connec.cat_dint,
-	vu_connec.epa_type,
-	vu_connec.inp_type,
-	vu_connec.state,
-    vu_connec.state_type,
-    vu_connec.expl_id,
-    vu_connec.macroexpl_id,
-	CASE
-		WHEN a.sector_id IS NULL THEN vu_connec.sector_id
-		ELSE a.sector_id
-	END AS sector_id,
-	CASE
-		WHEN a.sector_name IS NULL THEN vu_connec.sector_name
-		ELSE a.sector_name
-	END AS sector_name,
-    vu_connec.macrosector_id,
-	CASE
-		WHEN a.presszone_id IS NULL THEN vu_connec.presszone_id
-		ELSE a.presszone_id
-	END AS presszone_id,
-	CASE
-		WHEN a.presszone_name IS NULL THEN vu_connec.presszone_name
-		ELSE a.presszone_name
-	END AS presszone_name,
-	CASE
-		WHEN a.presszone_type IS NULL THEN vu_connec.presszone_type
-		ELSE a.presszone_type
-	END AS presszone_type,
-	CASE
-		WHEN a.presszone_head IS NULL THEN vu_connec.presszone_head
-		ELSE a.presszone_head
-	END AS presszone_head,
-	CASE
-		WHEN a.dma_id IS NULL THEN vu_connec.dma_id
-		ELSE a.dma_id
-	END AS dma_id,
-	CASE
-		WHEN a.dma_name IS NULL THEN vu_connec.dma_name
-		ELSE a.dma_name
-	END AS dma_name,
-	CASE
-		WHEN a.dma_type IS NULL THEN vu_connec.dma_type
-		ELSE a.dma_type::character varying(30)
-	END AS dma_type,
-	CASE
-		WHEN a.macrodma_id IS NULL THEN vu_connec.macrodma_id
-		ELSE a.macrodma_id
-	END AS macrodma_id,
-	CASE
-		WHEN a.dqa_id IS NULL THEN vu_connec.dqa_id
-		ELSE a.dqa_id
-	END AS dqa_id,
-	CASE
-		WHEN a.dqa_name IS NULL THEN vu_connec.dqa_name
-		ELSE a.dqa_name
-	END AS dqa_name,
-	CASE
-		WHEN a.dqa_type IS NULL THEN vu_connec.dqa_type
-		ELSE a.dqa_type
-	END AS dqa_type,
-	CASE
-		WHEN a.macrodqa_id IS NULL THEN vu_connec.macrodqa_id
-		ELSE a.macrodqa_id
-	END AS macrodqa_id,
-	vu_connec.crmzone_id,
-    vu_connec.crmzone_name,
-    vu_connec.customer_code,
-    vu_connec.connec_length,
-    vu_connec.n_hydrometer,
-    v_state_connec.arc_id,
-    vu_connec.annotation,
-    vu_connec.observ,
-    vu_connec.comment,   
-    CASE
-	WHEN a.staticpressure IS NULL THEN vu_connec.staticpressure
-	ELSE a.staticpressure
-    END AS staticpressure,
-    vu_connec.soilcat_id,
-    vu_connec.function_type,
-    vu_connec.category_type,
-    vu_connec.fluid_type,
-    vu_connec.location_type,
-    vu_connec.workcat_id,
-    vu_connec.workcat_id_end,
-    vu_connec.workcat_id_plan,
-    vu_connec.buildercat_id,
-    vu_connec.builtdate,
-    vu_connec.enddate,
-    vu_connec.ownercat_id,
-    vu_connec.muni_id,
-    vu_connec.postcode,
-    vu_connec.district_id,
-    vu_connec.streetname,
-    vu_connec.postnumber,
-    vu_connec.postcomplement,
-    vu_connec.streetname2,
-    vu_connec.postnumber2,
-    vu_connec.postcomplement2,
-    vu_connec.region_id,
-    vu_connec.province_id,
-    vu_connec.descript,
-    vu_connec.svg,
-    vu_connec.rotation,
-    vu_connec.link,
-    vu_connec.verified,
-    vu_connec.undelete,
-    vu_connec.label,
-    vu_connec.label_x,
-    vu_connec.label_y,
-    vu_connec.label_rotation,
-    vu_connec.label_quadrant,
-    vu_connec.publish,
-    vu_connec.inventory,
-    vu_connec.num_value,
-    CASE
-	WHEN a.exit_id IS NULL THEN vu_connec.pjoint_id
-	ELSE a.exit_id
-    END AS pjoint_id,
-    CASE
-	WHEN a.exit_type IS NULL THEN vu_connec.pjoint_type
-	ELSE a.exit_type
-    END AS pjoint_type,
-    vu_connec.adate,
-    vu_connec.adescript,
-    vu_connec.accessibility,
-    vu_connec.asset_id,
-    vu_connec.dma_style,
-    vu_connec.presszone_style,
-    vu_connec.priority,
-    vu_connec.valve_location,
-    vu_connec.valve_type,
-    vu_connec.shutoff_valve,
-    vu_connec.access_type,
-    vu_connec.placement_type,
-    vu_connec.om_state,
-    vu_connec.conserv_state,
-    vu_connec.expl_id2,
-    vu_connec.is_operative,
-    vu_connec.plot_code,
-    vu_connec.brand_id,
-    vu_connec.model_id,
-    vu_connec.serial_number,
-    vu_connec.cat_valve,
-    CASE
-	WHEN a.minsector_id IS NULL THEN vu_connec.minsector_id
-	ELSE a.minsector_id
-    END AS minsector_id,
-    vu_connec.macrominsector_id,
-    vu_connec.demand,
-    vu_connec.press_max,
-    vu_connec.press_min,
-    vu_connec.press_avg,
-	vu_connec.quality_max,
-    vu_connec.quality_min,
-    vu_connec.quality_avg,
-	vu_connec.tstamp,
-    vu_connec.insert_user,
-    vu_connec.lastupdate,
-    vu_connec.lastupdate_user,
-    vu_connec.the_geom
-   FROM s, vu_connec
-     JOIN v_state_connec USING (connec_id)
-     LEFT JOIN ( SELECT DISTINCT ON (vu_link.feature_id) vu_link.link_id,
-            vu_link.feature_type,
-            vu_link.feature_id,
-            vu_link.exit_type,
-            vu_link.exit_id,
-            vu_link.state,
-            vu_link.expl_id,
-            vu_link.sector_id,
-            vu_link.sector_type,
-            vu_link.dma_id,
-            vu_link.dma_type,
-            vu_link.presszone_id,
-	    vu_link.presszone_head,
-	    vu_link.presszone_type,
-            vu_link.dqa_id,
-            vu_link.dqa_type,
-            vu_link.minsector_id,
-            vu_link.exit_topelev,
-            vu_link.exit_elev,
-            vu_link.fluid_type,
-            vu_link.gis_length,
-            vu_link.the_geom,
-            vu_link.sector_name,
-            vu_link.dma_name,
-            vu_link.dqa_name,
-            vu_link.presszone_name,
-            vu_link.macrosector_id,
-            vu_link.macrodma_id,
-            vu_link.macrodqa_id,
-            vu_link.expl_id2,
-            vu_link.staticpressure
-           FROM v_edit_link vu_link, s s_1
-          WHERE (vu_link.expl_id = s_1.expl_id OR vu_link.expl_id2 = s_1.expl_id) AND vu_link.state = 2) a ON a.feature_id::text = vu_connec.connec_id::text
-	WHERE vu_connec.expl_id = s.expl_id OR vu_connec.expl_id2 = s.expl_id) c
-	join selector_sector s using (sector_id)
-	LEFT JOIN selector_municipality m using (muni_id)
-	where s.cur_user = current_user 
-	and (m.cur_user = current_user or c.muni_id is null);
-	
 
-CREATE OR REPLACE VIEW v_edit_connec AS 
+
+
+
+CREATE OR REPLACE VIEW v_edit_connec AS
 SELECT  c.* FROM (
     WITH s AS (
     SELECT selector_expl.expl_id
@@ -1049,7 +830,7 @@ SELECT vu_connec.connec_id,
     v_state_connec.arc_id,
     vu_connec.annotation,
     vu_connec.observ,
-    vu_connec.comment,   
+    vu_connec.comment,
     CASE
 	WHEN a.staticpressure IS NULL THEN vu_connec.staticpressure
 	ELSE a.staticpressure
@@ -1175,5 +956,263 @@ SELECT vu_connec.connec_id,
 	WHERE vu_connec.expl_id = s.expl_id OR vu_connec.expl_id2 = s.expl_id) c
 	join selector_sector s using (sector_id)
 	LEFT JOIN selector_municipality m using (muni_id)
-	where s.cur_user = current_user 
+	where s.cur_user = current_user
 	and (m.cur_user = current_user or c.muni_id is null);
+
+
+CREATE OR REPLACE VIEW v_edit_connec AS
+SELECT  c.* FROM (
+    WITH s AS (
+    SELECT selector_expl.expl_id
+   FROM selector_expl
+  WHERE selector_expl.cur_user = CURRENT_USER
+)
+SELECT vu_connec.connec_id,
+    vu_connec.code,
+    vu_connec.elevation,
+    vu_connec.depth,
+    vu_connec.connec_type,
+    vu_connec.sys_type,
+    vu_connec.connecat_id,
+	vu_connec.cat_matcat_id,
+    vu_connec.cat_pnom,
+    vu_connec.cat_dnom,
+	vu_connec.cat_dint,
+	vu_connec.epa_type,
+	vu_connec.inp_type,
+	vu_connec.state,
+    vu_connec.state_type,
+    vu_connec.expl_id,
+    vu_connec.macroexpl_id,
+	CASE
+		WHEN a.sector_id IS NULL THEN vu_connec.sector_id
+		ELSE a.sector_id
+	END AS sector_id,
+	CASE
+		WHEN a.sector_name IS NULL THEN vu_connec.sector_name
+		ELSE a.sector_name
+	END AS sector_name,
+    vu_connec.macrosector_id,
+	CASE
+		WHEN a.presszone_id IS NULL THEN vu_connec.presszone_id
+		ELSE a.presszone_id
+	END AS presszone_id,
+	CASE
+		WHEN a.presszone_name IS NULL THEN vu_connec.presszone_name
+		ELSE a.presszone_name
+	END AS presszone_name,
+	CASE
+		WHEN a.presszone_type IS NULL THEN vu_connec.presszone_type
+		ELSE a.presszone_type
+	END AS presszone_type,
+	CASE
+		WHEN a.presszone_head IS NULL THEN vu_connec.presszone_head
+		ELSE a.presszone_head
+	END AS presszone_head,
+	CASE
+		WHEN a.dma_id IS NULL THEN vu_connec.dma_id
+		ELSE a.dma_id
+	END AS dma_id,
+	CASE
+		WHEN a.dma_name IS NULL THEN vu_connec.dma_name
+		ELSE a.dma_name
+	END AS dma_name,
+	CASE
+		WHEN a.dma_type IS NULL THEN vu_connec.dma_type
+		ELSE a.dma_type::character varying(30)
+	END AS dma_type,
+	CASE
+		WHEN a.macrodma_id IS NULL THEN vu_connec.macrodma_id
+		ELSE a.macrodma_id
+	END AS macrodma_id,
+	CASE
+		WHEN a.dqa_id IS NULL THEN vu_connec.dqa_id
+		ELSE a.dqa_id
+	END AS dqa_id,
+	CASE
+		WHEN a.dqa_name IS NULL THEN vu_connec.dqa_name
+		ELSE a.dqa_name
+	END AS dqa_name,
+	CASE
+		WHEN a.dqa_type IS NULL THEN vu_connec.dqa_type
+		ELSE a.dqa_type
+	END AS dqa_type,
+	CASE
+		WHEN a.macrodqa_id IS NULL THEN vu_connec.macrodqa_id
+		ELSE a.macrodqa_id
+	END AS macrodqa_id,
+	vu_connec.crmzone_id,
+    vu_connec.crmzone_name,
+    vu_connec.customer_code,
+    vu_connec.connec_length,
+    vu_connec.n_hydrometer,
+    v_state_connec.arc_id,
+    vu_connec.annotation,
+    vu_connec.observ,
+    vu_connec.comment,
+    CASE
+	WHEN a.staticpressure IS NULL THEN vu_connec.staticpressure
+	ELSE a.staticpressure
+    END AS staticpressure,
+    vu_connec.soilcat_id,
+    vu_connec.function_type,
+    vu_connec.category_type,
+    vu_connec.fluid_type,
+    vu_connec.location_type,
+    vu_connec.workcat_id,
+    vu_connec.workcat_id_end,
+    vu_connec.workcat_id_plan,
+    vu_connec.buildercat_id,
+    vu_connec.builtdate,
+    vu_connec.enddate,
+    vu_connec.ownercat_id,
+    vu_connec.muni_id,
+    vu_connec.postcode,
+    vu_connec.district_id,
+    vu_connec.streetname,
+    vu_connec.postnumber,
+    vu_connec.postcomplement,
+    vu_connec.streetname2,
+    vu_connec.postnumber2,
+    vu_connec.postcomplement2,
+    vu_connec.region_id,
+    vu_connec.province_id,
+    vu_connec.descript,
+    vu_connec.svg,
+    vu_connec.rotation,
+    vu_connec.link,
+    vu_connec.verified,
+    vu_connec.undelete,
+    vu_connec.label,
+    vu_connec.label_x,
+    vu_connec.label_y,
+    vu_connec.label_rotation,
+    vu_connec.label_quadrant,
+    vu_connec.publish,
+    vu_connec.inventory,
+    vu_connec.num_value,
+    CASE
+	WHEN a.exit_id IS NULL THEN vu_connec.pjoint_id
+	ELSE a.exit_id
+    END AS pjoint_id,
+    CASE
+	WHEN a.exit_type IS NULL THEN vu_connec.pjoint_type
+	ELSE a.exit_type
+    END AS pjoint_type,
+    vu_connec.adate,
+    vu_connec.adescript,
+    vu_connec.accessibility,
+    vu_connec.asset_id,
+    vu_connec.dma_style,
+    vu_connec.presszone_style,
+    vu_connec.priority,
+    vu_connec.valve_location,
+    vu_connec.valve_type,
+    vu_connec.shutoff_valve,
+    vu_connec.access_type,
+    vu_connec.placement_type,
+    vu_connec.om_state,
+    vu_connec.conserv_state,
+    vu_connec.expl_id2,
+    vu_connec.is_operative,
+    vu_connec.plot_code,
+    vu_connec.brand_id,
+    vu_connec.model_id,
+    vu_connec.serial_number,
+    vu_connec.cat_valve,
+    CASE
+	WHEN a.minsector_id IS NULL THEN vu_connec.minsector_id
+	ELSE a.minsector_id
+    END AS minsector_id,
+    vu_connec.macrominsector_id,
+    vu_connec.demand,
+    vu_connec.press_max,
+    vu_connec.press_min,
+    vu_connec.press_avg,
+	vu_connec.quality_max,
+    vu_connec.quality_min,
+    vu_connec.quality_avg,
+	vu_connec.tstamp,
+    vu_connec.insert_user,
+    vu_connec.lastupdate,
+    vu_connec.lastupdate_user,
+    vu_connec.the_geom
+   FROM s, vu_connec
+     JOIN v_state_connec USING (connec_id)
+     LEFT JOIN ( SELECT DISTINCT ON (vu_link.feature_id) vu_link.link_id,
+            vu_link.feature_type,
+            vu_link.feature_id,
+            vu_link.exit_type,
+            vu_link.exit_id,
+            vu_link.state,
+            vu_link.expl_id,
+            vu_link.sector_id,
+            vu_link.sector_type,
+            vu_link.dma_id,
+            vu_link.dma_type,
+            vu_link.presszone_id,
+	    vu_link.presszone_head,
+	    vu_link.presszone_type,
+            vu_link.dqa_id,
+            vu_link.dqa_type,
+            vu_link.minsector_id,
+            vu_link.exit_topelev,
+            vu_link.exit_elev,
+            vu_link.fluid_type,
+            vu_link.gis_length,
+            vu_link.the_geom,
+            vu_link.sector_name,
+            vu_link.dma_name,
+            vu_link.dqa_name,
+            vu_link.presszone_name,
+            vu_link.macrosector_id,
+            vu_link.macrodma_id,
+            vu_link.macrodqa_id,
+            vu_link.expl_id2,
+            vu_link.staticpressure
+           FROM v_edit_link vu_link, s s_1
+          WHERE (vu_link.expl_id = s_1.expl_id OR vu_link.expl_id2 = s_1.expl_id) AND vu_link.state = 2) a ON a.feature_id::text = vu_connec.connec_id::text
+	WHERE vu_connec.expl_id = s.expl_id OR vu_connec.expl_id2 = s.expl_id) c
+	join selector_sector s using (sector_id)
+	LEFT JOIN selector_municipality m using (muni_id)
+	where s.cur_user = current_user
+	and (m.cur_user = current_user or c.muni_id is null);
+
+DROP VIEW IF EXISTS v_rpt_comp_node_hourly;
+CREATE OR REPLACE VIEW v_rpt_comp_node_hourly
+AS SELECT rpt_node.id,
+    node.node_id,
+    node.sector_id,
+    selector_rpt_compare.result_id,
+    rpt_node.elevation,
+    rpt_node.demand,
+    rpt_node.head,
+    rpt_node.press,
+    rpt_node.quality,
+    rpt_node."time",
+    node.the_geom
+   FROM selector_rpt_compare,
+    selector_rpt_compare_tstep,
+    rpt_inp_node node
+     JOIN rpt_node ON rpt_node.node_id::text = node.node_id::text
+  WHERE rpt_node.result_id::text = selector_rpt_compare.result_id::text AND rpt_node."time"::text = selector_rpt_compare_tstep.timestep::text AND selector_rpt_compare.cur_user = "current_user"()::text AND selector_rpt_compare_tstep.cur_user = "current_user"()::text AND node.result_id::text = selector_rpt_compare.result_id::text;
+
+DROP VIEW IF EXISTS v_rpt_comp_arc_hourly;
+CREATE OR REPLACE VIEW v_rpt_comp_arc_hourly
+AS SELECT rpt_arc.id,
+    arc.arc_id,
+    arc.sector_id,
+    selector_rpt_compare.result_id,
+    rpt_arc.flow,
+    rpt_arc.vel,
+    rpt_arc.headloss,
+    rpt_arc.setting,
+    rpt_arc.ffactor,
+    rpt_arc."time",
+    arc.the_geom
+   FROM selector_rpt_compare,
+    selector_rpt_compare_tstep,
+    rpt_inp_arc arc
+     JOIN rpt_arc ON rpt_arc.arc_id::text = arc.arc_id::text
+  WHERE rpt_arc.result_id::text = selector_rpt_compare.result_id::text AND rpt_arc."time"::text = selector_rpt_compare_tstep.timestep::text AND selector_rpt_compare.cur_user = "current_user"()::text AND selector_rpt_compare_tstep.cur_user = "current_user"()::text AND arc.result_id::text = selector_rpt_compare.result_id::text;
+
