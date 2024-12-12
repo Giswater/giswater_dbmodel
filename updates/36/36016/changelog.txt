@@ -7,3 +7,4 @@
 - Delete column serial_number on man_element UD
 - Change columns brand and model for brand_id and model_id on cat_arc, cat_node and cat_grate UD
 - Change name on config_param_system variable from edit_link_check_arcdnom to edit_link_link2network. Add maxDistance as a value and use it on linktonetwork
+- Enable the automatic calculation of label coordinates, label rotation and label quadrant according to a user defined distance from the geometry and the rotation of the feature when inserting or updating a node
