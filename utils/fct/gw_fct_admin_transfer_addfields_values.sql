@@ -402,10 +402,7 @@ BEGIN
             execute v_sql;
 
         end loop;
-<<<<<<< HEAD
-=======
 		end if;
->>>>>>> dev-3.6
      end if;
 
     -- update sys_foreignkey values
