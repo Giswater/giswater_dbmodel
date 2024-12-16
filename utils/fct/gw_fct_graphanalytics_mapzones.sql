@@ -50,7 +50,7 @@ TO CHECK PROBLEMS, RUN MODE DEBUG
 ---------------------------------
 
 1) CONTEXT
-SET search_path='ws', public;
+SET search_path='SCHEMA_NAME', public;
 UPDATE arc SET dma_id=0 where expl_id IN (1,2)
 
 
@@ -133,6 +133,7 @@ v_query_node text;
 v_query_connec text;
 v_query_gully text;
 v_query_link text;
+v_query_link_gully text;
 v_dscenario_valve text;
 v_netscenario text;
 v_has_conflicts boolean = false;
@@ -388,10 +389,11 @@ BEGIN
 		ELSE
 			v_query_arc = 'SELECT * FROM arc WHERE state=1 AND expl_id IN ('||v_expl_id||')';
 			v_query_node = 'SELECT * FROM node WHERE state=1 AND expl_id IN ('||v_expl_id||')';
-			v_query_connec = 'SELECT * FROM connec WHERE state=1 AND expl_id IN ('||v_expl_id||')';
-			v_query_link = 'SELECT * FROM link WHERE state=1 AND expl_id IN ('||v_expl_id||')';
+			v_query_connec = 'SELECT c.* FROM connec c JOIN arc a ON a.arc_id = c.arc_id WHERE c.state=1 AND a.state = 1 AND c.expl_id IN ('||v_expl_id||')';
+			v_query_link = 'SELECT l.* FROM link l join connec c ON c.connec_id = l.feature_id WHERE c.state=1 AND l.state =1 AND l.feature_type = ''CONNEC'' AND l.expl_id IN ('||v_expl_id||')';
 			IF v_project_type='UD' THEN
-				v_query_gully = 'SELECT * FROM gully WHERE expl_id IN ('||v_expl_id||')';
+				v_query_gully = 'SELECT g.* FROM gully g JOIN arc a ON a.arc_id = g.arc_id WHERE g.state=1 AND a.state = 1 AND g.expl_id IN ('||v_expl_id||')';
+				v_query_link_gully = 'SELECT l.* FROM link l join gully g ON g.gully_id = l.feature_id WHERE g.state=1 AND l.state =1 AND l.feature_type = ''GULLY'' AND l.expl_id IN ('||v_expl_id||')';
 			END IF;
 		END IF;
 
@@ -402,22 +404,11 @@ BEGIN
 
 		IF v_project_type = 'UD' THEN
 			EXECUTE 'INSERT INTO temp_t_gully '||v_query_gully;
+			EXECUTE 'INSERT INTO temp_t_link '||v_query_link_gully;
 		END IF;
 
 		-- update temp_t_connec in order to get correct arc_id (for planified features, arc_id from parent layer is NULL)
 		UPDATE temp_t_connec t SET arc_id=c.arc_id FROM v_edit_connec c WHERE t.connec_id=c.connec_id;
-
-		IF v_class = 'SECTOR' THEN
-			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND sector_id IN (SELECT distinct '||v_field||' FROM temp_t_arc)';
-		ELSE
-			IF v_netscenario IS NOT NULL THEN
-				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM plan_netscenario_'||v_table||' WHERE active is true AND netscenario_id = '||v_netscenario;
-			ELSE
-				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND expl_id IN('||v_expl_id||')';
-			END IF;
-		END IF;
-
-		EXECUTE 'UPDATE temp_'||v_table||' SET the_geom = null';
 
 		-- reset elements to 0
 		IF v_floodonlymapzone IS NULL THEN
@@ -740,6 +731,18 @@ BEGIN
 			-- update link table
 			EXECUTE 'UPDATE temp_t_link SET '||quote_ident(v_field)||' = g.'||quote_ident(v_field)||' FROM temp_t_gully g WHERE g.gully_id=feature_id';
 		END IF;
+
+		IF v_class = 'SECTOR' THEN
+			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND sector_id IN (SELECT distinct '||v_field||' FROM temp_t_arc)';
+		ELSE
+			IF v_netscenario IS NOT NULL THEN
+				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM plan_netscenario_'||v_table||' WHERE active is true AND netscenario_id = '||v_netscenario;
+			ELSE
+				EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND expl_id IN('||v_expl_id||')';
+			END IF;
+		END IF;
+
+		EXECUTE 'UPDATE temp_'||v_table||' SET the_geom = null';
 
 		IF v_islastupdate IS TRUE THEN
 

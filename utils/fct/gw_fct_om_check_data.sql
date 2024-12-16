@@ -20,6 +20,8 @@ SELECT SCHEMA_NAME.gw_fct_om_check_data($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "feature":{},"data":{"parameters":{"selectionMode":"wholeSystem"}}}$$)
 
+SELECT SCHEMA_NAME.gw_fct_om_check_data($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"selectionMode":"userSelectors"}, "aux_params":null}}$$);
+
 
 SELECT * FROM audit_check_data WHERE fid = v_fid
 
@@ -52,6 +54,8 @@ v_node_1 text;
 v_partialquery text;
 v_check_arcdnom integer;
 v_fid integer;
+v_psector_list varchar;
+
 
 BEGIN
 
@@ -78,17 +82,13 @@ BEGIN
 		v_edit = 'v_edit_';
 	END IF;
 
-	
-	--create temp tables
-	IF v_fid = 125 OR v_fid = 101 THEN
-		CREATE TEMP TABLE temp_anl_arc (LIKE SCHEMA_NAME.anl_arc INCLUDING ALL);
-		CREATE TEMP TABLE temp_anl_node (LIKE SCHEMA_NAME.anl_node INCLUDING ALL);
-		CREATE TEMP TABLE temp_anl_connec (LIKE SCHEMA_NAME.anl_connec INCLUDING ALL);
-		CREATE TEMP TABLE temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
-	END IF;
+	-- create temp tables
+	CREATE TEMP TABLE if not exists temp_anl_arc (LIKE SCHEMA_NAME.anl_arc INCLUDING ALL);
+	CREATE TEMP TABLE if not exists temp_anl_node (LIKE SCHEMA_NAME.anl_node INCLUDING ALL);
+	CREATE TEMP TABLE if not exists temp_anl_connec (LIKE SCHEMA_NAME.anl_connec INCLUDING ALL);
+	CREATE TEMP TABLE if not exists temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
+	CREATE TEMP TABLE if not exists temp_t_arc (LIKE SCHEMA_NAME.temp_arc INCLUDING ALL);
 
-	CREATE TEMP TABLE temp_t_arc (LIKE SCHEMA_NAME.temp_arc INCLUDING ALL);
-	
 	-- Starting process
 	INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('DATA QUALITY ANALYSIS ACORDING O&M RULES'));
 	INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '-------------------------------------------------------------');
@@ -178,9 +178,9 @@ BEGIN
 	END IF;
 
 	RAISE NOTICE '05 - Check state 1 arcs with state 2 nodes (197)';
-	v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN '||v_edit||'node n ON node_1=node_id 
+	v_querytext = '(SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN node n ON node_1=node_id 
 			WHERE a.state =1 AND n.state=2 UNION
-			SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN '||v_edit||'node n ON node_2=node_id WHERE a.state =1 AND n.state=2) a';
+			SELECT a.arc_id, arccat_id, a.the_geom, a.expl_id FROM '||v_edit||'arc a JOIN node n ON node_2=node_id WHERE a.state =1 AND n.state=2) a';
 			
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
 	IF v_count > 0 THEN
@@ -512,8 +512,8 @@ BEGIN
 					AND connec_id NOT IN (SELECT feature_id FROM link)
 					EXCEPT 
 					SELECT connec_id, connecat_id, c.the_geom, c.expl_id FROM '||v_edit||'connec c
-					LEFT JOIN '||v_edit||'arc a USING (arc_id) WHERE c.state= 1 
-					AND arc_id IS NOT NULL AND st_dwithin(c.the_geom, a.the_geom, 0.1)';
+					JOIN arc a USING (arc_id) WHERE c.state= 1 
+					AND st_dwithin(c.the_geom, a.the_geom, 0.1)';
 
 	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
@@ -956,16 +956,19 @@ BEGIN
 		FROM link l JOIN connec c ON feature_id = connec_id WHERE l.state = 1 and l.feature_type = 'CONNEC';
 
 		UPDATE temp_t_arc t SET node_1 = connec_id, state = 9 FROM (
-		SELECT l.link_id, c.connec_id, (ST_Distance(c.the_geom, ST_startpoint(l.the_geom))) as d FROM connec c, link l
-		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.05) group by 1,2,3 ORDER BY 1 DESC,3 DESC
+		SELECT l.link_id, c.connec_id FROM connec c, link l
+		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.01) group by 1,2 ORDER BY 1 DESC
 		)a where t.arc_id = a.link_id::text AND t.node_1 = a.connec_id;
 	ELSE
 		INSERT INTO temp_t_arc (arc_id, node_1, result_id, sector_id, state, the_geom) SELECT link_id, feature_id, '417', l.sector_id, l.state, l.the_geom 
 		FROM link l JOIN v_edit_connec c ON feature_id = connec_id WHERE l.state > 0 and l.feature_type = 'CONNEC';
 
 		UPDATE temp_t_arc t SET node_1 = connec_id, state = 9 FROM (
-		SELECT l.link_id, c.connec_id, (ST_Distance(c.the_geom, ST_startpoint(l.the_geom))) as d FROM v_edit_connec c, link l
-		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.05) group by 1,2,3 ORDER BY 1 DESC,3 DESC
+		SELECT l.link_id, c.connec_id FROM link l, connec c, selector_sector, selector_expl
+		WHERE l.state = 1 and c.state = 1 and ST_DWithin(ST_startpoint(l.the_geom), c.the_geom, 0.01) 
+		AND selector_sector.sector_id = c.sector_id AND selector_sector.cur_user = current_user
+		AND selector_expl.expl_id = c.expl_id AND selector_expl.cur_user = current_user
+		group by 1,2 ORDER BY 1 DESC
 		)a where t.arc_id = a.link_id::text AND t.node_1 = a.connec_id;
 	END IF;
 
@@ -1230,20 +1233,33 @@ BEGIN
 	END IF;
 
 	RAISE NOTICE '43 - Check nodes planified duplicated(453)';
-	v_querytext = 'SELECT * FROM (SELECT DISTINCT t1.node_id AS node_1, t1.nodecat_id AS nodecat_1, t1.state as state1, t2.node_id AS node_2, t2.nodecat_id AS nodecat_2, t2.state as state2, t1.expl_id, 453, t1.the_geom
-	FROM '||v_edit||'node AS t1 JOIN '||v_edit||'node AS t2 ON ST_Dwithin(t1.the_geom, t2.the_geom, 0.01) WHERE t1.node_id != t2.node_id ORDER BY t1.node_id ) a where a.state1 = 2 AND a.state2 = 2';
+	v_querytext = 'SELECT * FROM (SELECT DISTINCT t1.node_id AS node_1, t1.nodecat_id AS nodecat_1, t1.state AS state1, t2.node_id AS node_2, t2.nodecat_id AS nodecat_2, t2.state AS state2, t1.expl_id, 453, 
+	t1.the_geom , COALESCE(px1.psector_id, px2.psector_id) AS psector_id
+	FROM '||v_edit||'node AS t1  JOIN '||v_edit||'node AS t2 
+	ON ST_DWithin(t1.the_geom, t2.the_geom, 0.01) 
+	LEFT JOIN plan_psector_x_node AS px1 ON t1.node_id = px1.node_id 
+	LEFT JOIN plan_psector_x_node AS px2 ON t2.node_id = px2.node_id 
+	WHERE t1.node_id != t2.node_id AND ((px1.psector_id = px2.psector_id) 
+	OR (px1.psector_id IS NULL OR px2.psector_id IS NULL)) ORDER BY t1.node_id) 
+	a WHERE a.state1 = 2 AND a.state2 = 2';
 
-	EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
+   	EXECUTE concat(
+    'SELECT count(*), string_agg(psector_id::TEXT || '' ('' || total_nodes::TEXT || '' nodes)'', '', '') ' || 
+    'FROM (SELECT psector_id, count(*) AS total_nodes ' ||
+    'FROM (', v_querytext, ') a ' || 
+    'GROUP BY psector_id) a'
+	) INTO v_count, v_psector_list;
 
+	
 	IF v_count > 0 THEN
 		EXECUTE concat ('INSERT INTO temp_anl_node (fid, node_id, nodecat_id, descript, the_geom, expl_id)
 		SELECT 453, node_1, nodecat_1, ''Duplicated nodes'', the_geom, expl_id FROM (', v_querytext,')a');
 
 		INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-		VALUES (v_fid, 3, '453', concat('ERROR-453 (anl_node): There is/are ',v_count,' nodes duplicated with state 2.'),v_count);
+		VALUES (v_fid, 3, '453', concat('ERROR-453 (anl_node): There are nodes duplicated with state 2 in same psectors ', v_psector_list,'.'),v_count);
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-		VALUES (v_fid, 1, '453','INFO: There are no nodes duplicated with state 2',v_count);
+		VALUES (v_fid, 1, '453','INFO: There are no nodes duplicated with state 2 in same psector',v_count);
 	END IF;
 
 	RAISE NOTICE '44 - Check redundant values on y-top_elev-elev (461)';
@@ -1312,8 +1328,7 @@ BEGIN
 	FROM '||v_edit||'arc AS t1, arc AS t2
 	WHERE St_equals(t1.the_geom,t2.the_geom)
 	AND t1.arc_id != t2.arc_id
-	ORDER BY arc_id ) a where a.state1 > 0 AND a.state2 > 0) a';
-
+	ORDER BY arc_id ) a where a.state1 = 1 AND a.state2 = 1) a';
 
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
 	IF v_count > 0 THEN
@@ -1492,7 +1507,7 @@ BEGIN
 		
 		-- delete old values on anl table
 		DELETE FROM anl_connec WHERE cur_user=current_user AND fid IN (210,201,202,204,205,257,291,478);
-		DELETE FROM anl_arc WHERE cur_user=current_user AND fid IN (103,196,197,188,223,202,372,391,417,418,461,381, 479);
+		DELETE FROM anl_arc WHERE cur_user=current_user AND fid IN (103,196,197,188,223,202,251,372,391,417,418,461,381, 479);
 		DELETE FROM anl_node WHERE cur_user=current_user AND fid IN (106,177,187,202,442,443,461,432);
 
 		INSERT INTO anl_arc SELECT * FROM temp_anl_arc;

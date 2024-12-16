@@ -217,7 +217,7 @@ BEGIN
 		LEFT JOIN (SELECT node_id, active FROM '||v_edit||'node JOIN (SELECT (json_array_elements_text((graphconfig::json->>''use'')::json))::json->>''nodeParent'' as node_id, 
 		active FROM '||v_edit||'dma WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''DMA'' AND (a.node_id IS NULL
 		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM '||v_edit||'dma WHERE active IS TRUE))
-		AND '||v_edit||'node.state > 0';
+		AND '||v_edit||'node.state > 0 and verified<>''2'' and (a.active is null or a.active is false)';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 		IF v_count > 0 THEN
@@ -243,7 +243,7 @@ BEGIN
 			END IF;
 		ELSE
 			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 1, '180','INFO: All nodes with cat_feature_node.graphdelimiter=''DMA'' are defined as nodeParent on dma.graphconfig',v_count);
+			VALUES (v_fid, 1, '180','INFO: All nodes with cat_feature_node.graphdelimiter=''DMA'' are defined as nodeParent on dma.graphconfig (exception for verified=IGNORE CHECK)',v_count);
 		END IF;
 		
 		-- dma, toArc (fid:  84)
@@ -269,7 +269,7 @@ BEGIN
 		LEFT JOIN (SELECT node_id, active FROM '||v_edit||'node JOIN (SELECT (json_array_elements_text((graphconfig::json->>''use'')::json))::json->>''nodeParent'' as node_id, 
 		active FROM '||v_edit||'dqa WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''DQA'' AND (a.node_id IS NULL
 		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM '||v_edit||'dqa WHERE active IS TRUE))
-		AND '||v_edit||'node.state > 0';
+		AND '||v_edit||'node.state > 0 and verified<>''2'' and (a.active is null or a.active is false)';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
@@ -296,7 +296,7 @@ BEGIN
 			END IF;
 		ELSE
 			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 1, '181', 'INFO: All nodes with cat_feature_node.graphdelimiter=''DQA'' are defined as nodeParent on dqa.graphconfig',v_count);
+			VALUES (v_fid, 1, '181', 'INFO: All nodes with cat_feature_node.graphdelimiter=''DQA'' are defined as nodeParent on dqa.graphconfig (exception for verified=IGNORE CHECK)',v_count);
 		END IF;
 
 		-- dqa, toArc (fid:  85)
@@ -322,7 +322,7 @@ BEGIN
 		LEFT JOIN (SELECT node_id, active FROM '||v_edit||'node JOIN (SELECT (json_array_elements_text((graphconfig::json->>''use'')::json))::json->>''nodeParent'' as node_id, 
 		active FROM '||v_edit||'presszone WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''PRESSZONE'' AND (a.node_id IS NULL
 		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM '||v_edit||'presszone WHERE active IS TRUE))
-		AND '||v_edit||'node.state > 0';
+		AND '||v_edit||'node.state > 0 and verified<>''2'' and (a.active is null or a.active is false)';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 		IF v_count > 0 THEN
@@ -348,7 +348,7 @@ BEGIN
 			END IF;
 		ELSE
 			INSERT INTO temp_audit_check_data (fid, criticity, result_id, error_message, fcount)
-			VALUES (v_fid, 1, '182','INFO: All nodes with cat_feature_node.graphdelimiter=''PRESSZONE'' are defined as nodeParent on presszone.graphconfig',v_count);
+			VALUES (v_fid, 1, '182','INFO: All nodes with cat_feature_node.graphdelimiter=''PRESSZONE'' are defined as nodeParent on presszone.graphconfig (exception for verified=IGNORE CHECK)',v_count);
 		END IF;
 
 	END IF;

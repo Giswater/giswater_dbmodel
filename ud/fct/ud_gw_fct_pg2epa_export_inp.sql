@@ -567,6 +567,7 @@ BEGIN
 		    NULL::text AS other6,
 		    NULL::text AS other7
 		   FROM inp_lid
+ 		   JOIN (select distinct (lidco_id) from v_edit_inp_dscenario_lid_usage)a USING (lidco_id)
 		  WHERE inp_lid.active
 		UNION
 		 SELECT inp_lid_value.id,
@@ -581,6 +582,7 @@ BEGIN
 		    inp_lid_value.value_8 AS other7
 		   FROM inp_lid_value
 		     JOIN inp_lid USING (lidco_id)
+		     JOIN (select distinct (lidco_id) from v_edit_inp_dscenario_lid_usage)a USING (lidco_id)
 		     LEFT JOIN inp_typevalue ON inp_typevalue.id::text = inp_lid_value.lidlayer::text
 		  WHERE inp_lid.active AND inp_typevalue.typevalue::text = 'inp_value_lidlayer'::text) a
 	  ORDER BY a.lidco_id, a.id;
@@ -812,15 +814,29 @@ BEGIN
 	  WHERE temp_t_node.result_id::text = selector_inp_result.result_id::text AND selector_inp_result.cur_user = "current_user"()::text;
 
 
-
 	CREATE OR REPLACE TEMP VIEW vi_t_report AS
-	 SELECT a.idval AS parameter,
-	    b.value
-	   FROM sys_param_user a
-	     JOIN config_param_user b ON a.id = b.parameter::text
-	  WHERE (a.layoutname = ANY (ARRAY['lyt_reports_1'::text, 'lyt_reports_2'::text])) AND b.cur_user::name = "current_user"() AND b.value IS NOT NULL;
-
-
+	select * from (
+		SELECT a.idval AS parameter,
+		b.value
+		FROM sys_param_user a
+		JOIN config_param_user b ON a.id = b.parameter::text
+		WHERE (a.layoutname = ANY (ARRAY['lyt_reports_1'::text, 'lyt_reports_2'::text])) AND b.cur_user::name = "current_user"() AND b.value IS NOT null and parameter not in ('inp_report_nodes_2', 'inp_report_nodes', 'inp_report_links')
+		union
+		select 'NODES', replace(replace(replace(array_agg(a.node_id)::text,',',' '),'}',''),'{','')  from (select unnest(concat('{',replace(value,' ',','),'}')::integer[]) as node_id 
+		from config_param_user where parameter = 'inp_report_nodes' and cur_user=current_user)a
+		join temp_t_node n on n.node_id::integer = a.node_id
+		UNION
+		select 'NODES', replace(replace(replace(array_agg(a.node_id)::text,',',' '),'}',''),'{','')  from (select unnest(concat('{',replace(value,' ',','),'}')::integer[]) as node_id 
+		from config_param_user where parameter = 'inp_report_nodes_2' and cur_user=current_user)a
+		join temp_t_node n on n.node_id::integer = a.node_id
+		union
+		select 'LINKS', replace(replace(replace(array_agg(a.arc_id)::text,',',' '),'}',''),'{','')  from (select unnest(concat('{',replace(value,' ',','),'}')::integer[]) as arc_id 
+		from config_param_user where parameter = 'inp_report_link' and cur_user=current_user)a
+		join temp_t_arc n on n.arc_id::integer = a.arc_id)a
+		where value is not null
+		ORDER BY 1;
+		
+		
 	CREATE OR REPLACE TEMP VIEW vi_t_snowpacks AS
 	 SELECT inp_snowpack_value.snow_id,
 	    inp_snowpack_value.snow_type,
@@ -1123,7 +1139,7 @@ BEGIN
 	     ORDER BY pattern_id;
 
 	CREATE OR REPLACE TEMP VIEW vi_t_timeseries AS
-	SELECT 
+	SELECT c.* FROM (SELECT
 	b.timser_id,
 	b.other1,
 	b.other2,
@@ -1215,7 +1231,10 @@ BEGIN
 						  WHERE inp_timeseries.times_type::text = 'RELATIVE'::text AND inp_timeseries.active) a
 				  ORDER BY a.id) t
 		  WHERE t.expl_id is NULL) b
-  	ORDER BY b.id;
+  	ORDER BY b.id) c
+	JOIN inp_timeseries ON id = timser_id
+	WHERE (timser_type = 'Rainfall' and timser_id IN (SELECT timser_id FROM temp_rpt_inp_raingage)) or timser_type != 'Rainfall'::text 
+	ORDER BY timser_id, other2;
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_curves AS

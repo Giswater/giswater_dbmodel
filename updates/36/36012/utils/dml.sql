@@ -176,7 +176,20 @@ group by c.formname, formtype, tabname,  layoutname, datatype, widgettype, label
 iseditable, isautoupdate,  dv_querytext, dv_orderby_id, dv_isnullvalue, lytorder, hidden
 ON CONFLICT (formname, formtype, columnname, tabname) DO NOTHING;
 
-INSERT INTO selector_municipality SELECT muni_id,current_user FROM ext_municipality;
+
+DO $$
+DECLARE
+    v_utils boolean;
+BEGIN
+
+	SELECT value::boolean INTO v_utils FROM config_param_system WHERE parameter='admin_utils_schema';
+
+	IF v_utils IS true THEN
+		INSERT INTO selector_municipality SELECT muni_id,current_user FROM utils.municipality;
+    ELSE
+		INSERT INTO selector_municipality SELECT muni_id,current_user FROM ext_municipality;
+    END IF;
+END; $$;
 
 -- clean code for user's selector function
 UPDATE config_param_system set value = gw_fct_json_object_delete_keys(value::json, 'explFromMuni') where parameter = 'basic_selector_tab_municipality';
@@ -353,10 +366,6 @@ select visit_id, connec_id, n.muni_id, n.sector_id from om_visit_x_connec
 )a where e.id = a.visit_id;
 
 update om_visit set sector_id = 0 where sector_id is null;
-
--- 02/09/2024
-INSERT INTO config_form_tabs (formname, tabname, "label", tooltip, sys_role, tabfunction, tabactions, orderby, device)
-VALUES ('visit_arc_leak', 'tab_data', 'Data', 'Data', 'role_om', '{"name":"gwGetVisit", "parameters":{"form":{"tabData":{"active":true}, "tabFiles":{"active":false}}}}'::json, '[{"actionName":"actionAddFile", "actionFunction":"gwSetFileInsert", "actionTooltip":"Add file", "disabled":false}]'::json, 1, '{5}');
 
 delete from sys_table where id='v_ui_document';
 

@@ -77,13 +77,8 @@ BEGIN
 			IF (SELECT json_extract_path_text(value::json,'activated')::boolean FROM config_param_system WHERE parameter='admin_raster_dem') IS TRUE  
 			AND (NEW.elevation IS NULL) AND
 			(SELECT upper(value)  FROM config_param_user WHERE parameter = 'edit_update_elevation_from_dem' and cur_user = current_user) = 'TRUE' THEN
-				NEW.elevation = (SELECT ST_Value(rast,1,NEW.the_geom,false) FROM v_ext_raster_dem WHERE id =
-					(SELECT id FROM v_ext_raster_dem WHERE
-					st_dwithin (ST_MakeEnvelope(
-					ST_UpperLeftX(rast), 
-					ST_UpperLeftY(rast),
-					ST_UpperLeftX(rast) + ST_ScaleX(rast)*ST_width(rast),	
-					ST_UpperLeftY(rast) + ST_ScaleY(rast)*ST_height(rast), st_srid(rast)), NEW.the_geom, 1) LIMIT 1));
+					NEW.elevation = (SELECT ST_Value(rast,1,NEW.the_geom,true) FROM ext_raster_dem WHERE id =
+								(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, NEW.the_geom, 1) LIMIT 1));	
 			END IF;
 
 		END IF;
@@ -125,7 +120,7 @@ BEGIN
         ELSIF v_node_table = 'inp_pump_additional' THEN          
             UPDATE inp_pump_additional SET order_id=NEW.order_id, power=NEW.power, curve_id=NEW.curve_id, speed=NEW.speed, pattern_id=NEW.pattern_id, status=NEW.status,
             effic_curve_id = NEW.effic_curve_id, energy_price = NEW.energy_price, energy_pattern_id = NEW.energy_pattern_id
-            WHERE node_id=OLD.node_id;
+            WHERE node_id=OLD.node_id AND order_id=OLD.order_id;
 
         ELSIF v_node_table = 'inp_valve' THEN     
             UPDATE inp_valve SET valv_type=NEW.valv_type, pressure=NEW.pressure, flow=NEW.flow, coef_loss=NEW.coef_loss, curve_id=NEW.curve_id,

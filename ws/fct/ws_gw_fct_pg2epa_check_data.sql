@@ -17,7 +17,7 @@ SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data($${"data":{"parameters":{"fid":101}}
 SELECT SCHEMA_NAME.gw_fct_pg2epa_check_data('{"parameters":{}}')-- when is called from toolbox
 
 -- fid: main: 225
-		other: 107,153,164,165,166,167,169,170,171,188,198,227,229,230,292,294,295,371,379,433,411,412,430,432,480,482
+		other: 107,153,164,165,166,167,169,170,171,188,198,227,229,230,292,294,295,371,379,433,411,412,430,432,480,482,524
 
 */
 
@@ -182,13 +182,13 @@ BEGIN
 	SELECT 167, a.node_id, a.nodecat_id, a.the_geom, 'Node2arc with less than two arcs', a.expl_id FROM (
 		SELECT node_id, nodecat_id, v_edit_node.the_geom, v_edit_node.expl_id FROM v_edit_node
 		JOIN selector_sector USING (sector_id) 
-		JOIN v_edit_arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
+		JOIN arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
 		AND v_edit_node.epa_type IN ('VALVE', 'PUMP') AND a1.sector_id IN 
 		(SELECT sector_id FROM selector_sector WHERE cur_user=current_user)
 		UNION ALL
 		SELECT node_id, nodecat_id, v_edit_node.the_geom, v_edit_node.expl_id FROM v_edit_node
 		JOIN selector_sector USING (sector_id) 
-		JOIN v_edit_arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
+		JOIN arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
 		AND v_edit_node.epa_type IN ('VALVE', 'PUMP') AND a1.sector_id IN 
 		(SELECT sector_id FROM selector_sector WHERE cur_user=current_user))a
 	GROUP by node_id, nodecat_id, the_geom, expl_id
@@ -210,13 +210,13 @@ BEGIN
 	SELECT 292, a.node_id, a.nodecat_id, a.the_geom, 'Node2arc with less than two arcs', a.expl_id FROM (
 		SELECT node_id, nodecat_id, v_edit_node.the_geom, v_edit_node.expl_id FROM v_edit_node
 		JOIN selector_sector USING (sector_id) 
-		JOIN v_edit_arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
+		JOIN arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
 		AND v_edit_node.epa_type IN ('SHORTPIPE') AND a1.sector_id IN 
 		(SELECT sector_id FROM selector_sector WHERE cur_user=current_user)
 		UNION ALL
 		SELECT node_id, nodecat_id, v_edit_node.the_geom, v_edit_node.expl_id FROM v_edit_node
 		JOIN selector_sector USING (sector_id) 
-		JOIN v_edit_arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
+		JOIN arc a1 ON node_id=a1.node_1 WHERE cur_user = current_user
 		AND v_edit_node.epa_type IN ('SHORTPIPE') AND a1.sector_id IN 
 		(SELECT sector_id FROM selector_sector WHERE cur_user=current_user))a
 	GROUP by node_id, nodecat_id, the_geom, expl_id
@@ -271,7 +271,8 @@ BEGIN
 	IF (SELECT value FROM config_param_system WHERE parameter = 'epa_shutoffvalve') = 'VALVE' THEN
 		INSERT INTO temp_anl_node (fid, node_id, nodecat_id, the_geom, descript, sector_id)
 		select 170, node_id, nodecat_id, n.the_geom, 'To arc does not exists as closest arc for valve', n.sector_id
-		from man_valve LEFT JOIN v_edit_arc v on arc_id = to_arc JOIN v_edit_node n USING (node_id) where node_id not in (node_1, node_2) AND valv_type !='TCV';		
+		from man_valve JOIN inp_valve USING (node_id) LEFT JOIN v_edit_arc v on arc_id = to_arc JOIN node n USING (node_id)
+	    where node_id not in (node_1, node_2) AND valv_type !='TCV' AND n.state = 1;		
 	ELSE 
 		INSERT INTO temp_anl_node (fid, node_id, nodecat_id, the_geom, descript, sector_id)
 		select 170, node_id, nodecat_id, n.the_geom, 'To arc does not exists as closest arc for valve', n.sector_id
@@ -483,13 +484,14 @@ BEGIN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '279', 1, 'INFO: Virtualpumps checked. No mandatory values for pump_type missed.',v_count);
 	END IF;
+		
 	
 	--pump curve(280)
-	SELECT count(*) INTO v_count FROM v_edit_inp_pump WHERE curve_id IS NULL;
+	SELECT count(*) INTO v_count FROM v_edit_inp_pump WHERE curve_id IS null AND power is NULL;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '280', 3, concat(
-		'ERROR-280: There is/are ',v_count,' pump(s) with null values at least on mandatory column curve_id.'),v_count);
+		'ERROR-280: There is/are ',v_count,' pump(s) with null values at least on mandatory column curve_id or power.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
@@ -497,11 +499,11 @@ BEGIN
 	END IF;	
 
 	--pump curve(280)
-	SELECT count(*) INTO v_count FROM v_edit_inp_virtualpump WHERE curve_id IS NULL;
+	SELECT count(*) INTO v_count FROM v_edit_inp_virtualpump WHERE curve_id IS null AND power is NULL;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '280', 3, concat(
-		'ERROR-280: There is/are ',v_count,' virtualpump(s) with null values at least on mandatory column curve_id.'),v_count);
+		'ERROR-280: There is/are ',v_count,' virtualpump(s) with null values at least on mandatory column curve_id or power.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
@@ -509,7 +511,8 @@ BEGIN
 	END IF;	
 
 	--pump additional(281)
-	SELECT count(*) INTO v_count FROM inp_pump_additional JOIN v_edit_inp_pump USING (node_id) WHERE inp_pump_additional.curve_id IS NULL;
+	SELECT count(*) INTO v_count FROM inp_pump_additional JOIN v_edit_inp_pump USING (node_id) WHERE inp_pump_additional.curve_id IS null 
+	AND inp_pump_additional.power is NULL;
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
 		VALUES (v_fid, '281', 3, concat(
@@ -922,6 +925,22 @@ BEGIN
             VALUES (v_fid, '188', 1, 'INFO: No arcs with state > 0 AND state_type.is_operative on FALSE found.',v_count);
         END IF;
     END IF;
+	
+	RAISE NOTICE '38 - Check roughness value does not have overlapping time periods(524)';
+  
+	SELECT COUNT(*) INTO v_count
+	FROM cat_mat_roughness t1 JOIN cat_mat_roughness t2  ON t1.matcat_id = t2.matcat_id
+	AND t1.init_age < t2.end_age   AND t1.end_age > t2.init_age   AND t1.id != t2.id; -- Avoid comparing the same ROW
+	
+	IF v_count > 0 THEN
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '524', 2, concat(
+		'WARNING-524: There are ',v_count,' conflicting roughness values for the same material during overlapping time periods.'),v_count);
+		v_count=0;
+	ELSE
+		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
+		VALUES (v_fid, '524', 1, 'INFO: No conflicting roughness values for the same material during overlapping time periods.',v_count);
+	END IF;
 
 	-- Removing isaudit false sys_fprocess
 	FOR v_record IN SELECT * FROM sys_fprocess WHERE isaudit is false
