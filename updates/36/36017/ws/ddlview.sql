@@ -26,7 +26,11 @@ AS SELECT element_x_node.id,
     element.enddate,
     element.link,
     element.publish,
-    element.inventory
+    element.inventory,
+    element.serial_number,
+    element.brand_id,
+    element.model_id,
+    element.lastupdate
    FROM element_x_node
      JOIN element ON element.element_id::text = element_x_node.element_id::text
      JOIN value_state ON element.state = value_state.id
@@ -51,7 +55,11 @@ AS SELECT element_x_connec.id,
     element.enddate,
     element.link,
     element.publish,
-    element.inventory
+    element.inventory,
+    element.serial_number,
+    element.brand_id,
+    element.model_id,
+    element.lastupdate
    FROM element_x_connec
      JOIN element ON element.element_id::text = element_x_connec.element_id::text
      JOIN value_state ON element.state = value_state.id
@@ -76,7 +84,11 @@ AS SELECT element_x_arc.id,
     element.enddate,
     element.link,
     element.publish,
-    element.inventory
+    element.inventory,
+    element.serial_number,
+    element.brand_id,
+    element.model_id,
+    element.lastupdate
    FROM element_x_arc
      JOIN element ON element.element_id::text = element_x_arc.element_id::text
      JOIN value_state ON element.state = value_state.id
