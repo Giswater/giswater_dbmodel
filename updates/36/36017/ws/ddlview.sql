@@ -160,8 +160,8 @@ WITH
 	    node.expl_id,
 	    exploitation.macroexpl_id,
 	    node.sector_id,
-	    sector.name AS sector_name,
-	    sector.macrosector_id,
+	    sector_name,
+	    macrosector_id,
 	    sector_type,
 	    node.presszone_id,
 	    preszone_name,
@@ -170,11 +170,11 @@ WITH
 	    node.dma_id,
 	    dma_name,
 	    dma_type,
-	    dma.macrodma_id,
+	    macrodma_id,
 	    node.dqa_id,
-	    dqa.name AS dqa_name,
+	    dqa_name,
 	    dqa_type,
-	    dqa.macrodqa_id,
+	    macrodqa_id,
 	    node.arc_id,
 	    node.parent_id,
 	    node.annotation,
@@ -231,14 +231,14 @@ WITH
 	    node.placement_type,
 	    node.expl_id2,
 	    vst.is_operative,
-	        CASE
-	            WHEN node.brand_id IS NULL THEN cat_node.brand_id
-	            ELSE node.brand_id
-	        END AS brand_id,
-	        CASE
-	            WHEN node.model_id IS NULL THEN cat_node.model_id
-	            ELSE node.model_id
-	        END AS model_id,
+		CASE
+			WHEN node.brand_id IS NULL THEN cat_node.brand_id
+			ELSE node.brand_id
+		END AS brand_id,
+		CASE
+			WHEN node.model_id IS NULL THEN cat_node.model_id
+			ELSE node.model_id
+		END AS model_id,
 	    node.serial_number,
 	    node.minsector_id,
 	    node.macrominsector_id,
@@ -422,14 +422,14 @@ AS WITH
 		arc.parent_id,
 		arc.expl_id2,
 		vst.is_operative,
-			CASE
-				WHEN arc.brand_id IS NULL THEN cat_arc.brand_id
-				ELSE arc.brand_id
-			END AS brand_id,
-			CASE
-				WHEN arc.model_id IS NULL THEN cat_arc.model_id
-				ELSE arc.model_id
-			END AS model_id,
+		CASE
+			WHEN arc.brand_id IS NULL THEN cat_arc.brand_id
+			ELSE arc.brand_id
+		END AS brand_id,
+		CASE
+			WHEN arc.model_id IS NULL THEN cat_arc.model_id
+			ELSE arc.model_id
+		END AS model_id,
 		arc.serial_number,
 		arc.minsector_id,
 		arc.macrominsector_id,
@@ -444,10 +444,10 @@ AS WITH
 		date_trunc('second'::text, arc.lastupdate) AS lastupdate,
 		arc.lastupdate_user,
 		arc.the_geom,
-			CASE
-				WHEN arc.sector_id > 0 AND vst.is_operative = true AND arc.epa_type::text <> 'UNDEFINED'::character varying(16)::text THEN arc.epa_type
-				ELSE NULL::character varying(16)
-			END AS inp_type
+		CASE
+			WHEN arc.sector_id > 0 AND vst.is_operative = true AND arc.epa_type::text <> 'UNDEFINED'::character varying(16)::text THEN arc.epa_type
+			ELSE NULL::character varying(16)
+		END AS inp_type
 	    FROM arc_state nn
 		JOIN arc ON arc.arc_id::text = nn.arc_id::text
 		JOIN selector_expl se ON se.cur_user = CURRENT_USER AND (se.expl_id = arc.expl_id OR se.expl_id = arc.expl_id2)
@@ -551,70 +551,70 @@ WITH
 		connec.state_type,
 		connec.expl_id,
 		exploitation.macroexpl_id,
-			CASE
-				WHEN link_planned.sector_id IS NULL THEN connec.sector_id
-				ELSE link_planned.sector_id
-			END AS sector_id,
-			CASE
-				WHEN link_planned.sector_name IS NULL THEN sector_table.sector_name
-				ELSE link_planned.sector_name
-			END AS sector_name,
-			CASE
-				WHEN link_planned.macrosector_id IS NULL THEN sector_table.macrosector_id
-				ELSE link_planned.macrosector_id
-			END AS macrosector_id,
-			--CASE
-			  --  WHEN link_planned.sector_type IS NULL THEN sector.sector_type 
-			   -- ELSE link_planned.sector_type
-			--END AS sector_type,
-			CASE
-				WHEN link_planned.presszone_id IS NULL THEN presszone_table.presszone_id
-				ELSE link_planned.presszone_id::varchar
-			END AS presszone_id,
-			CASE
-				WHEN link_planned.presszone_name IS NULL THEN presszone_table.presszone_name
-				ELSE link_planned.presszone_name
-			END AS presszone_name,
-			CASE
-				WHEN link_planned.presszone_type IS NULL THEN presszone_table.presszone_type 
-				ELSE link_planned.presszone_type
-			END AS presszone_type,
-			CASE
-				WHEN link_planned.presszone_head IS NULL THEN presszone_table.presszone_head
-				ELSE link_planned.presszone_head
-			END AS presszone_head,
-			CASE
-				WHEN link_planned.dma_id IS NULL THEN dma_table.dma_id
-				ELSE link_planned.dma_id
-			END AS dma_id,
-			CASE
-				WHEN link_planned.dma_name IS NULL THEN dma_table.dma_name
-				ELSE link_planned.dma_name
-			END AS dma_name,
-			CASE
-				WHEN link_planned.dma_type IS NULL then dma_table.dma_type
-				ELSE link_planned.dma_type::varchar
-			END AS dma_type,
-			CASE
-				WHEN link_planned.macrodma_id IS NULL THEN dma_table.macrodma_id
-				ELSE link_planned.macrodma_id
-			END AS macrodma_id,
-			CASE
-				WHEN link_planned.dqa_id IS NULL THEN dqa_table.dqa_id
-				ELSE link_planned.dqa_id
-			END AS dqa_id,
-			CASE
-				WHEN link_planned.dqa_name IS NULL THEN dqa_table.dqa_name
-				ELSE link_planned.dqa_name
-			END AS dqa_name,
-			CASE
-				WHEN link_planned.dqa_type IS NULL THEN dqa_table.dqa_type
-				ELSE link_planned.dqa_type
-			END AS dqa_type,
-			CASE
-				WHEN link_planned.macrodqa_id IS NULL THEN dqa_table.macrodqa_id
-				ELSE link_planned.macrodqa_id
-			END AS macrodqa_id,
+		CASE
+			WHEN link_planned.sector_id IS NULL THEN connec.sector_id
+			ELSE link_planned.sector_id
+		END AS sector_id,
+		CASE
+			WHEN link_planned.sector_name IS NULL THEN sector_table.sector_name
+			ELSE link_planned.sector_name
+		END AS sector_name,
+		CASE
+			WHEN link_planned.macrosector_id IS NULL THEN sector_table.macrosector_id
+			ELSE link_planned.macrosector_id
+		END AS macrosector_id,
+		--CASE
+		  --  WHEN link_planned.sector_type IS NULL THEN sector.sector_type 
+		   -- ELSE link_planned.sector_type
+		--END AS sector_type,
+		CASE
+			WHEN link_planned.presszone_id IS NULL THEN presszone_table.presszone_id
+			ELSE link_planned.presszone_id::varchar
+		END AS presszone_id,
+		CASE
+			WHEN link_planned.presszone_name IS NULL THEN presszone_table.presszone_name
+			ELSE link_planned.presszone_name
+		END AS presszone_name,
+		CASE
+			WHEN link_planned.presszone_type IS NULL THEN presszone_table.presszone_type 
+			ELSE link_planned.presszone_type
+		END AS presszone_type,
+		CASE
+			WHEN link_planned.presszone_head IS NULL THEN presszone_table.presszone_head
+			ELSE link_planned.presszone_head
+		END AS presszone_head,
+		CASE
+			WHEN link_planned.dma_id IS NULL THEN dma_table.dma_id
+			ELSE link_planned.dma_id
+		END AS dma_id,
+		CASE
+			WHEN link_planned.dma_name IS NULL THEN dma_table.dma_name
+			ELSE link_planned.dma_name
+		END AS dma_name,
+		CASE
+			WHEN link_planned.dma_type IS NULL then dma_table.dma_type
+			ELSE link_planned.dma_type::varchar
+		END AS dma_type,
+		CASE
+			WHEN link_planned.macrodma_id IS NULL THEN dma_table.macrodma_id
+			ELSE link_planned.macrodma_id
+		END AS macrodma_id,
+		CASE
+			WHEN link_planned.dqa_id IS NULL THEN dqa_table.dqa_id
+			ELSE link_planned.dqa_id
+		END AS dqa_id,
+		CASE
+			WHEN link_planned.dqa_name IS NULL THEN dqa_table.dqa_name
+			ELSE link_planned.dqa_name
+		END AS dqa_name,
+		CASE
+			WHEN link_planned.dqa_type IS NULL THEN dqa_table.dqa_type
+			ELSE link_planned.dqa_type
+		END AS dqa_type,
+		CASE
+			WHEN link_planned.macrodqa_id IS NULL THEN dqa_table.macrodqa_id
+			ELSE link_planned.macrodqa_id
+		END AS macrodqa_id,
 		connec.crmzone_id,
 		crm_zone.name AS crmzone_name,
 		connec.customer_code,
@@ -624,17 +624,17 @@ WITH
 		connec.annotation,
 		connec.observ,
 		connec.comment,
-			CASE
-				WHEN link_planned.staticpressure IS NULL THEN connec.staticpressure
-				ELSE link_planned.staticpressure
-			END AS staticpressure,
+		CASE
+			WHEN link_planned.staticpressure IS NULL THEN connec.staticpressure
+			ELSE link_planned.staticpressure
+		END AS staticpressure,
 		connec.soilcat_id,
 		connec.function_type,
 		connec.category_type,
-			CASE
-				WHEN link_planned.fluid_type IS NULL THEN connec.fluid_type
-				ELSE link_planned.fluid_type::character varying(50)
-			END AS fluid_type,
+		CASE
+			WHEN link_planned.fluid_type IS NULL THEN connec.fluid_type
+			ELSE link_planned.fluid_type::character varying(50)
+		END AS fluid_type,
 		connec.location_type,
 		connec.workcat_id,
 		connec.workcat_id_end,
@@ -668,14 +668,14 @@ WITH
 		connec.publish,
 		connec.inventory,
 		connec.num_value,
-			CASE
-				WHEN link_planned.link_id IS NULL THEN connec.pjoint_id
-				ELSE connec.arc_id
-			END AS pjoint_id,
-			CASE
-				WHEN link_planned.link_id IS NULL THEN connec.pjoint_type
-				ELSE 'ARC'::character varying(16)
-			END AS pjoint_type,
+		CASE
+			WHEN link_planned.link_id IS NULL THEN connec.pjoint_id
+			ELSE connec.arc_id
+		END AS pjoint_id,
+		CASE
+			WHEN link_planned.link_id IS NULL THEN connec.pjoint_type
+			ELSE 'ARC'::character varying(16)
+		END AS pjoint_type,
 		connec.adate,
 		connec.adescript,
 		connec.accessibility,
@@ -693,24 +693,24 @@ WITH
 		connec.expl_id2,
 		vst.is_operative,
 		connec.plot_code,
-			CASE
-				WHEN connec.brand_id IS NULL THEN cat_connec.brand_id
-				ELSE connec.brand_id
-			END AS brand_id,
-			CASE
-				WHEN connec.model_id IS NULL THEN cat_connec.model_id
-				ELSE connec.model_id
-			END AS model_id,
+		CASE
+			WHEN connec.brand_id IS NULL THEN cat_connec.brand_id
+			ELSE connec.brand_id
+		END AS brand_id,
+		CASE
+			WHEN connec.model_id IS NULL THEN cat_connec.model_id
+			ELSE connec.model_id
+		END AS model_id,
 		connec.serial_number,
 		connec.cat_valve,
-			CASE
-				WHEN link_planned.minsector_id IS NULL THEN connec.minsector_id
-				ELSE link_planned.minsector_id
-			END AS minsector_id,
-			CASE
-				WHEN link_planned.macrominsector_id IS NULL THEN connec.macrominsector_id
-				ELSE link_planned.macrominsector_id
-			END AS macrominsector_id,
+		CASE
+			WHEN link_planned.minsector_id IS NULL THEN connec.minsector_id
+			ELSE link_planned.minsector_id
+		END AS minsector_id,
+		CASE
+			WHEN link_planned.macrominsector_id IS NULL THEN connec.macrominsector_id
+			ELSE link_planned.macrominsector_id
+		END AS macrominsector_id,
 		e.demand,
 		e.press_max,
 		e.press_min,
@@ -752,6 +752,26 @@ WITH
         FROM edit_typevalue
         WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'presszone_type'::character varying::text, 'dma_type'::character varying::text, 'dqa_type'::character varying::text])
         ),
+	sector_table as
+		(
+		select sector_id, name as sector_name, macrosector_id, stylesheet, id::varchar(16) as sector_type 
+		from sector left JOIN typevalue t ON t.id::text = sector.sector_type AND t.typevalue::text = 'sector_type'::text
+		),
+	dma_table as
+		(
+		select dma_id, name as dma_name, macrodma_id, stylesheet, id::varchar(16) as dma_type from dma 
+		left JOIN typevalue t ON t.id::text = dma.dma_type AND t.typevalue::text = 'dma_type'::text
+		),
+	presszone_table as
+		(
+		select presszone_id, name as presszone_name, head as presszone_head, stylesheet, id::varchar(16) as presszone_type 
+		from presszone left JOIN typevalue t ON t.id::text = presszone.presszone_type AND t.typevalue::text = 'presszone_type'::text
+		),
+	dqa_table as
+		(
+		select dqa_id, name as dqa_name, stylesheet, id::varchar(16) as dqa_type, macrodqa_id from dqa 
+		left JOIN typevalue t ON t.id::text = dqa.dqa_type AND t.typevalue::text = 'dqa_type'::text
+		),	
     inp_network_mode AS 
     	(
          select value FROM config_param_user WHERE parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER
@@ -823,14 +843,14 @@ WITH
 	       THEN l.epa_type::character varying
 	       ELSE NULL::character varying(16)
 	    END AS inp_type
-	    from inp_network_mode, link_state
+		FROM inp_network_mode, link_state
 	    JOIN link l using (link_id)
 	    JOIN selector_expl se ON se.cur_user =current_user AND se.expl_id IN (l.expl_id, l.expl_id2)
         JOIN selector_municipality sm ON sm.cur_user = current_user AND sm.muni_id =l.muni_id 
-		JOIN (select sector_id, name as sector_name, macrosector_id, stylesheet, id::varchar(16) as sector_type from sector left JOIN typevalue t ON t.id::text = sector.sector_type AND t.typevalue::text = 'sector_type'::text) sector ON l.sector_id = sector.sector_id
-		left JOIN (select dma_id, name as dma_name, macrodma_id, stylesheet, id::varchar(16) as dma_type from dma left JOIN typevalue t ON t.id::text = dma.dma_type AND t.typevalue::text = 'dma_type'::text) dma ON l.dma_id = dma.dma_id
-	    left JOIN (select dqa_id, name as dqa_name, macrodqa_id, stylesheet, id::varchar(16) as dqa_type from dqa left JOIN typevalue t ON t.id::text = dqa.dqa_type AND t.typevalue::text = 'dqa_type'::text) dqa ON l.dqa_id = dqa.dqa_id
-	    left JOIN (select presszone_id, name as presszone_name, head as presszone_head, stylesheet, id::varchar(16) as presszone_type from presszone left JOIN typevalue t ON t.id::text = presszone.presszone_type AND t.typevalue::text = 'presszone_type'::text) presszone ON l.presszone_id = presszone.presszone_id
-      )
+		JOIN sector_table ON sector_table.sector_id = l.sector_id
+	    LEFT JOIN presszone_table ON presszone_table.presszone_id = l.presszone_id
+	    LEFT JOIN dma_table ON dma_table.dma_id = l.dma_id
+	    LEFT JOIN dqa_table ON dqa_table.dqa_id = l.dqa_id
+		)
     SELECT l.*
 	FROM link_selected l;	 
