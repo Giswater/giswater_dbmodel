@@ -106,6 +106,26 @@ WITH
         FROM edit_typevalue
         WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'presszone_type'::character varying::text, 'dma_type'::character varying::text, 'dqa_type'::character varying::text])
         ),
+	sector_table as
+		(
+		select sector_id, name as sector_name, macrosector_id, stylesheet, id::varchar(16) as sector_type 
+		from sector left JOIN typevalue t ON t.id::text = sector.sector_type AND t.typevalue::text = 'sector_type'::text
+		),
+	dma_table as
+		(
+		select dma_id, name as dma_name, macrodma_id, stylesheet, id::varchar(16) as dma_type from dma 
+		left JOIN typevalue t ON t.id::text = dma.dma_type AND t.typevalue::text = 'dma_type'::text
+		),
+	presszone_table as
+		(
+		select presszone_id, name as presszone_name, head as presszone_head, stylesheet, id::varchar(16) as presszone_type 
+		from presszone left JOIN typevalue t ON t.id::text = presszone.presszone_type AND t.typevalue::text = 'presszone_type'::text
+		),
+	dqa_table as
+		(
+		select dqa_id, name as dqa_name, stylesheet, id::varchar(16) as dqa_type, macrodqa_id from dqa 
+		left JOIN typevalue t ON t.id::text = dqa.dqa_type AND t.typevalue::text = 'dqa_type'::text
+		),	
     node_psector AS
         (
         SELECT pp.node_id, pp.state AS p_state 
@@ -142,18 +162,18 @@ WITH
 	    node.sector_id,
 	    sector.name AS sector_name,
 	    sector.macrosector_id,
-	    et1.idval::character varying(16) AS sector_type,
+	    sector_type,
 	    node.presszone_id,
-	    presszone.name AS preszone_name,
-	    et2.idval::character varying(16) AS presszone_type,
-	    presszone.head AS presszone_head,
+	    preszone_name,
+	    presszone_type,  presszone
+	    presszone_head,
 	    node.dma_id,
-	    dma.name AS dma_name,
-	    et3.idval::character varying(16) AS dma_type,
+	    dma_name,
+	    dma_type,
 	    dma.macrodma_id,
 	    node.dqa_id,
 	    dqa.name AS dqa_name,
-	    et4.idval::character varying(16) AS dqa_type,
+	    dqa_type,
 	    dqa.macrodqa_id,
 	    node.arc_id,
 	    node.parent_id,
@@ -202,8 +222,8 @@ WITH
 	    node.adate,
 	    node.adescript,
 	    node.accessibility,
-	    dma.stylesheet ->> 'featureColor'::text AS dma_style,
-	    presszone.stylesheet ->> 'featureColor'::text AS presszone_style,
+	    dma_table.stylesheet ->> 'featureColor'::text AS dma_style,
+	    presszone_table.stylesheet ->> 'featureColor'::text AS presszone_style,
 	    node.asset_id,
 	    node.om_state,
 	    node.conserv_state,
@@ -251,22 +271,19 @@ WITH
         JOIN selector_municipality sm ON sm.cur_user = current_user AND sm.muni_id =node.muni_id 
    	    JOIN cat_node ON cat_node.id::text = node.nodecat_id::text
 	    JOIN cat_feature ON cat_feature.id::text = cat_node.nodetype_id::text
-	    JOIN sector ON node.sector_id = sector.sector_id
+		JOIN value_state_type vst ON vst.id = node.state_type
 	    JOIN exploitation ON node.expl_id = exploitation.expl_id
 	    JOIN ext_municipality mu ON node.muni_id = mu.muni_id
-	    left JOIN dma ON node.dma_id = dma.dma_id
-	    LEFT JOIN dqa ON node.dqa_id = dqa.dqa_id
-	    LEFT JOIN presszone ON presszone.presszone_id::text = node.presszone_id::text
+		JOIN sector_table ON sector_table.sector_id = node.sector_id
+	    LEFT JOIN presszone_table ON presszone_table.presszone_id = node.presszone_id
+	    LEFT JOIN dma_table ON dma_table.dma_id = node.dma_id
+	    LEFT JOIN dqa_table ON dqa_table.dqa_id = node.dqa_id 
 	    LEFT JOIN node_add e ON e.node_id::text = node.node_id::text
-	    LEFT JOIN value_state_type vst ON vst.id = node.state_type
-	    LEFT JOIN typevalue et1 ON et1.id::text = sector.sector_type::text AND et1.typevalue::text = 'sector_type'::text
-	    LEFT JOIN typevalue et2 ON et2.id::text = presszone.presszone_type AND et2.typevalue::text = 'presszone_type'::text
-	    LEFT JOIN typevalue et3 ON et3.id::text = dma.dma_type::text AND et3.typevalue::text = 'dma_type'::text
-	    LEFT JOIN typevalue et4 ON et4.id::text = dqa.dqa_type::text AND et4.typevalue::text = 'dqa_type'::text
         LEFT JOIN man_valve m ON m.node_id = nn.node_id
         )
 	SELECT n.*
 	FROM node_selected n;
+
 
 CREATE OR REPLACE VIEW v_edit_arc
 AS WITH  
@@ -276,11 +293,31 @@ AS WITH
         FROM edit_typevalue
         WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'presszone_type'::character varying::text, 'dma_type'::character varying::text, 'dqa_type'::character varying::text])
         ),
-	arc_psector AS (
-         SELECT pp.arc_id,
-            pp.state AS p_state
-           FROM plan_psector_x_arc pp
-             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+	sector_table as
+		(
+		select sector_id, name as sector_name, macrosector_id, stylesheet, id::varchar(16) as sector_type 
+		from sector left JOIN typevalue t ON t.id::text = sector.sector_type AND t.typevalue::text = 'sector_type'::text
+		),
+	dma_table as
+		(
+		select dma_id, name as dma_name, macrodma_id, stylesheet, id::varchar(16) as dma_type from dma 
+		left JOIN typevalue t ON t.id::text = dma.dma_type AND t.typevalue::text = 'dma_type'::text
+		),
+	presszone_table as
+		(
+		select presszone_id, name as presszone_name, head as presszone_head, stylesheet, id::varchar(16) as presszone_type 
+		from presszone left JOIN typevalue t ON t.id::text = presszone.presszone_type AND t.typevalue::text = 'presszone_type'::text
+		),
+	dqa_table as
+		(
+		select dqa_id, name as dqa_name, stylesheet, id::varchar(16) as dqa_type, macrodqa_id from dqa 
+		left JOIN typevalue t ON t.id::text = dqa.dqa_type AND t.typevalue::text = 'dqa_type'::text
+		),	
+	arc_psector AS 
+		(
+		SELECT pp.arc_id, pp.state AS p_state
+        FROM plan_psector_x_arc pp
+        JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
         ), 
     arc_state AS 
 		(
@@ -320,20 +357,20 @@ AS WITH
 		exploitation.macroexpl_id,
 		arc.sector_id,
 		sector_name,
-		sector.macrosector_id,
+		macrosector_id,
 		sector_type,
 		arc.presszone_id,
-		presszone_name as preszone_name,
+		preszone_name,
 		presszone_type,
 		presszone_head,
 		arc.dma_id,
 		dma_name,
 		dma_type,
-		dma.macrodma_id,
+		macrodma_id,
 		arc.dqa_id,
 		dqa_name,
 		dqa_type,
-		dqa.macrodqa_id,
+		macrodqa_id,
 		arc.annotation,
 		arc.observ,
 		arc.comment,
@@ -376,8 +413,8 @@ AS WITH
 		arc.num_value,
 		arc.adate,
 		arc.adescript,
-		dma.stylesheet ->> 'featureColor'::text AS dma_style,
-		presszone.stylesheet ->> 'featureColor'::text AS presszone_style,
+		dma_table.stylesheet ->> 'featureColor'::text AS dma_style,
+		presszone_table.stylesheet ->> 'featureColor'::text AS presszone_style,
 		arc.asset_id,
 		arc.pavcat_id,
 		arc.om_state,
@@ -419,10 +456,10 @@ AS WITH
 		JOIN cat_feature ON cat_feature.id::text = cat_arc.arctype_id::text
 		JOIN exploitation ON arc.expl_id = exploitation.expl_id
 		JOIN ext_municipality mu ON arc.muni_id = mu.muni_id
-		JOIN (select sector_id, name as sector_name, macrosector_id, stylesheet, id::varchar(16) as sector_type from sector left JOIN typevalue t ON t.id::text = sector.sector_type AND t.typevalue::text = 'sector_type'::text) sector ON arc.sector_id = sector.sector_id
-		left JOIN (select dma_id, name as dma_name, macrodma_id, stylesheet, id::varchar(16) as dma_type from dma left JOIN typevalue t ON t.id::text = dma.dma_type AND t.typevalue::text = 'dma_type'::text) dma ON arc.dma_id = dma.dma_id
-		left JOIN (select dqa_id, name as dqa_name, macrodqa_id, stylesheet, id::varchar(16) as dqa_type from dqa left JOIN typevalue t ON t.id::text = dqa.dqa_type AND t.typevalue::text = 'dqa_type'::text) dqa ON arc.dqa_id = dqa.dqa_id
-		left JOIN (select presszone_id, name as presszone_name, head as presszone_head, stylesheet, id::varchar(16) as presszone_type from presszone left JOIN typevalue t ON t.id::text = presszone.presszone_type AND t.typevalue::text = 'presszone_type'::text) presszone ON arc.presszone_id = presszone.presszone_id
+		JOIN sector_table ON sector_table.sector_id = arc.sector_id
+	    LEFT JOIN presszone_table ON presszone_table.presszone_id = arc.presszone_id
+	    LEFT JOIN dma_table ON dma_table.dma_id = arc.dma_id
+	    LEFT JOIN dqa_table ON dqa_table.dqa_id = arc.dqa_id 
 		LEFT JOIN arc_add e ON e.arc_id::text = arc.arc_id::text
 		LEFT JOIN value_state_type vst ON vst.id = arc.state_type
         )
