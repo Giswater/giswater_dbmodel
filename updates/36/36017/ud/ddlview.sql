@@ -493,7 +493,6 @@ AS WITH
 	SELECT arc_selected.*
 	FROM arc_selected;
 	
-
 create or replace view v_edit_connec as
 with
 	 typevalue AS 
@@ -543,7 +542,7 @@ with
         JOIN selector_sector se ON se.cur_user =current_user AND c.sector_id =se.sector_id
 		WHERE NOT EXISTS (SELECT connec_id, arc_id FROM connec_psector WHERE p_state = 0)
         UNION ALL
-        SELECT connec_id, arc_id FROM connec_psector WHERE p_state = 1
+        SELECT connec_id, arc_id::varchar(16) FROM connec_psector WHERE p_state = 1
         ),
     connec_selected AS 
     	(
@@ -731,7 +730,7 @@ with
         JOIN selector_sector se ON se.cur_user =current_user AND g.sector_id =se.sector_id
 		WHERE NOT EXISTS (SELECT gully_id, arc_id FROM gully_psector WHERE p_state = 0)
         UNION ALL
-        SELECT gully_id, arc_id FROM gully_psector WHERE p_state = 1
+        SELECT gully_id, arc_id::varchar(16) FROM gully_psector WHERE p_state = 1
         ),
     gully_selected AS 
     	(
@@ -886,9 +885,8 @@ with
 	   )
 	 SELECT gully_selected.*
 	 FROM gully_selected;
-	 
-	 
-	create or replace view v_edit_link as
+
+create or replace view v_edit_link as
 WITH 
 	typevalue AS 
        (

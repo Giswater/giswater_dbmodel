@@ -490,7 +490,7 @@ WITH
         JOIN selector_sector se ON se.cur_user =current_user AND c.sector_id =se.sector_id
         where not exists (SELECT connec_id, arc_id FROM connec_psector WHERE p_state = 0)
        	union all
-        SELECT connec_id, arc_id FROM connec_psector WHERE p_state = 1
+        SELECT connec_id, arc_id::varchar(16) FROM connec_psector WHERE p_state = 1
         ),
     connec_selected AS 
     	(
