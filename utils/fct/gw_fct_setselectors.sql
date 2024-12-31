@@ -162,6 +162,9 @@ BEGIN
 				ON CONFLICT (',v_columnname,', cur_user) DO NOTHING;');
 			END IF;
 	
+	ELSIF v_checkall is false THEN
+		EXECUTE 'DELETE FROM ' || v_tablename || ' WHERE cur_user = current_user';
+
 	ELSE
 		IF v_isalone THEN
 			EXECUTE 'DELETE FROM ' || v_tablename || ' WHERE cur_user = current_user';
@@ -177,6 +180,8 @@ BEGIN
 		ELSE
 			EXECUTE 'DELETE FROM ' || v_tablename || ' WHERE ' || v_columnname || '::text = '''|| v_id ||''' AND cur_user = current_user';
 		END IF;
+
+
 	END IF;
 
 	-- manage parents
