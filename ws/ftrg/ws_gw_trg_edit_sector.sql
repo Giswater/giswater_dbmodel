@@ -18,8 +18,8 @@ BEGIN
 	
 	IF TG_OP = 'INSERT' THEN
 
-		INSERT INTO sector (sector_id, name, descript, macrosector_id, the_geom, undelete, graphconfig, stylesheet, active, parent_id, pattern_id, avg_press)
-		VALUES (NEW.sector_id, NEW.name, NEW.descript, NEW.macrosector_id, NEW.the_geom, NEW.undelete, 
+		INSERT INTO sector (sector_id, name, descript, macrosector_id, sector_type, the_geom, undelete, graphconfig, stylesheet, active, parent_id, pattern_id, avg_press)
+		VALUES (NEW.sector_id, NEW.name, NEW.descript, NEW.macrosector_id, NEW.sector_type, NEW.the_geom, NEW.undelete, 
 		NEW.graphconfig::json, NEW.stylesheet::json, true, NEW.parent_id, NEW.pattern_id, NEW.avg_press);
 	
 		INSERT INTO selector_sector VALUES (NEW.sector_id, current_user);
