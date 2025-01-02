@@ -29,7 +29,7 @@ BEGIN
 	ELSIF TG_OP = 'UPDATE' THEN
 
 		UPDATE sector 
-		SET sector_id=NEW.sector_id, name=NEW.name, descript=NEW.descript, macrosector_id=NEW.macrosector_id, the_geom=NEW.the_geom, 
+		SET sector_id=NEW.sector_id, name=NEW.name, descript=NEW.descript, sector_type = NEW.sector_type, macrosector_id=NEW.macrosector_id, the_geom=NEW.the_geom, 
 		undelete=NEW.undelete, graphconfig=NEW.graphconfig::json, stylesheet = NEW.stylesheet::json, active = NEW.active, parent_id = NEW.parent_id, pattern_id = NEW.pattern_id, 
 		lastupdate=now(), lastupdate_user = current_user, avg_press = NEW.avg_press
 		WHERE sector_id=OLD.sector_id;
