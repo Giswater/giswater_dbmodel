@@ -12,6 +12,19 @@ VALUES(3270, 'You can''t create or update a document with an empty name. Please 
 
 UPDATE config_form_fields SET dv_querytext = 'SELECT muni_id as id, name as idval from v_ext_municipality WHERE muni_id IS NOT NULL' WHERE columnname  = 'muni_id' AND widgettype = 'combo';
 
+DO $$
+DECLARE
+    v_utils boolean;
+BEGIN
+     SELECT value::boolean INTO v_utils FROM config_param_system WHERE parameter='admin_utils_schema';
+
+	 IF v_utils IS true THEN
+        INSERT INTO utils.municipality VALUES (0, 'Undefined', NULL, NULL, true) ON CONFLICT DO NOTHING;
+     ELSE
+        INSERT INTO ext_municipality VALUES (0, 'Undefined', NULL, NULL, true) ON CONFLICT DO NOTHING;
+	 END IF;
+END; $$;
+
 INSERT INTO selector_municipality SELECT DISTINCT 0, cur_user FROM selector_expl ON CONFLICT (muni_id, cur_user) DO NOTHING;
 
 -- 19/11/24
