@@ -176,7 +176,7 @@ BEGIN
 	IF v_sector IS TRUE AND (v_graphclass = 'SECTOR' OR v_graphclass = 'ALL') THEN
 
 		-- check sector.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_sector WHERE graphconfig IS NULL and sector_id > 0 AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_sector WHERE graphconfig IS NULL and sector_id > 0' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -201,7 +201,7 @@ BEGIN
 	IF v_dma IS TRUE AND (v_graphclass = 'DMA' OR v_graphclass = 'ALL') THEN
 
 		-- check dma.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_dma WHERE graphconfig IS NULL and dma_id > 0  AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_dma WHERE graphconfig IS NULL and dma_id > 0' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -253,7 +253,7 @@ BEGIN
 	IF v_dqa IS TRUE AND (v_graphclass = 'DQA' OR v_graphclass = 'ALL') THEN
 
 		-- check dqa.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_dqa WHERE graphconfig IS NULL and dqa_id > 0 AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_dqa WHERE graphconfig IS NULL and dqa_id > 0' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -306,7 +306,7 @@ BEGIN
 	IF v_presszone IS TRUE AND (v_graphclass = 'PRESSZONE' OR v_graphclass = 'ALL') THEN
 
 		-- check presszone.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_presszone WHERE graphconfig IS NULL and presszone_id > 0::text AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_presszone WHERE graphconfig IS NULL and presszone_id > 0::text' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
