@@ -299,7 +299,16 @@ BEGIN
 			-- muni
 			DELETE FROM selector_municipality WHERE cur_user = current_user;
 			INSERT INTO selector_municipality
-			SELECT DISTINCT muni_id, current_user FROM node WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user);		
+			SELECT DISTINCT muni_id, current_user FROM node WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user);	
+
+			-- scenarios
+			DELETE FROM selector_inp_dscenario WHERE dscenario_id NOT IN
+			(SELECT dscenario_id FROM cat_dscenario WHERE expl_id IS NULL OR expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+				
+			-- psector
+			DELETE FROM selector_psector WHERE psector_id NOT IN 
+			(SELECT psector_id FROM cat_dscenario WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+	
 
 		ELSIF v_tabname IN ('tab_sector', 'tab_macrosector') THEN
 
@@ -333,7 +342,16 @@ BEGIN
 
 			INSERT INTO selector_municipality
 			SELECT DISTINCT muni_id, current_user FROM node WHERE sector_id IN (SELECT sector_id FROM selector_sector WHERE cur_user = current_user AND sector_id > 0)
-			ON CONFLICT (muni_id, cur_user) DO NOTHING;		
+			ON CONFLICT (muni_id, cur_user) DO NOTHING;	
+
+			-- scenarios
+			DELETE FROM selector_inp_dscenario WHERE dscenario_id NOT IN
+			(SELECT dscenario_id FROM cat_dscenario WHERE expl_id IS NULL OR expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+				
+			-- psector
+			DELETE FROM selector_psector WHERE psector_id NOT IN 
+			(SELECT psector_id FROM cat_dscenario WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+				
 
 		-- inserting muni_id from selected muni
 		ELSIF v_tabname IN ('tab_municipality') THEN
@@ -369,7 +387,17 @@ BEGIN
 			UNION
 			SELECT DISTINCT sector_id,current_user FROM node WHERE expl_id2 IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user) AND sector_id > 0
 			ON CONFLICT (sector_id, cur_user) DO NOTHING;
+					
+			-- scenarios
+			DELETE FROM selector_inp_dscenario WHERE dscenario_id NOT IN
+			(SELECT dscenario_id FROM cat_dscenario WHERE expl_id IS NULL OR expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+				
+			-- psector
+			DELETE FROM selector_psector WHERE psector_id NOT IN 
+			(SELECT psector_id FROM cat_dscenario WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+		
 		END IF;
+
 	END IF;
 		
 	-- manage addschema
