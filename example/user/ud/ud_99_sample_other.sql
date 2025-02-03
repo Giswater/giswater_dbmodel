@@ -806,11 +806,7 @@ UPDATE cat_feature_gully SET double_geom = '{"activated":true,"value":1}' WHERE 
 
 INSERT INTO config_param_user (parameter, value, cur_user) VALUES ('om_visit_status_vdefault', '4', current_user) ON CONFLICT (parameter, cur_user) DO NOTHING;
 
-SELECT setval('SCHEMA_NAME.urn_id_seq', gw_fct_setvalurn(),true);
-
-UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sectorFromExpl', false) WHERE parameter = 'basic_selector_tab_exploitation';
-UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'explFromSector', false) WHERE parameter = 'basic_selector_tab_sector';
-UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json,'explFromMacroexpl', false) WHERE parameter = 'basic_selector_tab_macroexploitation';
+SELECT setval('SCHEMA_NAME.urn_id_seq', gw_fct_setvalurn(),true);;
 
 INSERT INTO inp_lid VALUES ('BIO-RETENTION','BC');
 INSERT INTO inp_lid VALUES ('VEGE-SWALE','VS');
@@ -901,3 +897,14 @@ INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc
 INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 108, 'qml');
 
 UPDATE config_form_fields SET hidden=false WHERE formtype='form_featuretype_change' AND columnname='featurecat_id';
+
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=1 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='drainzone_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=2 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='name' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=3 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='drainzone_type' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=4 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='descript' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=5 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='active' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=6 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='undelete' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=7 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='graphconfig' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=8 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='stylesheet' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=9 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='link' AND tabname='tab_none';
+

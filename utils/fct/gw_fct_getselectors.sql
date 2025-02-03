@@ -7,7 +7,6 @@ This version of Giswater is provided by Giswater Association
 
 --FUNCTION CODE: 2796
 
--- DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_getselectors(p_data json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getselectors(p_data json)
   RETURNS json AS
 $BODY$
@@ -98,18 +97,24 @@ v_mincut_node json;
 v_mincut_connec json;
 v_mincut_arc json;
 v_exclude_tab text='';
+v_orderby_query text;
+v_sectorfromexpl boolean;
+v_orderby_check boolean;
+v_sectorfrommacro boolean;
+v_explfrommacro boolean;
+v_project_type text;
+
 BEGIN
 
 	-- Set search path to local schema
 	SET search_path = "SCHEMA_NAME", public;
 
-	--  get api version
+	--  get system values
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''admin_version'') row'
 		INTO v_version;
 
-	raise notice 'GET SELECTORS %', p_data;
+	v_project_type = (SELECT project_type FROM sys_version LIMIT 1);
 
-	
 	-- Get input parameters:
 	v_selector_type := (p_data ->> 'data')::json->> 'selectorType';
 	v_currenttab := (p_data ->> 'form')::json->> 'currentTab';
@@ -142,6 +147,10 @@ BEGIN
 
 	-- get system variables:
 	v_expl_x_user = (SELECT value FROM config_param_system WHERE parameter = 'admin_exploitation_x_user');
+	v_sectorfromexpl = (SELECT value::json->>'sectorFromExpl' FROM config_param_system WHERE parameter = 'basic_selector_options');
+	v_sectorfrommacro = (SELECT value::json->>'sectorFromMacro' FROM config_param_system WHERE parameter = 'basic_selector_options');
+	v_explfrommacro = (SELECT value::json->>'explFromNacro' FROM config_param_system WHERE parameter = 'basic_selector_options');
+
 	v_stylesheet = (SELECT value FROM config_param_system WHERE parameter = 'qgis_form_selector_stylesheet');
 
 	-- when typeahead only one tab is executed
@@ -163,6 +172,53 @@ BEGIN
 	v_debug := json_build_object('querystring', v_query, 'vars', v_debug_vars, 'funcname', 'gw_fct_getselectors', 'flag', 10);
 	SELECT gw_fct_debugsql(v_debug) INTO v_msgerr;
 
+	-- create temp tables related to expl x user variable
+	DROP TABLE IF EXISTS temp_exploitation;
+	DROP TABLE IF EXISTS temp_macroexploitation;
+	DROP TABLE IF EXISTS temp_sector;
+	DROP TABLE IF EXISTS temp_macrosector;
+	DROP TABLE IF EXISTS temp_mincut;
+
+	IF v_expl_x_user is false then
+		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e WHERE active and expl_id > 0 order by 1;
+		CREATE TEMP TABLE temp_macroexploitation as select e.* from macroexploitation e WHERE active and macroexpl_id > 0 order by 1;
+		CREATE TEMP TABLE temp_sector as select e.* from sector e WHERE active and sector_id > 0 order by 1;
+		CREATE TEMP TABLE temp_macrosector as select e.* from macrosector e WHERE active and macrosector_id > 0 order by 1;
+
+		IF v_project_type = 'WS' THEN
+			CREATE TEMP TABLE temp_mincut as select e.* from om_mincut e WHERE id > 0 order by 1;
+		END IF;
+	ELSE 
+		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e 
+		JOIN config_user_x_expl USING (expl_id)	WHERE e.active and expl_id > 0 and username = current_user order by 1;
+
+		CREATE TEMP TABLE temp_macroexploitation as select distinct on (m.macroexpl_id) m.* from macroexploitation m
+		JOIN temp_exploitation e USING (macroexpl_id)
+		WHERE m.active and m.macroexpl_id > 0 order by 1;
+
+		CREATE TEMP TABLE temp_sector as 
+		select distinct on (s.sector_id) s.sector_id, s.name, s.macrosector_id, s.descript, s.active from sector s
+		JOIN (SELECT DISTINCT node.sector_id, node.expl_id FROM node WHERE node.state > 0)n USING (sector_id)
+		JOIN exploitation e ON e.expl_id=n.expl_id 
+		JOIN config_user_x_expl c ON c.expl_id=n.expl_id WHERE s.active and s.sector_id > 0 and username = current_user
+ 			UNION
+		select distinct on (s.sector_id) s.sector_id, s.name, s.macrosector_id, s.descript, s.active from sector s
+		JOIN (SELECT DISTINCT node.sector_id, node.expl_id FROM node WHERE node.state > 0)n USING (sector_id)
+		WHERE n.sector_id is null AND s.active and s.sector_id > 0
+		order by 1;
+
+		CREATE TEMP TABLE temp_macrosector as select distinct on (m.macrosector_id) m.* from macrosector m
+		JOIN temp_sector e USING (macrosector_id) 
+		WHERE m.active and m.macrosector_id > 0;
+
+		IF v_project_type = 'WS' THEN
+			CREATE TEMP TABLE temp_mincut AS select distinct on (m.id) m.* from om_mincut m
+			JOIN config_user_x_expl USING (expl_id)
+			where username = current_user and m.id > 0;
+		END IF;
+	END IF;
+
+	-- starting loop for tabs	
 	FOR v_tab IN EXECUTE v_query
 ​
 	LOOP	
@@ -183,6 +239,7 @@ BEGIN
 		v_orderby = v_tab.value::json->>'orderBy';
 		v_name = v_tab.value::json->>'name';
 		v_typeaheadForced = v_tab.value::json->>'typeaheadForced';
+		v_orderby_check = v_tab.value::json->>'orderbyCheck';
 
 		-- profilactic control of v_orderby
 		v_querystring = concat('SELECT gw_fct_getpkeyfield(''',v_table,''');');
@@ -197,29 +254,45 @@ BEGIN
 		IF v_selectionMode = '' OR v_selectionMode is null then
 			v_selectionMode = 'keepPrevious';
 		END IF;
-
-		-- getting from v_expl_x_user variable to setup v_filterfrominput
-		IF v_selector = 'selector_expl' AND v_expl_x_user THEN
-			IF v_filterfrominput IS NULL OR v_filterfrominput = '' THEN
-				v_filterfrominput = ' AND expl_id IN (SELECT expl_id FROM config_user_x_expl WHERE username = current_user)';
-			ELSE
-				v_filterfrominput = concat (' AND expl_id IN (SELECT expl_id FROM config_user_x_expl WHERE username = current_user) ', v_typeahead,' LIKE ''%', lower(v_filterfrominput), '%''');
-			END IF;
-			
-		ELSIF v_selector = 'selector_sector' AND v_expl_x_user THEN
-			IF v_filterfrominput IS NULL OR v_filterfrominput = '' THEN
-				v_filterfrominput = ' AND sector_id IN (SELECT sector_id FROM config_user_x_sector WHERE username = current_user)';
-			ELSE
-				v_filterfrominput = concat (' AND sector_id IN (SELECT sector_id FROM config_user_x_sector WHERE username = current_user) ', v_typeahead,' LIKE ''%', lower(v_filterfrominput), '%''');
-			END IF;
-
+	
+		-- order by heck. This enables to put checked rows on the top. Useful when there are lots of rows and you need to use the scrollbar to kwow what is checked
+		IF v_orderby_check AND v_tab.tabname != v_currenttab THEN		
+			v_orderby_query = 'ORDER BY value DESC, orderby';
 		ELSE 
-			-- built filter from input (recalled from typeahead)
-			IF v_filterfrominput IS NULL OR v_filterfrominput = '' OR lower(v_filterfrominput) ='None' or lower(v_filterfrominput) = 'null' THEN
-				v_filterfrominput := NULL;
-			ELSE 
-				v_filterfrominput = concat (v_typeahead,' LIKE ''%', lower(v_filterfrominput), '%''');
+			v_orderby_query = 'ORDER BY orderby';
+		END IF;
+
+		-- built filter from input
+		IF v_filterfrominput IS NULL OR v_filterfrominput = '' OR lower(v_filterfrominput) ='None' or lower(v_filterfrominput) = 'null' THEN
+			v_filterfrominput := NULL;
+		ELSE 
+			v_filterfrominput = concat (v_typeahead,' LIKE ''%', lower(v_filterfrominput), '%''');
+		END IF;
+
+		-- built additional filter for only those sector related to selected exploitation
+		IF v_sectorfromexpl THEN
+			IF v_tab.tabname = 'tab_sector' THEN
+				v_filterfrominput = concat (COALESCE(v_filterfrominput),
+				' AND sector_id IN (SELECT DISTINCT sector_id FROM node JOIN selector_expl USING (expl_id) WHERE cur_user = current_user
+									UNION
+									SELECT sector_id FROM sector LEFT JOIN node USING (sector_id) WHERE node.sector_id is null)');
+
+			ELSIF v_tab.tabname = 'tab_macrosector' THEN
+				v_filterfrominput = concat (COALESCE(v_filterfrominput),
+				' AND macrosector_id IN (SELECT DISTINCT macrosector_id FROM vu_sector JOIN node USING (sector_id) JOIN selector_expl USING (expl_id) WHERE cur_user = current_user)');
 			END IF;
+		END IF;
+
+		-- built additional filter for only those sectors related to selected macrosector
+		IF  v_sectorfrommacro AND v_tab.tabname = 'tab_sector' THEN
+			v_filterfrominput = concat (COALESCE(v_filterfrominput),
+			' AND macrosector_id IN (SELECT macrosector_id FROM selector_macrosector WHERE cur_user = current_user) ');
+		END IF;
+
+		-- built additional filter for only those expl related to selected macroexpl
+		IF v_explfrommacro AND v_tab.tabname = 'tab_exploitation' THEN
+			v_filterfrominput = concat (COALESCE(v_filterfrominput),
+			' AND macroexpl_id IN (SELECT macroexpl_id FROM selector_macroexpl WHERE cur_user = current_user) ');
 		END IF;
 
 		-- Manage filters from ids (only mincut)
@@ -229,7 +302,6 @@ BEGIN
 				v_filterfromids = ' AND ' || v_table_id || ' IN '|| v_selector_list || ' ';
 			END IF;
 		END IF;
-
 
 		-- built full filter 
 		v_fullfilter = concat(v_filterfromids, v_filterfromconfig, v_filterfrominput);
@@ -242,118 +314,26 @@ BEGIN
 			
 		-- profilactic null control
 		v_fullfilter := COALESCE(v_fullfilter, '');
-		IF v_tab.tabname ='tab_macroexploitation' OR v_tab.tabname='tab_macrosector'  or v_tab.tabname ='tab_macroexploitation_add' THEN
-			
-			IF v_tab.tabname ='tab_macroexploitation' or v_tab.tabname ='tab_macroexploitation_add' THEN
-				v_zonetable='exploitation';
-				v_zoneid = 'expl_id';
-				v_macroid = 'macroexpl_id';
-				v_macrotable = 'macroexploitation';
-				v_macroselector = 'selector_expl';
-				--EXECUTE 'SELECT array_agg(macroexpl_id) FROM macroexploitation' INTO v_ids;
-			ELSIF v_tab.tabname='tab_macrosector' THEN
-				v_zonetable='sector';
-				v_zoneid = 'sector_id';
-				v_macroid = 'macrosector_id';
-				v_macrotable = 'macrosector';
-				v_macroselector = 'selector_sector';
-				--EXECUTE 'SELECT array_agg(macrosector_id) FROM v_edit_macrosector' INTO v_ids;
-			END IF;
-	
-	
-			if v_addschema is NULL then
-				v_query = 'SELECT '||v_macroid||' FROM '||v_macrotable||'';
-			else
-				v_query = 'SELECT '||v_macroid||' FROM '||v_addschema||'.'||v_macrotable||'';
-			end if;
-			
-				FOR rec_macro IN EXECUTE v_query LOOP
 
-					IF v_tab.tabname ='tab_macroexploitation_add' and (v_addschema IS NOT NULL) THEN
-						
-						EXECUTE 'SELECT count('||v_zoneid||') as count  FROM '||v_addschema||'.'||v_zonetable||' 
-						WHERE '||v_macroid||'='||rec_macro||' and active IS TRUE group by '||v_macroid||''
-						INTO v_count_zone;
-	
-						EXECUTE 'SELECT count(*) FROM '||v_addschema||'.'||v_macroselector||' JOIN '||v_addschema||'.'||v_zonetable||' USING ('||v_zoneid||') 
-						WHERE '||v_macroid||'='||rec_macro||'  AND active IS TRUE AND cur_user=current_user'
-						INTO v_count_selector;
-					ELSE
-	
-						EXECUTE 'SELECT count('||v_zoneid||') as count  FROM '||v_zonetable||' WHERE '||v_macroid||'='||rec_macro||' and active IS TRUE group by '||v_macroid||''
-						INTO v_count_zone;
-	
-						EXECUTE 'SELECT count(*) FROM '||v_macroselector||' JOIN '||v_zonetable||' USING ('||v_zoneid||') 
-						WHERE '||v_macroid||'='||rec_macro||'  AND active IS TRUE AND cur_user=current_user'
-						INTO v_count_selector;
-					END IF;
-				
-					IF v_count_zone = v_count_selector THEN
-	
-						IF v_ids IS NULL THEN 
-							v_ids = rec_macro::text;
-						ELSE
-							v_ids = concat(v_ids,',',rec_macro::text );
-						END IF;
-					END IF;
-				 END LOOP;	
-
-			v_ids = replace(v_ids,'{','');
-			v_ids = replace(v_ids,'}','');	
-
-			IF v_ids IS NULL THEN v_ids='0'; END IF;
-				IF v_tab.tabname ='tab_macroexploitation_add' and v_addschema IS NOT NULL THEN
-					v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(a))) FROM (
-						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
-						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", true as "value" 
-						FROM ',v_addschema,'.' , v_table , ' m JOIN  ',v_addschema,'.', v_zonetable , '  USING (',v_table_id,') 
-						WHERE ',v_table_id ,' IN (' , v_ids, ') ', v_fullfilter ,' UNION 
-						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
-						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", false as "value" 
-						FROM ',v_addschema,'.', v_table , ' m JOIN   ',v_addschema,'.', v_zonetable , '    USING (',v_table_id,')
-						WHERE ',v_table_id ,' NOT IN (' , v_ids, ') ',
-						 v_fullfilter ,' ORDER BY orderby asc) a');
-				ELSE
-
-				v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(a))) FROM (
-						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
-						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", true as "value" 
-						FROM ' , v_table , ' m JOIN  ' , v_zonetable , '  USING (',v_table_id,') 
-						WHERE ',v_table_id ,' IN (' , v_ids, ') ', v_fullfilter ,' UNION 
-						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
-						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", false as "value" 
-						FROM ' , v_table , ' m JOIN   ' , v_zonetable , '    USING (',v_table_id,')
-						WHERE ',v_table_id ,' NOT IN (' , v_ids, ') ',
-						 v_fullfilter ,' ORDER BY orderby asc) a');
-				END IF;
-		ELSIF v_tab.tabname ='tab_exploitation_add' and v_addschema IS NOT NULL THEN
-			v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(a))) FROM (
-						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
-						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", true as "value" 
-						FROM ',v_addschema,'.' , v_table , ' m 
-						WHERE ',v_table_id ,' NOT IN (SELECT ',v_table_id ,' FROM  ws36007.', v_table , ') AND ' , 
-						v_table_id , ' IN (SELECT ' , v_selector_id , ' FROM ',v_addschema,'.' , v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ', v_fullfilter ,' UNION 
-						SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_orderby,' as orderby , ',v_name,' as name, ', v_table_id , '::text as widgetname, ''' , 
-						v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", false as "value" 
-						FROM ',v_addschema,'.', v_table , ' m
-						WHERE ',v_table_id ,' NOT IN (SELECT ',v_table_id ,' FROM  ws36007.', v_table , ') AND ' , 
-						v_table_id , ' NOT IN (SELECT ' , v_selector_id , ' FROM ',v_addschema,'.' , v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ', v_fullfilter ,' ORDER BY orderby asc) a');
-			
-		ELSE 
-		
-			v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(b))) FROM (
-					select *, row_number() OVER (ORDER BY orderby) as orderby from (
-					SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' , 
-					v_orderby, ' as orderby , ''', v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", true as "value" 
-					FROM ', v_table ,' WHERE ' , v_table_id , ' IN (SELECT ' , v_selector_id , ' FROM ', v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ', v_fullfilter ,' UNION 
-					SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' , 
-					v_orderby, ' , ''',v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", false as "value" 
-					FROM ', v_table ,' WHERE ' , v_table_id , ' NOT IN (SELECT ' , v_selector_id , ' FROM ', v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ',
-					 v_fullfilter ,') a)b');
-
+		-- setting schema add
+		IF v_tab.tabname like '%add%' AND v_addschema IS NOT  NULL THEN
+			v_table = concat(v_addschema,'.',v_table);
+			v_selector = concat(v_addschema,'.',v_selector);
 		END IF;
-		v_debug_vars := json_build_object('v_table_id', v_table_id, 'v_label', v_label, 'v_orderby', v_orderby, 'v_name', v_name, 'v_selector_id', v_selector_id, 
-						  'v_table', v_table, 'v_selector', v_selector, 'current_user', current_user, 'v_fullfilter', v_fullfilter);
+
+		-- final query
+		v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(b))) FROM (
+				select *, row_number() OVER (',v_orderby_query,') as orderby from (
+				SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' ,
+				v_orderby, ' as orderby , ''', v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", true as "value" 
+				FROM ', v_table ,' WHERE ' , v_table_id , ' IN (SELECT ' , v_selector_id , ' FROM ', v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ', v_fullfilter ,' UNION 
+				SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' ,
+				v_orderby, ' , ''',v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType", false as "value" 
+				FROM ', v_table ,' WHERE ' , v_table_id , ' NOT IN (SELECT ' , v_selector_id , ' FROM ', v_selector ,' WHERE cur_user=' , quote_literal(current_user) , ') ',
+				 v_fullfilter ,') a)b');
+
+		v_debug_vars := json_build_object('v_table_id', v_table_id, 'v_label', v_label, 'v_orderby', v_orderby, 'v_name', v_name, 'v_selector_id', v_selector_id,
+					'v_table', v_table, 'v_selector', v_selector, 'current_user', current_user, 'v_fullfilter', v_fullfilter);
 		v_debug := json_build_object('querystring', v_finalquery, 'vars', v_debug_vars, 'funcname', 'gw_fct_getselectors', 'flag', 30);
 		SELECT gw_fct_debugsql(v_debug) INTO v_msgerr;
 
@@ -397,7 +377,7 @@ BEGIN
 	
 	END LOOP;
 
-	-- Manage QWC
+	-- Manage web client
 	IF v_device = 5 THEN
 	
 		-- Get active exploitations geometry (to zoom on them)
@@ -424,7 +404,8 @@ BEGIN
 			raise notice 'v_om_mincut -> %', v_result;
 			v_result := COALESCE(v_result, '{}');
 			v_mincut_init = concat('{"geometryType":"Point", "features":',v_result, '}');
-			
+
+
 			--v_om_mincut_valve proposed true
             SELECT jsonb_agg(features.feature) INTO v_result
                 FROM (

@@ -446,11 +446,6 @@ UPDATE cat_mat_roughness SET roughness = 0.025 WHERE matcat_id IN ('FC');
 
 SELECT setval('SCHEMA_NAME.urn_id_seq', gw_fct_setvalurn(),true);
 
-UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sectorFromExpl', false) WHERE parameter = 'basic_selector_tab_exploitation';
-UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'explFromSector', false) WHERE parameter = 'basic_selector_tab_sector';
-UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json,'explFromMacroexpl', false) WHERE parameter = 'basic_selector_tab_macroexploitation';
-
-
 INSERT INTO config_param_user VALUES ('edit_pavement_vdefault','Asphalt',current_user);
 
 INSERT INTO plan_arc_x_pavement (arc_id, pavcat_id, percent) VALUES ('2001', 'Slab', 0.5);
@@ -671,3 +666,54 @@ INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc
 UPDATE config_form_fields SET hidden=false WHERE formtype='form_featuretype_change' AND columnname='featurecat_id';
 
 update node set verified=2 where node_id in ('1084', '113957', '114227', '114230', '42');
+
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=1 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='sector_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=2 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='name' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=3 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='sector_type' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=4 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='macrosector' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=5 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='descript' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=6 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='active' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=7 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='undelete' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=8 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='parent_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=9 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='pattern_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=10 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='graphconfig' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=11 WHERE formname='v_ui_sector' AND formtype='form_feature' AND columnname='stylesheet' AND tabname='tab_none';
+
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=1 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='dqa_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=2 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='name' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=3 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='dqa_type' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=4 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='macrodqa_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=5 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='descript' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=6 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='active' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=7 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='undelete' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=8 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='expl_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=9 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='pattern_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=10 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='link' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=11 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='graphconfig' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=12 WHERE formname='v_ui_dqa' AND formtype='form_feature' AND columnname='stylesheet' AND tabname='tab_none';
+
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=1 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='presszone_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=2 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='name' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=3 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='presszone_type' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=4 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='descript' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=5 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='active' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=6 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='expl_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=7 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='head' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=8 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='graphconfig' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=9 WHERE formname='v_ui_presszone' AND formtype='form_feature' AND columnname='stylesheet' AND tabname='tab_none';
+
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=1 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='dma_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=2 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='name' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=3 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='dma_type' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=4 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='macrodma_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=5 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='descript' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=6 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='active' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=7 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='undelete' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=8 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='expl_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=9 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='pattern_id' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=10 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='link' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=11 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='effc' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=12 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='avg_press' AND tabname='tab_data';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=13 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='graphconfig' AND tabname='tab_none';
+UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=14 WHERE formname='v_ui_dma' AND formtype='form_feature' AND columnname='stylesheet' AND tabname='tab_none';
+

@@ -176,7 +176,7 @@ BEGIN
 	IF v_sector IS TRUE AND (v_graphclass = 'SECTOR' OR v_graphclass = 'ALL') THEN
 
 		-- check sector.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_sector WHERE graphconfig IS NULL and sector_id > 0 AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_sector WHERE graphconfig IS NULL and sector_id > 0' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -201,7 +201,7 @@ BEGIN
 	IF v_dma IS TRUE AND (v_graphclass = 'DMA' OR v_graphclass = 'ALL') THEN
 
 		-- check dma.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_dma WHERE graphconfig IS NULL and dma_id > 0  AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_dma WHERE graphconfig IS NULL and dma_id > 0' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -215,8 +215,8 @@ BEGIN
 		-- dma : check coherence against nodetype.graphdelimiter and nodeparent defined on dma.graphconfig (fid:  180)
 		v_querytext ='SELECT node_id, nodecat_id, the_geom, a.active, '||v_edit||'node.expl_id FROM '||v_edit||'node JOIN cat_node c ON id=nodecat_id JOIN cat_feature_node n ON n.id=c.nodetype_id
 		LEFT JOIN (SELECT node_id, active FROM '||v_edit||'node JOIN (SELECT (json_array_elements_text((graphconfig::json->>''use'')::json))::json->>''nodeParent'' as node_id, 
-		active FROM '||v_edit||'dma WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''DMA'' AND (a.node_id IS NULL
-		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM '||v_edit||'dma WHERE active IS TRUE))
+		active FROM dma WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''DMA'' AND (a.node_id IS NULL
+		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM dma WHERE active IS TRUE))
 		AND '||v_edit||'node.state > 0 and verified<>''2'' and (a.active is null or a.active is false)';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
@@ -253,7 +253,7 @@ BEGIN
 	IF v_dqa IS TRUE AND (v_graphclass = 'DQA' OR v_graphclass = 'ALL') THEN
 
 		-- check dqa.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_dqa WHERE graphconfig IS NULL and dqa_id > 0 AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_dqa WHERE graphconfig IS NULL and dqa_id > 0' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -267,8 +267,8 @@ BEGIN
 		-- dqa : check coherence against nodetype.graphdelimiter and nodeparent defined on dqa.graphconfig (fid:  181)
 		v_querytext = 'SELECT node_id, nodecat_id, the_geom, a.active,  '||v_edit||'node.expl_id FROM '||v_edit||'node JOIN cat_node c ON id=nodecat_id JOIN cat_feature_node n ON n.id=c.nodetype_id
 		LEFT JOIN (SELECT node_id, active FROM '||v_edit||'node JOIN (SELECT (json_array_elements_text((graphconfig::json->>''use'')::json))::json->>''nodeParent'' as node_id, 
-		active FROM '||v_edit||'dqa WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''DQA'' AND (a.node_id IS NULL
-		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM '||v_edit||'dqa WHERE active IS TRUE))
+		active FROM dqa WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''DQA'' AND (a.node_id IS NULL
+		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM dqa WHERE active IS TRUE))
 		AND '||v_edit||'node.state > 0 and verified<>''2'' and (a.active is null or a.active is false)';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
@@ -306,7 +306,7 @@ BEGIN
 	IF v_presszone IS TRUE AND (v_graphclass = 'PRESSZONE' OR v_graphclass = 'ALL') THEN
 
 		-- check presszone.graphconfig values
-		v_querytext = 'SELECT * FROM v_edit_presszone WHERE graphconfig IS NULL and presszone_id > 0::text AND active IS TRUE' ;
+		v_querytext = 'SELECT * FROM v_edit_presszone WHERE graphconfig IS NULL and presszone_id > 0::text' ;
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;
 
 		IF v_count > 0 THEN
@@ -320,8 +320,8 @@ BEGIN
 		-- presszone : check coherence between nodetype.graphdelimiter and nodeparent defined on presszone.graphconfig (fid:  182)
 		v_querytext = 'SELECT node_id, nodecat_id, the_geom, a.active,'||v_edit||'node.expl_id FROM '||v_edit||'node JOIN cat_node c ON id=nodecat_id JOIN cat_feature_node n ON n.id=c.nodetype_id
 		LEFT JOIN (SELECT node_id, active FROM '||v_edit||'node JOIN (SELECT (json_array_elements_text((graphconfig::json->>''use'')::json))::json->>''nodeParent'' as node_id, 
-		active FROM '||v_edit||'presszone WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''PRESSZONE'' AND (a.node_id IS NULL
-		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM '||v_edit||'presszone WHERE active IS TRUE))
+		active FROM presszone WHERE graphconfig IS NOT NULL )a USING (node_id)) a USING (node_id) WHERE graph_delimiter=''PRESSZONE'' AND (a.node_id IS NULL
+		OR node_id NOT IN (SELECT (json_array_elements_text((graphconfig::json->>''ignore'')::json))::text FROM presszone WHERE active IS TRUE))
 		AND '||v_edit||'node.state > 0 and verified<>''2'' and (a.active is null or a.active is false)';
 
 		EXECUTE concat('SELECT count(*) FROM (',v_querytext,')a') INTO v_count;

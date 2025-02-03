@@ -76,8 +76,6 @@ UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, '
 UPDATE config_param_system SET value = gw_fct_json_object_set_key(value::json, 'sys_geom', 's.the_geom'::text)
 	WHERE parameter ='basic_search_v2_tab_address';
 	
-UPDATE config_param_system SET isenabled = true WHERE parameter = 'basic_selector_tab_municipality';
-
 UPDATE link SET muni_id = c.muni_id FROM connec c WHERE connec_id =  feature_id;
 
 -- run graphanalytics for presszone
@@ -91,3 +89,6 @@ UPDATE ext_rtc_hydrometer SET is_waterbal = false WHERE  id::integer in (3,4);
 UPDATE ext_plot set muni_id = 2 where id::integer < 40;
 
 UPDATE config_form_fields SET dv_querytext = 'SELECT muni_id as id, name as idval from v_ext_municipality WHERE muni_id IS NOT NULL' WHERE columnname  = 'muni_id' AND widgettype = 'combo';
+
+update macroexploitation set name ='macroexpl-01', undelete = true where macroexpl_id = 1;
+insert into macroexploitation values (2, 'Other', 'Macroexploitation used for test', true, true);

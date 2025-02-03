@@ -87,8 +87,6 @@ UPDATE cat_arc SET visitability_vdef = 1 WHERE geom1 <= 1.2; -- NO VISITABLE
 UPDATE cat_arc SET visitability_vdef = 2 WHERE geom1 > 1.2 AND geom1 < 1.6; -- SEMI VISITABLE
 UPDATE cat_arc SET visitability_vdef = 3 WHERE geom1 >= 1.6; -- VISITABLE
 
-UPDATE config_param_system SET isenabled = true WHERE parameter = 'basic_selector_tab_municipality';
-
 UPDATE link SET muni_id = c.muni_id FROM connec c WHERE connec_id =  feature_id;
 UPDATE link SET muni_id = g.muni_id FROM gully g WHERE gully_id =  feature_id;
 
@@ -138,3 +136,9 @@ update cat_feature_node set isexitupperintro=2 where id in ('VIRTUAL_NODE', 'REC
 delete from element where element_id in ('787', '791', '794', '983', '987', '990', '1650', '1653', '1662');
 
 delete from om_visit where id in (386, 389, 390, 575);
+
+update macroexploitation set name ='macroexpl-01', undelete = true where macroexpl_id = 1;
+insert into macroexploitation values (2, 'Other', 'Macroexploitation used for test', true, true);
+
+-- update descript for cat_feature
+update cat_feature set descript = concat(left(id,1), substring(lower(id), 2,99))
