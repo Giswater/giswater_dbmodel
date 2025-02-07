@@ -9,8 +9,8 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 
 -- 23/12/2024
-update arc set streetname = s.descript from v_ext_streetaxis s where streetaxis_id = id;  
-update node set streetname = s.descript from v_ext_streetaxis s where streetaxis_id = id;  
+update arc set streetname = s.descript from v_ext_streetaxis s where streetaxis_id = id;
+update node set streetname = s.descript from v_ext_streetaxis s where streetaxis_id = id;
 update connec set streetname = s.descript from v_ext_streetaxis s where streetaxis_id = id;
 
 UPDATE config_form_tabs SET orderby = orderby+1 where formname = 'selector_basic' and orderby > 1;
@@ -24,7 +24,7 @@ UPDATE sys_table set sys_role='role_basic' where id = 'config_user_x_expl';
 INSERT INTO config_form_tabs VALUES ('selector_basic','tab_exploitation_add', 'Expl Add', 'Active exploitation', 'role_basic',null,null,1,'{4,5}');
 
 INSERT into config_param_system (parameter, value, descript, label, isenabled, project_type, datatype, widgettype)
-VALUES ('basic_selector_tab_exploitation_add',	'{"table":"vu_exploitation","selector":"selector_expl","table_id":"expl_id","selector_id":"expl_id","label":"expl_id, '' - '', name","orderBy":"expl_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(expl_id, '' - '', name))", "selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}', 
+VALUES ('basic_selector_tab_exploitation_add',	'{"table":"vu_exploitation","selector":"selector_expl","table_id":"expl_id","selector_id":"expl_id","label":"expl_id, '' - '', name","orderBy":"expl_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(expl_id, '' - '', name))", "selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}',
 'Variable to configura all options related to search for the specificic tab', 'Selector variables',false,'utils','json','text');
 
 delete from config_param_system where parameter = 'basic_selector_mapzone_relation';
@@ -48,31 +48,31 @@ INSERT INTO sys_table (id, descript, sys_role, source) VALUES ('vu_om_mincut','V
 
 update config_param_system
 set value = '{"table":"temp_sector","selector":"selector_sector","table_id":"sector_id","selector_id":"sector_id","label":"sector_id, '' - '', name","orderBy":"sector_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(sector_id, '' - '', name))", "selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}'
-where parameter = 'basic_selector_tab_sector';	
+where parameter = 'basic_selector_tab_sector';
 
 update config_param_system
 set value = '{"table":"temp_exploitation","selector":"selector_expl","table_id":"expl_id","selector_id":"expl_id","label":"expl_id, '' - '', name","orderBy":"expl_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(expl_id, '' - '', name))","selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}'
-where parameter = 'basic_selector_tab_exploitation';	
+where parameter = 'basic_selector_tab_exploitation';
 
-update config_param_system set value = 
+update config_param_system set value =
 '{"table":"temp_macrosector","selector":"selector_macrosector","table_id":"macrosector_id","selector_id":"macrosector_id","label":"macrosector_id, '' - '', name","orderBy":"macrosector_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(macrosector_id, '' - '', name))", "selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}'::text
 where parameter='basic_selector_tab_macrosector';
 
-update config_param_system set value = 
+update config_param_system set value =
 '{"table":"temp_macroexploitation","selector":"selector_macroexpl","table_id":"macroexpl_id","selector_id":"macroexpl_id","label":"macroexpl_id, '' - '', name","orderBy":"macroexpl_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(macroexpl_id, '' - '', name))", "selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}'::text
 where parameter='basic_selector_tab_macroexploitation';
 
 update config_param_system
 set isenabled = false, value = '{"table":"ext_municipality","selector":"selector_municipality","table_id":"muni_id","selector_id":"muni_id","label":"muni_id, ''- '', name","orderBy":"muni_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(muni_id, '' - '', name))","selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}'
-where parameter = 'basic_selector_tab_municipality';	
+where parameter = 'basic_selector_tab_municipality';
 
 update config_param_system
 set value = '{"table":"macroexploitation","selector":"selector_expl","table_id":"macroexpl_id","selector_id":"expl_id","label":"macroexpl_id, '' - '', name","orderBy":"macroexpl_id","manageAll":true,"query_filter":"","typeaheadFilter":" AND lower(concat(macroexpl_id, '' - '', name))", "selectionMode":"keepPreviousUsingShift", "orderbyCheck":false}'
-where parameter = 'basic_selector_tab_macroexploitation_add';	
+where parameter = 'basic_selector_tab_macroexploitation_add';
 
 update config_param_system
 set value = '{"table":"temp_t_mincut","table_id":"id","selector":"selector_mincut_result","selector_id":"result_id","label":"id, ''('', CASE WHEN work_order IS NULL THEN ''N/I'' ELSE work_order END, '') on '', forecast_start::date, '' at '', forecast_start::time, ''H-'', forecast_end::time,''H''","query_filter":"","manageAll":true}'
-where parameter = 'basic_selector_tab_mincut';	
+where parameter = 'basic_selector_tab_mincut';
 
 -- 13/01/2025
 UPDATE config_form_fields SET dv_querytext = 'SELECT sector_id as id,name as idval FROM v_edit_sector WHERE sector_id > -1',
@@ -82,7 +82,6 @@ WHERE formname = 'v_edit_sector' AND formtype = 'form_feature' AND tabname = 'ta
 
 UPDATE config_param_system SET isenabled = false where parameter = ' basic_selector_tab_municipality';
 
-
-
-
+-- 07/02/2025
+INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutname, layoutorder, "datatype", widgettype, "label", tooltip, placeholder, ismandatory, isparent, iseditable, isautoupdate, isfilter, dv_querytext, dv_orderby_id, dv_isnullvalue, dv_parent_id, dv_querytext_filterc, stylesheet, widgetcontrols, widgetfunction, linkedobject, hidden, web_layoutorder) VALUES('v_edit_dimensions', 'form_feature', 'tab_none', 'visit_id', 'lyt_other', 13, 'integer', 'typeahead', 'visit_id', 'visit_id', NULL, false, false, true, false, NULL, 'SELECT id::text, id::text as idval FROM om_visit WHERE id IS NOT NULL', true, true, NULL, NULL, NULL, '{"setMultiline":false}'::json, NULL, NULL, true, NULL);
 
