@@ -159,6 +159,11 @@ BEGIN
 		-- grate Catalog ID
 		IF (NEW.gratecat_id IS NULL OR NEW.gratecat_id = '') THEN
 				NEW.gratecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_gratecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		ELSE
+			IF (SELECT true from cat_grate where id=NEW.gratecat_id) IS NULL THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3282", "function":"1206","debug_msg":"'||NEW.gratecat_id||'"}}$$);';
+			END IF;
 		END IF;
 
 		-- Arc Catalog ID
