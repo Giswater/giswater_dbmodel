@@ -87,3 +87,5 @@ INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutn
 
 INSERT INTO sys_message (id, error_message, hint_message, log_level, show_user, project_type, "source") 
 VALUES(3282, 'The inserted catalog value does not exist -->', 'Please review and insert it into the related catalog table', 2, true, 'utils', 'core');
+
+DELETE FROM config_form_fields WHERE formname = 've_epa_valve' AND columnname = 'to_arc';
