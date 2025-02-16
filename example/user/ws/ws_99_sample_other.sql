@@ -655,6 +655,10 @@ UPDATE config_param_system SET value = (replace(value, 'Disable', 'Random')) WHE
 
 UPDATE man_hydrant set customer_code = concat('cc', node_id);
 
+INSERT INTO config_style VALUES (106, 'GwSector', NULL, 'role_basic', '{"orderBy":3}', false, true);
+INSERT INTO config_style VALUES (107, 'GwDma', NULL, 'role_basic', '{"orderBy":4}', false, true);
+INSERT INTO config_style VALUES (108, 'GwPresszone', NULL, 'role_basic', '{"orderBy":5}', false, true);
+
 INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 106, 'qml');
 INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 107, 'qml');
 INSERT INTO sys_style (layername, styleconfig_id, styletype) VALUES ('v_edit_arc', 108, 'qml');
