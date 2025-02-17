@@ -64,3 +64,8 @@ INSERT INTO config_form_fields (formname, formtype, tabname, columnname, layoutn
 
 
 UPDATE inp_typevalue set typevalue = 'inp_options_networkmode', idval ='TRIMED NETWORK' where id = '3' and typevalue ='_inp_options_networkmode';
+
+-- 17/20/2025
+UPDATE sys_table
+	SET addparam=NULL
+	WHERE id IN ('inp_dscenario_demand', 'v_edit_inp_dscenario_demand');
