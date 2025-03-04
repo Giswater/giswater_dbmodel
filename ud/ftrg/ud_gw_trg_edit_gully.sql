@@ -159,6 +159,11 @@ BEGIN
 		-- grate Catalog ID
 		IF (NEW.gratecat_id IS NULL OR NEW.gratecat_id = '') THEN
 				NEW.gratecat_id := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_gratecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		ELSE
+			IF (SELECT true from cat_grate where id=NEW.gratecat_id) IS NULL THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3282", "function":"1206","debug_msg":"'||NEW.gratecat_id||'"}}$$);';
+			END IF;
 		END IF;
 
 		-- Arc Catalog ID
@@ -822,7 +827,7 @@ BEGIN
 
 
 		-- calculate rotation
-		IF v_doublegeometry AND (ST_equals(NEW.the_geom, OLD.the_geom) IS FALSE) OR (NEW.gratecat_id != OLD.gratecat_id) OR (NEW.units <> OLD.units) THEN
+		IF v_doublegeometry AND ((ST_equals(NEW.the_geom, OLD.the_geom) IS FALSE) OR (NEW.gratecat_id != OLD.gratecat_id) OR (NEW.units <> OLD.units)) THEN
 			WITH index_query AS(
 			SELECT ST_Distance(the_geom, NEW.the_geom) as distance, the_geom FROM arc WHERE state=1 ORDER BY the_geom <-> NEW.the_geom LIMIT 10)
 			SELECT St_linelocatepoint(the_geom, St_closestpoint(the_geom, NEW.the_geom)), the_geom INTO v_linelocatepoint, v_thegeom FROM index_query ORDER BY distance LIMIT 1;
@@ -838,7 +843,7 @@ BEGIN
 		END IF;
 
 		-- double geometry catalog update
-		IF v_doublegeometry AND (NEW.gratecat_id != OLD.gratecat_id) OR (NEW.units <> OLD.units) THEN
+		IF v_doublegeometry AND ((NEW.gratecat_id != OLD.gratecat_id) OR (NEW.units <> OLD.units)) THEN
 
 			v_length = (SELECT length FROM cat_grate WHERE id=NEW.gratecat_id);
 			v_width = (SELECT width FROM cat_grate WHERE id=NEW.gratecat_id);

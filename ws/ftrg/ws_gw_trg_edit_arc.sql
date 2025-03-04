@@ -102,6 +102,11 @@ BEGIN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
 				"data":{"message":"1088", "function":"1302","debug_msg":null}}$$);';
 			END IF;
+		ELSE
+			IF (SELECT true from cat_arc where id=NEW.arccat_id) IS NULL THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3282", "function":"1302","debug_msg":"'||NEW.arccat_id||'"}}$$);';
+			END IF;
 		END IF;
 
 

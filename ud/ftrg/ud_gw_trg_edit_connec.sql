@@ -136,6 +136,11 @@ BEGIN
 				"data":{"message":"1022", "function":"1204","debug_msg":null}}$$);';
 			END IF;
 			NEW.connecat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_connecat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+		ELSE
+			IF (SELECT true from cat_connec where id=NEW.connecat_id) IS NULL THEN
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3282", "function":"1204","debug_msg":"'||NEW.connecat_id||'"}}$$);';
+			END IF;
 		END IF;
 
 		-- Exploitation

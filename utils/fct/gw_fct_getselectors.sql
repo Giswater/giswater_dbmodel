@@ -136,7 +136,7 @@ BEGIN
 	END IF;
 
 	-- profilactic control of schema name
-	IF lower(v_addschema) = 'none' OR v_addschema = '' OR lower(v_addschema) ='null' OR v_addschema is null OR v_addschema='NULL' THEN 
+	IF lower(v_addschema) = 'none' OR v_addschema = '' OR lower(v_addschema) ='null' OR v_addschema is null OR v_addschema='NULL' THEN
 		v_addschema = null;
 		v_exclude_tab = ' AND tabname != ''tab_exploitation_add''';
 	END IF;
@@ -156,12 +156,12 @@ BEGIN
 	-- when typeahead only one tab is executed
 	IF v_filterfrominput IS NULL OR v_filterfrominput = '' OR lower(v_filterfrominput) ='None' or lower(v_filterfrominput) = 'null' THEN
 		v_querytab = '';
-	ELSE 
+	ELSE
 		v_querytab = concat(' AND tabname = ', quote_literal(v_currenttab));
 	END IF;
 
 	-- Start the construction of the tabs array
-	v_formTabs := '['; 
+	v_formTabs := '[';
 
 	v_query = concat(
 	'SELECT formname, tabname, label, tooltip, tabfunction, tabactions, value
@@ -177,7 +177,7 @@ BEGIN
 	DROP TABLE IF EXISTS temp_macroexploitation;
 	DROP TABLE IF EXISTS temp_sector;
 	DROP TABLE IF EXISTS temp_macrosector;
-	DROP TABLE IF EXISTS temp_mincut;
+	DROP TABLE IF EXISTS temp_t_mincut;
 
 	IF v_expl_x_user is false then
 		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e WHERE active and expl_id > 0 order by 1;
@@ -186,20 +186,20 @@ BEGIN
 		CREATE TEMP TABLE temp_macrosector as select e.* from macrosector e WHERE active and macrosector_id > 0 order by 1;
 
 		IF v_project_type = 'WS' THEN
-			CREATE TEMP TABLE temp_mincut as select e.* from om_mincut e WHERE id > 0 order by 1;
+			CREATE TEMP TABLE temp_t_mincut as select e.* from om_mincut e WHERE id > 0 order by 1;
 		END IF;
-	ELSE 
-		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e 
+	ELSE
+		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e
 		JOIN config_user_x_expl USING (expl_id)	WHERE e.active and expl_id > 0 and username = current_user order by 1;
 
 		CREATE TEMP TABLE temp_macroexploitation as select distinct on (m.macroexpl_id) m.* from macroexploitation m
 		JOIN temp_exploitation e USING (macroexpl_id)
 		WHERE m.active and m.macroexpl_id > 0 order by 1;
 
-		CREATE TEMP TABLE temp_sector as 
+		CREATE TEMP TABLE temp_sector as
 		select distinct on (s.sector_id) s.sector_id, s.name, s.macrosector_id, s.descript, s.active from sector s
 		JOIN (SELECT DISTINCT node.sector_id, node.expl_id FROM node WHERE node.state > 0)n USING (sector_id)
-		JOIN exploitation e ON e.expl_id=n.expl_id 
+		JOIN exploitation e ON e.expl_id=n.expl_id
 		JOIN config_user_x_expl c ON c.expl_id=n.expl_id WHERE s.active and s.sector_id > 0 and username = current_user
  			UNION
 		select distinct on (s.sector_id) s.sector_id, s.name, s.macrosector_id, s.descript, s.active from sector s
@@ -208,20 +208,20 @@ BEGIN
 		order by 1;
 
 		CREATE TEMP TABLE temp_macrosector as select distinct on (m.macrosector_id) m.* from macrosector m
-		JOIN temp_sector e USING (macrosector_id) 
+		JOIN temp_sector e USING (macrosector_id)
 		WHERE m.active and m.macrosector_id > 0;
 
 		IF v_project_type = 'WS' THEN
-			CREATE TEMP TABLE temp_mincut AS select distinct on (m.id) m.* from om_mincut m
+			CREATE TEMP TABLE temp_t_mincut AS select distinct on (m.id) m.* from om_mincut m
 			JOIN config_user_x_expl USING (expl_id)
 			where username = current_user and m.id > 0;
 		END IF;
 	END IF;
 
-	-- starting loop for tabs	
+	-- starting loop for tabs
 	FOR v_tab IN EXECUTE v_query
-​
-	LOOP	
+
+	LOOP
 		-- get variables form input
 		v_selector_list := (p_data ->> 'data')::json->> 'ids';
 		v_filterfrominput := (p_data ->> 'data')::json->> 'filterText';
@@ -262,10 +262,17 @@ BEGIN
 			v_orderby_query = 'ORDER BY orderby';
 		END IF;
 
+		-- order by heck. This enables to put checked rows on the top. Useful when there are lots of rows and you need to use the scrollbar to kwow what is checked
+		IF v_orderby_check AND v_tab.tabname != v_currenttab THEN
+			v_orderby_query = 'ORDER BY value DESC, orderby';
+		ELSE
+			v_orderby_query = 'ORDER BY orderby';
+		END IF;
+
 		-- built filter from input
 		IF v_filterfrominput IS NULL OR v_filterfrominput = '' OR lower(v_filterfrominput) ='None' or lower(v_filterfrominput) = 'null' THEN
 			v_filterfrominput := NULL;
-		ELSE 
+		ELSE
 			v_filterfrominput = concat (v_typeahead,' LIKE ''%', lower(v_filterfrominput), '%''');
 		END IF;
 
@@ -303,7 +310,7 @@ BEGIN
 			END IF;
 		END IF;
 
-		-- built full filter 
+		-- built full filter
 		v_fullfilter = concat(v_filterfromids, v_filterfromconfig, v_filterfrominput);
 
 		-- use atlas on psector selector
@@ -311,7 +318,7 @@ BEGIN
 			v_orderby = 'atlas_id::integer';
 			v_name = 'concat(row_number() over(order by atlas_id::integer), ''-'',name)';
 		END IF;
-			
+
 		-- profilactic null control
 		v_fullfilter := COALESCE(v_fullfilter, '');
 
@@ -366,28 +373,28 @@ BEGIN
 		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'typeaheadFilter', v_typeahead::TEXT);
 		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'selectionMode', v_selectionMode::TEXT);
 		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'typeaheadForced', v_typeaheadForced::TEXT);
-	
+
 		-- Create tabs array
 		IF v_firsttab THEN
 			v_formTabs := v_formTabs || ',' || v_formTabsAux::text;
-		ELSE 
+		ELSE
 			v_formTabs := v_formTabs || v_formTabsAux::text;
 		END IF;
 		v_firsttab := TRUE;
-	
+
 	END LOOP;
 
 	-- Manage web client
 	IF v_device = 5 THEN
-	
+
 		-- Get active exploitations geometry (to zoom on them)
 		IF v_loadProject IS TRUE AND v_geometry IS NULL THEN
-			SELECT row_to_json (a) 
+			SELECT row_to_json (a)
 			INTO v_geometry
-			FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2 
+			FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
 			FROM (SELECT st_expand(st_collect(the_geom), 50.0) as the_geom FROM exploitation where expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user)) b) a;
 		END IF;
-		
+
 		if v_selector_type='selector_mincut' then
 			-- GET GEOJSON
 			--v_om_mincut
@@ -420,7 +427,7 @@ BEGIN
 
             v_result := COALESCE(v_result, '{}');
             v_mincut_valve_proposed = concat('{"geometryType":"Point", "features":',v_result, '}');
-            
+
             --v_om_mincut_valve proposed false
             SELECT jsonb_agg(features.feature) INTO v_result
                 FROM (
@@ -435,7 +442,7 @@ BEGIN
 
             v_result := COALESCE(v_result, '{}');
             v_mincut_valve_not_proposed = concat('{"geometryType":"Point", "features":',v_result, '}');
-	
+
 			--v_om_mincut_node
 			SELECT jsonb_agg(features.feature) INTO v_result
 				FROM (
@@ -447,10 +454,10 @@ BEGIN
 		  	) AS feature
 		  	FROM (SELECT id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
 		  	FROM  v_om_mincut_node) row) features;
-	
+
 			v_result := COALESCE(v_result, '{}');
 			v_mincut_node = concat('{"geometryType":"Point", "features":',v_result, '}');
-	
+
 			--v_om_mincut_connec
 			SELECT jsonb_agg(features.feature) INTO v_result
 				FROM (
@@ -462,10 +469,10 @@ BEGIN
 		  	) AS feature
 		  	FROM (SELECT id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
 		  	FROM  v_om_mincut_connec) row) features;
-	
+
 			v_result := COALESCE(v_result, '{}');
 			v_mincut_connec = concat('{"geometryType":"Point", "features":',v_result, '}');
-	
+
 			--v_om_mincut_arc
 			SELECT jsonb_agg(features.feature) INTO v_result
 				FROM (
@@ -477,7 +484,7 @@ BEGIN
 		  	) AS feature
 		  	FROM (SELECT id, arc_id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
 		  	FROM  v_om_mincut_arc) row) features;
-	
+
 			v_result := COALESCE(v_result, '{}');
 			v_mincut_arc = concat('{"geometryType":"LineString", "features":',v_result, '}');
 		end if;
@@ -488,7 +495,7 @@ BEGIN
 
 	-- Check null
 	v_formTabs := COALESCE(v_formTabs, '[]');
-	v_manageall := COALESCE(v_manageall, FALSE);	
+	v_manageall := COALESCE(v_manageall, FALSE);
 	v_selectionMode = COALESCE(v_selectionMode, '');
 	v_currenttab = COALESCE(v_currenttab, '');
 	v_geometry = COALESCE(v_geometry, '{}');
@@ -501,10 +508,10 @@ BEGIN
 	v_mincut_connec = COALESCE(v_mincut_connec, '[]');
 	v_mincut_arc = COALESCE(v_mincut_arc, '[]');
 	v_uservalues = COALESCE(v_uservalues, '{}');
-	v_tiled = COALESCE(v_tiled, FALSE);	
-	
+	v_tiled = COALESCE(v_tiled, FALSE);
+
 	EXECUTE 'SET ROLE "'||v_prev_cur_user||'"';
-	
+
 	-- Return
 	IF v_firsttab IS FALSE THEN
 		-- Return not implemented
@@ -512,14 +519,14 @@ BEGIN
 		', "version":'|| v_version ||
 		', "message":"Not implemented"'||
 		'}')::json;
-	ELSE 
-		v_uservalues := COALESCE(json_extract_path_text(p_data,'data','userValues'), 
-			(SELECT to_json(array_agg(row_to_json(a))) FROM (SELECT parameter, value FROM config_param_user WHERE parameter IN ('plan_psector_vdefault', 'utils_workspace_vdefault') AND cur_user = current_user ORDER BY parameter)a)::text, 
+	ELSE
+		v_uservalues := COALESCE(json_extract_path_text(p_data,'data','userValues'),
+			(SELECT to_json(array_agg(row_to_json(a))) FROM (SELECT parameter, value FROM config_param_user WHERE parameter IN ('plan_psector_vdefault', 'utils_workspace_vdefault') AND cur_user = current_user ORDER BY parameter)a)::text,
 			'{}');
 		v_action := json_extract_path_text(p_data,'data','action');
 		IF v_action = '' THEN v_action = NULL; END IF;
-		
-		
+
+
 		-- Return formtabs
 		RETURN gw_fct_json_create_return(('{"status":"Accepted", "version":'||v_version||
 			',"body":{"message":'||v_message||
@@ -536,7 +543,7 @@ BEGIN
 					"mincutNotProposedValve":'||v_mincut_valve_not_proposed||',
 					"mincutNode":'||v_mincut_node||',
 					"mincutConnec":'||v_mincut_connec||',
-					"mincutArc":'||v_mincut_arc else '' end ) ||	
+					"mincutArc":'||v_mincut_arc else '' end ) ||
 				'}'||
 			'}'||
 		    '}')::json,2796, null, null, v_action::json);

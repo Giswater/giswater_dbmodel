@@ -484,7 +484,7 @@ WITH
 		),
 	dma_table as
 		(
-		select dma_id, name as dma_name, macrodma_id, stylesheet, id::varchar(16) as dma_type from dma
+		select dma_id, name as dma_name, macrodma_id, stylesheet, id::character varying::text as dma_type from dma
 		left JOIN typevalue t ON t.id::text = dma.dma_type AND t.typevalue::text = 'dma_type'::text
 		),
 	presszone_table as
@@ -726,7 +726,8 @@ WITH
 		date_trunc('second'::text, connec.lastupdate) AS lastupdate,
 		connec.lastupdate_user,
 		connec.the_geom,
-		sector_table.stylesheet ->> 'featureColor'::text AS sector_style
+		sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+		connec.n_inhabitants
 	    FROM inp_network_mode, connec_selector
         JOIN connec ON connec.connec_id = connec_selector.connec_id
         JOIN selector_expl se ON (se.cur_user =current_user AND se.expl_id = connec.expl_id) or (se.cur_user =current_user and se.expl_id = connec.expl_id2)
@@ -1437,3 +1438,201 @@ AS SELECT inp_pipe.arc_id,
             WHEN a.builtdate IS NULL THEN '1900-01-01'::date
             ELSE a.builtdate
         END) / 365) < r.end_age AND r.active IS TRUE;
+
+CREATE OR REPLACE VIEW v_edit_element
+AS SELECT
+	e.element_id,
+    e.code,
+    e.elementcat_id,
+    e.elementtype_id,
+    e.brand_id,
+    e.model_id,
+    e.serial_number,
+    e.state,
+    e.state_type,
+    e.num_elements,
+    e.observ,
+    e.comment,
+    e.function_type,
+    e.category_type,
+    e.location_type,
+    e.fluid_type,
+    e.workcat_id,
+    e.workcat_id_end,
+    e.buildercat_id,
+    e.builtdate,
+    e.enddate,
+    e.ownercat_id,
+    e.rotation,
+    e.link,
+    e.verified,
+    e.the_geom,
+    e.label_x,
+    e.label_y,
+    e.label_rotation,
+    e.publish,
+    e.inventory,
+    e.undelete,
+    e.expl_id,
+    e.pol_id,
+    e.lastupdate,
+    e.lastupdate_user,
+    e.elevation,
+    e.expl_id2,
+    e.trace_featuregeom,
+    e.muni_id,
+    e.sector_id
+   FROM (
+   		SELECT
+   			element.element_id,
+            element.code,
+            element.elementcat_id,
+            cat_element.elementtype_id,
+            element.brand_id,
+            element.model_id,
+            element.serial_number,
+            element.state,
+            element.state_type,
+            element.num_elements,
+            element.observ,
+            element.comment,
+            element.function_type,
+            element.category_type,
+            element.location_type,
+            element.fluid_type,
+            element.workcat_id,
+            element.workcat_id_end,
+            element.buildercat_id,
+            element.builtdate,
+            element.enddate,
+            element.ownercat_id,
+            element.rotation,
+            concat(element_type.link_path, element.link) AS link,
+            element.verified,
+            element.the_geom,
+            element.label_x,
+            element.label_y,
+            element.label_rotation,
+            element.publish,
+            element.inventory,
+            element.undelete,
+            element.expl_id,
+            element.pol_id,
+            element.lastupdate,
+            element.lastupdate_user,
+            element.elevation,
+            element.expl_id2,
+            element.trace_featuregeom,
+            element.muni_id,
+            element.sector_id
+       FROM selector_expl, element
+     	JOIN v_state_element ON element.element_id::text = v_state_element.element_id::text
+     	JOIN cat_element ON element.elementcat_id::text = cat_element.id::text
+     	JOIN element_type ON element_type.id::text = cat_element.elementtype_id::text
+         WHERE element.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::TEXT
+        ) e
+     LEFT JOIN selector_sector s USING (sector_id)
+     LEFT JOIN selector_municipality m USING (muni_id)
+  WHERE (s.cur_user = CURRENT_USER OR e.sector_id IS NULL) AND (m.cur_user = CURRENT_USER OR e.muni_id IS NULL);
+
+
+CREATE OR REPLACE VIEW v_om_waterbalance
+AS SELECT e.name AS exploitation,
+    d.name AS dma,
+    p.code AS period,
+    om_waterbalance.auth_bill,
+    om_waterbalance.auth_unbill,
+    om_waterbalance.loss_app,
+    om_waterbalance.loss_real,
+    om_waterbalance.total_in,
+    om_waterbalance.total_out,
+    om_waterbalance.total,
+    p.start_date::date AS crm_startdate,
+    p.end_date::date AS crm_enddate,
+    om_waterbalance.startdate AS wbal_startdate,
+    om_waterbalance.enddate AS wbal_enddate,
+    om_waterbalance.ili,
+    om_waterbalance.auth,
+    om_waterbalance.loss,
+        CASE
+            WHEN om_waterbalance.total > 0::double precision THEN (100::numeric::double precision * (om_waterbalance.auth_bill + om_waterbalance.auth_unbill) / om_waterbalance.total)::numeric(20,2)
+            ELSE 0::numeric(20,2)
+        END AS loss_eff,
+    om_waterbalance.auth_bill AS rw,
+    (om_waterbalance.total - om_waterbalance.auth_bill)::numeric(20,2) AS nrw,
+        CASE
+            WHEN om_waterbalance.total > 0::double precision THEN (100::numeric::double precision * om_waterbalance.auth_bill / om_waterbalance.total)::numeric(20,2)
+            ELSE 0::numeric(20,2)
+        END AS nrw_eff,
+    d.the_geom,
+	om_waterbalance.n_inhabitants,
+	om_waterbalance.avg_press
+   FROM om_waterbalance
+     JOIN exploitation e USING (expl_id)
+     JOIN dma d USING (dma_id)
+     JOIN ext_cat_period p ON p.id::text = om_waterbalance.cat_period_id::text;
+
+CREATE OR REPLACE VIEW v_om_waterbalance_report
+AS WITH expl_data AS (
+         SELECT sum(w_1.auth) / sum(w_1.total) AS expl_rw_eff,
+            1::double precision - sum(w_1.auth) / sum(w_1.total) AS expl_nrw_eff,
+            NULL::text AS expl_nightvol,
+                CASE
+                    WHEN sum(w_1.arc_length) = 0::double precision THEN NULL::double precision
+                    ELSE sum(w_1.nrw) / sum(w_1.arc_length) / (EXTRACT(epoch FROM age(p_1.end_date, p_1.start_date)) / 3600::numeric)::double precision
+                END AS expl_m4day,
+                CASE
+                    WHEN sum(w_1.arc_length) = 0::double precision AND sum(w_1.n_connec) = 0 AND sum(w_1.link_length) = 0::double precision THEN NULL::double precision
+                    ELSE sum(w_1.loss) * (365::numeric / EXTRACT(day FROM p_1.end_date - p_1.start_date))::double precision / (6.57::double precision * sum(w_1.arc_length) + 9.13::double precision * sum(w_1.link_length) + (0.256 * sum(w_1.n_connec)::numeric * avg(d_1.avg_press))::double precision)
+                END AS expl_ili,
+            w_1.expl_id,
+            w_1.cat_period_id,
+            p_1.start_date
+           FROM om_waterbalance w_1
+             JOIN ext_cat_period p_1 ON w_1.cat_period_id::text = p_1.id::text
+             JOIN dma d_1 ON d_1.dma_id = w_1.dma_id
+          GROUP BY w_1.expl_id, w_1.cat_period_id, p_1.end_date, p_1.start_date
+        )
+ SELECT DISTINCT e.name AS exploitation,
+    w.expl_id,
+    d.name AS dma,
+    w.dma_id,
+    w.cat_period_id,
+    p.code AS period,
+    p.start_date,
+    p.end_date,
+    w.meters_in,
+    w.meters_out,
+    w.n_connec,
+    w.n_hydro,
+    w.arc_length,
+    w.link_length,
+    w.total_in,
+    w.total_out,
+    w.total,
+    w.auth,
+    w.nrw,
+        CASE
+            WHEN w.total <> 0::double precision THEN w.auth / w.total
+            ELSE NULL::double precision
+        END AS dma_rw_eff,
+        CASE
+            WHEN w.total <> 0::double precision THEN 1::double precision - w.auth / w.total
+            ELSE NULL::double precision
+        END AS dma_nrw_eff,
+    w.ili AS dma_ili,
+    NULL::text AS dma_nightvol,
+    w.nrw / w.arc_length / (EXTRACT(epoch FROM age(p.end_date, p.start_date)) / 3600::numeric)::double precision AS dma_m4day,
+    ed.expl_rw_eff,
+    ed.expl_nrw_eff,
+    ed.expl_nightvol,
+    ed.expl_ili,
+    ed.expl_m4day,
+	w.n_inhabitants,
+	w.avg_press
+   FROM om_waterbalance w
+     JOIN exploitation e USING (expl_id)
+     JOIN dma d USING (dma_id)
+     JOIN ext_cat_period p ON w.cat_period_id::text = p.id::text
+     JOIN expl_data ed ON ed.expl_id = w.expl_id AND w.cat_period_id::text = p.id::text
+  WHERE ed.start_date = p.start_date;

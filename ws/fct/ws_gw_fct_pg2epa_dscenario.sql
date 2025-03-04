@@ -40,7 +40,6 @@ v_old_arc_id varchar(16);
 v_addparam json;
 rec_version record;
 
-
 v_demandpriority integer; 
 v_querytext text;
 v_patternmethod integer;
@@ -73,7 +72,11 @@ BEGIN
 		-- Remove whole base demand
 		IF v_demandpriority = 0 THEN 
 		
+			-- -- for inp_options_networkmode = 1,2,4
 			UPDATE temp_t_node SET demand = 0, pattern_id = null;
+
+			-- for inp_options_networkmode = 3
+			DELETE FROM temp_t_demand;
 
 		END IF;
 		
@@ -108,20 +111,32 @@ BEGIN
 				FROM temp_t_node n
 				JOIN temp_t_demand ON node_id = feature_id
 				WHERE n.demand IS NOT NULL AND n.demand <> 0;				
-			END IF;	
-			
-		END IF;
+			END IF;
 
+		ELSIF v_networkmode = 3 THEN
+		
+			-- insertar all connecs
+			INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id, demand_type, source)
+			select dscenario_id , concat('VN',link_id), dd.demand, dd.pattern_id, demand_type, source 
+			from inp_dscenario_demand dd
+			join temp_t_link l using (feature_id) join inp_connec on connec_id = l.feature_id
+			WHERE dscenario_id IN (SELECT unnest(v_userscenario)) and dd.demand IS NOT NULL AND dd.demand <> 0;
+		
+			-- update those connecs that is other link_id
+			FOR rec in select * from temp_t_demand where feature_id not in (select node_id from temp_t_node)
+			LOOP	
+				UPDATE temp_t_demand SET feature_id = f.feature_id  
+				FROM 
+				(SELECT concat('VN',c2.link_id) as feature_id FROM temp_t_link c1, temp_t_link c2 where st_dwithin(c1.the_geom, c2.the_geom, 100) and c1.link_id <> c2.link_id
+				and concat('VN',c1.link_id) = rec.feature_id and concat('VN',c2.link_id) in (SELECT feature_id FROM temp_t_demand) 
+				order by st_distance ( c1.the_geom, c2.the_geom) asc LIMIT 1) f 
+				WHERE temp_t_demand.feature_id = rec.feature_id;				
+			END LOOP;
+
+		end if;
+		
 		-- remove those demands which for some reason linked node is not exported
 		DELETE FROM temp_t_demand WHERE feature_id IN (SELECT feature_id FROM temp_t_demand EXCEPT select node_id FROM temp_t_node);
-
-		-- demands for virtual connec (3 , 4 only)
-		INSERT INTO temp_t_demand (dscenario_id, feature_id, demand, pattern_id,  demand_type, source)
-		SELECT dscenario_id, n.node_id, d.demand, d.pattern_id, demand_type, source 
-		FROM  inp_dscenario_demand d ,temp_t_node n
-		JOIN connec c ON concat('VC',c.pjoint_id) =  n.node_id
-		WHERE c.connec_id = d.feature_id AND d.demand IS NOT NULL AND d.demand <> 0  
-		AND dscenario_id IN (SELECT unnest(v_userscenario));
 			
 		-- pattern
 		IF v_patternmethod = 11 THEN -- DEFAULT PATTERN
