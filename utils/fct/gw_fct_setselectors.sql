@@ -360,8 +360,7 @@ BEGIN
 			DELETE FROM selector_macroexpl WHERE cur_user = current_user;
 			INSERT INTO selector_macroexpl
 			SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE expl_id IN (SELECT DISTINCT expl_id FROM node 
-			JOIN selector_sector using (sector_id) WHERE state = 1 AND cur_user = current_user)
-			ON CONFLICT (macroexpl_id, cur_user) DO NOTHING;
+			JOIN selector_sector using (sector_id) WHERE state = 1 AND cur_user = current_user);
 
 			-- expl
 			DELETE FROM selector_expl WHERE cur_user = current_user;
