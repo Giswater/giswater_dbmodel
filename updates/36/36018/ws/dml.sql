@@ -26,3 +26,22 @@ When the network geometry generator works with [NODE] demands are moved 30% to n
 
 >End Date proposal for 1% of hydrometers which consum is out of the period: 2015-07-31 00:00:00'
 WHERE id=3110;
+
+UPDATE config_toolbox SET inputparams = '
+[
+{"widgetname":"exploitation", "label":"Exploitation:","widgettype":"combo","datatype":"text", "isMandatory":true, "tooltip":"Dscenario type", "dvQueryText":"WITH aux AS (SELECT ''ALL'' as id, ''ALL'' as idval, 1 AS rowid UNION SELECT expl_id::text as id, name as idval, row_number() over()+1 AS  rowid FROM exploitation where expl_id>0) SELECT id, idval FROM aux ORDER BY rowid ASC", "layoutname":"grl_option_parameters","layoutorder":1, "value":""},
+{"widgetname":"method", "label":"Method:","widgettype":"combo","datatype":"text","isMandatory":true,"tooltip":"Water balance method", "dvQueryText":"SELECT id, idval FROM om_typevalue WHERE typevalue = ''waterbalance_method''", "layoutname":"grl_option_parameters","layoutorder":2, "value":""},
+{"widgetname": "patternOrDate","label": "Choose time method:","widgettype": "combo","datatype": "text","layoutname": "grl_option_parameters","comboIds": [1, 2],"comboNames": ["PERIOD ID","DATE INTERVAL"],"layoutorder": 3,"isMandatory":true},
+{"widgetname":"period","label": "    [if PERIOD_ID] Period:","widgettype": "combo","datatype": "text","layoutname": "grl_option_parameters","layoutorder": 4,"dvQueryText":"SELECT ''999999'' as id, ''ALL'' as idval UNION SELECT id, code as idval FROM ext_cat_period ORDER BY id desc","selectedId": ""},
+{"widgetname":"initDate", "label":"    [if DATE INTERVAL] Period (init date):","widgettype":"datetime","datatype":"text", "isMandatory":true, "tooltip":"Start date", "layoutname":"grl_option_parameters","layoutorder":5, "value":""},
+{"widgetname":"endDate", "label":"    [if DATE INTERVAL] Period (end date):","widgettype":"datetime","datatype":"text", "isMandatory":true, "tooltip":"End date", "layoutname":"grl_option_parameters","layoutorder":6, "value":"1900-01-01"},
+{"widgetname":"executeGraphDma", "label":"Execute DMA:","widgettype":"check","datatype":"boolean","isMandatory":true,"tooltip":"Execute DMA","layoutname":"grl_option_parameters","layoutorder":7, "value":""}
+]'::JSON WHERE id = 3142;
+
+UPDATE sys_function SET descript='Function to calculate water balance according stardards of IWA.
+Before that: 
+1) tables ext_cat_period, ext_rtc_hydrometer_x_data, ext_rtc_scada_x_data need to be filled.
+2) DMA graph need to be executed.
+
+>End Date proposal for 1% of hydrometers which consum is out of the period: 2015-07-31 00:00:00'
+ WHERE id=3142;

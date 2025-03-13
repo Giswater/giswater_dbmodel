@@ -88,6 +88,8 @@ BEGIN
 	v_inp_dscenario = (SELECT dscenario_id FROM selector_inp_dscenario WHERE cur_user = current_user limit 1);
 	v_sector = (SELECT sector_id FROM selector_sector WHERE cur_user = current_user AND sector_id > 0 limit 1 );
 
+	DROP TABLE IF EXISTS temp_sys_function;
+	DROP TABLE IF EXISTS temp_config_toolbox;
 
 	CREATE TEMP TABLE IF NOT EXISTS temp_sys_function AS SELECT*FROM sys_function;
 	CREATE TEMP TABLE IF NOT EXISTS temp_config_toolbox AS SELECT*FROM config_toolbox;
@@ -98,7 +100,7 @@ BEGIN
 		-- get enddate proposal for demand dscenarios
 		PERFORM gw_fct_create_dscenario_from_crm($${"client":{"device":4, "lang":"ca_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"step":1, "exploitation":"1"}}}$$);
 
-		--PERFORM gw_fct_waterbalance($${"client":{"device":4, "infoType":1, "lang":"ES"},"form":{}, "data":{"parameters":{"executeGraphDma":"false", "exploitation":1, "period":"5", "method":"CPW"}}}$$)::text;
+		PERFORM gw_fct_waterbalance($${"client":{"device":4, "infoType":1, "lang":"ES"},"form":{}, "data":{"parameters":{"step":"1"}}}$$)::text;
 
 	END IF;
 
