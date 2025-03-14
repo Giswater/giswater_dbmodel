@@ -83,6 +83,7 @@ v_days_past integer;
 v_percent_hydro TEXT;
 v_queryhydro TEXT;
 v_proposed_enddate TEXT;
+--v_startdate TEXT;
 v_step integer;
 v_tmethod TEXT;
 v_sql TEXT;
@@ -255,7 +256,7 @@ BEGIN
 	ON CONFLICT (dma_id, startdate, enddate) do nothing';
 
 	
-	IF v_method = 'CPW' AND v_tmethod = '1' THEN -- static period or remote lecture period (1 day)
+	IF v_method = 'CPW' THEN -- static period or remote lecture period (1 day)
 
 		UPDATE om_waterbalance SET startdate = v_startdate::date, enddate = v_enddate::date WHERE cat_period_id = v_period;
 		
@@ -300,7 +301,7 @@ BEGIN
 
 		UPDATE om_waterbalance SET auth_bill_met_hydro = 0 WHERE auth_bill_met_hydro is null AND cat_period_id = v_period;
 		
- 	ELSIF v_method = 'DCW' AND v_tmethod = '1' THEN -- dynamic period acording centroid for dates x vol of dma
+ 	ELSIF v_method = 'DCW' THEN -- dynamic period acording centroid for dates x vol of dma
 
 		FOR v_dma IN EXECUTE 'SELECT DISTINCT dma_id FROM connec WHERE state = 1 AND expl_id in ('||v_expl||')'
 		LOOP
@@ -347,7 +348,7 @@ BEGIN
 		END LOOP;
 	
 	
-	ELSIF v_tmethod = '2' THEN --date interval
+	ELSIF v_method = 'CDI' THEN -- custom date interval
 	
 		-- total inlet
 		UPDATE om_waterbalance n SET total_in =  value FROM (
@@ -412,25 +413,24 @@ BEGIN
 	--update data
 	EXECUTE '
 	UPDATE om_waterbalance n SET n_connec = count_connecs, link_length = length::numeric(12,3)
-	FROM (SELECT c.dma_id, p.id as cat_period_id, count(c.connec_id) as count_connecs, sum(st_length(l.the_geom)) /1000 as length, p.start_date, p.end_date
+	FROM (SELECT c.dma_id, count(c.connec_id) as count_connecs, sum(st_length(l.the_geom)) /1000 as length
 	FROM ext_cat_period p, rtc_hydrometer_x_connec d
 	JOIN connec c USING (connec_id) 
 	JOIN ext_rtc_hydrometer h ON c.customer_code::text = h.connec_id::text
 	left join link l on c.connec_id = feature_id
-	where c.state=1 AND p.start_date::date = '||quote_literal(v_startdate)||'::date AND p.end_date::date = '||quote_literal(v_enddate)||'::date AND is_waterbal IS TRUE
-	GROUP BY c.dma_id, p.id)a
+	where c.state=1 AND is_waterbal IS TRUE
+	GROUP BY c.dma_id)a
 	WHERE n.dma_id = a.dma_id AND n.startdate::date = '||quote_literal(v_startdate)||'::date AND n.enddate::date = '||quote_literal(v_enddate)||'::date AND expl_id in ('||v_expl||')';
 
 
 	-- n_hydro
 	EXECUTE '
 	UPDATE om_waterbalance n SET n_hydro = count_hydro FROM 
-	(SELECT dma_id, p.id as cat_period_id, count(hydrometer_id) as count_hydro, p.start_date, p.end_date
-	FROM ext_cat_period p, rtc_hydrometer_x_connec d
+	(SELECT dma_id, count(hydrometer_id) as count_hydro
+	FROM rtc_hydrometer_x_connec d
 	JOIN connec c USING (connec_id) 
 	JOIN ext_rtc_hydrometer h ON c.customer_code::text = h.connec_id::TEXT
-	where state=1 AND p.start_date::date = '||quote_literal(v_startdate)||'::date AND p.end_date::date = '||quote_literal(v_enddate)||'::date AND is_waterbal IS TRUE
-	GROUP BY dma_id, p.id)a
+	GROUP BY dma_id)a
 	WHERE n.dma_id = a.dma_id AND n.startdate::date = '||quote_literal(v_startdate)||'::date AND n.enddate::date = '||quote_literal(v_enddate )||'::date AND expl_id in ('||v_expl||')';
 
 	UPDATE om_waterbalance set n_connec = 0, link_length = 0, n_hydro = 0 where n_connec is null;
@@ -438,10 +438,9 @@ BEGIN
 	-- arc_length
 	EXECUTE '
 	UPDATE om_waterbalance n SET arc_length = length::numeric(12,3) FROM 
-	(SELECT dma_id, p.id as cat_period_id, sum(st_length(the_geom)) /1000 as length, p.start_date, p.end_date
-	FROM arc c ,ext_cat_period p
-	where state=1 and p.start_date::date = '||quote_literal(v_startdate)||'::date and p.end_date::date = '||quote_literal(v_enddate)||'::date
-	GROUP BY dma_id, p.id, p.start_date, p.end_date)a
+	(SELECT dma_id, sum(st_length(the_geom)) /1000 as length
+	FROM arc c
+	GROUP BY dma_id)a
 	WHERE n.dma_id = a.dma_id AND n.startdate::date = '||quote_literal(v_startdate)||'::date and n.enddate::date = '||quote_literal(v_enddate)||'::date AND expl_id in ('||v_expl||')';
 
 	UPDATE om_waterbalance set arc_length = 0 where arc_length is null;
@@ -498,17 +497,16 @@ BEGIN
 		v_avgpress = (SELECT avg_press FROM dma WHERE dma_id = v_dma);
 		
 		v_uarl = (v_a*v_kmarc + v_b*v_kmconnec + v_c*v_numconnec)*v_avgpress;	
-		-- el 1r select retorna varios valors
-		v_carl = (SELECT sum(loss) FROM om_waterbalance WHERE cat_period_id = v_period AND 
-			dma_id = v_dma)*(365/(SELECT case when extract (day from end_date - start_date) = 0 then 1
-		else  extract (day from end_date - start_date) end 
-			FROM ext_cat_period WHERE id = v_period));
+	
+		v_carl = (SELECT sum(loss) FROM om_waterbalance WHERE startdate = v_startdate::date AND enddate = v_enddate::date AND 
+			dma_id = v_dma)*(365/(SELECT case when quote_literal(v_enddate)::date - quote_literal(v_startdate)::date = 0 then 1
+		else  quote_literal(v_enddate)::date - quote_literal(v_startdate)::date end));
 	
 		v_ili = v_carl/v_uarl;
 	
 		RAISE NOTICE ' % % %' , v_carl, v_uarl, v_dma;
 	
-		UPDATE om_waterbalance SET ili = v_ili
+		UPDATE om_waterbalance SET ili = v_ili, avg_press = v_avgpress
 		WHERE startdate::date = v_startdate::date AND enddate::date = v_enddate::date AND dma_id = v_dma;
 
 	END LOOP;
@@ -546,13 +544,6 @@ BEGIN
 		
 	else
 		
-		EXECUTE '
-		SELECT sum(total_sys_input) as tsi, sum(auth_bill_met_hydro) as bmc, (sum(total_sys_input) - sum(auth_bill_met_hydro))::numeric (12,2) as nrw
-		FROM om_waterbalance 
-		WHERE startdate::date = '||quote_literal(v_startdate)||'::date and enddate::date = '||quote_literal(v_enddate)||'::date AND expl_id in ('||v_expl||')' 
-		INTO rec_nrw;
-
-
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Process done succesfully for period: ',v_period));
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Number of DMA processed: ', v_count));
 		INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('Number of hydrometer processed: ', v_hydrometer));
