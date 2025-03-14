@@ -49,7 +49,7 @@ v_factor float;
 v_expl TEXT;
 v_onlyiswaterbal boolean;
 v_waterbal TEXT;
-v_initdate TEXT;
+v_startdate TEXT;
 v_enddate TEXT;
 v_sql TEXT;
 v_tmethod text;
@@ -80,7 +80,7 @@ BEGIN
 	v_expl :=  ((p_data ->>'data')::json->>'parameters')::json->>'exploitation'::text;
 	v_onlyiswaterbal :=  ((p_data ->>'data')::json->>'parameters')::json->>'onlyIsWaterBal';
 	v_tmethod :=  ((p_data ->>'data')::json->>'parameters')::json->>'patternOrDate';
-	v_initdate :=  ((p_data ->>'data')::json->>'parameters')::json->>'initDate'::text;
+	v_startdate :=  ((p_data ->>'data')::json->>'parameters')::json->>'initDate'::text;
 	v_enddate :=  ((p_data ->>'data')::json->>'parameters')::json->>'endDate';
 
 
@@ -174,9 +174,20 @@ BEGIN
 		v_waterbal = 'TRUE, FALSE, NULL';
 	END IF;
 	
-	-- getting system values
 	v_crm_name := (SELECT code FROM ext_cat_period WHERE id  = v_period);
-	v_periodseconds := (SELECT period_seconds FROM ext_cat_period WHERE id  = v_period);
+	
+	IF v_tmethod = '1' then
+
+		v_periodseconds := (SELECT period_seconds FROM ext_cat_period WHERE id  = v_period);
+	
+	ELSIF v_tmethod = '2' THEN --use date INTERVAL
+	
+		EXECUTE 'SELECT ('||quote_literal(v_enddate)||'::date - '||quote_literal(v_startdate)||'::date) * 24 * 3600' INTO v_periodseconds; -- FROM days to seconds
+	
+	END IF;
+
+	
+
 	IF v_periodseconds IS NULL THEN
 		SELECT value::integer INTO v_periodseconds FROM config_param_system WHERE parameter = 'admin_crm_periodseconds_vdefault';
 	END IF;
@@ -227,8 +238,8 @@ BEGIN
 	        SELECT
 	                p.id, p.start_date::date, p.end_date::date, p.period_seconds AS p_seconds,
 	                CASE
-	                     WHEN p.start_date >= '||quote_literal(v_initdate)||'::date THEN p.start_date
-	                     ELSE '||quote_literal(v_initdate)||'
+	                     WHEN p.start_date >= '||quote_literal(v_startdate)||'::date THEN p.start_date
+	                     ELSE '||quote_literal(v_startdate)||'
 	                END::date AS c_start_date,
 	                CASE
 	                    WHEN p.end_date <= '||quote_literal(v_enddate)||'::date + INTERVAL ''1 day'' THEN p.end_date
@@ -241,7 +252,7 @@ BEGIN
 	                p.*,
 	                EXTRACT(EPOCH FROM p.c_end_date::date + INTERVAL ''1 day'') - EXTRACT(EPOCH FROM p.c_start_date) AS c_seconds
 	            FROM period_calculat p
-	            WHERE p.end_date >= '||quote_literal(v_initdate)||'
+	            WHERE p.end_date >= '||quote_literal(v_startdate)||'
 	            AND  p.start_date <= '||quote_literal(v_enddate)||'::date + INTERVAL ''1 day''
 	      	), final_hydros AS  (
 			    SELECT
