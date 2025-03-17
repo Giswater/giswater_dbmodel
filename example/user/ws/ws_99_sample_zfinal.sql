@@ -102,3 +102,10 @@ insert into sys_style select 'v_edit_node', 106, 'qml', stylevalue, true from sy
 insert into sys_style select 'v_edit_node', 107, 'qml', stylevalue, true from sys_style where layername = 'v_edit_node' and styleconfig_id = 101;
 insert into sys_style select 'v_edit_node', 108, 'qml', stylevalue, true from sys_style where layername = 'v_edit_node' and styleconfig_id = 101;
 
+UPDATE ext_cat_period b SET end_date = a.end_date FROM (
+	SELECT id, end_date + INTERVAL '1 day' AS end_date FROM ext_cat_period
+)a WHERE a.id = b.id;
+
+UPDATE ext_cat_period b SET period_seconds = a.period_seconds FROM (
+	SELECT id, LEFT((end_date::TIMESTAMP - start_date::TIMESTAMP)::TEXT, 2)::integer * 24 * 3600 AS period_seconds FROM ext_cat_period
+)a WHERE a.id = b.id;
