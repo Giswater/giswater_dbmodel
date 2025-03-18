@@ -120,15 +120,21 @@ BEGIN
         END IF;
     END IF;
 
-	EXECUTE '
-	SELECT addparam->''labelPosition''->''dist''->>0  
-	FROM cat_feature WHERE id = '||quote_literal(new.node_type)||'					
-	' INTO v_dist_xlab;
+	IF v_project_type = 'UD' then
+		EXECUTE '
+		SELECT addparam->''labelPosition''->''dist''->>0  
+		FROM cat_feature WHERE id = '||quote_literal(new.node_type)||'					
+		' INTO v_dist_xlab;
 
-	EXECUTE '
-	SELECT addparam->''labelPosition''->''dist''->>1  
-	FROM cat_feature WHERE id = '||quote_literal(new.node_type)||'					
-	' INTO v_dist_ylab;
+		EXECUTE '
+		SELECT addparam->''labelPosition''->''dist''->>1  
+		FROM cat_feature WHERE id = '||quote_literal(new.node_type)||'					
+		' INTO v_dist_ylab;
+	ELSIF v_project_type = 'WS' THEN
+		
+		-- TO DO
+		
+	END IF;
 	
 	new.rotation = coalesce(new.rotation, 0);
 
