@@ -222,7 +222,7 @@ BEGIN
 					execute v_sql into v_label_point;
 										
 				
-					update node set label_rotation = rec_node.rotation where node_id = rec_node.node_id;
+					update node set label_rotation = rotation where node_id = rec_node.node_id;
 				
 					update node set label_x = st_x(v_label_point) where node_id = rec_node.node_id;
 					update node set label_y = st_y(v_label_point) where node_id = rec_node.node_id;

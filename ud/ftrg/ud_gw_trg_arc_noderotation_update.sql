@@ -88,10 +88,10 @@ BEGIN
 				-- force positive values for rotation
 				IF (SELECT rotation FROM node where node_id = rec_node.node_id) < 0 then 
 					UPDATE node set rotation = rotation + 360 where node_id =  rec_node.node_id;
-					UPDATE node set label_rotation = rotation + 360 where node_id =  rec_node.node_id;
+					UPDATE node set label_rotation = rotation where node_id =  rec_node.node_id;
 				ELSIF (SELECT rotation FROM node where node_id = rec_node.node_id) > 360 then
 					UPDATE node set rotation = rotation -360 where node_id =  rec_node.node_id;
-					UPDATE node set label_rotation = rotation -360 where node_id =  rec_node.node_id;
+					UPDATE node set label_rotation = rotation where node_id =  rec_node.node_id;
 				END IF;
 				
 			END LOOP;

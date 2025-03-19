@@ -1023,6 +1023,24 @@ BEGIN
 	SELECT addparam->''labelPosition''->''dist''->>1  
 	FROM cat_feature WHERE id = '||quote_literal(new.node_type)||'					
 	' INTO v_dist_ylab;
+
+	if new.label_x != old.label_x and new.label_y != old.label_y then
+
+		update node set label_x = new.label_x, label_y = new.label_y where node_id = new.node_id;
+
+		v_dist_ylab = null;
+		v_dist_xlab = null;
+
+	end if;
+
+	if new.label_rotation != old.label_rotation then
+
+		update node set label_rotation = new.label_rotation where node_id = new.node_id;
+
+		v_dist_ylab = null;
+		v_dist_xlab = null;
+
+	end if;
 	
 	new.rotation = coalesce(new.rotation, 0);
 
@@ -1085,7 +1103,7 @@ BEGIN
 			v_cur_quadrant = 'BL';
 		end if;
 	
-	end if;	
+	
 
 
 	-- set label_x and label_y according to cat_feature
@@ -1157,7 +1175,7 @@ BEGIN
 		update node set label_rotation = new.rotation where node_id = new.node_id;
 
 	end if;
-
+end if;	
 
 	-- CASE: if rotation of the node changes
 	if new.rotation != old.rotation then
@@ -1249,6 +1267,12 @@ BEGIN
 		RETURN NULL;
 	END IF;
 END;
-$BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
+$function$
+;
+
+-- Permissions
+
+ALTER FUNCTION ud.gw_trg_edit_node() OWNER TO role_admin;
+GRANT ALL ON FUNCTION ud.gw_trg_edit_node() TO public;
+GRANT ALL ON FUNCTION ud.gw_trg_edit_node() TO role_admin;
+GRANT ALL ON FUNCTION ud.gw_trg_edit_node() TO role_basic;

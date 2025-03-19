@@ -809,6 +809,12 @@ BEGIN
 			END LOOP;
 		END IF;
 
+		if new.label_x != old.label_x and new.label_y != old.label_y then
+
+			update connec set label_x = new.label_x, label_y = new.label_y where connec_id = new.connec_id;
+
+		end if;
+
         RETURN NEW;
 
 

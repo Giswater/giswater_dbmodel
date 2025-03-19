@@ -132,9 +132,29 @@ BEGIN
 		' INTO v_dist_ylab;
 	ELSIF v_project_type = 'WS' THEN
 		
-		-- TO DO
+		EXECUTE '
+		SELECT addparam->''labelPosition''->''dist''->>0  
+		FROM cat_feature JOIN cat_node on cat_feature.id = cat_node.nodetype_id WHERE cat_node.id = '||quote_literal(new.nodecat_id)||'					
+		' INTO v_dist_xlab;
+
+		EXECUTE '
+		SELECT addparam->''labelPosition''->''dist''->>1  
+		FROM cat_feature JOIN cat_node on cat_feature.id = cat_node.nodetype_id WHERE cat_node.id = '||quote_literal(new.nodecat_id)||'					
+		' INTO v_dist_ylab;
 		
 	END IF;
+
+
+	if new.label_x != old.label_x and new.label_y != old.label_y then
+
+		update node set label_x = new.label_x, label_y = new.label_y where node_id = new.node_id;
+
+		v_dist_ylab = null;
+		v_dist_xlab = null;
+
+	end if;
+
+
 	
 	new.rotation = coalesce(new.rotation, 0);
 
@@ -196,6 +216,11 @@ BEGIN
 	
 	end if;	
 
+	if new.rotation > 360 then
+		new.rotation = new.rotation - 360;
+	elsif new.rotation <0 then
+		new.rotation = 360 + new.rotation;
+	end if;
 
 	-- set label_x and label_y according to cat_feature
 	update node set label_x = st_x(v_label_point) where node_id = new.node_id;
@@ -262,7 +287,7 @@ BEGIN
 		update node set label_y = st_y(v_new_lab_position) where node_id = new.node_id;
 	
 		update node set label_quadrant = new.label_quadrant where node_id = new.node_id;
-		update node set label_rotation = new.rotation where node_id = new.node_id;
+		update node set label_rotation = rotation where node_id = new.node_id;
 
 	end if;
 
@@ -316,7 +341,7 @@ BEGIN
 		select st_transform(fff::geometry, '||v_srid||') as label_p from lab_point';
 		execute v_sql into v_label_point;
 
-		update node set label_rotation = new.rotation where node_id = new.node_id;
+		update node set label_rotation = rotation where node_id = new.node_id;
 		update node set label_x = st_x(v_label_point) where node_id = new.node_id;
 		update node set label_y = st_y(v_label_point) where node_id = new.node_id;
 	
