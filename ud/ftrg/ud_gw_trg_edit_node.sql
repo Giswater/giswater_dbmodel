@@ -1046,7 +1046,6 @@ BEGIN
 
 	if v_dist_ylab is not null and v_dist_xlab is not null and 
 	(SELECT value::boolean FROM config_param_user WHERE parameter='edit_noderotation_update_dsbl' AND cur_user=current_user) IS FALSE 
-	AND (new.label_x != old.label_x and new.label_y != old.label_y or new.rotation != old.rotation or new.label_quadrant != old.label_quadrant)
 	then -- only start the process with not-null values
 
 		-- prev calc: intermediate rotations according to dist_x and dist_y from cat_feature
