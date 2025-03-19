@@ -1267,12 +1267,6 @@ end if;
 		RETURN NULL;
 	END IF;
 END;
-$function$
-;
-
--- Permissions
-
-ALTER FUNCTION ud.gw_trg_edit_node() OWNER TO role_admin;
-GRANT ALL ON FUNCTION ud.gw_trg_edit_node() TO public;
-GRANT ALL ON FUNCTION ud.gw_trg_edit_node() TO role_admin;
-GRANT ALL ON FUNCTION ud.gw_trg_edit_node() TO role_basic;
+$BODY$	
+	LANGUAGE plpgsql VOLATILE
+	COST 100;
