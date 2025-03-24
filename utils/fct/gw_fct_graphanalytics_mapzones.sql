@@ -138,6 +138,9 @@ v_dscenario_valve text;
 v_netscenario text;
 v_has_conflicts boolean = false;
 
+-- LOCK LEVEL LOGIC
+v_original_disable_locklevel json;
+
 BEGIN
 	-- Search path
 	SET search_path = "SCHEMA_NAME", public;
@@ -166,6 +169,13 @@ BEGIN
 	IF v_netscenario = '' THEN v_netscenario = NULL; END IF;
 	IF v_floodonlymapzone = '' THEN v_floodonlymapzone = NULL; END IF;
 	v_floodonlymapzone = REPLACE(REPLACE (v_floodonlymapzone,'[','') ,']','');
+
+	-- Get user variable for disabling lock level
+    SELECT value::json INTO v_original_disable_locklevel FROM config_param_user
+    WHERE parameter = 'edit_disable_locklevel' AND cur_user = current_user;
+    -- Set disable lock level to true for this operation
+    UPDATE config_param_user SET value = '{"update":true, "delete":true}'
+    WHERE parameter = 'edit_disable_locklevel' AND cur_user = current_user;
 
 	-- set fid:
 	IF v_class = 'PRESSZONE' THEN
@@ -249,7 +259,7 @@ BEGIN
 		-- graph quality analysis
 		v_input = concat('{"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},"data":{"parameters":{ "fid":',v_fid,',"selectionMode":"userSelectors", "graphClass":',quote_ident(v_class),'}}}')::json;
 		PERFORM gw_fct_graphanalytics_check_data(v_input);
-		SELECT count(*) INTO v_count2 FROM temp_audit_check_data WHERE cur_user="current_user"() AND fid=v_fid AND criticity=3 AND result_id IS NOT NULL;	
+		SELECT count(*) INTO v_count2 FROM temp_audit_check_data WHERE cur_user="current_user"() AND fid=v_fid AND criticity=3 AND result_id IS NOT NULL;
 	END IF;
 
 	IF v_expl_id = '' THEN
@@ -1341,7 +1351,7 @@ BEGIN
 		IF v_class = 'DMA' THEN
 
 			RAISE NOTICE 'Filling om_waterbalance_dma_graph ';
-				
+
 			v_querytext = 'INSERT INTO temp_om_waterbalance_dma_graph (node_id, '||quote_ident(v_field)||', flow_sign)
 			(SELECT DISTINCT n.node_id, a.'||quote_ident(v_field)||',
 			CASE 
@@ -1362,7 +1372,7 @@ BEGIN
 			)
 			) ON CONFLICT (node_id, dma_id) DO NOTHING';
 			EXECUTE v_querytext;
-		
+
 			delete from om_waterbalance_dma_graph where dma_id in (select distinct dma_id from temp_om_waterbalance_dma_graph);
 			INSERT INTO om_waterbalance_dma_graph SELECT * FROM temp_om_waterbalance_dma_graph ON CONFLICT (dma_id, node_id) DO NOTHING;
 
@@ -1524,6 +1534,9 @@ BEGIN
 		DROP TABLE IF EXISTS temp_dma;
 		DROP TABLE IF EXISTS temp_dqa;
 	END IF;
+
+	-- Restore original disable lock level
+    UPDATE config_param_user SET value = v_original_disable_locklevel WHERE parameter = 'edit_disable_locklevel' AND cur_user = current_user;
 
 	--  Return
 	RETURN  gw_fct_json_create_return(('{"status":"'||v_status||'", "message":{"level":'||v_level||', "text":"'||v_message||'"}, "version":"'||v_version||'"'||
