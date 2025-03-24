@@ -58,14 +58,14 @@ BEGIN
     RETURN NULL;
   ELSE
 
-    IF v_automatic_disable_locklevel->>'update' = 'false' AND v_disable_locklevel->>'update' = 'false' THEN
+    IF v_automatic_disable_locklevel->>'update' = 'false' AND (v_disable_locklevel->>'update' = 'false' OR v_disable_locklevel IS NULL) THEN
       IF TG_OP = 'UPDATE' AND (OLD.undelete IS TRUE AND NEW.undelete IS TRUE) THEN
         EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
         "data":{"message":"3284", "function":"2718","debug_msg":null}}$$);';
         RETURN NULL;
       END IF;
-    ELSIF v_automatic_disable_locklevel->>'delete' = 'false' AND v_disable_locklevel->>'delete' = 'false' THEN
-      IF TG_OP = 'DELETE' AND (OLD.undelete IS TRUE AND NEW.undelete IS TRUE) THEN
+    ELSIF v_automatic_disable_locklevel->>'delete' = 'false' AND (v_disable_locklevel->>'delete' = 'false' OR v_disable_locklevel IS NULL) THEN
+      IF TG_OP = 'DELETE' AND (OLD.undelete IS TRUE) THEN
         EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
         "data":{"message":"3284", "function":"2718","debug_msg":null}}$$);';
         RETURN NULL;
