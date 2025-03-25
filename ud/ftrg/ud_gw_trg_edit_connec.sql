@@ -495,7 +495,7 @@ BEGIN
 			v_streetaxis2, v_streetaxis, NEW.postnumber, NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 			NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.undelete, NEW.label_x, NEW.label_y, NEW.label_rotation,
 			NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.private_connecat_id,
-			NEW.lastupdate, NEW.lastupdate_user, NEW.asset_id, NEW.drainzone_id, NEW.expl_id2, NEW.adate, NEW.adescript, NEW.plot_code, NEW.placement_type, 
+			NEW.lastupdate, NEW.lastupdate_user, NEW.asset_id, NEW.drainzone_id, NEW.expl_id2, NEW.adate, NEW.adescript, NEW.plot_code, NEW.placement_type,
 			NEW.label_quadrant, NEW.access_type, NEW.streetname, NEW.streetname2);
 		ELSE
 			INSERT INTO connec (connec_id, code, customer_code, top_elev, y1, y2,connecat_id, connec_type, sector_id, demand, "state",  state_type, connec_depth, connec_length, arc_id, annotation,
@@ -510,7 +510,7 @@ BEGIN
 			v_streetaxis2, v_streetaxis, NEW.postnumber, NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 			NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.undelete, NEW.label_x, NEW.label_y, NEW.label_rotation,
 			NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.private_connecat_id, NEW.matcat_id,
-			NEW.lastupdate, NEW.lastupdate_user, NEW.asset_id, NEW.drainzone_id, NEW.expl_id2, NEW.adate, NEW.adescript, NEW.plot_code, NEW.placement_type, 
+			NEW.lastupdate, NEW.lastupdate_user, NEW.asset_id, NEW.drainzone_id, NEW.expl_id2, NEW.adate, NEW.adescript, NEW.plot_code, NEW.placement_type,
 			NEW.label_quadrant, NEW.access_type, NEW.streetname, NEW.streetname2);
 		END IF;
 
@@ -557,7 +557,7 @@ BEGIN
 					USING NEW
 					INTO v_new_value_param;
 
-				v_childtable_name := 'man_connec' || lower(v_customfeature);
+				v_childtable_name := 'man_connec_' || lower(v_customfeature);
 				IF (SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = TG_TABLE_SCHEMA AND table_name = v_childtable_name)) IS TRUE THEN
 					IF v_new_value_param IS NOT NULL THEN
 						EXECUTE 'INSERT INTO '||v_childtable_name||' (connec_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')'
@@ -793,7 +793,7 @@ BEGIN
 					USING OLD
 					INTO v_old_value_param;
 
-				v_childtable_name := 'man_connec' || lower(v_customfeature);
+				v_childtable_name := 'man_connec_' || lower(v_customfeature);
 				IF (SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = TG_TABLE_SCHEMA AND table_name = v_childtable_name)) IS TRUE THEN
 					IF (v_new_value_param IS NOT NULL AND v_old_value_param!=v_new_value_param) OR (v_new_value_param IS NOT NULL AND v_old_value_param IS NULL) THEN
 						EXECUTE 'INSERT INTO '||v_childtable_name||' (connec_id, '||v_addfields.param_name||') VALUES ($1, $2::'||v_addfields.datatype_id||')
@@ -840,7 +840,7 @@ BEGIN
 		v_connec_id = old.connec_id;
 
 
-		v_childtable_name := 'man_connec' || lower(v_customfeature);
+		v_childtable_name := 'man_connec_' || lower(v_customfeature);
 		IF (SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = TG_TABLE_SCHEMA AND table_name = v_childtable_name)) IS TRUE THEN
 			EXECUTE 'DELETE FROM '||v_childtable_name||' WHERE connec_id = '||quote_literal(v_connec_id)||'';
 		END IF;
