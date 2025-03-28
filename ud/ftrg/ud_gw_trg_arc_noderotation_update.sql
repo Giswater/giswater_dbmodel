@@ -202,15 +202,19 @@ BEGIN
 					then
 						v_rot1 = -90+rec_node.rotation;
 						v_rot2 = -180+rec_node.rotation;
+
+						v_dist_xlab = v_dist_xlab * (-1);
+						v_dist_ylab = v_dist_ylab * (-1);
+						
 					end if;
 				
 					
 				   	-- new label position
 					v_sql = '
 					with mec as (
-					select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_ylab||', radians('||v_rot1||')) as eee
+					select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_xlab||', radians('||v_rot1||')) as eee
 					FROM node WHERE node_id = '||QUOTE_LITERAL(rec_node.node_id)||'), lab_point as (
-					SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_xlab||', radians('||v_rot2||')) as fff
+					SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_ylab||', radians('||v_rot2||')) as fff
 					from mec)
 					select st_transform(fff::geometry, '||v_srid||') as label_p from lab_point';
 								
