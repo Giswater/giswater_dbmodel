@@ -248,7 +248,8 @@ WITH
     END AS inp_type,
     node.brand_id,
     node.model_id,
-    node.serial_number
+    node.serial_number,
+	node.hemisphere
     FROM node_selector
     JOIN node USING (node_id)
     JOIN selector_expl se ON (se.cur_user =current_user AND se.expl_id = node.expl_id) or (se.cur_user = current_user AND se.expl_id = node.expl_id2)
@@ -361,7 +362,8 @@ WITH
     inp_type,
     brand_id,
     model_id,
-    serial_number
+    serial_number,
+	hemisphere
     FROM node_selected
   )
 	SELECT node_base.*
