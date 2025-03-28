@@ -204,8 +204,8 @@ BEGIN
 					elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
 					or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
 					then
-						v_rot1 = -90+new.rotation;
-						v_rot2 = -180+new.rotation;
+						v_rot1 = -90+rec_node.rotation;
+						v_rot2 = -180+rec_node.rotation;
 					end if;
 				
 					
