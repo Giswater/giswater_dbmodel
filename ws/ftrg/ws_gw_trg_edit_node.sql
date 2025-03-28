@@ -1146,9 +1146,8 @@ BEGIN
 		elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
 		or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
 		then
-			v_rot1 = 0+new.rotation;
-			v_rot2 = 90+new.rotation;
-
+			v_rot1 = -90+new.rotation;
+			v_rot2 = -180+new.rotation;
 		end if;
 
 		-- prev calc: label position according to cat_feature
@@ -1238,8 +1237,8 @@ BEGIN
 		elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
 		or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
 		then
-			v_rot1 = 0+new.rotation;
-			v_rot2 = 90+new.rotation;
+			v_rot1 = -90+new.rotation;
+			v_rot2 = -180+new.rotation;
 		end if;
 
 		v_rot1=coalesce(v_rot1, 0);
@@ -1299,9 +1298,8 @@ end if;
 		elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
 		or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
 		then
-			v_rot1 = 0+new.rotation;
-			v_rot2 = 90+new.rotation;
-
+			v_rot1 = -90+new.rotation;
+			v_rot2 = -180+new.rotation;
 		end if;
 
 		-- label position
