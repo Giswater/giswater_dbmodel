@@ -4,7 +4,7 @@ The program is free software: you can redistribute it and/or modify it under the
 This version of Giswater is provided by Giswater Association
 */
 
-CREATE EXTENSION postgres_fdw;
+CREATE EXTENSION postgres_fdw schema pg_catalog;
 CREATE SERVER logserver FOREIGN DATA WRAPPER postgres_fdw  OPTIONS (host 'hostname', dbname 'log', port '5432');
 CREATE USER MAPPING FOR localUser SERVER serverName OPTIONS (user 'foreingUser', password 'foreingUserPassword');
 CREATE FOREIGN TABLE ws.audit (
