@@ -25,3 +25,11 @@ UPDATE config_form_list SET query_text='SELECT concat(arc_id, '' - '', doc_id) a
 UPDATE config_form_list SET query_text='SELECT concat(node_id, '' - '', doc_id) as sys_id, * FROM v_ui_doc_x_node WHERE node_id IS NOT NULL' WHERE listname='tbl_doc_x_node' AND device=4;
 UPDATE config_form_list SET query_text='SELECT concat(connec_id, '' - '', doc_id) as sys_id, * FROM v_ui_doc_x_connec WHERE connec_id IS NOT NULL' WHERE listname='tbl_doc_x_connec' AND device=4;
 UPDATE config_form_list SET query_text='SELECT concat(gully_id, '' - '', doc_id) as sys_id, * FROM v_ui_doc_x_gully WHERE gully_id IS NOT NULL' WHERE listname='tbl_doc_x_gully' AND device=4;
+
+
+UPDATE sector set macrosector_id = 0 where macrosector_id is null;
+
+-- 31/03/2025
+UPDATE config_form_fields SET iseditable = TRUE WHERE columnname = 'to_arc';
+
+
