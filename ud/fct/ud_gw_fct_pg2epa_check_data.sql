@@ -86,10 +86,9 @@ BEGIN
 			
 	RAISE NOTICE '1 - Check orphan nodes (fid:  107)';
 	v_querytext = '(SELECT node_id, nodecat_id, the_geom FROM (SELECT node_id FROM v_edit_node EXCEPT 
-			(SELECT node_1 as node_id FROM v_edit_arc UNION SELECT node_2 FROM v_edit_arc))a JOIN v_edit_node USING (node_id)
-			JOIN selector_sector USING (sector_id) 
+			(SELECT node_1 as node_id FROM v_edit_arc UNION SELECT node_2 FROM v_edit_arc))a JOIN node USING (node_id)
 			JOIN value_state_type v ON state_type = v.id
-			WHERE epa_type != ''UNDEFINED'' and v_edit_node.is_operative = true and cur_user = current_user ) b';	
+			WHERE epa_type != ''UNDEFINED'' and is_operative = true ) b';	
 		
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
 	IF v_count > 0 THEN
@@ -627,7 +626,7 @@ BEGIN
 
 	RAISE NOTICE '27 - Check if outfalls have more than 1 connected arc';
 	select count(*) into v_count 
-	from (select node_2 from v_edit_inp_conduit a join v_edit_inp_outfall n on node_2 = node_id group by node_2 having count(*) > 1)a;   
+	from (select node_2 from v_edit_inp_conduit a join inp_outfall n on node_2 = node_id group by node_2 having count(*) > 1)a;   
 	
 	IF v_count>0 then
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, error_message, fcount)
