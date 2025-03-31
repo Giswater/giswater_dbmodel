@@ -49,11 +49,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION postgis schema pg_catalog;'
-          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION pgrouting schema pg_catalog;'
-          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION postgis_raster schema pg_catalog;'
-          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION postgis_topology schema pg_catalog;'
-          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION pgtap schema pg_catalog;'
+          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION postgis;'
+          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION pgrouting;'
+          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION postgis_raster;'
+          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION postgis_topology;'
+          psql -h localhost -U postgres -d gw_db -c 'CREATE EXTENSION pgtap;'
 
       - name: Replace variables in SQL files
         run: python test/replace_vars.py ud
