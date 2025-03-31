@@ -203,26 +203,29 @@ BEGIN
 					
 					elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
 					or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
-					then 
-						v_rot1 = 0+rec_node.rotation;
-						v_rot2 = 90+rec_node.rotation; 
-					
+					then
+						v_rot1 = -90+rec_node.rotation;
+						v_rot2 = -180+rec_node.rotation;
+
+						v_dist_xlab = v_dist_xlab * (-1);
+						v_dist_ylab = v_dist_ylab * (-1);
+
 					end if;
 				
 					
 				   	-- new label position
 					v_sql = '
 					with mec as (
-					select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_ylab||', radians('||v_rot1||')) as eee
+					select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_xlab||', radians('||v_rot1||')) as eee
 					FROM node WHERE node_id = '||QUOTE_LITERAL(rec_node.node_id)||'), lab_point as (
-					SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_xlab||', radians('||v_rot2||')) as fff
+					SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_ylab||', radians('||v_rot2||')) as fff
 					from mec)
 					select st_transform(fff::geometry, 25831) as label_p from lab_point';
 								
 					execute v_sql into v_label_point;
 										
 				
-					update node set label_rotation = rec_node.rotation where node_id = rec_node.node_id;
+					update node set label_rotation = rotation where node_id = rec_node.node_id;
 				
 					update node set label_x = st_x(v_label_point) where node_id = rec_node.node_id;
 					update node set label_y = st_y(v_label_point) where node_id = rec_node.node_id;

@@ -18,19 +18,22 @@ v_featureold varchar;
 v_projecttype text;
 v_count integer;
 
+v_disable_locklevel json;
+v_automatic_disable_locklevel json;
+
 BEGIN
 
   EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
   v_featurefield:= TG_ARGV[0];
 
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
-		IF OLD.undelete IS TRUE AND NEW.undelete IS TRUE THEN
-			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"3284", "function":"2718","debug_msg":null}}$$);';
-			RETURN NULL;
-		END IF;
-	END IF;
+  -- Get user variable for disabling lock level
+  SELECT value::json INTO v_disable_locklevel FROM config_param_user
+  WHERE parameter = 'edit_disable_locklevel' AND cur_user = current_user;
+
+  -- Check if automatic disable is enabled in system config
+  SELECT value::json INTO v_automatic_disable_locklevel FROM config_param_system
+  WHERE parameter = 'edit_automatic_disable_locklevel';
 
   IF v_featurefield = 'inp_subcatchment' THEN
     IF TG_OP = 'UPDATE' THEN
@@ -53,6 +56,22 @@ BEGIN
     END IF;
 
     RETURN NULL;
+  ELSE
+
+    IF v_automatic_disable_locklevel->>'update' = 'false' AND (v_disable_locklevel->>'update' = 'false' OR v_disable_locklevel IS NULL) THEN
+      IF TG_OP = 'UPDATE' AND (OLD.undelete IS TRUE AND NEW.undelete IS TRUE) THEN
+        EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+        "data":{"message":"3284", "function":"2718","debug_msg":null}}$$);';
+        RETURN NULL;
+      END IF;
+    ELSIF v_automatic_disable_locklevel->>'delete' = 'false' AND (v_disable_locklevel->>'delete' = 'false' OR v_disable_locklevel IS NULL) THEN
+      IF TG_OP = 'DELETE' AND (OLD.undelete IS TRUE) THEN
+        EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+        "data":{"message":"3284", "function":"2718","debug_msg":null}}$$);';
+        RETURN NULL;
+      END IF;
+    END IF;
+
   END IF;
 
 	RETURN NEW;

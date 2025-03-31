@@ -88,8 +88,20 @@ BEGIN
 	v_inp_dscenario = (SELECT dscenario_id FROM selector_inp_dscenario WHERE cur_user = current_user limit 1);
 	v_sector = (SELECT sector_id FROM selector_sector WHERE cur_user = current_user AND sector_id > 0 limit 1 );
 
+	DROP TABLE IF EXISTS temp_sys_function;
+	DROP TABLE IF EXISTS temp_config_toolbox;
+
+	CREATE TEMP TABLE IF NOT EXISTS temp_sys_function AS SELECT*FROM sys_function;
+	CREATE TEMP TABLE IF NOT EXISTS temp_config_toolbox AS SELECT*FROM config_toolbox;
+
 	IF v_projectype = 'ws' THEN
 		v_mincut = (SELECT result_id FROM selector_mincut_result WHERE cur_user = current_user limit 1 );
+
+		-- get enddate proposal for demand dscenarios
+		PERFORM gw_fct_create_dscenario_from_crm($${"client":{"device":4, "lang":"ca_ES", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"step":1, "exploitation":"1"}}}$$);
+
+		PERFORM gw_fct_waterbalance($${"client":{"device":4, "infoType":1, "lang":"ES"},"form":{}, "data":{"parameters":{"step":"1"}}}$$)::text;
+
 	END IF;
 
 	IF v_projectype = 'ws' THEN
@@ -124,8 +136,8 @@ BEGIN
 	-- get process parameters
 	v_querystring = concat('SELECT row_to_json(a) FROM (
 			 SELECT id, alias, descript, functionparams, inputparams AS fields, observ AS isnotparammsg, sys_role, function_name as functionname
-			 FROM sys_function 
-			 JOIN config_toolbox USING (id)
+			 FROM temp_sys_function
+			 JOIN temp_config_toolbox USING (id)
 			 WHERE id = '||v_function_id||') a');
 	v_debug_vars := json_build_object('v_filter', v_filter, 'v_projectype', v_projectype);
 	v_debug := json_build_object('querystring', v_querystring, 'vars', v_debug_vars, 'funcname', 'gw_fct_gettoolbox', 'flag', 10);
@@ -134,8 +146,8 @@ BEGIN
 
 	-- refactor dvquerytext
 	FOR rec IN SELECT json_array_elements(inputparams::json) as inputparams, functionparams
-	FROM sys_function JOIN config_toolbox USING (id)
-	WHERE id = v_function_id  AND config_toolbox.active IS TRUE AND (project_type=v_projectype OR project_type='utils')
+	FROM temp_sys_function JOIN temp_config_toolbox USING (id)
+	WHERE id = v_function_id  AND temp_config_toolbox.active IS TRUE AND (project_type=v_projectype OR project_type='utils')
 	loop
 		v_querytext = rec.inputparams::json->>'dvQueryText';
 

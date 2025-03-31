@@ -39,16 +39,29 @@ v_source_name text;
 v_target_name text;
 v_action text;
 v_querytext text;
-v_result_id text = null;
+v_result_id text = 'empty';
 v_scenarioid integer;
 v_pattern integer;
 v_periodunits text;
 v_demandunits text;
 v_periodseconds integer;
 v_factor float;
-v_expl integer;
+v_expl TEXT;
 v_onlyiswaterbal boolean;
 v_waterbal TEXT;
+v_startdate TEXT;
+v_enddate TEXT;
+v_sql TEXT;
+v_tmethod text;
+v_tmethod_query TEXT;
+v_query_catdscenario TEXT;
+
+v_step integer;
+v_queryfinal TEXT;
+v_queryhydro TEXT;
+v_percent_hydro text;
+v_proposed_enddate text;
+v_rec_hydro record;
 
 BEGIN
 
@@ -58,23 +71,123 @@ BEGIN
 	SELECT giswater, project_type INTO v_version, v_projecttype FROM sys_version ORDER BY id DESC LIMIT 1;
 	
 	-- getting input data 	
+	v_step := ((p_data ->>'data')::json->>'parameters')::json->>'step';
 	v_name :=  ((p_data ->>'data')::json->>'parameters')::json->>'name';
 	v_descript :=  ((p_data ->>'data')::json->>'parameters')::json->>'descript';
 	v_period :=  ((p_data ->>'data')::json->>'parameters')::json->>'period';
 	v_pattern :=  ((p_data ->>'data')::json->>'parameters')::json->>'pattern';
 	v_demandunits :=  ((p_data ->>'data')::json->>'parameters')::json->>'demandUnits';
-	v_expl :=  ((p_data ->>'data')::json->>'parameters')::json->>'exploitation';
+	v_expl :=  ((p_data ->>'data')::json->>'parameters')::json->>'exploitation'::text;
 	v_onlyiswaterbal :=  ((p_data ->>'data')::json->>'parameters')::json->>'onlyIsWaterBal';
+	v_tmethod :=  ((p_data ->>'data')::json->>'parameters')::json->>'patternOrDate';
+	v_startdate :=  ((p_data ->>'data')::json->>'parameters')::json->>'initDate'::text;
+	v_enddate :=  ((p_data ->>'data')::json->>'parameters')::json->>'endDate';
 
-	IF v_onlyiswaterbal is true then 
+
+	v_percent_hydro := (SELECT "value" FROM config_param_user WHERE "parameter" = 'epa_dscenario_percent_hydro_threshold');
+	v_percent_hydro = coalesce(v_percent_hydro, '1');
+
+	IF v_expl = '99999' THEN
+
+		EXECUTE 'SELECT string_agg(expl_id::text, '', '') from exploitation WHERE active IS TRUE AND expl_id>0 ' INTO v_expl;
+
+	END IF;
+
+
+	-- query calc hydro: (enddate)
+	v_queryhydro = 'WITH hydro_data AS (
+        SELECT
+        d.hydrometer_id,
+        d.cat_period_id,
+        d.sum,
+        p.end_date AS p_end_date,
+        first_value(d.sum) OVER w AS last_sum,
+        first_value(d.cat_period_id) OVER w AS last_cat_period_id,
+        first_value(p.end_date) OVER w::date AS last_end_date,
+        first_value(p.period_seconds) OVER w AS last_period_seconds
+        FROM ext_rtc_hydrometer_x_data d
+        JOIN ext_cat_period p ON d.cat_period_id = p.id
+        WINDOW w AS (PARTITION BY d.hydrometer_id ORDER BY p.end_date desc)
+    ), hydro_data_calculat AS (
+        SELECT DISTINCT
+        d.hydrometer_id,
+        d.last_sum,
+        d.last_cat_period_id,
+        d.last_end_date,
+        d.last_period_seconds AS p_seconds
+        FROM hydro_data d
+    ), hydro_data_selected AS (
+        SELECT d.*
+        FROM hydro_data_calculat d
+        JOIN ext_rtc_hydrometer h ON d.hydrometer_id = h.id
+        WHERE h.end_date IS NULL
+	), hydro_data_selected_expl AS (
+	     SELECT d.*, c.expl_id AS expl_id
+	     FROM hydro_data_selected d
+	     JOIN rtc_hydrometer_x_connec hc ON hc.hydrometer_id = d.hydrometer_id
+	     JOIN connec c ON c.connec_id = hc.connec_id
+		 WHERE expl_id in ('||v_expl||')
+	     UNION ALL
+	     SELECT d.*, n.expl_id AS expl_id
+	     FROM hydro_data_selected d
+	     JOIN rtc_hydrometer_x_node hn ON hn.hydrometer_id = d.hydrometer_id
+	     JOIN node n ON n.node_id = hn.node_id
+	     WHERE expl_id in ('||v_expl||')
+     ), hydro_estimated_statistic AS (
+    	SELECT
+        d.*,
+        count(*) OVER (ORDER BY d.last_end_date RANGE BETWEEN UNBOUNDED PRECEDING AND ''1 days'' PRECEDING) AS hydro_no_llegits,
+        count(*) OVER (PARTITION BY d.last_end_date) AS hydro_day,
+        count(*) OVER () AS hydro_total
+    	FROM hydro_data_selected_expl as d) ';
+
+	IF v_step = 1 THEN -- set proposal OF enddate
+
+		v_sql = concat(v_queryhydro, ' SELECT max(last_end_date)
+    	FROM hydro_estimated_statistic
+    	WHERE (100*hydro_no_llegits/hydro_total::float) < '||v_percent_hydro||'');
+
+		execute v_sql INTO v_proposed_enddate;
+
+    	v_proposed_enddate = coalesce(v_proposed_enddate, '1800-01-01');
+
+		EXECUTE '
+ 		UPDATE temp_sys_function
+ 		SET descript = REPLACE(descript, split_part(descript, ''>'', 2), ''End Date proposal for '||v_percent_hydro||'% of hydrometers which consum is out of the period: '||v_proposed_enddate::TIMESTAMP||''')
+		WHERE id in (3110)';
+
+
+		v_proposed_enddate = quote_literal(v_proposed_enddate)::date - INTERVAL '1 day';
+		v_proposed_enddate = v_proposed_enddate::date;
+
+ 		UPDATE temp_config_toolbox c SET inputparams = REPLACE(inputparams::TEXT, inputparams->6->>'value', v_proposed_enddate)::JSON WHERE id = 3110; --enddate
+
+   		RETURN '{"status":"Accepted"}';
+
+	END IF;
+
+
+
+	IF v_onlyiswaterbal is true then
 		v_waterbal = 'TRUE';
 	ELSE
 		v_waterbal = 'TRUE, FALSE, NULL';
 	END IF;
 	
-	-- getting system values
 	v_crm_name := (SELECT code FROM ext_cat_period WHERE id  = v_period);
-	v_periodseconds := (SELECT period_seconds FROM ext_cat_period WHERE id  = v_period);
+	
+	IF v_tmethod = '1' then
+
+		v_periodseconds := (SELECT period_seconds FROM ext_cat_period WHERE id  = v_period);
+	
+	ELSIF v_tmethod = '2' THEN --use date INTERVAL
+	
+		EXECUTE 'SELECT ('||quote_literal(v_enddate)||'::date - '||quote_literal(v_startdate)||'::date) * 24 * 3600' INTO v_periodseconds; -- FROM days to seconds
+	
+	END IF;
+
+	
+
 	IF v_periodseconds IS NULL THEN
 		SELECT value::integer INTO v_periodseconds FROM config_param_system WHERE parameter = 'admin_crm_periodseconds_vdefault';
 	END IF;
@@ -100,9 +213,62 @@ BEGIN
 	-- inserting on catalog table
 	PERFORM setval('SCHEMA_NAME.cat_dscenario_dscenario_id_seq'::regclass,(SELECT max(dscenario_id) FROM cat_dscenario) ,true);
 
-	INSERT INTO cat_dscenario (name, descript, dscenario_type, expl_id, log) VALUES (v_name, v_descript, 'DEMAND', 
-	v_expl, concat('Insert by ',current_user,' on ', substring(now()::text,0,20),'. Input params:{·Target feature":"", "Source CRM Period":"',v_crm_name,'", "Source Pattern":"',v_pattern,'", "Demand Units":"',v_demandunits,'"}'))
-	ON CONFLICT (name) DO NOTHING RETURNING dscenario_id INTO v_scenarioid ;
+	INSERT INTO cat_dscenario (name, descript, dscenario_type, expl_id, log)
+	SELECT v_name, v_descript, 'DEMAND',
+	CASE WHEN v_expl ILIKE '%,%' THEN NULL ELSE v_expl::integer END,
+	concat('Insert by ',current_user,' on ', substring(now()::text,0,20),'. Input params:{"Target feature":"", "Exploitation":"'||v_expl||'", "Source CRM Period":"',v_crm_name,'", "Source Pattern":"',v_pattern,'", "Demand Units":"',v_demandunits,'"}')
+	ON CONFLICT (name) DO NOTHING RETURNING dscenario_id INTO v_scenarioid;
+
+
+	IF v_tmethod = '1' THEN -- use period_id
+
+		v_querytext = '
+		with final_hydros as (
+			SELECT hydrometer_id, sum, custom_sum, pattern_id from ext_rtc_hydrometer_x_data where cat_period_id = '||quote_literal(v_period)||'
+		), aux_data AS (
+			SELECT b.hydrometer_id, b.connec_id AS feature_id, ''CONNEC'' AS feature_type, a.expl_id FROM rtc_hydrometer_x_connec b JOIN connec a USING (connec_id) UNION
+					SELECT hydrometer_id, node_id AS feature_id, ''NODE'' AS feature_type, a.expl_id FROM rtc_hydrometer_x_node JOIN node a USING (node_id)
+		)
+		SELECT*FROM final_hydros LEFT JOIN aux_data USING (hydrometer_id) where feature_id is not null and expl_id in ('||v_expl||')';
+
+	ELSIF v_tmethod = '2' THEN -- calculate period
+
+		v_querytext = 'WITH
+	        period_calculat AS (
+	        SELECT
+	                p.id, p.start_date::date, p.end_date::date, p.period_seconds AS p_seconds,
+	                CASE
+	                     WHEN p.start_date >= '||quote_literal(v_startdate)||'::date THEN p.start_date
+	                     ELSE '||quote_literal(v_startdate)||'
+	                END::date AS c_start_date,
+	                CASE
+	                    WHEN p.end_date <= '||quote_literal(v_enddate)||'::date + INTERVAL ''1 day'' THEN p.end_date
+	                     ELSE '||quote_literal(v_enddate)||'
+	                END::date AS c_end_date
+	            FROM ext_cat_period p
+	            ),
+	        period_selected AS (
+	             SELECT
+	                p.*,
+	                EXTRACT(EPOCH FROM p.c_end_date::date + INTERVAL ''1 day'') - EXTRACT(EPOCH FROM p.c_start_date) AS c_seconds
+	            FROM period_calculat p
+	            WHERE p.end_date >= '||quote_literal(v_startdate)||'
+	            AND  p.start_date <= '||quote_literal(v_enddate)||'::date + INTERVAL ''1 day''
+	      	), final_hydros AS  (
+			    SELECT
+			    d.hydrometer_id,
+			    sum(d.sum*(p.c_seconds/p.p_seconds))::numeric(10,0) AS sum, null as custom_sum, pattern_id
+			    FROM ext_rtc_hydrometer_x_data d
+			    JOIN period_selected p ON d.cat_period_id = p.id
+			    GROUP BY hydrometer_id, pattern_id
+			), aux_data AS (
+				SELECT b.hydrometer_id, b.connec_id AS feature_id, ''CONNEC'' AS feature_type, a.expl_id FROM rtc_hydrometer_x_connec b JOIN connec a USING (connec_id) UNION
+				SELECT hydrometer_id, node_id AS feature_id, ''NODE'' AS feature_type, a.expl_id FROM rtc_hydrometer_x_node JOIN node a USING (node_id)
+			)
+				SELECT*FROM final_hydros LEFT JOIN aux_data USING (hydrometer_id) where feature_id is not null and expl_id in ('||v_expl||')';
+
+	END IF;
+
 
 	IF v_scenarioid IS NULL THEN
 		SELECT dscenario_id INTO v_scenarioid FROM cat_dscenario where name = v_name;
@@ -126,56 +292,34 @@ BEGIN
 		-- this factor is calculated assuming period value is on M3
 		v_factor = 1000*(SELECT value::json->>v_demandunits FROM config_param_system WHERE parameter = 'epa_units_factor')::float/v_periodseconds::float;		
 
-		-- total number of hydrometers
-		v_querytext = 'SELECT count(*) FROM ext_rtc_hydrometer_x_data 
-		JOIN ext_rtc_hydrometer erh on erh.id::varchar = hydrometer_id
-		JOIN rtc_hydrometer_x_connec hc USING (hydrometer_id) 
-		JOIN connec c ON c.connec_id = hc.connec_id
-		WHERE  cat_period_id  = '||v_period||'::text AND c.expl_id = '||v_expl||' AND is_waterbal IN ('||v_waterbal||');';
 
-		EXECUTE v_querytext INTO v_total_hydro;
+		-- count hydrometers and total vol grouped by feature_type
+		EXECUTE 'SELECT COUNT(hydrometer_id) FROM ('||v_querytext||')' INTO v_total_hydro;
 
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)	
+		EXECUTE 'SELECT sum("sum") FROM ('||v_querytext||')' INTO v_total_vol;
+
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1, concat('There are ', v_total_hydro, ' hydrometers with data for this period and this exploitation.'));
-	
-		-- total volume of hydrometers
-		EXECUTE 'SELECT sum(sum) FROM ext_rtc_hydrometer_x_data 
-		JOIN ext_rtc_hydrometer erh on erh.id::varchar = hydrometer_id
-		JOIN rtc_hydrometer_x_connec hc USING (hydrometer_id) 
-		JOIN connec c ON c.connec_id = hc.connec_id	
-		WHERE  cat_period_id  = '||v_period||'::text AND c.expl_id = '||v_expl||' AND is_waterbal IN ('||v_waterbal||');'
-		INTO v_total_vol;
 
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)	
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
 		VALUES (v_fid, v_result_id, 1, concat('The total volume (m3) for all the hydrometers is ', v_total_vol,'.'));
 
-		-- insert connecs
-		EXECUTE 'INSERT INTO inp_dscenario_demand (feature_type, dscenario_id, feature_id, demand, source)
-		SELECT ''CONNEC'' as feature_type, '||v_scenarioid||', c.connec_id as node_id, (case when custom_sum is null then '||v_factor||'*sum else '||v_factor||'*custom_sum end) as volume, hc.hydrometer_id
-		FROM ext_rtc_hydrometer_x_data d
-		JOIN ext_rtc_hydrometer h ON h.id::text = d.hydrometer_id::text
-		JOIN rtc_hydrometer_x_connec hc USING (hydrometer_id) 
-		JOIN connec c ON c.connec_id = hc.connec_id
-		WHERE cat_period_id  = '||v_period||'::text AND c.expl_id = '||v_expl||' AND is_waterbal IN ('||v_waterbal||') order by 2';
-		
-		-- real number of hydrometers
-		GET DIAGNOSTICS v_count = row_count;	
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)	
-		VALUES (v_fid, v_result_id, 1, concat(v_count, ' rows (hydrometers) with demands on CONNEC (wjoin, greentap, fountain or tap) have been inserted on inp_dscenario_demand.'));
 
-		-- insert nodes (netwjoins)
+		-- insert connecs and nodes (netwjoins)
 		EXECUTE 'INSERT INTO inp_dscenario_demand (feature_type, dscenario_id, feature_id, demand, source)
-		SELECT ''NODE'' as feature_type, '||v_scenarioid||', n.node_id, (case when custom_sum is null then '||v_factor||'*sum else '||v_factor||'*custom_sum end) as volume, h.id as hydrometer_id
-		FROM ext_rtc_hydrometer_x_data d
-		JOIN ext_rtc_hydrometer h ON h.id::text = d.hydrometer_id::text
-		JOIN rtc_hydrometer_x_node USING (hydrometer_id) 
-		JOIN node n USING (node_id)
-		WHERE cat_period_id  = '||v_period||'::text AND n.expl_id = '||v_expl||' AND is_waterbal IN ('||v_waterbal||') order by 2';
+		WITH aux as ('||v_querytext||')
+		SELECT  feature_type, '||v_scenarioid||', feature_id,
+		(case when custom_sum is null then '||v_factor||'*sum::numeric else '||v_factor||'*custom_sum::numeric end) as volume,
+		hydrometer_id as source
+		FROM aux order by 2';
 
-		-- real number of hydrometers
-		GET DIAGNOSTICS v_count = row_count;	
-		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)	
-		VALUES (v_fid, v_result_id, 1, concat(v_count, ' rows (hydrometers) with demands on NODE (netwjoin) have been inserted on inp_dscenario_demand.'));
+
+		EXECUTE  '
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		WITH aux as ('||v_querytext||')
+		SELECT '||v_fid||', '||quote_literal(v_result_id)||', 1,
+		concat(count(hydrometer_id), '' rows (hydrometers) with demands on '', feature_type, '' have been inserted on inp_dscenario_demand.'')
+		FROM aux GROUP BY feature_type';
 
 		-- real volume inserted
 		SELECT sum(demand)/v_factor INTO v_count2 FROM inp_dscenario_demand WHERE dscenario_id = v_scenarioid;
@@ -189,6 +333,7 @@ BEGIN
 		VALUES (v_fid, v_result_id, 1, concat('The water loss could be motivated by current connecs with state = 0 which they was operative for that period with some hydrometer linked'));
 	
 		-- update patterns  (1 -> none)
+		
 		IF v_pattern = 2 THEN -- sector default
 
 			UPDATE inp_dscenario_demand d SET pattern_id = s.pattern_id 
@@ -209,19 +354,21 @@ BEGIN
 
 		ELSIF v_pattern = 4 THEN -- dma period
 
-			UPDATE inp_dscenario_demand d SET pattern_id = s.pattern_id 
-			FROM ext_rtc_dma_period s 
-			JOIN connec c ON c.dma_id = s.dma_id::integer  
-			JOIN rtc_hydrometer_x_connec h USING (connec_id) 
-			WHERE d.source = h.hydrometer_id AND cat_period_id = v_period
-			AND dscenario_id = v_scenarioid;
+			EXECUTE '
+			UPDATE inp_dscenario_demand d SET pattern_id = s.pattern_id
+			FROM ext_rtc_dma_period s
+			JOIN connec c ON c.dma_id = s.dma_id::integer
+			JOIN rtc_hydrometer_x_connec h USING (connec_id)
+			WHERE d.source = h.hydrometer_id AND h.hydrometer_id IN (SELECT hydrometer_id FROM ('||v_querytext||'))
+			AND dscenario_id = '||v_scenarioid||'';
 
 		ELSIF v_pattern = 5 THEN -- hydrometer period
 
-			UPDATE inp_dscenario_demand d SET pattern_id = h.pattern_id 
+			EXECUTE '
+			UPDATE inp_dscenario_demand d SET pattern_id = h.pattern_id
 			FROM ext_rtc_hydrometer_x_data h
-			WHERE d.source = h.hydrometer_id AND cat_period_id = v_period
-			AND dscenario_id = v_scenarioid;
+			WHERE d.source = h.hydrometer_id AND h.hydrometer_id IN (SELECT hydrometer_id FROM ('||v_querytext||')
+			AND dscenario_id = '||v_scenarioid||'';
 
 		ELSIF v_pattern = 6 THEN -- hydrometer category
 
@@ -276,7 +423,25 @@ BEGIN
 				VALUES (v_fid, v_result_id, 2, concat('FEATURE PATTERN: inp_junction & inp_connec tables.'));
 			END IF;
 		END IF;
-				
+
+
+		-- hydro stats
+
+		EXECUTE concat(v_queryhydro, ', aux AS (
+    	SELECT DISTINCT last_end_date, hydro_no_llegits, hydro_day,hydro_total,
+		(100*hydro_no_llegits/hydro_total::float) AS percentage
+		FROM hydro_estimated_statistic
+		ORDER BY last_end_date)
+		SELECT aux.*, ROW_NUMBER() OVER(PARTITION BY percentage ORDER BY percentage)
+		FROM aux WHERE percentage< ', v_percent_hydro, ' ORDER BY ROW_NUMBER() OVER() DESC LIMIT 1')
+		INTO v_rec_hydro;
+
+
+		INSERT INTO audit_check_data (fid, result_id, criticity, error_message)
+		VALUES (v_fid, v_result_id, 1,
+		concat('INFO: There are ', v_rec_hydro.hydro_no_llegits, ' non-read hydrometers from ', v_rec_hydro.hydro_total, ' hydrometers in total (', v_rec_hydro.percentage, '% of the hydrometers)')
+		);
+
 		-- set selector
 		INSERT INTO selector_inp_dscenario (dscenario_id,cur_user) VALUES (v_scenarioid, current_user) ON CONFLICT (dscenario_id,cur_user) DO NOTHING;
 

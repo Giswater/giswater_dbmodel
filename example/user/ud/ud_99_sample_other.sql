@@ -908,3 +908,167 @@ UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=7 WHERE formn
 UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=8 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='stylesheet' AND tabname='tab_none';
 UPDATE config_form_fields SET layoutname='lyt_data_1', layoutorder=9 WHERE formname='v_ui_drainzone' AND formtype='form_feature' AND columnname='link' AND tabname='tab_none';
 
+-- 10/03/2025
+UPDATE config_form_tabs SET tabactions='[
+  {
+    "actionName": "actionEdit",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoom",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCentered",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoomOut",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCatalog",
+    "disabled": false
+  },
+  {
+    "actionName": "actionWorkcat",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCopyPaste",
+    "disabled": false
+  },
+  {
+    "actionName": "actionSection",
+    "disabled": false
+  },
+  {
+    "actionName": "actionGetParentId",
+    "disabled": false
+  },
+  {
+    "actionName": "actionLink",
+    "disabled": false
+  }
+]'::json WHERE formname='v_edit_arc' AND tabname='tab_data';
+
+UPDATE config_form_tabs SET tabactions='[
+  {
+    "actionName": "actionEdit",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoom",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCentered",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoomOut",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCatalog",
+    "disabled": false
+  },
+  {
+    "actionName": "actionWorkcat",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCopyPaste",
+    "disabled": false
+  },
+  {
+    "actionName": "actionLink",
+    "disabled": false
+  },
+  {
+    "actionName": "actionGetArcId",
+    "disabled": false
+  },
+  {
+    "actionName": "actionInterpolate",
+    "disabled": false
+  },
+  {
+    "actionName": "actionRotation",
+    "disabled": false
+  }
+]'::json WHERE formname='v_edit_node' AND tabname='tab_data';
+
+UPDATE config_form_tabs SET tabactions='[
+  {
+    "actionName": "actionEdit",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoom",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCentered",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoomOut",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCatalog",
+    "disabled": false
+  },
+  {
+    "actionName": "actionWorkcat",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCopyPaste",
+    "disabled": false
+  },
+  {
+    "actionName": "actionLink",
+    "disabled": false
+  },
+  {
+    "actionName": "actionGetArcId",
+    "disabled": false
+  }
+]'::json WHERE formname='v_edit_connec' AND tabname='tab_data';
+
+UPDATE config_form_tabs SET tabactions='[
+  {
+    "actionName": "actionEdit",
+    "disabled": true
+  },
+  {
+    "actionName": "actionZoom",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCentered",
+    "disabled": false
+  },
+  {
+    "actionName": "actionZoomOut",
+    "disabled": false
+  },
+  {
+    "actionName": "actionWorkcat",
+    "disabled": false
+  },
+  {
+    "actionName": "actionCopyPaste",
+    "disabled": false
+  },
+  {
+    "actionName": "actionLink",
+    "disabled": false
+  },
+  {
+    "actionName": "actionGetArcId",
+    "disabled": false
+  }
+]'::json WHERE formname='v_edit_gully' AND tabname='tab_data';
