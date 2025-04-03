@@ -293,7 +293,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 3, '295',concat(
-		'ERROR-295 (anl_arc): There is/are ',v_count,' arc features with epa_type not according with epa table. Check your data before continue'), v_count);
+		'ERROR-295 (anl_arc): There is/are ',v_count,' arc features with epa_type not according with epa table. Check your data before continue.'), v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
@@ -350,7 +350,7 @@ BEGIN
 	IF v_count > 0 THEN
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 3, '383', concat('ERROR-383: There is/are ',v_count,
-		' material(s) with null values on manning coefficient column used on a real arc wich manning is needed.'),v_count);
+		' material(s) with null values on manning coefficient column used on a real arc where manning is needed.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
@@ -447,11 +447,11 @@ BEGIN
 	
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 3, '427',concat(
-		'ERROR-427 (anl_arc): There is/are ',v_count,' orifice flow regulator(s) wich his length do not respect the minimum length for target arc.'),v_count);
+		'ERROR-427 (anl_arc): There is/are ',v_count,' orifice flow regulator(s) which has/have length that do not respect the minimum length for target arc.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id , 1,  '427','INFO: All orifice flow regulators has lengh wich fits target arc.', v_count);
+		VALUES (v_fid, v_result_id , 1,  '427','INFO: All orifice flow regulators have length which fits target arc.', v_count);
 	END IF;	
 
 	v_querytext = 'SELECT 427, nodarc_id, ''Weir flow regulator length do not respect the minimum length for target arc'', f.the_geom FROM selector_sector s, v_edit_inp_flwreg_weir f
@@ -465,11 +465,11 @@ BEGIN
 	
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 3, '427',concat(
-		'ERROR-427 (anl_arc): There is/are ',v_count,' weir flow regulator(s) wich his length do not respect the minimum length for target arc.'),v_count);
+		'ERROR-427 (anl_arc): There is/are ',v_count,' weir flow regulator(s) which has/have length that do not respect the minimum length for target arc.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id , 1,  '427','INFO: All weir flow regulators has lengh wich fits target arc.',v_count);
+		VALUES (v_fid, v_result_id , 1,  '427','INFO: All weir flow regulators have length which fits target arc.',v_count);
 	END IF;	
 
 	v_querytext = 'SELECT 427, nodarc_id, ''Outlet flow regulator length do not respect the minimum length for target arc'', f.the_geom FROM selector_sector s, v_edit_inp_flwreg_pump f
@@ -484,11 +484,11 @@ BEGIN
 	
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 3, '427',concat(
-		'ERROR-427 (anl_arc): There is/are ',v_count,' outlet flow regulator(s) wich his length do not respect the minimum length for target arc.'),v_count);
+		'ERROR-427 (anl_arc): There is/are ',v_count,' outlet flow regulator(s) which has/have length that do not respect the minimum length for target arc.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id , 1,  '427','INFO: All outlet flow regulators has lengh wich fits target arc.', v_count);
+		VALUES (v_fid, v_result_id , 1,  '427','INFO: All outlet flow regulators have length which fits target arc.', v_count);
 	END IF;	
 
 	v_querytext = 'SELECT 427, nodarc_id, ''Pump flow regulator length do not respect the minimum length for target arc'', f.the_geom FROM selector_sector s, v_edit_inp_flwreg_outlet f
@@ -502,11 +502,11 @@ BEGIN
 	
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
 		VALUES (v_fid, v_result_id, 3, '427',concat(
-		'ERROR-427 (anl_arc): There is/are ',v_count,' pump flow regulator(s) wich his length do not respect the minimum length for target arc.'),v_count);
+		'ERROR-427 (anl_arc): There is/are ',v_count,' pump flow regulator(s) which has/have length that do not respect the minimum length for target arc.'),v_count);
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id , 1,  '427','INFO: All pump flow regulators has lengh wich fits target arc.',v_count);
+		VALUES (v_fid, v_result_id , 1,  '427','INFO: All pump flow regulators have length which fits target arc.',v_count);
 	END IF;	
 
 	RAISE NOTICE '20 - Check valid relative timeseries(459)';
@@ -522,7 +522,7 @@ BEGIN
 		v_count=0;
 	ELSE
 		INSERT INTO temp_audit_check_data (fid, result_id, criticity, table_id, error_message, fcount)
-		VALUES (v_fid, v_result_id , 1,  '427','INFO: All relative timeseries related ot this exploitation are correctly defined.',v_count);
+		VALUES (v_fid, v_result_id , 1,  '427','INFO: All relative timeseries related to this exploitation are correctly defined.',v_count);
 	END IF;	
 
 
