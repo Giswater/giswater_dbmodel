@@ -32,4 +32,6 @@ UPDATE sector set macrosector_id = 0 where macrosector_id is null;
 -- 31/03/2025
 UPDATE config_form_fields SET iseditable = TRUE WHERE columnname = 'to_arc';
 
-
+-- 04/04/2025
+INSERT INTO plan_typevalue (typevalue, id, idval, descript, addparam) VALUES('psector_type', '1', 'PLANNIFIED', NULL, NULL) ON CONFLICT DO NOTHING;
+INSERT INTO sys_foreignkey (typevalue_table, typevalue_name, target_table, target_field, parameter_id, active) VALUES('plan_typevalue', 'psector_type', 'plan_psector', 'psector_type', NULL, true);
