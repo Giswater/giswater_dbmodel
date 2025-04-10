@@ -503,7 +503,7 @@ BEGIN
 			AND n.cat_period_id IS NULL
 			AND n.startdate::date = '||quote_literal(v_startdate)||'::date 
 			AND n.enddate::date = '||quote_literal(v_enddate)||'::date 
-			AND n.expl_id IN ('||v_expl||')'
+			AND n.expl_id IN ('||v_expl||')';
 
 			EXECUTE ' 
 			UPDATE om_waterbalance SET auth_bill_met_hydro = 0 
