@@ -3,3 +3,5 @@
 - Add dqa_style on v_edit_* tables
 - Improve waterbalance function and create scenario from CRM
 - Bug fix on calculation of label position coords
+- Add psector_type widget on psector dialog
+
