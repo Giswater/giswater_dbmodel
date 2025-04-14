@@ -1117,7 +1117,7 @@ AS SELECT d.dma_id,
     d.lastupdate_user,
     d.the_geom
    FROM selector_expl, dma d
-  WHERE d.expl_id = selector_expl.expl_id AND d.active AND dma_id > -1 AND selector_expl.cur_user = "current_user"()::text OR d.expl_id IS NULL
+  WHERE d.expl_id = selector_expl.expl_id AND d.active AND selector_expl.cur_user = "current_user"()::text OR d.expl_id IS NULL
   ORDER BY d.dma_id;
  
 create trigger gw_trg_edit_dma instead of insert  or delete   or update   on
@@ -1142,7 +1142,7 @@ AS SELECT d.dqa_id,
     d.lastupdate_user,
     d.the_geom
    FROM selector_expl, vu_dqa d
-  WHERE d.expl_id = selector_expl.expl_id AND d.active AND dqa_id > -1 AND selector_expl.cur_user = "current_user"()::text OR d.expl_id IS NULL
+  WHERE d.expl_id = selector_expl.expl_id AND d.active AND selector_expl.cur_user = "current_user"()::text OR d.expl_id IS NULL
   ORDER BY d.dqa_id;
 
  create trigger gw_trg_edit_dqa instead of insert  or delete   or update   on
@@ -1167,7 +1167,7 @@ AS SELECT p.presszone_id,
     p.the_geom
    FROM selector_expl,
     vu_presszone p
-  WHERE p.expl_id = selector_expl.expl_id AND p.active AND presszone_id::integer > -1 AND selector_expl.cur_user = "current_user"()::text OR p.expl_id IS NULL
+  WHERE p.expl_id = selector_expl.expl_id AND p.active AND selector_expl.cur_user = "current_user"()::text OR p.expl_id IS NULL
   ORDER BY p.presszone_id;
 
 
