@@ -40,15 +40,15 @@ BEGIN
 			END IF;
 		END IF;
 
-		INSERT INTO dqa (dqa_id, name, expl_id, macrodqa_id, descript, undelete, pattern_id, dqa_type, link, graphconfig, stylesheet)
-		VALUES (NEW.dqa_id, NEW.name, NEW.expl_id, (SELECT macrodqa_id FROM macrodqa WHERE name = NEW.macrodqa_id), NEW.descript, NEW.undelete, NEW.pattern_id, NEW.dqa_type,
+		INSERT INTO dqa (dqa_id, name, expl_id, descript, undelete, pattern_id, dqa_type, link, graphconfig, stylesheet)
+		VALUES (NEW.dqa_id, NEW.name, NEW.expl_id, NEW.descript, NEW.undelete, NEW.pattern_id, NEW.dqa_type,
 		NEW.link, NEW.graphconfig::json, NEW.stylesheet::json);
 
 		IF view_name = 'ui' THEN
-			UPDATE dqa SET active = NEW.active WHERE dqa_id = NEW.dqa_id;
+			UPDATE dqa SET macrodqa_id = (select macrodqa_id from macrodqa where name = new.macrodqa), active = NEW.active WHERE dqa_id = NEW.dqa_id;
 
 		ELSIF view_name = 'edit' THEN
-			UPDATE dqa SET the_geom = NEW.the_geom WHERE dqa_id = NEW.dqa_id;
+			UPDATE dqa SET macrodqa_id = NEW.macrodqa_id, the_geom = NEW.the_geom WHERE dqa_id = NEW.dqa_id;
 
 		END IF;
 
@@ -57,16 +57,16 @@ BEGIN
 	ELSIF TG_OP = 'UPDATE' THEN
 
 		UPDATE dqa
-		SET dqa_id=NEW.dqa_id, name=NEW.name, expl_id=NEW.expl_id, macrodqa_id=(SELECT macrodqa_id FROM macrodqa WHERE name = NEW.macrodqa_id), descript=NEW.descript, undelete=NEW.undelete,
+		SET dqa_id=NEW.dqa_id, name=NEW.name, expl_id=NEW.expl_id, descript=NEW.descript, undelete=NEW.undelete,
 		pattern_id=NEW.pattern_id, dqa_type=NEW.dqa_type, link=NEW.link, graphconfig=NEW.graphconfig::json,
 		stylesheet = NEW.stylesheet::json, lastupdate=now(), lastupdate_user = current_user
 		WHERE dqa_id=OLD.dqa_id;
 
 		IF view_name = 'ui' THEN
-			UPDATE dqa SET active = NEW.active WHERE dqa_id = OLD.dqa_id;
+			UPDATE dqa SET macrodqa_id = (select macrodqa_id from macrodqa where name = new.macrodqa), active = NEW.active WHERE dqa_id = NEW.dqa_id;
 
 		ELSIF view_name = 'edit' THEN
-			UPDATE dqa SET the_geom = NEW.the_geom WHERE dqa_id = OLD.dqa_id;
+			UPDATE dqa SET macrodqa_id = NEW.macrodqa_id, the_geom = NEW.the_geom WHERE dqa_id = NEW.dqa_id;
 
 		END IF;
 

@@ -1065,3 +1065,135 @@ AS WITH typevalue AS (
     n_inhabitants,
     dqa_style
    FROM connec_selected c;
+
+
+
+drop view if exists v_edit_sector;
+CREATE OR REPLACE VIEW v_edit_sector
+AS SELECT s.sector_id,
+    s.name,
+    s.sector_type,
+    s.macrosector_id,
+    s.descript,
+    s.undelete,
+    s.graphconfig::text AS graphconfig,
+    s.stylesheet,
+    s.parent_id,
+    s.pattern_id,
+    s.tstamp,
+    s.insert_user,
+    s.lastupdate,
+    s.lastupdate_user,
+    s.avg_press,
+    s.link,
+    s.the_geom
+   FROM selector_sector, sector s
+  WHERE s.sector_id = selector_sector.sector_id AND selector_sector.cur_user = "current_user"()::text;
+ 
+create trigger gw_trg_edit_sector instead of insert  or delete   or update   on
+v_edit_sector for each row execute function gw_trg_edit_sector('edit');
+
+  
+drop view if exists v_edit_dma;
+CREATE OR REPLACE VIEW v_edit_dma
+AS SELECT d.dma_id,
+    d.name,
+    d.dma_type,
+    d.macrodma_id,
+    d.descript,
+    d.undelete,
+    d.expl_id,
+    d.minc,
+    d.maxc,
+    d.effc,
+    d.pattern_id,
+    d.link,
+    d.graphconfig,
+    d.stylesheet,
+    d.avg_press,
+    d.tstamp,
+    d.insert_user,
+    d.lastupdate,
+    d.lastupdate_user,
+    d.the_geom
+   FROM selector_expl, dma d
+  WHERE d.expl_id = selector_expl.expl_id AND d.active AND dma_id > -1 AND selector_expl.cur_user = "current_user"()::text OR d.expl_id IS NULL
+  ORDER BY d.dma_id;
+ 
+create trigger gw_trg_edit_dma instead of insert  or delete   or update   on
+v_edit_dma for each row execute function gw_trg_edit_dma('edit');
+ 
+ drop view if exists v_edit_dqa;
+CREATE OR REPLACE VIEW v_edit_dqa
+AS SELECT d.dqa_id,
+    d.name,
+    d.dqa_type,
+    d.macrodqa_id,
+    d.descript,
+    d.undelete,
+    d.expl_id,
+    d.pattern_id,
+    d.link,
+    d.graphconfig,
+    d.stylesheet,
+    d.tstamp,
+    d.insert_user,
+    d.lastupdate,
+    d.lastupdate_user,
+    d.the_geom
+   FROM selector_expl, vu_dqa d
+  WHERE d.expl_id = selector_expl.expl_id AND d.active AND dqa_id > -1 AND selector_expl.cur_user = "current_user"()::text OR d.expl_id IS NULL
+  ORDER BY d.dqa_id;
+
+ create trigger gw_trg_edit_dqa instead of insert  or delete   or update   on
+v_edit_dqa for each row execute function gw_trg_edit_dqa('edit');
+
+
+CREATE OR REPLACE VIEW v_edit_presszone
+AS SELECT p.presszone_id,
+    p.name,
+    p.presszone_type,
+    p.descript,
+    p.expl_id,
+    p.link,
+    p.head,
+    p.graphconfig,
+    p.stylesheet,
+    p.tstamp,
+    p.insert_user,
+    p.lastupdate,
+    p.lastupdate_user,
+    p.avg_press,
+    p.the_geom
+   FROM selector_expl,
+    vu_presszone p
+  WHERE p.expl_id = selector_expl.expl_id AND p.active AND presszone_id::integer > -1 AND selector_expl.cur_user = "current_user"()::text OR p.expl_id IS NULL
+  ORDER BY p.presszone_id;
+
+
+drop VIEW v_ui_dqa;
+CREATE OR REPLACE VIEW v_ui_dqa
+AS SELECT d.dqa_id,
+    d.name,
+    d.dqa_type,
+    md.name AS macrodqa,
+    d.descript,
+    d.active,
+    d.undelete,
+    d.expl_id,
+    d.pattern_id,
+    d.link,
+    d.graphconfig,
+    d.stylesheet,
+    d.tstamp,
+    d.insert_user,
+    d.lastupdate,
+    d.lastupdate_user
+   FROM selector_expl s,
+    vu_dqa d
+     LEFT JOIN macrodqa md ON md.macrodqa_id = d.macrodqa_id
+  WHERE d.dqa_id > 0 AND s.expl_id = d.expl_id AND s.cur_user = CURRENT_USER
+  ORDER BY d.dqa_id;
+
+create trigger gw_trg_v_ui_dqa instead of insert    or delete    or update
+on v_ui_dqa for each row execute function gw_trg_edit_dqa('ui');
