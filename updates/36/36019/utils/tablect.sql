@@ -27,8 +27,8 @@ DROP RULE IF EXISTS dma_undefined ON dma;
 DROP RULE IF EXISTS dma_conflict ON dma;
 
 update dma set macrodma_id = 0 where macrodma_id is null;
-ALTER TABLE dma alter column macrodma_id set NOT NULL;
---ALTER TABLE dma alter column macrodma_id set default 0;
+--ALTER TABLE dma alter column macrodma_id set NOT NULL;
+ALTER TABLE dma alter column macrodma_id set default 0;
 
 CREATE RULE dma_conflict AS ON UPDATE TO dma WHERE ((new.dma_id = -1) OR (old.dma_id = -1)) DO INSTEAD NOTHING;
 CREATE RULE dma_undefined AS ON UPDATE TO dma WHERE ((new.dma_id = 0) OR (old.dma_id = 0)) DO INSTEAD NOTHING;;
@@ -39,8 +39,8 @@ DROP RULE IF EXISTS sector_undefined ON sector;
 DROP RULE IF EXISTS sector_conflict ON sector;
 
 update sector set macrosector_id = 0 where macrosector_id is null;
-ALTER TABLE sector alter column macrosector_id set NOT NULL;
---ALTER TABLE sector alter column macrosector_id set default 0;
+--ALTER TABLE sector alter column macrosector_id set NOT NULL;
+ALTER TABLE sector alter column macrosector_id set default 0;
 
 CREATE RULE sector_conflict AS ON UPDATE TO sector WHERE ((new.sector_id = -1) OR (old.sector_id = -1)) DO INSTEAD NOTHING;
 CREATE RULE sector_undefined AS ON UPDATE TO sector WHERE ((new.sector_id = 0) OR (old.sector_id = 0)) DO INSTEAD NOTHING;;
