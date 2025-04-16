@@ -70,6 +70,10 @@ BEGIN
 
 		ELSIF view_name = 'edit' THEN
 			UPDATE dma SET macrodma_id = NEW.macrodma_id, the_geom = NEW.the_geom WHERE dma_id = NEW.dma_id;
+			-- set macrodma_id = 0 if null
+			IF NEW.macrodma_id IS NULL THEN
+				UPDATE dma SET macrodma_id = 0 WHERE dma_id = NEW.dma_id;
+			END IF;
 
 		END IF;
 

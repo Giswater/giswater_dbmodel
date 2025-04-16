@@ -18,6 +18,8 @@ BEGIN
 	IF TG_OP = 'INSERT' THEN
 
 		NEW.active = TRUE;
+		-- set macrosector_id = 0 if null
+		IF NEW.macrosector_id IS NULL THEN NEW.macrosector_id = 0; END IF;
 
 		INSERT INTO sector (sector_id, name, descript, macrosector_id, the_geom, undelete, active, parent_id, stylesheet, sector_type, graphconfig)
 		VALUES (NEW.sector_id, NEW.name, NEW.descript, NEW.macrosector_id, NEW.the_geom, NEW.undelete, NEW.active, NEW.parent_id,

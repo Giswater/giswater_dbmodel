@@ -32,6 +32,10 @@ BEGIN
 
 		ELSIF view_name = 'edit' THEN
 			UPDATE sector SET macrosector_id = NEW.macrosector_id, the_geom = NEW.the_geom WHERE sector_id = NEW.sector_id;
+			-- set macrosector_id = 0 if null
+			IF NEW.macrosector_id IS NULL THEN
+				UPDATE sector SET macrosector_id = 0 WHERE sector_id = NEW.sector_id;
+			END IF;
 
 		END IF;
 
