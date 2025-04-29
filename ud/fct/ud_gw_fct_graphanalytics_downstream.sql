@@ -121,11 +121,15 @@ BEGIN
 
 	-- fill the graph table
 	INSERT INTO temp_t_anlgraph (arc_id, node_1, node_2, water, flag, checkf)
-	SELECT  arc_id::integer, node_1::integer, node_2::integer, 0, 0, 0 FROM v_edit_arc JOIN value_state_type ON state_type=id
-	WHERE node_1 IS NOT NULL AND node_2 IS NOT NULL AND value_state_type.is_operative=TRUE AND v_edit_arc.state > 0;
+	SELECT arc_id::integer, node_1::integer, node_2::integer, 0, 0, 0
+	FROM v_edit_arc
+	WHERE node_1 IS NOT NULL
+	AND node_2 IS NOT NULL
+	AND is_operative=TRUE
+	AND state > 0;
 
 	-- Close mapzone headers
-	EXECUTE 'UPDATE temp_t_anlgraph SET flag=0, water=1, trace = 1::integer  WHERE node_1::integer IN ('||v_node||')';
+	EXECUTE 'UPDATE temp_t_anlgraph SET flag=0, water=1, trace = 1::integer WHERE node_1::integer IN ('||v_node||')';
 
 	-- inundation process
 	LOOP
@@ -149,12 +153,15 @@ BEGIN
 	DELETE FROM anl_node WHERE cur_user="current_user"() AND (fid = 220 or fid=221);
 
 	INSERT INTO anl_arc (arc_id, fid, arccat_id, expl_id, the_geom)
-	SELECT arc_id, v_fid, arc_type, expl_id, the_geom	FROM temp_t_anlgraph
-	join arc using(arc_id)	where water=1;
+	SELECT arc_id, v_fid, arc_type, expl_id, the_geom FROM temp_t_anlgraph
+	JOIN arc USING(arc_id) WHERE water=1;
 
 	INSERT INTO anl_node (node_id, nodecat_id,state, expl_id, fid, the_geom)
 	SELECT node_id, node_type, state, expl_id, v_fid, the_geom
-	FROM v_edit_node WHERE node_id IN (SELECT  node_1 from temp_t_anlgraph where water=1 union SELECT  node_2 from temp_t_anlgraph where water=1);
+	FROM v_edit_node WHERE node_id IN (
+		SELECT node_1 from temp_t_anlgraph where water=1
+		UNION
+		SELECT node_2 from temp_t_anlgraph where water=1);
 
 	DROP VIEW v_temp_graphanalytics_downstream;
 	DROP TABLE temp_t_anlgraph;
@@ -181,14 +188,14 @@ BEGIN
 		'properties', to_jsonb(row) - 'the_geom',
 		'crs',concat('EPSG:',ST_SRID(the_geom))
 	) AS feature
-	FROM (SELECT node_id as feature_id, n.node_type as feature_type, 'Flow exit' as context, n.expl_id, n.the_geom
+	FROM (SELECT node_id as feature_id, n.node_type as feature_type, anl_node.sys_type, 'Flow exit' as context, n.expl_id, n.the_geom
 	FROM  anl_node join node n using (node_id) WHERE fid=v_fid
 	UNION
-	SELECT connec_id, 'CONNEC', 'Flow exit' as context, c.expl_id, c.the_geom
-	FROM anl_arc JOIN connec c using (arc_id) WHERE fid=v_fid
+	SELECT connec_id, c.connec_type, c.sys_type, 'Flow exit' as context, c.expl_id, c.the_geom
+	FROM anl_arc JOIN v_edit_connec c using (arc_id) WHERE fid=v_fid AND cur_user="current_user"() AND c.state > 0 AND c.is_operative=TRUE
 	UNION
-	SELECT gully_id, 'GULLY',  'Flow exit' as context, g.expl_id, g.the_geom
-	FROM anl_arc JOIN gully g using (arc_id) WHERE fid=v_fid) row) features;
+	SELECT gully_id, g.gully_type, g.sys_type, 'Flow exit' as context, g.expl_id, g.the_geom
+	FROM anl_arc JOIN v_edit_gully g using (arc_id) WHERE fid=v_fid AND cur_user="current_user"() AND g.state > 0 AND g.is_operative=TRUE) row) features;
 
 	v_result := COALESCE(v_result, '{}');
 	v_result_point = concat ('{"geometryType":"Point", "layerName": "Flowtrace node", "features":',v_result, '}');
