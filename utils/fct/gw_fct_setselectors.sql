@@ -72,9 +72,8 @@ v_result_valve json;
 v_result_node json;
 v_result_connec json;
 v_result_arc json;
-v_sectorfromexpl boolean;
-v_sectorfrommacro boolean;
-v_explfrommacro boolean;
+v_expl_x_user boolean;
+v_project_type text;
 
 BEGIN
 
@@ -87,9 +86,8 @@ BEGIN
 		INTO v_version;
 
 	-- get system variables
-	v_sectorfromexpl = (SELECT value::json->>'sectorFromExpl' FROM config_param_system WHERE parameter = 'basic_selector_options');
-	v_sectorfrommacro = (SELECT value::json->>'sectorFromMacro' FROM config_param_system WHERE parameter = 'basic_selector_options');
-	v_explfrommacro = (SELECT value::json->>'explFromNacro' FROM config_param_system WHERE parameter = 'basic_selector_options');
+	v_expl_x_user = (SELECT value FROM config_param_system WHERE parameter = 'admin_exploitation_x_user');
+    v_project_type = (SELECT project_type FROM sys_version LIMIT 1);
 
 	-- Get input parameters:
 	v_tabname := (p_data ->> 'data')::json->> 'tabName';
@@ -142,6 +140,61 @@ BEGIN
 	IF v_tabname like '%add%' AND v_addschema IS NOT NULL THEN
 		v_tablename = concat(v_addschema,'.',v_tablename);
 		v_table = concat(v_addschema,'.',v_table);
+	END IF;
+
+	-- create temp tables related to expl x user variable
+	DROP TABLE IF EXISTS temp_exploitation;
+	DROP TABLE IF EXISTS temp_macroexploitation;
+	DROP TABLE IF EXISTS temp_sector;
+	DROP TABLE IF EXISTS temp_macrosector;
+	DROP TABLE IF EXISTS temp_municipality;
+	DROP TABLE IF EXISTS temp_t_mincut;
+
+	IF v_expl_x_user is false then
+		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e WHERE active and expl_id > 0 order by 1;
+		CREATE TEMP TABLE temp_macroexploitation as select e.* from macroexploitation e WHERE active and macroexpl_id > 0 order by 1;
+		CREATE TEMP TABLE temp_sector as select e.* from sector e WHERE active and sector_id > 0 order by 1;
+		CREATE TEMP TABLE temp_macrosector as select e.* from macrosector e WHERE active and macrosector_id > 0 order by 1;
+		CREATE TEMP TABLE temp_municipality as select em.* from ext_municipality em WHERE active and muni_id > 0 order by 1;
+
+		IF v_project_type = 'WS' THEN
+			CREATE TEMP TABLE temp_t_mincut as select e.* from om_mincut e WHERE id > 0 order by 1;
+		END IF;
+	ELSE
+		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e
+		JOIN config_user_x_expl USING (expl_id)	WHERE e.active and expl_id > 0 and username = current_user order by 1;
+
+		CREATE TEMP TABLE temp_macroexploitation as select distinct on (m.macroexpl_id) m.* from macroexploitation m
+		JOIN temp_exploitation e USING (macroexpl_id)
+		WHERE m.active and m.macroexpl_id > 0 order by 1;
+
+		CREATE TEMP TABLE temp_sector as
+		select distinct on (s.sector_id) s.sector_id, s.name, s.macrosector_id, s.descript, s.active from sector s
+		JOIN (SELECT DISTINCT node.sector_id, node.expl_id FROM node WHERE node.state > 0)n USING (sector_id)
+		JOIN exploitation e ON e.expl_id=n.expl_id
+		JOIN config_user_x_expl c ON c.expl_id=n.expl_id WHERE s.active and s.sector_id > 0 and username = current_user
+ 			UNION
+		select distinct on (s.sector_id) s.sector_id, s.name, s.macrosector_id, s.descript, s.active from sector s
+		JOIN (SELECT DISTINCT node.sector_id, node.expl_id FROM node WHERE node.state > 0)n USING (sector_id)
+		WHERE n.sector_id is null AND s.active and s.sector_id > 0
+		order by 1;
+
+		CREATE TEMP TABLE temp_macrosector as select distinct on (m.macrosector_id) m.* from macrosector m
+		JOIN temp_sector e USING (macrosector_id)
+		WHERE m.active and m.macrosector_id > 0;
+
+		CREATE TEMP TABLE temp_municipality as
+		select distinct on (muni_id) muni_id, em.name, descript, em.active from ext_municipality em
+		JOIN (SELECT DISTINCT expl_id, muni_id FROM node)n USING (muni_id)
+		JOIN exploitation e ON e.expl_id=n.expl_id
+		JOIN config_user_x_expl c ON c.expl_id=n.expl_id
+		WHERE em.active and username = current_user;
+
+		IF v_project_type = 'WS' THEN
+			CREATE TEMP TABLE temp_t_mincut AS select distinct on (m.id) m.* from om_mincut m
+			JOIN config_user_x_expl USING (expl_id)
+			where username = current_user and m.id > 0;
+		END IF;
 	END IF;
 
 	-- manage check all
@@ -262,10 +315,6 @@ BEGIN
 		IF v_tabname IN ('tab_exploitation', 'tab_macroexploitation') THEN
 
 			IF v_tabname = 'tab_exploitation' THEN
-
-				IF v_explfrommacro is false THEN
-					DELETE FROM selector_macroexpl WHERE cur_user = current_user;
-				end if;
 				INSERT INTO selector_macroexpl
 				SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user)
 				ON CONFLICT (macroexpl_id, cur_user) DO NOTHING;
@@ -315,9 +364,6 @@ BEGIN
 		ELSIF v_tabname IN ('tab_sector', 'tab_macrosector') THEN
 
 			IF v_tabname = 'tab_sector' THEN
-				IF v_sectorfrommacro is false THEN
-					DELETE FROM selector_macrosector WHERE cur_user = current_user;
-				end if;
 				INSERT INTO selector_macrosector
 				SELECT DISTINCT macrosector_id, current_user FROM sector WHERE sector_id IN (SELECT sector_id FROM selector_sector WHERE cur_user = current_user)
 				ON CONFLICT (macrosector_id, cur_user) DO NOTHING;
@@ -330,18 +376,11 @@ BEGIN
 			END IF;
 
 			-- expl
-			IF v_sectorfromexpl IS FALSE THEN
-				DELETE FROM selector_expl WHERE cur_user = current_user;
-			END IF;
 			INSERT INTO selector_expl
 			SELECT DISTINCT expl_id, current_user FROM node WHERE sector_id IN (SELECT sector_id FROM selector_sector WHERE cur_user = current_user AND sector_id > 0)
 			ON CONFLICT (expl_id, cur_user) DO NOTHING;
 
 			-- muni
-			IF v_sectorfromexpl IS FALSE THEN
-				DELETE FROM selector_municipality WHERE cur_user = current_user;
-			END IF;
-
 			INSERT INTO selector_municipality
 			SELECT DISTINCT muni_id, current_user FROM node WHERE sector_id IN (SELECT sector_id FROM selector_sector WHERE cur_user = current_user AND sector_id > 0)
 			ON CONFLICT (muni_id, cur_user) DO NOTHING;
