@@ -26,6 +26,7 @@ v_expl_id INTEGER;
 v_search_dist INTEGER;
 
 -- vars --
+v_srid INTEGER;
 rec_meter RECORD;
 v_tank_id INTEGER;
 rec RECORD;
