@@ -5,6 +5,7 @@ This version of Giswater is provided by Giswater Association
 */
 
 
+DROP TABLE IF EXISTS temp_dma_order;
 DROP TABLE IF EXISTS dma_graph_object;
 DROP TABLE IF EXISTS dma_graph_meter;
 
@@ -25,3 +26,12 @@ CREATE TABLE dma_graph_meter(
 	attrib json NULL,
 	the_geom public.geometry(LINESTRING, SRID_VALUE),
 	CONSTRAINT dma_graph_meter_pkey PRIMARY KEY (meter_id, expl_id));
+
+CREATE TABLE temp_dma_order (
+    meter_id int,
+    dma_1 int, --source
+    dma_2 int, --target
+    agg_cost int,
+    constraint pkey primary key (meter_id, dma_1, dma_2)
+);
+

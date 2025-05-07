@@ -9,18 +9,32 @@ CREATE OR REPLACE FUNCTION ws.gw_fct_dma_graph(p_data json)
 	LANGUAGE plpgsql
 AS $function$
 
+-- Function code: 3326
+
 /*
 
 -- TODO: type an example
-SELECT ws.gw_fct_dma_graph('1', $${"client":{"device":3,"infoType":100,"lang":"es"},"form":{},
-"data":{"parameters":{"explId":525},"fields":{},"pageInfo":null}}$$)
-
+SELECT ws.gw_fct_dma_graph($${
+"client":{"device":4, "infoType":1, "lang":"ES"},
+"feature":{},"data":{"parameters":{"explId":501, "searchDistRouting":999}}}$$);
 
 */
 
 DECLARE 
+-- input params --
 v_expl_id INTEGER;
-rec_meter record;
+v_search_dist INTEGER;
+
+-- vars --
+rec_meter RECORD;
+v_tank_id INTEGER;
+rec RECORD;
+v_sql_pgrouting TEXT;
+
+-- return --
+v_version TEXT;
+v_result_info TEXT;
+
 
 BEGIN
 	
@@ -29,12 +43,38 @@ BEGIN
 
 
 	-- Input params
-	v_expl_id = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'explId')::integer;	
-		
+	v_expl_id = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'explId')::integer;
+	v_search_dist = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'searchDistRouting')::integer;
+
+	SELECT giswater, epsg INTO v_version, v_srid FROM sys_version LIMIT 1;
+
 
 	-- PART 1 (embeded in  gw_fct_mapzonesanalitics)
+	
+	
+	-- Get topology of dma's
+	v_sql_pgrouting = 'WITH entr AS (SELECT node_id, dma_id AS dma_2 FROM om_waterbalance_dma_graph WHERE flow_sign = 1),
+	sort AS (SELECT node_id, dma_id AS dma_1 FROM om_waterbalance_dma_graph WHERE flow_sign = -1)
+	SELECT node_id::int AS id, dma_1 AS source, dma_2 AS target, 1 AS cost FROM entr 
+	LEFT JOIN sort USING (node_id)
+	JOIN node n using (node_id) 
+	WHERE dma_1 IS NOT NULL AND dma_2 IS NOT NULL AND n.state = 1';
 
 
+	-- Get the flooding order of the dma's using previous query
+	FOR rec in execute 'SELECT DISTINCT "source" from ('||v_sql_pgrouting||')a'
+	LOOP
+		
+		execute '
+		INSERT INTO temp_dma_order (meter_id, dma_1, dma_2, agg_cost)
+		SELECT edge AS meter_id, '||rec."source"||' AS dma_1, node AS dma_2, agg_cost 
+		FROM pgr_drivingDistance('||quote_literal(v_sql_pgrouting)||', '||rec."source"||', '||v_search_dist||')
+		ON CONFLICT (meter_id, dma_1, dma_2) DO NOTHING
+		';
+
+	END LOOP;
+	
+	
 	-- STEP 1.1 Fill the table dma_graph_meter (the tanks are represented with meter_id = 0)
 	INSERT INTO dma_graph_meter (meter_id, object_1, object_2, expl_id, attrib, the_geom) 
 	SELECT a.meter_id, a.dma_1, a.dma_2, n.expl_id, 
@@ -45,55 +85,62 @@ BEGIN
     ) AS attributs,
     st_makeline(array[st_centroid(d.the_geom), n.the_geom, st_centroid(e.the_geom)]) AS the_geom    
     FROM temp_dma_order a
-    JOIN ws.node n on a.meter_id::text = n.node_id
-    JOIN ws.cat_node c on c.id = n.nodecat_id
-    LEFT JOIN ws.dma d on d.dma_id = a.dma_1 
-    LEFT JOIN ws.dma e on e.dma_id = a.dma_2;
+    JOIN node n on a.meter_id::text = n.node_id
+    JOIN cat_node c on c.id = n.nodecat_id
+    LEFT JOIN dma d on d.dma_id = a.dma_1 
+    LEFT JOIN dma e on e.dma_id = a.dma_2
+    ON CONFLICT (meter_id, expl_id) DO NOTHING;
 
    	
-   	-- STEP 1.2 Fill the table dma_graph_object (it has dma's and tanks)
+   	-- STEP 1.2 Fill the table dma_graph_object (it has dma's AND tanks)
 
 	-- INSERT dmas
 	INSERT INTO dma_graph_object (object_id, expl_id, object_type, the_geom)
-	SELECT distinct dma_id, expl_id, 'DMA', st_centroid(the_geom) FROM om_waterbalance WHERE expl_id =  v_expl_id;
+	SELECT DISTINCT dma_id, d.expl_id, 'DMA', st_centroid(the_geom) FROM om_waterbalance_dma_graph 
+	LEFT JOIN dma d using (dma_id) WHERE expl_id =  514
+	ON CONFLICT (object_id, expl_id) DO NOTHING;
 
-	-- INSERT tanks (pgr_drivingdistnace): take them from the meter_id where dma_1 = 0 and dma_2 > 0
-	--v_sql = '
-	--SELECT arc_id::integer AS id, node_1::integer AS source, node_2::integer AS target,
-	SELECT arc_id, node_1, node_2, 
-	CASE WHEN mv1.closed IS true or mv2.closed then 1
-	--WHEN arc_id = el que tiene al lado com dma then 1
+	--INSERT tanks (pgr_drivingdistnace): take them from the meter_id WHERE dma_1 = 0 AND dma_2 > 0
+
+	-- prepare graph: go backward from the meter to look for the tank upstream
+	v_sql_pgrouting = '
+	SELECT arc_id::int AS id, node_1::int AS target, node_2::int AS source,
+	CASE WHEN mv1.closed IS true or mv2.closed then 0
+	WHEN a.dma_id = 0 then 1 
 	ELSE 0 END AS cost
-	FROM ws.arc a
-	LEFT JOIN ws.man_valve mv1 ON node_1=mv1.node_id
-	LEFT JOIN ws.man_valve mv2 ON node_2=mv2.node_id
-	WHERE mv1.closed IS NOT true OR mv2.closed IS NOT true
-	and a.node_1 IS NOT NULL AND a.node_2 IS NOT NULL AND a.state = 1;
-	--';
- 
-   	-- LOOP for each meter_id where dma_1 = 0 and dma_2 > 0 -> and then, find the tank (=last node_id)
-   FOR rec_meter IN SELECT meter_id FROM temp_dma_order WHERE dma_1 = 0 AND dma_2 > 0
-   LOOP
+	FROM arc a
+	LEFT JOIN man_valve mv1 ON node_1=mv1.node_id
+	LEFT JOIN man_valve mv2 ON node_2=mv2.node_id
+	WHERE a.node_1 IS NOT NULL AND a.node_2 IS NOT NULL AND a.state = 1 AND a.dma_id <1
+	AND (mv1.closed IS NOT true OR mv2.closed IS NOT true)
+	';
 
-		-- TO-DO: flood all the pipes and AVOID the pipes that 1) have closed valves as node_1 or node_2 and 2) have dma_id = 0
-		-- TO-DO: querytext as a variable and add schema name to tables
-   		SELECT node INTO v_tank FROM pgr_drivingdistance (
-			'SELECT arc_id::integer AS id, node_1::integer AS source, node_2::integer AS target, 
-			CASE WHEN mv1.closed IS true or mv2.closed then 1
-			--WHEN arc_id = el que tiene al lado com dma then 1
-			 ELSE  0 end AS cost
-			FROM ws.arc a
-			LEFT JOIN ws.man_valve mv1 ON node_1=mv1.node_id
-			LEFT JOIN man_valve mv2 ON node_2=mv2.node_id
-			WHERE node_1 IS not null and node_2 IS not null and a.state = 1
-			and mv1.closed IS not true or mv2.closed IS not true'::text,
-			rec_meter , 1000) JOIN node n ON node = n.node_id WHERE n.nodecat_id LIKE '%DEP%' ORDER BY agg_cost ASC LIMIT 1
-    
-   
-   	   	-- UPDATE dma_graph_meter WHERE object_1 = v_tank  WHERE meter_id = v_meter
-		-- INSERT dma_graph_object (object_id, object_type, expl_id) SELECT v_tank_id, v_expl_id, 'TANK', the_geom FROM node WHERE node_id = v_tank_id
+   	-- LOOP for each meter_id WHERE dma_1 = 0 AND dma_2 > 0 -> AND then, find the tank (=last node_id)
+   	FOR rec_meter IN SELECT meter_id::INT FROM temp_dma_order WHERE dma_1 = 0 AND dma_2 > 0
+   	LOOP
+
+		-- flood all the pipes AND AVOID the pipes that have closed valves AS node_1 or node_2
+	   	EXECUTE '
+	   	SELECT a.node from pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
+		JOIN node n ON node = n.node_id::int WHERE n.nodecat_id LIKE ''%DEP%''
+		order by a.agg_cost asc limit 1;
+    	' INTO v_tank_id;
+			
+   	   	UPDATE dma_graph_meter SET object_1 = v_tank_id  WHERE meter_id = rec_meter.meter_id;
+   	   
+		INSERT INTO dma_graph_object (object_id, object_type, expl_id, the_geom) 
+		SELECT v_tank_id, 'TANK', v_expl_id, node.the_geom FROM node WHERE node_id = quote_literal(v_tank_id);
 			
 	END LOOP;
+
+
+	v_version = COALESCE(v_version, '{}');
+	v_result_info = COALESCE(v_result_info, '{}');
+
+	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"DMA graph successfully created"}, "version":"'||v_version||'"'||
+				',"body":{"form":{}'||
+				',"data":{ "info":'||v_result_info||'}}'||
+			'}')::json, 3326, null, null, null);
 
 END;
 
