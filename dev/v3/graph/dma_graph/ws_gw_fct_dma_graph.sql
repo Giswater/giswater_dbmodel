@@ -108,7 +108,10 @@ BEGIN
 	SELECT arc_id::int AS id, node_1::int AS target, node_2::int AS source,
 	CASE WHEN mv1.closed IS true or mv2.closed then 0
 	WHEN a.dma_id = 0 then 1 
-	ELSE 0 END AS cost
+	ELSE 0 END AS cost,
+	CASE WHEN mv1.closed IS true or mv2.closed then 0
+	WHEN a.dma_id = 0 then 1 
+	ELSE 0 END AS reverse_cost
 	FROM arc a
 	LEFT JOIN man_valve mv1 ON node_1=mv1.node_id
 	LEFT JOIN man_valve mv2 ON node_2=mv2.node_id
@@ -124,8 +127,10 @@ BEGIN
 	   	EXECUTE '
 	   	SELECT a.node from pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
 		JOIN node n ON node = n.node_id::int WHERE n.nodecat_id LIKE ''%DEP%''
-		order by a.agg_cost asc limit 1;
+		order by a.agg_cost asc limit 1
     	' INTO v_tank_id;
+    
+    	raise notice 'tank_id: %  | meter_id: %  |  expl_id: %', v_tank_id, rec_meter.meter_id, rec_meter.expl_id;
 			
    	   	UPDATE dma_graph_meter SET object_1 = v_tank_id  WHERE meter_id = rec_meter.meter_id;
    	   
