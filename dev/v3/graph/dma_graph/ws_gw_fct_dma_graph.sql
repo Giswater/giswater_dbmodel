@@ -114,7 +114,7 @@ BEGIN
 
 	-- prepare graph: go backward from the meter to look for the tank upstream
 	v_sql_pgrouting = '
-	SELECT arc_id::int AS id, node_1::int AS target, node_2::int AS source,
+	SELECT arc_id::int AS id, node_1::int AS source, node_2::int AS target,
 	CASE WHEN mv1.closed IS true or mv2.closed then 0
 	WHEN a.dma_id = 0 then 1 
 	ELSE 0 END AS cost,
@@ -210,6 +210,8 @@ BEGIN
 	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
+	UPDATE dma_graph_object SET coord_x = st_x(the_geom);
+	UPDATE dma_graph_object SET coord_y = st_y(the_geom);
 
 
 	v_version = COALESCE(v_version, '{}');

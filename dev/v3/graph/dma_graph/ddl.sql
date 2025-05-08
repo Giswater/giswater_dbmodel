@@ -16,6 +16,8 @@ CREATE TABLE dma_graph_object (
     label TEXT,
 	order_id INTEGER,
 	attrib json,
+    coord_x numeric,
+    coord_y numeric,
 	the_geom public.geometry(POINT, SRID_VALUE),
 	CONSTRAINT dma_graph_object_pkey PRIMARY KEY (object_id, expl_id));
 
