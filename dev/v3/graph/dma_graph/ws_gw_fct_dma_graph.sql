@@ -16,7 +16,7 @@ AS $function$
 -- TODO: type an example
 SELECT ws.gw_fct_dma_graph($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"feature":{},"data":{"parameters":{"explId":501, "searchDistRouting":999}}}$$);
+"feature":{},"data":{"parameters":{"explId":513, "searchDistRouting":999}}}$$);
 
 */
 
@@ -51,6 +51,11 @@ BEGIN
 
 
 	-- PART 1 (embeded in  gw_fct_mapzonesanalitics)
+
+	-- reset values
+	DELETE FROM dma_graph_meter WHERE expl_id = v_expl_id;
+	DELETE FROM dma_graph_object WHERE expl_id = v_expl_id;
+	DELETE FROM temp_dma_order WHERE meter_id IN (SELECT node_id::INT FROM node WHERE expl_id = v_expl_id);
 	
 	
 	-- Get topology of dma's
@@ -132,7 +137,7 @@ BEGIN
 	   	EXECUTE '
 	   	SELECT a.node FROM pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
 		JOIN node n ON node = n.node_id::int WHERE n.nodecat_id LIKE ''%DEP%''
-		ORDER BY a.agg_cost asc LIMIT 1
+		ORDER BY a.agg_cost ASC LIMIT 1
     	' INTO v_tank_id;
     
     	RAISE NOTICE 'v_tank_id %', v_tank_id;
