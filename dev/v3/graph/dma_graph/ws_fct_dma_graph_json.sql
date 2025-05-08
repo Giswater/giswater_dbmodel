@@ -9,16 +9,32 @@ CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_dma_graph_json(p_data json)
 	LANGUAGE plpgsql
 AS $function$
 
+/*
+
+SELECT ws.gw_fct_dma_graph_json($${
+"client":{"device":4, "infoType":1, "lang":"ES"},
+"feature":{},"data":{"parameters":{"explId":513}}}$$);
+
+*/
+
 
 DECLARE
 v_schema_date date;
 v_json_result_header json;
+v_json_result_nodes json;
+v_json_result_links json;
+v_json_result_return json;
+v_expl_id integer;
+v_entity text;
 
 BEGIN
 
 	-- Input params
-	--
 	SELECT "date" INTO v_schema_date FROM sys_version ORDER BY giswater DESC LIMIT 1;
+	v_expl_id = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'explId')::integer;
+	v_entity = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'entityName')::text;
+
+
 	
 	-- Build Network info:
 	
@@ -26,53 +42,61 @@ BEGIN
 		'name', concat(expl_id, ' - ', e.name), 
 		'description', concat('DMA graph de ', e.name),
 		'macroExpl', concat(n.macroexpl_id, ' - ', f.name),
-		'entity', 'ent',
+		'entity', quote_literal(v_entity),
 		'generatedDate', now(),
-		'schemaDate', v_schema_date,
+		'schemaName', v_schema_date
 	) INTO v_json_result_header
-	FROM ws.v_edit_node n 
+	FROM v_edit_node n 
 	JOIN exploitation e USING (expl_id) 
 	JOIN macroexploitation f ON e.macroexpl_id = f.macroexpl_id
+	WHERE n.expl_id = v_expl_id
 	LIMIT 1;
-
-
-	/*
-	"name": "Red de...",
-    "description": "Sect...",
-    "municipality": "municipio",
-    "entity": "entity",
-    "generatedDate": "2025-04-08T20:46:34Z",
-    "schemaDate": "Nov 1998",
-    "schemaNumber": "1",
-    "sheetNumber": "1"
-	 */
-	
 
 	
 	-- Build key "nodes" (table dma_graph_object)
-	
-	/*
-	"id": "CONN_IB",
-  	"type": "ETAPConnection",
-  	"label": "IB",
-  	"attributes": {},
-  	"schematicPosition": { "x": 400, "y": 50 }
-	*/
-	
+	SELECT 
+	json_agg(
+		json_build_object(
+		'id', object_id,
+		'type', object_type,
+		'label', object_label,
+		'attributes', attrib::json,
+		'coordPosition', json_build_object('x', coord_x, 'y', coord_y)
+		)
+	) INTO v_json_result_nodes
+	FROM dma_graph_object
+	WHERE expl_id = v_expl_id;
 	
 	
 	-- Build key "links" (table dma_graph_meter)
+
+	SELECT 
+	json_agg(
+		json_build_object(
+		'id', meter_id,
+		'type', 'METER',
+		'fromNode', object_1,
+		'toNode', object_2,
+		'attributes', attrib::json
+		) 
+	) INTO v_json_result_links 
+	FROM dma_graph_meter
+	WHERE expl_id = v_expl_id;
+
+
+
+	v_json_result_return = json_build_object(
+		'header', v_json_result_header, 
+		'nodes' ,v_json_result_nodes, 
+		'links', v_json_result_links
+	);
 	
-	/*
- 	"id": "L01_TZO",
- 	"type": "Pipe",
-  	"from_node": "CONN_IB",
-  	"to_node": "DEP",
-  	"attributes": { "networkPressureType": "Baja", "meterId": "98040", "meterTransmission": "Wf" }
- 	*/
+	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"DMA JSON graph successfully created"}, "version":""'||
+				',"body":{"form":{}'||
+				',"data":{ "result":'||v_json_result_return||'}}'||
+			'}')::json, 3326, null, null, null);
 
-
-
+	
 END;
 
 $function$
