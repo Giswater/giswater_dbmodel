@@ -59,7 +59,7 @@ BEGIN
 	SELECT node_id::int AS id, dma_1 AS source, dma_2 AS target, 1 AS cost FROM entr 
 	LEFT JOIN sort USING (node_id)
 	JOIN node n using (node_id) 
-	WHERE dma_1 IS NOT NULL AND dma_2 IS NOT NULL AND n.state = 1';
+	WHERE dma_1 IS NOT NULL AND dma_2 IS NOT NULL AND n.state = 1 AND n.expl_id = '||v_expl_id||'';
 
 
 	-- Get the flooding order of the dma's using previous query
@@ -101,7 +101,7 @@ BEGIN
 	FROM om_waterbalance_dma_graph 
 	LEFT JOIN dma d using (dma_id) 
 	LEFT JOIN temp_dma_order b ON dma_id = b.dma_2
-	WHERE expl_id =  514
+	WHERE expl_id = v_expl_id
 	group by dma_id, expl_id, st_centroid(the_geom)
 	ON CONFLICT (object_id, expl_id) DO NOTHING;
 
@@ -120,7 +120,8 @@ BEGIN
 	LEFT JOIN man_valve mv1 ON node_1=mv1.node_id
 	LEFT JOIN man_valve mv2 ON node_2=mv2.node_id
 	WHERE a.node_1 IS NOT NULL AND a.node_2 IS NOT NULL AND a.state = 1 AND a.dma_id <1
-	AND (mv1.closed IS NOT true OR mv2.closed IS NOT true)
+	AND (mv1.closed IS NOT true OR mv2.closed IS NOT true) 
+	AND a.expl_id = '||v_expl_id||'
 	';
 
    	-- LOOP for each meter_id WHERE dma_1 = 0 AND dma_2 > 0 -> AND then, find the tank (=last node_id)
@@ -134,11 +135,12 @@ BEGIN
 		ORDER BY a.agg_cost asc LIMIT 1
     	' INTO v_tank_id;
     
-    	-- raise notice 'tank_id: %  | meter_id: %  |  expl_id: %', v_tank_id, rec_meter.meter_id
-			
-   	   	UPDATE dma_graph_meter SET object_1 = v_tank_id  WHERE meter_id = rec_meter.meter_id;
+    	RAISE NOTICE 'v_tank_id %', v_tank_id;
+  	   	
    	   
    	   	IF v_tank_id IS NOT NULL THEN
+   	   	
+   	   		EXECUTE 'UPDATE dma_graph_meter SET object_1 = '||v_tank_id||' WHERE meter_id = '||rec_meter.meter_id||'';
    	   		
    	   		EXECUTE '
 	   	   	INSERT INTO dma_graph_object (object_id, object_type, expl_id, the_geom, order_id) 
