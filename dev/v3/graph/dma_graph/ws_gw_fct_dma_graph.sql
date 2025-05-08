@@ -96,9 +96,13 @@ BEGIN
    	-- STEP 1.2 Fill the table dma_graph_object (it has dma's AND tanks)
 
 	-- INSERT dmas
-	INSERT INTO dma_graph_object (object_id, expl_id, object_type, the_geom)
-	SELECT DISTINCT dma_id, d.expl_id, 'DMA', st_centroid(the_geom) FROM om_waterbalance_dma_graph 
-	LEFT JOIN dma d using (dma_id) WHERE expl_id =  514
+	INSERT INTO dma_graph_object (object_id, expl_id, object_type, the_geom, order_id)
+	SELECT DISTINCT dma_id, d.expl_id, 'DMA', st_centroid(the_geom), min(b.agg_cost) 
+	FROM om_waterbalance_dma_graph 
+	LEFT JOIN dma d using (dma_id) 
+	LEFT JOIN temp_dma_order b on dma_id = b.dma_2
+	WHERE expl_id =  514
+	group by dma_id, expl_id, st_centroid(the_geom)
 	ON CONFLICT (object_id, expl_id) DO NOTHING;
 
 	--INSERT tanks (pgr_drivingdistnace): take them from the meter_id WHERE dma_1 = 0 AND dma_2 > 0
@@ -127,15 +131,26 @@ BEGIN
 	   	EXECUTE '
 	   	SELECT a.node from pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
 		JOIN node n ON node = n.node_id::int WHERE n.nodecat_id LIKE ''%DEP%''
-		order by a.agg_cost asc limit 1
+		ORDER BY a.agg_cost asc LIMIT 1
     	' INTO v_tank_id;
     
-    	raise notice 'tank_id: %  | meter_id: %  |  expl_id: %', v_tank_id, rec_meter.meter_id, rec_meter.expl_id;
+    	-- raise notice 'tank_id: %  | meter_id: %  |  expl_id: %', v_tank_id, rec_meter.meter_id
 			
    	   	UPDATE dma_graph_meter SET object_1 = v_tank_id  WHERE meter_id = rec_meter.meter_id;
    	   
-		INSERT INTO dma_graph_object (object_id, object_type, expl_id, the_geom) 
-		SELECT v_tank_id, 'TANK', v_expl_id, node.the_geom FROM node WHERE node_id = quote_literal(v_tank_id);
+   	   	IF v_tank_id IS NOT NULL THEN
+   	   		
+   	   		EXECUTE '
+	   	   	INSERT INTO dma_graph_object (object_id, object_type, expl_id, the_geom, order_id) 
+			SELECT  '||v_tank_id||', ''TANK'', '||v_expl_id||', c.the_geom, b.agg_cost FROM dma_graph_meter a 
+			LEFT JOIN temp_dma_order b using (meter_id)
+			LEFT JOIN node c ON b.meter_id = c.node_id::int
+			WHERE b.meter_id = '||rec_meter.meter_id||'	
+			ON CONFLICT (object_id, expl_id) DO NOTHING
+			';
+		
+		END IF;
+	
 			
 	END LOOP;
 
