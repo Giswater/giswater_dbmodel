@@ -13,6 +13,7 @@ CREATE TABLE dma_graph_object (
 	object_id INTEGER,
 	expl_id INTEGER,
 	object_type TEXT,
+    label TEXT,
 	order_id INTEGER,
 	attrib json,
 	the_geom public.geometry(POINT, SRID_VALUE),

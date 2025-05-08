@@ -208,6 +208,8 @@ BEGIN
 	)a WHERE a.object_id = t.object_id;
 	
 	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
+	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
+	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
 
 
 	v_version = COALESCE(v_version, '{}');
