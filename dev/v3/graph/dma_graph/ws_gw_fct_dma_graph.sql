@@ -86,10 +86,10 @@ BEGIN
     ) AS attributs,
     st_makeline(array[st_centroid(d.the_geom), n.the_geom, st_centroid(e.the_geom)]) AS the_geom    
     FROM temp_dma_order a
-    JOIN node n on a.meter_id::text = n.node_id
-    JOIN cat_node c on c.id = n.nodecat_id
-    LEFT JOIN dma d on d.dma_id = a.dma_1 
-    LEFT JOIN dma e on e.dma_id = a.dma_2
+    JOIN node n ON a.meter_id::text = n.node_id
+    JOIN cat_node c ON c.id = n.nodecat_id
+    LEFT JOIN dma d ON d.dma_id = a.dma_1 
+    LEFT JOIN dma e ON e.dma_id = a.dma_2
     ON CONFLICT (meter_id, expl_id) DO NOTHING;
 
    	
@@ -100,7 +100,7 @@ BEGIN
 	SELECT DISTINCT dma_id, d.expl_id, 'DMA', st_centroid(the_geom), min(b.agg_cost) 
 	FROM om_waterbalance_dma_graph 
 	LEFT JOIN dma d using (dma_id) 
-	LEFT JOIN temp_dma_order b on dma_id = b.dma_2
+	LEFT JOIN temp_dma_order b ON dma_id = b.dma_2
 	WHERE expl_id =  514
 	group by dma_id, expl_id, st_centroid(the_geom)
 	ON CONFLICT (object_id, expl_id) DO NOTHING;
@@ -129,7 +129,7 @@ BEGIN
 
 		-- flood all the pipes AND AVOID the pipes that have closed valves AS node_1 or node_2
 	   	EXECUTE '
-	   	SELECT a.node from pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
+	   	SELECT a.node FROM pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
 		JOIN node n ON node = n.node_id::int WHERE n.nodecat_id LIKE ''%DEP%''
 		ORDER BY a.agg_cost asc LIMIT 1
     	' INTO v_tank_id;
