@@ -155,6 +155,54 @@ BEGIN
 	END LOOP;
 
 
+	-- stats of table dma_graph_object (table of nodes of the graph)
+	UPDATE dma_graph_object t SET attrib = a.json_stats FROM (
+		WITH dma_graph_stats AS (
+		    WITH aa AS ( -- pipe len
+		    SELECT dma_id, round(sum(st_length(the_geom)::numeric/1000), 2) AS pipe_length
+		    FROM arc WHERE state = 1 GROUP BY dma_id
+		    ), bb AS ( -- conexiones totales
+		    SELECT dma_id, count(*) AS n_connecs
+		    FROM connec WHERE state = 1 GROUP BY dma_id
+		    ), cc AS ( -- abonados totales
+		    SELECT c.dma_id, count(a.hydrometer_id) AS n_hydro FROM ws.rtc_hydrometer_x_connec a 
+		    JOIN connec c USING (connec_id) GROUP BY c.dma_id
+		    ), dd AS ( -- count de bombas
+		    SELECT a.dma_id, count(a.node_id) AS n_pump FROM ws.node a 
+		    LEFT JOIN cat_node b ON a.nodecat_id = b.id WHERE b.nodetype_id = 'BOMBA'
+		    AND a.state = 1 GROUP BY b.nodetype_id, a.dma_id
+		    ), ee AS ( -- count de valv reduc pres
+		    SELECT a.dma_id, count(a.node_id) AS n_vrp FROM ws.node a 
+		    LEFT JOIN cat_node b ON a.nodecat_id = b.id WHERE b.nodetype_id = 'VALVULA_REDUCTORA_PRES'
+		    AND a.state = 1 GROUP BY b.nodetype_id, a.dma_id
+		    ), all_tab AS (
+		    SELECT dma_id, 
+		    coalesce(aa.pipe_length, 0) AS pipe_length, 
+		    coalesce(bb.n_connecs, 0) AS n_connecs, 
+		    coalesce(cc.n_hydro, 0) AS n_hydro, 
+		    coalesce(dd.n_pump, 0) AS n_pump, 
+		    coalesce(ee.n_vrp, 0) AS n_vrp FROM aa 
+		        LEFT JOIN bb using (dma_id)
+		        LEFT JOIN cc using (dma_id)
+		        LEFT JOIN dd using (dma_id)
+		        LEFT JOIN ee using (dma_id)
+		    )
+		    SELECT dma_id, json_build_object(
+		    'pipe_length', pipe_length,
+		    'n_connecs', n_connecs,
+		    'n_hydro', n_hydro,
+		    'n_pump', n_pump,
+		    'n_vrp', n_vrp
+		    )::text AS json_stats FROM all_tab
+		)
+		SELECT DISTINCT a.dma_id AS object_id, a.json_stats FROM dma_graph_stats a
+		LEFT JOIN dma b USING (dma_id)
+		LEFT JOIN temp_dma_order c ON b.graphconfig -> 'use' -> 0 ->> 'nodeParent' = c.meter_id::text
+	)a WHERE a.object_id = t.object_id;
+	
+	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
+
+
 	v_version = COALESCE(v_version, '{}');
 	v_result_info = COALESCE(v_result_info, '{}');
 
