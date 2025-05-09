@@ -38,3 +38,9 @@ CREATE TABLE temp_dma_order (
     constraint pkey primary key (meter_id, dma_1, dma_2)
 );
 
+CREATE TABLE dma_graph_json (
+	expl_id int PRIMARY KEY,
+	dma_graph_json json,
+	insert_tstamp timestamp default now(),
+	update_tstamp timestamp default null
+);

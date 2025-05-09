@@ -83,14 +83,19 @@ BEGIN
 	FROM dma_graph_meter
 	WHERE expl_id = v_expl_id;
 
-
-
 	v_json_result_return = json_build_object(
 		'header', v_json_result_header, 
 		'nodes' ,v_json_result_nodes, 
 		'links', v_json_result_links
 	);
 	
+
+	INSERT INTO dma_graph_json (expl_id, dma_graph_json, insert_tstamp)
+	VALUES (v_expl_id, v_json_result_return, now()) ON CONFLICT (expl_id) DO NOTHING; 
+
+	UPDATE dma_graph_json SET dma_graph_json = v_json_result_return, update_tstamp = now() WHERE expl_id = v_expl_id;
+
+
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"DMA JSON graph successfully created"}, "version":""'||
 				',"body":{"form":{}'||
 				',"data":{ "result":'||v_json_result_return||'}}'||
