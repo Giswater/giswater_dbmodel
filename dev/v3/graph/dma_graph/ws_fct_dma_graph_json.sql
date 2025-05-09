@@ -13,7 +13,8 @@ AS $function$
 
 SELECT ws.gw_fct_dma_graph_json($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
-"feature":{},"data":{"parameters":{"explId":513}}}$$);
+"feature":{},
+"data":{"parameters":{"explId":513, "entityName":"test"}}}$$);
 
 */
 
@@ -44,7 +45,7 @@ BEGIN
 		'macroExpl', concat(n.macroexpl_id, ' - ', f.name),
 		'entity', quote_literal(v_entity),
 		'generatedDate', now(),
-		'schemaName', v_schema_date
+		'schemaDate', v_schema_date
 	) INTO v_json_result_header
 	FROM v_edit_node n 
 	JOIN exploitation e USING (expl_id) 
