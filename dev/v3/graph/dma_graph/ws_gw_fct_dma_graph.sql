@@ -210,8 +210,26 @@ BEGIN
 	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
-	UPDATE dma_graph_object SET coord_x = st_x(the_geom);
-	UPDATE dma_graph_object SET coord_y = st_y(the_geom);
+	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
+	UPDATE dma_graph_object SET coord_y = st_y(the_geom) WHERE expl_id = v_expl_id;
+
+
+	-- build geometry for dma_graph_meter
+	UPDATE dma_graph_meter t SET the_geom = a.the_geom FROM (
+		WITH mec AS (
+		SELECT a.*, st_centroid(c.the_geom) AS geom_dma_1, n.the_geom AS geom_meter, st_centroid(b.the_geom) AS geom_dma_2 FROM temp_dma_order a 
+		LEFT JOIN node n ON a.meter_id = n.node_id::int
+		LEFT JOIN dma c ON a.dma_1 = c.dma_id 
+		LEFT JOIN dma b ON a.dma_2 = b.dma_id
+		WHERE meter_id IN (SELECT meter_id FROM dma_graph_meter)
+		)
+		SELECT mec.meter_id, st_makeline(geom ORDER BY orden) AS the_geom FROM (
+			SELECT meter_id, dma_1, dma_2, agg_cost, geom_dma_1 AS geom, 1 AS orden FROM mec UNION
+			SELECT meter_id, dma_1, dma_2, agg_cost, geom_meter AS geom, 2 AS orden FROM mec UNION
+			SELECT meter_id, dma_1, dma_2, agg_cost, geom_dma_2 AS geom, 3 AS orden FROM mec
+		)mec GROUP BY meter_id
+	)a WHERE a.meter_id = t.meter_id;
+
 
 
 	v_version = COALESCE(v_version, '{}');
