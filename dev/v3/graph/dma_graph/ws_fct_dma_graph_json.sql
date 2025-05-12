@@ -74,15 +74,18 @@ BEGIN
 	SELECT 
 	json_agg(
 		json_build_object(
-		'id', meter_id,
+		'id', a.meter_id,
 		'type', 'METER',
-		'fromNode', object_1,
-		'toNode', object_2,
-		'attributes', attrib::json
+		'fromNode', a.object_1,
+		'toNode', a.object_2,
+		'orderId', b.agg_cost,
+		'attributes', a.attrib::json
 		) 
 	) INTO v_json_result_links 
-	FROM dma_graph_meter
-	WHERE expl_id = v_expl_id;
+	FROM dma_graph_meter a
+	LEFT JOIN temp_dma_order b ON a.meter_id = b.meter_id;
+
+
 
 	v_json_result_return = json_build_object(
 		'networkInfo', v_json_result_header, 

@@ -133,7 +133,7 @@ BEGIN
    	FOR rec_meter IN SELECT meter_id::INT FROM temp_dma_order WHERE dma_1 = 0 AND dma_2 > 0
    	LOOP
 
-		-- flood all the pipes AND AVOID the pipes that have closed valves AS node_1 or node_2
+		-- flood all the pipes upstream from the meter AND AVOID the pipes that have closed valves AS node_1 or node_2
 	   	EXECUTE '
 	   	SELECT a.node FROM pgr_drivingdistance ('||quote_literal(v_sql_pgrouting)||', '||rec_meter.meter_id||', 1000) a
 		JOIN node n ON node = n.node_id::int WHERE n.nodecat_id LIKE ''%DEP%''
@@ -143,19 +143,24 @@ BEGIN
     	RAISE NOTICE 'v_tank_id %', v_tank_id;
   	   	
    	   
-   	   	IF v_tank_id IS NOT NULL THEN
+   	   	IF v_tank_id IS NOT NULL THEN -- there IS a tank upstream FROM the meter_is
    	   	
-   	   		EXECUTE 'UPDATE dma_graph_meter SET object_1 = '||v_tank_id||' WHERE meter_id = '||rec_meter.meter_id||'';
-   	   		
+   	   		EXECUTE 'INSERT INTO dma_graph_meter (meter_id, expl_id, object_1, object_2)
+   	   		VALUES ('||v_tank_id||', '||v_expl_id||', '||v_tank_id||', '||rec_meter.meter_id||')';
+   	   	   	   		
    	   		EXECUTE '
-	   	   	INSERT INTO dma_graph_object (object_id, object_type, expl_id, the_geom, order_id) 
-			SELECT  '||v_tank_id||', ''TANK'', '||v_expl_id||', c.the_geom, b.agg_cost FROM dma_graph_meter a 
+	   	   	INSERT INTO dma_graph_object (object_id, object_type, expl_id, order_id) 
+			SELECT  '||v_tank_id||', ''TANK'', '||v_expl_id||', b.agg_cost FROM dma_graph_meter a 
 			LEFT JOIN temp_dma_order b using (meter_id)
 			LEFT JOIN node c ON b.meter_id = c.node_id::int
 			WHERE b.meter_id = '||rec_meter.meter_id||'	
-			ON CONFLICT (object_id, expl_id) DO NOTHING
 			';
 		
+			UPDATE dma_graph_object t SET the_geom = a.the_geom FROM (
+				SELECT node_id, the_geom FROM node
+			)a WHERE t.object_id = a.node_id::int;
+		
+	
 		END IF;
 	
 			
@@ -163,7 +168,7 @@ BEGIN
 
 
 	-- stats of table dma_graph_object (table of nodes of the graph)
-	UPDATE dma_graph_object t SET attrib = a.json_stats::json FROM (
+	UPDATE dma_graph_object t SET attrib = a.json_stats FROM (
 		WITH dma_graph_stats AS (
 		    WITH aa AS ( -- pipe len
 		    SELECT dma_id, round(sum(st_length(the_geom)::numeric/1000), 2) AS pipe_length
@@ -214,8 +219,18 @@ BEGIN
 	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
 	UPDATE dma_graph_object SET coord_y = st_y(the_geom) WHERE expl_id = v_expl_id;
 
+	-- update agg_cost for DMAs (object_1 and object_2)
+	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
+	SELECT a.object_1, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
+	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
+	)b WHERE a.object_id = b.object_1;
+	
+	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
+	SELECT a.object_2, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
+	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
+	)b WHERE a.object_id = b.object_2;
 
-	-- build geometry for dma_graph_meter
+	-- build geometry for dma_graph_meter (object_1 - meter - object_2)
 	UPDATE dma_graph_meter t SET the_geom = a.the_geom FROM (
 		WITH mec AS (
 		SELECT a.*, st_centroid(c.the_geom) AS geom_dma_1, n.the_geom AS geom_meter, st_centroid(b.the_geom) AS geom_dma_2 FROM temp_dma_order a 
@@ -231,6 +246,14 @@ BEGIN
 		)mec GROUP BY meter_id
 	)a WHERE a.meter_id = t.meter_id;
 
+	
+	-- built geometry for dma_graph_meter (tank-dma)
+	UPDATE dma_graph_meter t SET the_geom = a.line_tank FROM (
+	SELECT a.meter_id, st_makeline(n.the_geom, b.the_geom) AS line_tank FROM dma_graph_meter a
+	LEFT JOIN node n ON a.object_1 = n.node_id::int
+	LEFT JOIN node b ON a.object_2 = b.node_id::int
+	JOIN dma_graph_object c ON a.meter_id = c.object_id WHERE c.object_type = 'TANK'
+	)a WHERE t.meter_id = a.meter_id;
 
 
 	v_version = COALESCE(v_version, '{}');
