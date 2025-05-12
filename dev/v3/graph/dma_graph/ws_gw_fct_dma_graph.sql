@@ -163,7 +163,7 @@ BEGIN
 
 
 	-- stats of table dma_graph_object (table of nodes of the graph)
-	UPDATE dma_graph_object t SET attrib = a.json_stats FROM (
+	UPDATE dma_graph_object t SET attrib = a.json_stats::json FROM (
 		WITH dma_graph_stats AS (
 		    WITH aa AS ( -- pipe len
 		    SELECT dma_id, round(sum(st_length(the_geom)::numeric/1000), 2) AS pipe_length
@@ -208,8 +208,8 @@ BEGIN
 	)a WHERE a.object_id = t.object_id;
 	
 	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
-	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
-	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
+	UPDATE dma_graph_object t SET object_label = concat('tank ', a.name) FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
+	UPDATE dma_graph_object t SET object_label = concat('dma ', a.name) FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
 	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
 	UPDATE dma_graph_object SET coord_y = st_y(the_geom) WHERE expl_id = v_expl_id;
 
