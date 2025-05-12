@@ -207,9 +207,10 @@ BEGIN
 		LEFT JOIN temp_dma_order c ON b.graphconfig -> 'use' -> 0 ->> 'nodeParent' = c.meter_id::text
 	)a WHERE a.object_id = t.object_id;
 	
+	-- fill table
 	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
-	UPDATE dma_graph_object t SET object_label = concat('tank ', a.name) FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
-	UPDATE dma_graph_object t SET object_label = concat('dma ', a.name) FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
+	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
+	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
 	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
 	UPDATE dma_graph_object SET coord_y = st_y(the_geom) WHERE expl_id = v_expl_id;
 
