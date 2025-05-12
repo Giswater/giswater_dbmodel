@@ -62,7 +62,7 @@ BEGIN
 		'type', object_type,
 		'label', object_label,
 		'attributes', attrib::json,
-		'coordPosition', json_build_object('x', coord_x, 'y', coord_y)
+		'coordPosition', json_build_object('x', round(ST_X(the_geom)::numeric, 3), 'y', round(st_y(the_geom)::numeric, 3))
 		)
 	) INTO v_json_result_nodes
 	FROM dma_graph_object
@@ -85,7 +85,7 @@ BEGIN
 	WHERE expl_id = v_expl_id;
 
 	v_json_result_return = json_build_object(
-		'header', v_json_result_header, 
+		'networkInfo', v_json_result_header, 
 		'nodes' ,v_json_result_nodes, 
 		'links', v_json_result_links
 	);

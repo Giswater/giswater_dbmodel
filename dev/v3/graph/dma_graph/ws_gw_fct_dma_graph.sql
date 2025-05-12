@@ -195,11 +195,11 @@ BEGIN
 		        LEFT JOIN ee using (dma_id)
 		    )
 		    SELECT dma_id, json_build_object(
-		    'pipe_length', pipe_length,
-		    'n_connecs', n_connecs,
-		    'n_hydro', n_hydro,
-		    'n_pump', n_pump,
-		    'n_vrp', n_vrp
+		    'pipeLength', pipe_length,
+		    'numConnecs', n_connecs,
+		    'numHydro', n_hydro,
+		    'numPump', n_pump,
+		    'numVrp', n_vrp
 		    )::text AS json_stats FROM all_tab
 		)
 		SELECT DISTINCT a.dma_id AS object_id, a.json_stats FROM dma_graph_stats a
