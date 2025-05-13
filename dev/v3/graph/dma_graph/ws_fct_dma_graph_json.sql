@@ -11,7 +11,7 @@ AS $function$
 
 /*
 
-SELECT ws.gw_fct_dma_graph_json($${
+SELECT SCHEMA_NAME.gw_fct_dma_graph_json($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "feature":{},
 "data":{"parameters":{"explId":513, "entityName":"test"}}}$$);
@@ -50,7 +50,7 @@ BEGIN
 	FROM v_edit_node n 
 	JOIN exploitation e USING (expl_id) 
 	JOIN macroexploitation f ON e.macroexpl_id = f.macroexpl_id
-	WHERE n.expl_id = v_expl_id
+	WHERE e.expl_id = v_expl_id
 	LIMIT 1;
 
 	

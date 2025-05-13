@@ -4,7 +4,7 @@ The program IS free software: you can redistribute it and/or modify it under the
 This version of Giswater IS provided by Giswater Association
 */
 
-CREATE OR REPLACE FUNCTION ws.gw_fct_dma_graph(p_data json)
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_dma_graph(p_data json)
 	RETURNS json
 	LANGUAGE plpgsql
 AS $function$
@@ -14,7 +14,7 @@ AS $function$
 /*
 
 -- TODO: type an example
-SELECT ws.gw_fct_dma_graph($${
+SELECT SCHEMA_NAME.gw_fct_dma_graph($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "feature":{},"data":{"parameters":{"explId":513, "searchDistRouting":999}}}$$);
 
@@ -177,14 +177,14 @@ BEGIN
 		    SELECT dma_id, count(*) AS n_connecs
 		    FROM connec WHERE state = 1 GROUP BY dma_id
 		    ), cc AS ( -- abonados totales
-		    SELECT c.dma_id, count(a.hydrometer_id) AS n_hydro FROM ws.rtc_hydrometer_x_connec a 
+		    SELECT c.dma_id, count(a.hydrometer_id) AS n_hydro FROM rtc_hydrometer_x_connec a 
 		    JOIN connec c USING (connec_id) GROUP BY c.dma_id
 		    ), dd AS ( -- count de bombas
-		    SELECT a.dma_id, count(a.node_id) AS n_pump FROM ws.node a 
+		    SELECT a.dma_id, count(a.node_id) AS n_pump FROM node a 
 		    LEFT JOIN cat_node b ON a.nodecat_id = b.id WHERE b.nodetype_id = 'BOMBA'
 		    AND a.state = 1 GROUP BY b.nodetype_id, a.dma_id
 		    ), ee AS ( -- count de valv reduc pres
-		    SELECT a.dma_id, count(a.node_id) AS n_vrp FROM ws.node a 
+		    SELECT a.dma_id, count(a.node_id) AS n_vrp FROM node a 
 		    LEFT JOIN cat_node b ON a.nodecat_id = b.id WHERE b.nodetype_id = 'VALVULA_REDUCTORA_PRES'
 		    AND a.state = 1 GROUP BY b.nodetype_id, a.dma_id
 		    ), all_tab AS (
@@ -254,6 +254,14 @@ BEGIN
 	LEFT JOIN node b ON a.object_2 = b.node_id::int
 	JOIN dma_graph_object c ON a.meter_id = c.object_id WHERE c.object_type = 'TANK'
 	)a WHERE t.meter_id = a.meter_id;
+
+
+	-- execute fct to create json graph
+	EXECUTE '
+	SELECT gw_fct_dma_graph_json($${
+	"client":{"device":4, "infoType":1, "lang":"ES"},
+	"feature":{},"data":{"parameters":{"explId":'||v_expl_id||', "searchDistRouting":999}}}$$)
+	';
 
 
 	v_version = COALESCE(v_version, '{}');
