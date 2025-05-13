@@ -115,12 +115,12 @@ BEGIN
 	-- prepare graph: go backward from the meter to look for the tank upstream
 	v_sql_pgrouting = '
 	SELECT arc_id::int AS id, node_1::int AS source, node_2::int AS target,
-	CASE WHEN mv1.closed IS true or mv2.closed then 0
+	CASE WHEN mv1.closed IS true or mv2.closed then -1
 	WHEN a.dma_id = 0 then 1 
-	ELSE 0 END AS cost,
-	CASE WHEN mv1.closed IS true or mv2.closed then 0
+	ELSE -1 END AS cost,
+	CASE WHEN mv1.closed IS true or mv2.closed then -1
 	WHEN a.dma_id = 0 then 1 
-	ELSE 0 END AS reverse_cost
+	ELSE -1 END AS reverse_cost
 	FROM arc a
 	LEFT JOIN man_valve mv1 ON node_1=mv1.node_id
 	LEFT JOIN man_valve mv2 ON node_2=mv2.node_id
