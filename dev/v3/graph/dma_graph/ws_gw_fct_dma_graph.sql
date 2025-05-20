@@ -82,7 +82,7 @@ BEGIN
 	
 	
 	-- STEP 1.1 Fill the table dma_graph_meter (the tanks are represented with meter_id = 0)
-	INSERT INTO dma_graph_meter (meter_id, object_1, object_2, expl_id, attrib, the_geom) 
+	INSERT INTO dma_graph_meter (meter_id, object_1, object_2, expl_id, attrib, the_geom, order_id) 
 	SELECT a.meter_id, a.dma_1, a.dma_2, n.expl_id, 
     json_build_object(
     'networkPressureType', n.category_type,
@@ -91,11 +91,13 @@ BEGIN
     ) AS attributs,
     --st_makeline(array[st_centroid(d.the_geom), n.the_geom, st_centroid(e.the_geom)]) AS the_geom,
     st_makeline(CASE WHEN d.the_geom IS NULL THEN n.the_geom ELSE st_centroid(d.the_geom) end, st_centroid(e.the_geom)) AS the_geom,    
+    a.agg_cost AS order_id
     FROM temp_dma_order a
     JOIN node n ON a.meter_id::text = n.node_id
     JOIN cat_node c ON c.id = n.nodecat_id
     LEFT JOIN dma d ON d.dma_id = a.dma_1 
     LEFT JOIN dma e ON e.dma_id = a.dma_2
+    WHERE n.expl_id = v_expl_id AND a.agg_cost = 1
     ON CONFLICT (meter_id, expl_id) DO NOTHING;
 
    	
@@ -146,9 +148,12 @@ BEGIN
    	   
    	   	IF v_tank_id IS NOT NULL THEN -- there IS a tank upstream FROM the meter_is
    	   	
-   	   		EXECUTE 'INSERT INTO dma_graph_meter (meter_id, expl_id, object_1, object_2)
-   	   		VALUES ('||v_tank_id||', '||v_expl_id||', '||v_tank_id||', '||rec_meter.meter_id||')';
-   	   	   	   		
+   	   		EXECUTE 'INSERT INTO dma_graph_meter (meter_id, expl_id, object_1, object_2, order_id)
+   	   		VALUES ('||v_tank_id||', '||v_expl_id||', '||v_tank_id||', '||rec_meter.meter_id||', 1)
+			ON CONFLICT (meter_id, expl_id) DO NOTHING';
+   	   	
+   	   		EXECUTE 'UPDATE dma_graph_meter SET object_1 = '||v_tank_id||' WHERE meter_id = '||rec_meter.meter_id||'';
+   	   		
    	   		EXECUTE '
 	   	   	INSERT INTO dma_graph_object (object_id, object_type, expl_id, order_id) 
 			SELECT  '||v_tank_id||', ''TANK'', '||v_expl_id||', b.agg_cost FROM dma_graph_meter a 
