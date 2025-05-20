@@ -89,7 +89,8 @@ BEGIN
     'meterId', a.meter_id,
     'meterTransmission', c.matcat_id
     ) AS attributs,
-    st_makeline(array[st_centroid(d.the_geom), n.the_geom, st_centroid(e.the_geom)]) AS the_geom    
+    --st_makeline(array[st_centroid(d.the_geom), n.the_geom, st_centroid(e.the_geom)]) AS the_geom,
+    st_makeline(CASE WHEN d.the_geom IS NULL THEN n.the_geom ELSE st_centroid(d.the_geom) end, st_centroid(e.the_geom)) AS the_geom,    
     FROM temp_dma_order a
     JOIN node n ON a.meter_id::text = n.node_id
     JOIN cat_node c ON c.id = n.nodecat_id
@@ -230,29 +231,20 @@ BEGIN
 	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
 	)b WHERE a.object_id = b.object_2;
 
-	-- build geometry for dma_graph_meter (object_1 - meter - object_2)
-	UPDATE dma_graph_meter t SET the_geom = a.the_geom FROM (
-		WITH mec AS (
-		SELECT a.*, st_centroid(c.the_geom) AS geom_dma_1, n.the_geom AS geom_meter, st_centroid(b.the_geom) AS geom_dma_2 FROM temp_dma_order a 
-		LEFT JOIN node n ON a.meter_id = n.node_id::int
-		LEFT JOIN dma c ON a.dma_1 = c.dma_id 
-		LEFT JOIN dma b ON a.dma_2 = b.dma_id
-		WHERE meter_id IN (SELECT meter_id FROM dma_graph_meter)
-		)
-		SELECT mec.meter_id, st_makeline(geom ORDER BY orden) AS the_geom FROM (
-			SELECT meter_id, dma_1, dma_2, agg_cost, geom_dma_1 AS geom, 1 AS orden FROM mec UNION
-			SELECT meter_id, dma_1, dma_2, agg_cost, geom_meter AS geom, 2 AS orden FROM mec UNION
-			SELECT meter_id, dma_1, dma_2, agg_cost, geom_dma_2 AS geom, 3 AS orden FROM mec
-		)mec GROUP BY meter_id
-	)a WHERE a.meter_id = t.meter_id;
 
 	
-	-- built geometry for dma_graph_meter (tank-dma)
 	UPDATE dma_graph_meter t SET the_geom = a.line_tank FROM (
-	SELECT a.meter_id, st_makeline(n.the_geom, b.the_geom) AS line_tank FROM dma_graph_meter a
+	SELECT a.meter_id, st_makeline(n.the_geom, st_centroid(b.the_geom)) AS line_tank FROM dma_graph_meter a
 	LEFT JOIN node n ON a.object_1 = n.node_id::int
-	LEFT JOIN node b ON a.object_2 = b.node_id::int
-	JOIN dma_graph_object c ON a.meter_id = c.object_id WHERE c.object_type = 'TANK'
+	LEFT JOIN dma b ON a.object_2 = b.dma_id::int
+	WHERE st_makeline(n.the_geom, st_centroid(b.the_geom)) IS NOT NULL
+	)a WHERE t.meter_id = a.meter_id;
+
+	UPDATE dma_graph_meter t SET order_id = max_agg_cost FROM (
+		SELECT a.meter_id, max(b.agg_cost) AS max_agg_cost from dma_graph_meter a 
+		JOIN temp_dma_order b USING (meter_id)
+		WHERE a.expl_id = v_expl_id
+		GROUP BY meter_id, expl_id
 	)a WHERE t.meter_id = a.meter_id;
 
 
