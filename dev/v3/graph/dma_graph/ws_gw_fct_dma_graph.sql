@@ -237,6 +237,27 @@ BEGIN
 	)b WHERE a.object_id = b.object_2;
 
 
+	-- remove null values on order_id
+	UPDATE dma_graph_object SET order_id = order_id+1 WHERE expl_id = v_expl_id AND order_id IS NOT NULL AND object_type = 'DMA';
+	UPDATE dma_graph_object SET order_id = 1 WHERE order_id IS NULL AND object_type = 'TANK';
+
+	-- build topology of meters into table of nodes
+	UPDATE dma_graph_object t SET meter_2 = a.meter_1 FROM (
+		SELECT object_1, array_agg(meter_id) AS meter_1 
+		FROM dma_graph_meter WHERE expl_id = v_expl_id 
+		GROUP BY object_1
+	)a WHERE t.object_id = a.object_1 AND t.expl_id = v_expl_id;
+
+	UPDATE dma_graph_object t SET meter_1 = a.meter_2 FROM (
+		SELECT object_2, array_agg(meter_id) AS meter_2 
+		FROM dma_graph_meter WHERE expl_id = v_expl_id 
+		GROUP BY object_2
+	)a WHERE t.object_id = a.object_2 AND t.expl_id = v_expl_id;
+
+	UPDATE dma_graph_object 
+	SET meter_1 = array_remove(meter_1, object_id), meter_2 = array_remove(meter_2, object_id) 
+	WHERE expl_id = v_expl_id;
+
 	
 	UPDATE dma_graph_meter t SET the_geom = a.line_tank FROM (
 	SELECT a.meter_id, st_makeline(n.the_geom, st_centroid(b.the_geom)) AS line_tank FROM dma_graph_meter a
