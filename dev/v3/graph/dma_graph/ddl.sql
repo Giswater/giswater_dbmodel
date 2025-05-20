@@ -10,8 +10,8 @@ DROP TABLE IF EXISTS dma_graph_object;
 DROP TABLE IF EXISTS dma_graph_meter;
 
 CREATE TABLE dma_graph_object (
-	object_id INTEGER,
-	expl_id INTEGER,
+	object_id INTEGER NOT NULL,
+	expl_id INTEGER NOT NULL,
 	object_type TEXT,
 	object_label TEXT,
     label TEXT,
@@ -19,12 +19,14 @@ CREATE TABLE dma_graph_object (
 	attrib json,
     coord_x numeric,
     coord_y numeric,
+	meter_1 _int4 NULL,
+	meter_2 _int4 NULL,
 	the_geom public.geometry(POINT, SRID_VALUE),
 	CONSTRAINT dma_graph_object_pkey PRIMARY KEY (object_id, expl_id));
 
 CREATE TABLE dma_graph_meter(
 	meter_id int4 NOT NULL,
-	expl_id int4 NULL,
+	expl_id int4 NOT NULL,
 	object_1 int4 NULL,
 	object_2 int4 NULL,
 	attrib json NULL,
