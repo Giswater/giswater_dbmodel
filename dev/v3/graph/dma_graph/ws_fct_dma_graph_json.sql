@@ -40,10 +40,9 @@ BEGIN
 	-- Build Network info:
 	
 	SELECT json_build_object(
-		'name', concat(expl_id, ' - ', e.name), 
+		'name', concat(v_expl_id, ' - ', e.name), 
 		'description', concat('DMA graph de ', e.name),
 		'macroExpl', concat(n.macroexpl_id, ' - ', f.name),
-		'entity', quote_literal(v_entity),
 		'generatedDate', now(),
 		'schemaDate', v_schema_date
 	) INTO v_json_result_header
@@ -62,6 +61,9 @@ BEGIN
 		'type', object_type,
 		'label', object_label,
 		'attributes', attrib::json,
+		'orderId', order_id,
+		'fromMeter', meter_1,
+		'toMeter', meter_2,
 		'coordPosition', json_build_object('x', round(ST_X(the_geom)::numeric, 3), 'y', round(st_y(the_geom)::numeric, 3))
 		)
 	) INTO v_json_result_nodes
@@ -70,20 +72,19 @@ BEGIN
 	
 	
 	-- Build key "links" (table dma_graph_meter)
-
 	SELECT 
 	json_agg(
 		json_build_object(
-		'id', a.meter_id,
+		'id', meter_id,
 		'type', 'METER',
-		'fromNode', a.object_1,
-		'toNode', a.object_2,
-		'orderId', b.agg_cost,
-		'attributes', a.attrib::json
+		'fromNode', object_1,
+		'toNode', object_2,
+		'orderId', order_id,
+		'attributes', attrib::json
 		) 
 	) INTO v_json_result_links 
 	FROM dma_graph_meter a
-	LEFT JOIN temp_dma_order b ON a.meter_id = b.meter_id;
+	WHERE expl_id = v_expl_id;
 
 
 
