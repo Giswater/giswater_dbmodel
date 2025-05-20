@@ -30,6 +30,7 @@ CREATE TABLE dma_graph_meter(
 	object_1 int4 NULL,
 	object_2 int4 NULL,
 	attrib json NULL,
+	order_id int4 NULL,
 	the_geom public.geometry(LINESTRING, SRID_VALUE),
 	CONSTRAINT dma_graph_meter_pkey PRIMARY KEY (meter_id, expl_id));
 

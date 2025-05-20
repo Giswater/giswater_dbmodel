@@ -40,7 +40,7 @@ v_result_info TEXT;
 BEGIN
 	
 	-- Search path
-	SET search_path = "ws", public;
+	SET search_path = "SCHEMA_NAME", public;
 
 
 	-- Input params
@@ -174,7 +174,7 @@ BEGIN
 
 
 	-- stats of table dma_graph_object (table of nodes of the graph)
-	UPDATE dma_graph_object t SET attrib = a.json_stats FROM (
+	UPDATE dma_graph_object t SET attrib = a.json_stats::json FROM (
 		WITH dma_graph_stats AS (
 		    WITH aa AS ( -- pipe len
 		    SELECT dma_id, round(sum(st_length(the_geom)::numeric/1000), 2) AS pipe_length
@@ -219,7 +219,7 @@ BEGIN
 	)a WHERE a.object_id = t.object_id;
 	
 	-- fill table
-	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
+	UPDATE dma_graph_object set attrib = '{}'::json WHERE attrib IS NULL;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
 	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
@@ -228,12 +228,12 @@ BEGIN
 	-- update agg_cost for DMAs (object_1 and object_2)
 	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
 	SELECT a.object_1, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
-	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
+	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib::text, the_geom
 	)b WHERE a.object_id = b.object_1;
 	
 	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
 	SELECT a.object_2, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
-	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
+	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib::text, the_geom
 	)b WHERE a.object_id = b.object_2;
 
 
