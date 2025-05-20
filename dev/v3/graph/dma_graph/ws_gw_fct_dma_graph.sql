@@ -13,7 +13,6 @@ AS $function$
 
 /*
 
--- TODO: type an example
 SELECT SCHEMA_NAME.gw_fct_dma_graph($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "feature":{},"data":{"parameters":{"explId":513, "searchDistRouting":999}}}$$);
@@ -39,11 +38,11 @@ v_result_info TEXT;
 
 BEGIN
 	
-	-- Search path
+	-- NOTE: Search path
 	SET search_path = "SCHEMA_NAME", public;
 
 
-	-- Input params
+	-- NOTE: Input params
 	v_expl_id = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'explId')::integer;
 	v_search_dist = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'searchDistRouting')::integer;
 
@@ -52,13 +51,13 @@ BEGIN
 
 	-- PART 1 (embeded in  gw_fct_mapzonesanalitics)
 
-	-- reset values
+	-- NOTE: Reset values
 	DELETE FROM dma_graph_meter WHERE expl_id = v_expl_id;
 	DELETE FROM dma_graph_object WHERE expl_id = v_expl_id;
 	DELETE FROM temp_dma_order WHERE meter_id IN (SELECT node_id::INT FROM node WHERE expl_id = v_expl_id);
 	
 	
-	-- Get topology of dma's
+	-- NOTE: Get topology of dma's
 	v_sql_pgrouting = 'WITH entr AS (SELECT node_id, dma_id AS dma_2 FROM om_waterbalance_dma_graph WHERE flow_sign = 1),
 	sort AS (SELECT node_id, dma_id AS dma_1 FROM om_waterbalance_dma_graph WHERE flow_sign = -1)
 	SELECT node_id::int AS id, dma_1 AS source, dma_2 AS target, 1 AS cost FROM entr 
@@ -67,7 +66,7 @@ BEGIN
 	WHERE dma_1 IS NOT NULL AND dma_2 IS NOT NULL AND n.state = 1 AND n.expl_id = '||v_expl_id||'';
 
 
-	-- Get the flooding order of the dma's using previous query
+	-- NOTE: Get the flooding order of the dma's using previous query
 	FOR rec in execute 'SELECT DISTINCT "source" from ('||v_sql_pgrouting||')a'
 	LOOP
 		
@@ -81,7 +80,7 @@ BEGIN
 	END LOOP;
 	
 	
-	-- STEP 1.1 Fill the table dma_graph_meter (the tanks are represented with meter_id = 0)
+	-- SECTION: STEP 1.1 Fill the table dma_graph_meter (the tanks are represented with meter_id = 0)
 	INSERT INTO dma_graph_meter (meter_id, object_1, object_2, expl_id, attrib, the_geom, order_id) 
 	SELECT a.meter_id, a.dma_1, a.dma_2, n.expl_id, 
     json_build_object(
@@ -100,10 +99,11 @@ BEGIN
     WHERE n.expl_id = v_expl_id AND a.agg_cost = 1
     ON CONFLICT (meter_id, expl_id) DO NOTHING;
 
+	-- !SECTION
    	
-   	-- STEP 1.2 Fill the table dma_graph_object (it has dma's AND tanks)
+   	-- SECTION: STEP 1.2 Fill the table dma_graph_object (it has dma's AND tanks)
 
-	-- INSERT dmas
+	-- NOTE: Insert dmas
 	INSERT INTO dma_graph_object (object_id, expl_id, object_type, the_geom, order_id)
 	SELECT DISTINCT dma_id, d.expl_id, 'DMA', st_centroid(the_geom), min(b.agg_cost) 
 	FROM om_waterbalance_dma_graph 
@@ -113,9 +113,12 @@ BEGIN
 	group by dma_id, expl_id, st_centroid(the_geom)
 	ON CONFLICT (object_id, expl_id) DO NOTHING;
 
-	--INSERT tanks (pgr_drivingdistnace): take them from the meter_id WHERE dma_1 = 0 AND dma_2 > 0
+	-- NOTE: Insert tanks 
+	-- (pgr_drivingdistnace): take them from the meter_id WHERE dma_1 = 0 AND dma_2 > 0
 
-	-- prepare graph: go backward from the meter to look for the tank upstream
+	-- !SECTION
+
+	-- SECTION: prepare graph: go backward from the meter to look for the tank upstream
 	v_sql_pgrouting = '
 	SELECT arc_id::int AS id, node_1::int AS source, node_2::int AS target,
 	CASE WHEN mv1.closed IS true or mv2.closed then -1
@@ -172,8 +175,9 @@ BEGIN
 			
 	END LOOP;
 
+	-- !SECTION
 
-	-- stats of table dma_graph_object (table of nodes of the graph)
+	-- NOTE: Stats of table dma_graph_object (table of nodes of the graph)
 	UPDATE dma_graph_object t SET attrib = a.json_stats::json FROM (
 		WITH dma_graph_stats AS (
 		    WITH aa AS ( -- pipe len
@@ -218,14 +222,15 @@ BEGIN
 		LEFT JOIN temp_dma_order c ON b.graphconfig -> 'use' -> 0 ->> 'nodeParent' = c.meter_id::text
 	)a WHERE a.object_id = t.object_id;
 	
-	-- fill table
+	-- SECTION: Update values
+	-- NOTE: Fill dma_graph_object
 	UPDATE dma_graph_object set attrib = '{}'::json WHERE attrib IS NULL;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
 	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
 	UPDATE dma_graph_object SET coord_y = st_y(the_geom) WHERE expl_id = v_expl_id;
 
-	-- update agg_cost for DMAs (object_1 and object_2)
+	-- NOTE: Update agg_cost for DMAs (object_1 and object_2)
 	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
 	SELECT a.object_1, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
 	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib::text, the_geom
@@ -237,11 +242,11 @@ BEGIN
 	)b WHERE a.object_id = b.object_2;
 
 
-	-- remove null values on order_id
+	-- NOTE: Remove null values on order_id
 	UPDATE dma_graph_object SET order_id = order_id+1 WHERE expl_id = v_expl_id AND order_id IS NOT NULL AND object_type = 'DMA';
 	UPDATE dma_graph_object SET order_id = 1 WHERE order_id IS NULL AND object_type = 'TANK';
 
-	-- build topology of meters into table of nodes
+	-- NOTE: Build topology of meters into table of nodes
 	UPDATE dma_graph_object t SET meter_2 = a.meter_1 FROM (
 		SELECT object_1, array_agg(meter_id) AS meter_1 
 		FROM dma_graph_meter WHERE expl_id = v_expl_id 
@@ -273,15 +278,9 @@ BEGIN
 		GROUP BY meter_id, expl_id
 	)a WHERE t.meter_id = a.meter_id;
 
+	-- !SECTION
 
-	-- execute fct to create json graph
-	EXECUTE '
-	SELECT gw_fct_dma_graph_json($${
-	"client":{"device":4, "infoType":1, "lang":"ES"},
-	"feature":{},"data":{"parameters":{"explId":'||v_expl_id||', "searchDistRouting":999}}}$$)
-	';
-
-
+	-- NOTE: Return
 	v_version = COALESCE(v_version, '{}');
 	v_result_info = COALESCE(v_result_info, '{}');
 
