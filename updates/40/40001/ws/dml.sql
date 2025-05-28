@@ -533,3 +533,22 @@ DELETE FROM sys_table WHERE id = 'vu_macroexploitation';
 DELETE FROM sys_table WHERE id = 'vu_macrosector';
 DELETE FROM sys_table WHERE id = 'vu_node';
 DELETE FROM sys_table WHERE id = 'vu_om_mincut';
+
+--28/05/2025
+
+UPDATE sys_function SET function_alias = 'CALCULATE THE REACH OF HYDRANTS' WHERE function_name = 'gw_fct_graphanalytics_hydrant';
+
+INSERT INTO sys_message (id, error_message, hint_message, log_level, show_user, project_type, "source", message_type)
+VALUES(3514, 'Process executed for hydrant: %rec_hydrant%.', null, 0, true, 'utils', 'core', 'AUDIT');
+
+UPDATE sys_function SET function_alias = 'DATA QUALITY ANALYSIS ACORDING graph ANALYTICS RULES' WHERE function_name = 'gw_fct_graphanalytics_check_data';
+
+INSERT INTO sys_label (id, idval, label_type) VALUES(2022, '----------------------', 'separator');
+
+INSERT INTO sys_label (id, idval, label_type) VALUES(2007, '-------', 'separator');
+
+INSERT INTO sys_label (id, idval, label_type) VALUES(3004, 'CRITICAL ERRORS', 'prefix');
+
+UPDATE sys_function SET function_alias = 'CHECK USER DATA' WHERE function_name = 'gw_fct_user_check_data';
+
+
