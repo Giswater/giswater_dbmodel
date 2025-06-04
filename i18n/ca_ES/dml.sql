@@ -3311,7 +3311,7 @@ UPDATE config_form_fields SET label = 'Geometria definida per l''usuari', toolti
 UPDATE config_form_fields SET label = 'ID del Macrodma', tooltip = 'macrodma_id - Identificador de macrodma' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'macrodma_id' ;
 UPDATE config_form_fields SET label = 'Longitud GIS', tooltip = 'Gis length' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'gis_length' ;
 UPDATE config_form_fields SET label = 'ispsectorgeom', tooltip = 'ispsectorgeom' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'ispsectorgeom' ;
-UPDATE config_form_fields SET label = 'ID d''elevació', tooltip = 'Exit ID' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'exit_id' ;
+UPDATE config_form_fields SET label = 'ID de sortida', tooltip = 'Exit ID' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'exit_id' ;
 UPDATE config_form_fields SET label = 'ID explotació', tooltip = 'expl_id - Identificador de l''explotació' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'expl_id' ;
 UPDATE config_form_fields SET label = 'Tipus d''element', tooltip = 'Tipus d''element' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'feature_type' ;
 UPDATE config_form_fields SET label = 'ID del Macrosector', tooltip = 'macrosector_id - Identificador del macrosector' WHERE formname = 'v_edit_link' AND formtype = 'form_feature' AND columnname = 'macrosector_id' ;
