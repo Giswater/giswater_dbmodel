@@ -64,6 +64,7 @@ v_ispresszone boolean;
 v_fluidtype text;
 v_expl integer;
 v_sector integer;
+v_muni integer;
 v_presszone text;
 v_dma integer;
 v_dqa integer;
@@ -259,6 +260,7 @@ BEGIN
 			v_expl = v_arc.expl_id;
 			v_arc_id = v_arc.arc_id;
 			v_sector = v_arc.sector_id;
+			v_muni = v_arc.muni_id;
 
 			-- control of dma and fluidtype automatic values
 			IF v_dma_autoupdate is true or v_dma_autoupdate is null THEN v_dma = v_arc.dma_id; ELSE v_dma = NEW.dma_id; END IF;
@@ -306,6 +308,7 @@ BEGIN
 			-- mapzones
 			v_expl = v_node.expl_id;
 			v_sector = v_node.sector_id;
+			v_muni = v_node.muni_id;
 
 			-- control of dma and fluidtype automatic values
 			IF v_dma_autoupdate is true or v_dma_autoupdate is null THEN v_dma = v_node.dma_id; ELSE v_dma = NEW.dma_id; END IF;
@@ -356,6 +359,7 @@ BEGIN
 			v_expl = v_connec2.expl_id;
 			v_arc_id = v_connec2.arc_id;
 			v_sector = v_connec2.sector_id;
+			v_muni = v_connec2.muni_id;
 
             -- control of dma and fluidtype automatic values
 			IF v_dma_autoupdate is true or v_dma_autoupdate is null THEN v_dma = v_connec2.dma_id; ELSE v_dma = NEW.dma_id; END IF;
@@ -399,6 +403,7 @@ BEGIN
 				v_expl = v_gully2.expl_id;
 				v_arc_id = v_gully2.arc_id;
 				v_sector = v_gully2.sector_id;
+				v_muni = v_gully2.muni_id;
 
                 -- control of dma and fluidtype automatic values
                 IF v_dma_autoupdate is true or v_dma_autoupdate is null THEN v_dma = v_gully2.dma_id; ELSE v_dma = NEW.dma_id; END IF;
@@ -607,14 +612,14 @@ BEGIN
 			 fluid_type, dma_id, dqa_id, presszone_id, minsector_id, connecat_id, workcat_id, workcat_id_end, builtdate, enddate, exit_elev, exit_topelev, uncertain, muni_id)
 			VALUES (NEW.link_id, NEW.feature_type, NEW.feature_id, v_expl, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom, v_sector,
 			v_fluidtype, v_dma, v_dqa, v_presszone, v_minsector, NEW.connecat_id, NEW.workcat_id, NEW.workcat_id_end, NEW.builtdate, NEW.enddate,
-			NEW.exit_elev, NEW.exit_topelev, NEW.uncertain, NEW.muni_id);
+			NEW.exit_elev, NEW.exit_topelev, NEW.uncertain, v_muni);
 
 		ELSIF  v_projectype = 'UD' THEN
 
 			INSERT INTO link (link_id, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom, sector_id, fluid_type, dma_id,
 				connecat_id, workcat_id, workcat_id_end, builtdate, enddate, exit_elev, exit_topelev, uncertain, muni_id)
 			VALUES (NEW.link_id, NEW.feature_type, NEW.feature_id, v_expl, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom, v_sector, v_fluidtype, v_dma,
-				NEW.connecat_id, NEW.workcat_id, NEW.workcat_id_end, NEW.builtdate, NEW.enddate, NEW.exit_elev, NEW.exit_topelev, NEW.uncertain, NEW.muni_id);
+				NEW.connecat_id, NEW.workcat_id, NEW.workcat_id_end, NEW.builtdate, NEW.enddate, NEW.exit_elev, NEW.exit_topelev, NEW.uncertain, v_muni);
 		END IF;
 
 		-- update feature
@@ -746,7 +751,7 @@ BEGIN
 
 		-- update link parameters
 		UPDATE link SET state = NEW.state, the_geom = NEW.the_geom, workcat_id = NEW.workcat_id, workcat_id_end = NEW.workcat_id_end, builtdate = NEW.builtdate,
-		enddate = NEW.enddate, exit_elev = NEW.exit_elev, exit_topelev = NEW.exit_topelev, uncertain = NEW.uncertain, muni_id = NEW.muni_id, sector_id=v_sector
+		enddate = NEW.enddate, exit_elev = NEW.exit_elev, exit_topelev = NEW.exit_topelev, uncertain = NEW.uncertain, muni_id = v_muni, sector_id=v_sector
 		WHERE link_id=NEW.link_id;
 
 		-- Update state_type if edit_connect_update_statetype is TRUE
