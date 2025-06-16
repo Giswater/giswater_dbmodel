@@ -46,7 +46,7 @@ BEGIN
 		'generatedDate', now(),
 		'schemaDate', v_schema_date
 	) INTO v_json_result_header
-	FROM v_edit_node n 
+	FROM vu_node n 
 	JOIN exploitation e USING (expl_id) 
 	JOIN macroexploitation f ON e.macroexpl_id = f.macroexpl_id
 	WHERE e.expl_id = v_expl_id
