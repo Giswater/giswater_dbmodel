@@ -201,7 +201,7 @@ BEGIN
 				VALUES (212, 1, concat('Divide arc ', v_arc_id,'.'));
 
 				-- Get arctype
-				v_sql := 'SELECT arc_type FROM v_edit_arc WHERE id = '||v_arc_id||'::text;';
+				v_sql := 'SELECT arc_type FROM v_edit_arc WHERE arc_id = '||v_arc_id||'::text;';
 				EXECUTE v_sql
 				INTO v_arc_type;
 
