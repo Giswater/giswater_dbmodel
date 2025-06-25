@@ -60,10 +60,14 @@ BEGIN
 	-- NOTE: Get topology of dma's
 	v_sql_pgrouting = 'WITH entr AS (SELECT node_id, dma_id AS dma_2 FROM om_waterbalance_dma_graph WHERE flow_sign = 1),
 	sort AS (SELECT node_id, dma_id AS dma_1 FROM om_waterbalance_dma_graph WHERE flow_sign = -1)
-	SELECT node_id::int AS id, dma_1 AS source, dma_2 AS target, 1 AS cost FROM entr 
+	SELECT node_id::int AS id, 
+	case when dma_1 is null then 0 else dma_1 end AS source,
+	case when dma_2 is null then 0 else dma_2 end AS target, 
+	1 AS cost FROM entr 
 	LEFT JOIN sort USING (node_id)
 	JOIN node n using (node_id) 
-	WHERE dma_1 IS NOT NULL AND dma_2 IS NOT NULL AND n.state = 1 AND n.expl_id = '||v_expl_id||'';
+	where n.state = 1 
+	AND n.expl_id = '||v_expl_id||'';
 
 
 	-- NOTE: Get the flooding order of the dma's using previous query
@@ -178,7 +182,7 @@ BEGIN
 	-- !SECTION
 
 	-- NOTE: Stats of table dma_graph_object (table of nodes of the graph)
-	UPDATE dma_graph_object t SET attrib = a.json_stats::json FROM (
+	UPDATE dma_graph_object t SET attrib = a.json_stats FROM (
 		WITH dma_graph_stats AS (
 		    WITH aa AS ( -- pipe len
 		    SELECT dma_id, round(sum(st_length(the_geom)::numeric/1000), 2) AS pipe_length
@@ -224,7 +228,7 @@ BEGIN
 	
 	-- SECTION: Update values
 	-- NOTE: Fill dma_graph_object
-	UPDATE dma_graph_object set attrib = '{}'::json WHERE attrib IS NULL;
+	UPDATE dma_graph_object set attrib = '{}' WHERE attrib IS NULL;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT node_id, name FROM man_tank)a WHERE t.object_id = a.node_id::int;
 	UPDATE dma_graph_object t SET object_label = a.name FROM (SELECT dma_id, name FROM dma)a WHERE t.object_id = a.dma_id;
 	UPDATE dma_graph_object SET coord_x = st_x(the_geom) WHERE expl_id = v_expl_id;
@@ -233,18 +237,14 @@ BEGIN
 	-- NOTE: Update agg_cost for DMAs (object_1 and object_2)
 	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
 	SELECT a.object_1, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
-	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib::text, the_geom
+	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
 	)b WHERE a.object_id = b.object_1;
 	
 	UPDATE dma_graph_object a SET order_id = b.max_cost FROM (
 	SELECT a.object_2, max(b.agg_cost) AS max_cost FROM dma_graph_meter a 
-	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib::text, the_geom
+	LEFT JOIN temp_dma_order b USING (meter_id) GROUP BY meter_id, expl_id, object_1, object_2, attrib, the_geom
 	)b WHERE a.object_id = b.object_2;
 
-
-	-- NOTE: Remove null values on order_id
-	UPDATE dma_graph_object SET order_id = order_id+1 WHERE expl_id = v_expl_id AND order_id IS NOT NULL AND object_type = 'DMA';
-	UPDATE dma_graph_object SET order_id = 1 WHERE order_id IS NULL AND object_type = 'TANK';
 
 	-- NOTE: Build topology of meters into table of nodes
 	UPDATE dma_graph_object t SET meter_2 = a.meter_1 FROM (
@@ -280,10 +280,23 @@ BEGIN
 
 	-- !SECTION
 
-	-- NOTE: Return
+	-- clean data
+	UPDATE dma_graph_object SET order_id = 0 WHERE object_type = 'TANK';
+	
+	update dma_graph_object set meter_1 = null WHERE object_type = 'TANK';
+
+	delete from dma_graph_meter where meter_id = object_1 and expl_id = v_expl_id;
+
+
 	v_version = COALESCE(v_version, '{}');
 	v_result_info = COALESCE(v_result_info, '{}');
 
+
+	execute 'SELECT gw_fct_dma_graph_json($${
+	"client":{"device":4, "infoType":1, "lang":"ES"},
+	"feature":{},"data":{"parameters":{"explId":'||v_expl_id||', "searchDistRouting":999}}}$$)';
+
+	-- NOTE: Return
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"DMA graph successfully created"}, "version":"'||v_version||'"'||
 				',"body":{"form":{}'||
 				',"data":{ "info":'||v_result_info||'}}'||

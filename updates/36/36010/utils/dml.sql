@@ -1023,7 +1023,12 @@ UPDATE config_typevalue SET addparam=NULL WHERE id IN ('lyt_mincut_mng_1', 'lyt_
 UPDATE sys_addfields SET feature_type = 'ALL' WHERE cat_feature_id IS NULL;
 UPDATE sys_addfields SET feature_type = 'CHILD' WHERE cat_feature_id IS NOT NULL;
 
-SELECT gw_fct_admin_transfer_addfields_values();
+SELECT gw_fct_admin_transfer_addfields_values(concat('{"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, 
+"form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"catFeatureId":"', cat_feature_id, '"}}}')::json)
+FROM (select distinct cat_feature_id from sys_addfields where feature_type = 'CHILD')a;
+
+SELECT gw_fct_admin_transfer_addfields_values($${"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":25831}, 
+"form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"catFeatureId":null}}}$$);
 
 DELETE FROM sys_table WHERE id = 'man_addfields_value';
 
