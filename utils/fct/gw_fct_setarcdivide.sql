@@ -201,16 +201,9 @@ BEGIN
 				VALUES (212, 1, concat('Divide arc ', v_arc_id,'.'));
 
 				-- Get arctype
-				IF v_project_type = 'UD' THEN
-					v_sql := 'SELECT arc_type FROM cat_arc WHERE id = (SELECT arccat_id FROM arc WHERE arc_id = '||v_arc_id||'::text);';
-					EXECUTE v_sql
-					INTO v_arc_type;
-				ELSIF v_project_type = 'WS' THEN
-					v_sql := 'SELECT arctype_id FROM cat_arc WHERE id = (SELECT arccat_id FROM arc WHERE arc_id = '||v_arc_id||'::text);';
-					EXECUTE v_sql
-					INTO v_arc_type;
-				END IF;
-
+				v_sql := 'SELECT arc_type FROM v_edit_arc WHERE id = '||v_arc_id||'::text;';
+				EXECUTE v_sql
+				INTO v_arc_type;
 
 				--  Locate position of the nearest point
 				v_intersect_loc := ST_LineLocatePoint(v_arc_geom, v_node_geom);
