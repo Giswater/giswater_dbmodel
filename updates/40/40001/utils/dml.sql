@@ -2499,4 +2499,4 @@ INSERT INTO sys_message (id, error_message, hint_message, log_level, show_user, 
 INSERT INTO sys_message (id, error_message, hint_message, log_level, show_user, project_type, "source", message_type) VALUES(5002, 'There are ', NULL, 0, true, 'utils', 'core', 'UI');
 
 
-DELETE FROM config_form_fields WHERE forname ILIKE '%node%' AND columname = 'tstamp';
+DELETE FROM config_form_fields WHERE formname ILIKE '%node%' AND columnname = 'tstamp';
