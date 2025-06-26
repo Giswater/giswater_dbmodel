@@ -2080,3 +2080,4 @@ INSERT INTO sys_message (id, error_message, hint_message, log_level, show_user, 
 VALUES(3978, 'There are %v_count% nodes with all values of top_elev, ymax and elev inserted.', null, 0, true, 'utils', 'core', 'AUDIT');
 
 
+INSERT INTO dwfzone (dwfzone_id, code, name) VALUES(0, '0', 'Undefined');
