@@ -38,7 +38,7 @@ SELECT SCHEMA_NAME.gw_fct_getfeaturerelation($${
 DECLARE
 
 v_feature_type text;
-v_feature_id text;
+v_feature_id integer;
 v_workcat_id_end text;
 v_enddate text;
 v_descript text;
@@ -67,8 +67,8 @@ BEGIN
 
 	-- manage log (fid: 151)
 	DELETE FROM audit_check_data WHERE fid = 151 AND cur_user=current_user;
-	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('FEATURE RELATIONS'));
-	INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('------------------------------'));
+	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"function":"2725", "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true, "is_header":"true"}}$$)';
 
 	--  get api version
 	EXECUTE 'SELECT row_to_json(row) FROM (SELECT value FROM config_param_system WHERE parameter=''admin_version'') row'
@@ -78,7 +78,7 @@ BEGIN
 	v_feature_type = lower(((p_data ->>'feature')::json->>'type'))::text;
 	v_feature_id = ((p_data ->>'data')::json->>'feature_id')::text;
 
-	EXECUTE 'SELECT '||v_feature_type||'_type FROM v_edit_'||v_feature_type||' WHERE '||v_feature_type||'_id = '''||v_feature_id||''''
+	EXECUTE 'SELECT '||v_feature_type||'_type FROM v_edit_'||v_feature_type||' WHERE '||v_feature_type||'_id = '||v_feature_id||''
 	INTO v_featurecat;
 
 	EXECUTE 'SELECT man_table FROM cat_feature_'||v_feature_type||' c JOIN cat_feature cf ON c.id = cf.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE s.id = '''||v_featurecat||''';'
@@ -86,19 +86,21 @@ BEGIN
 
 	IF v_feature_type='arc' THEN
 		--check connec& gully related to arc
-		SELECT string_agg(feature_id,',') INTO v_connect_connec FROM v_ui_arc_x_relations
+		SELECT array_agg(feature_id) INTO v_connect_connec FROM v_ui_arc_x_relations
 		JOIN sys_feature_class ON sys_feature_class.id=v_ui_arc_x_relations.sys_type WHERE type='CONNEC' AND  arc_id = v_feature_id;
 
 		IF v_connect_connec IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Connecs connected with the feature :',v_connect_connec ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3676", "function":"2725", "parameters":{"v_connect_connec":"'||v_connect_connec||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
-		SELECT string_agg(feature_id,',') INTO v_connect_gully FROM v_ui_arc_x_relations
+		SELECT array_agg(feature_id) INTO v_connect_gully FROM v_ui_arc_x_relations
 		JOIN sys_feature_class ON sys_feature_class.id=v_ui_arc_x_relations.sys_type WHERE type='GULLY' AND  arc_id = v_feature_id;
 
 		IF v_connect_gully IS NOT NULL THEN
 
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Gullies connected with the feature :',v_connect_gully ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3678", "function":"2725", "parameters":{"v_connect_gully":"'||v_connect_gully||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 
 		END IF;
 
@@ -109,119 +111,132 @@ BEGIN
      	WHERE v_edit_arc.arc_id = v_feature_id;
 
 		IF v_connect_node IS NOT NULL THEN
-				INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Nodes connected with the feature: ',v_connect_node ));
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3680", "function":"2725", "parameters":{"v_connect_node":"'||v_connect_node||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 			END IF;
 
 	ELSIF v_feature_type='node' THEN
 		--check nodes childs related to node
 
 		IF v_project_type = 'WS' THEN
-		 	SELECT string_agg(child_id,',') INTO v_connect_node FROM v_ui_node_x_relations WHERE node_id = v_feature_id;
+		 	SELECT array_agg(child_id) INTO v_connect_node FROM v_ui_node_x_relations WHERE node_id = v_feature_id;
 
 			IF v_connect_node IS NOT NULL THEN
-				INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Nodes connected with the feature: ',v_connect_node ));
+				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3682", "function":"2725", "parameters":{"v_connect_node":"'||v_connect_node||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 			END IF;
 		END IF;
 
 		--check arcs related to node (on service)
-		SELECT string_agg(arc.arc_id,',')  INTO v_connect_arc FROM arc
+		SELECT array_agg(arc.arc_id)  INTO v_connect_arc FROM arc
 		LEFT JOIN node a ON a.node_id::text = arc.node_1::text
      	LEFT JOIN node b ON b.node_id::text = arc.node_2::text
      	WHERE (node_1 = v_feature_id OR node_2 = v_feature_id) AND arc.state=1;
 
 		IF v_connect_arc IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Arcs connected with the feature (on service): ',v_connect_arc ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3684", "function":"2725", "parameters":{"v_connect_arc":"'||v_connect_arc||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
 		--check arcs related to node (obsolete)
-		SELECT string_agg(arc.arc_id,',')  INTO v_connect_arc FROM arc
+		SELECT array_agg(arc.arc_id)  INTO v_connect_arc FROM arc
 		LEFT JOIN node a ON a.node_id::text = arc.node_1::text
      	LEFT JOIN node b ON b.node_id::text = arc.node_2::text
      	WHERE  (node_1 = v_feature_id OR node_2 = v_feature_id) AND arc.state=0;
 
 		IF v_connect_arc IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Arcs connected with the feature (obsolete): ',v_connect_arc ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3686", "function":"2725", "parameters":{"v_connect_arc":"'||v_connect_arc||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
 		--check related polygon
-		EXECUTE 'SELECT pol_id FROM polygon where feature_id= '''||v_feature_id||''';'
+		EXECUTE 'SELECT pol_id FROM polygon where feature_id= '||v_feature_id||';'
 		INTO v_connect_pol;
 
 		IF v_connect_pol IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Polygon connected with the feature: ',v_connect_pol ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3688", "function":"2725", "parameters":{"v_connect_pol":"'||v_connect_pol||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
 	ELSIF v_feature_type='connec' OR v_feature_type='gully' THEN
-		EXECUTE 'SELECT string_agg(link_id::text,'','') FROM link where (exit_type=''CONNEC''  AND  exit_id = '''||v_feature_id||'''::text)
-		OR  (feature_type=''CONNEC''  AND  feature_id = '''||v_feature_id||'''::text)'
+		EXECUTE 'SELECT string_agg(link_id::text,'','') FROM link where (exit_type=''CONNEC''  AND  exit_id = '||v_feature_id||')
+		OR  (feature_type=''CONNEC''  AND  feature_id = '||v_feature_id||')'
 		INTO v_connect_connec;
 
 		IF v_connect_connec IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Links connected with the feature :',v_connect_connec ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3690", "function":"2725", "parameters":{"v_connect_connec":"'||v_connect_connec||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
-		EXECUTE 'SELECT string_agg(link_id::text,'','') FROM link where exit_type=''GULLY''  AND  exit_id = '''||v_feature_id||'''::text
-		OR  (feature_type=''GULLY''  AND  feature_id = '''||v_feature_id||'''::text)'
+		EXECUTE 'SELECT string_agg(link_id::text,'','') FROM link where exit_type=''GULLY''  AND  exit_id = '||v_feature_id||'
+		OR  (feature_type=''GULLY''  AND  feature_id = '||v_feature_id||')'
 		INTO v_connect_gully;
 
 		IF v_connect_gully IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Gullies connected with the feature :',v_connect_gully ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3692", "function":"2725", "parameters":{"v_connect_gully":"'||v_connect_gully||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
 		--check related polygon
-		EXECUTE 'SELECT pol_id FROM polygon where feature_id= '''||v_feature_id||''';'
+		EXECUTE 'SELECT pol_id FROM polygon where feature_id= '||v_feature_id||';'
 		INTO v_connect_pol;
 
 		IF v_connect_pol IS NOT NULL THEN
-			INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Polygon connected with the feature: ',v_connect_pol ));
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3480", "function":"2725", "parameters":{"v_connect_gully":"'||v_connect_gully||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 		END IF;
 
 	END IF;
 
 	--check elements related to feature
-	EXECUTE 'SELECT string_agg(element_id,'','') FROM element_x_'||v_feature_type||' where '||v_feature_type||'_id = '''||v_feature_id||'''::text'
+	EXECUTE 'SELECT array_agg(element_id) FROM element_x_'||v_feature_type||' where '||v_feature_type||'_id = '||v_feature_id||''
 	INTO v_element;
 
 	IF v_element IS NOT NULL THEN
-		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Elements connected with the feature: ',v_element ));
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3518", "function":"2725", "parameters":{"v_element":"'||v_element||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 	END IF;
 	--check visits related to feature
-	EXECUTE 'SELECT string_agg(visit_id::text,'','') FROM om_visit_x_'||v_feature_type||' where '||v_feature_type||'_id = '''||v_feature_id||'''::text'
+	EXECUTE 'SELECT string_agg(visit_id::text,'','') FROM om_visit_x_'||v_feature_type||' where '||v_feature_type||'_id = '||v_feature_id||''
 	INTO v_visit;
 
 	IF v_visit IS NOT NULL THEN
-		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Visits connected with the feature: ',v_visit ));
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3520", "function":"2725", "parameters":{"v_visit":"'||v_visit||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 	END IF;
 
 	--check documents related to feature
-	EXECUTE 'SELECT string_agg(doc_id,'','') FROM doc_x_'||v_feature_type||' where '||v_feature_type||'_id = '''||v_feature_id||'''::text'
+	EXECUTE 'SELECT string_agg(doc_id,'','') FROM doc_x_'||v_feature_type||' where '||v_feature_type||'_id = '||v_feature_id||''
 	INTO v_doc;
 
 	IF v_doc IS NOT NULL THEN
-		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Documents connected with the feature: ',v_doc ));
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3522", "function":"2725", "parameters":{"v_doc":"'||v_doc||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 	END IF;
 
 	--check psectors related to feature
 	IF v_feature_type='node' THEN
 		EXECUTE 'SELECT string_agg(distinct a.name, '', '') FROM (
 		SELECT name FROM plan_psector_x_node
-		JOIN plan_psector USING (psector_id) where node_id = '''||v_feature_id||'''::text 
+		JOIN plan_psector USING (psector_id) where node_id = '||v_feature_id||' 
 		UNION 
 		SELECT name FROM plan_psector_x_arc
 		JOIN plan_psector USING (psector_id) 
 		JOIN arc using (arc_id) 
-		where node_1 =  '''||v_feature_id||'''::text or node_2= '''||v_feature_id||'''::text  and arc.state=2)a'
+		where node_1 =  '||v_feature_id||' or node_2= '||v_feature_id||'  and arc.state=2)a'
 		INTO v_psector;
 	ELSE
 
 		EXECUTE 'SELECT string_agg(name,'', '') FROM plan_psector_x_'||v_feature_type||' 
-		JOIN plan_psector USING (psector_id) where '||v_feature_type||'_id = '''||v_feature_id||'''::text'
+		JOIN plan_psector USING (psector_id) where '||v_feature_type||'_id = '||v_feature_id||''
 		INTO v_psector;
 	END IF;
 
 	IF v_psector IS NOT NULL THEN
-		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('Psectors connected with the feature: ',v_psector ));
-		INSERT INTO audit_check_data (fid, result_id, error_message) VALUES (151, v_result_id, concat('IMPORTANT: Activate psector before deleting features.' ));
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3524", "function":"2725", "parameters":{"v_psector":"'||v_psector||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3526", "function":"2725", "parameters":{"v_psector":"'||v_psector||'"}, "fid":"151", "result_id":"'||quote_nullable(v_result_id)||'", "is_process":true}}$$)';
 	END IF;
 
 	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result

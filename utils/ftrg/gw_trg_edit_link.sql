@@ -40,7 +40,8 @@ After that the trg_edit_link can update geometry and enpoint. By updating endpoi
 */
 
 DECLARE
-v_mantable varchar;
+v_man_table varchar;
+v_customfeature varchar;
 v_projectype varchar;
 v_arc record;
 v_connect record;
@@ -53,11 +54,11 @@ v_vnode record;
 v_link_searchbuffer double precision = 0.01;
 v_count integer;
 v_node_id integer;
-v_arc_id text;
+v_arc_id integer;
 v_userdefined_geom boolean;
 v_end_state integer;
 v_init_state integer;
-v_pjoint_id text;
+v_pjoint_id integer;
 v_pjoint_type text;
 v_dsbl_error boolean;
 v_message text;
@@ -78,11 +79,12 @@ v_fluidtype_autoupdate boolean;
 v_dma_autoupdate boolean;
 v_check_arcdnom_status boolean;
 v_check_arcdnom integer;
+v_sql varchar;
 
 BEGIN
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
-	v_mantable:= TG_ARGV[0];
+	v_man_table:= TG_ARGV[0];
 
 	-- getting system values
 	SELECT value::boolean INTO v_dma_autoupdate FROM config_param_system WHERE parameter='edit_connect_autoupdate_dma';
@@ -93,6 +95,10 @@ BEGIN
 	v_currentpsector = (SELECT value::integer from config_param_user WHERE cur_user = current_user AND parameter = 'plan_psector_current');
 	v_check_arcdnom_status:= (SELECT value::json->>'status' FROM config_param_system WHERE parameter = 'edit_link_check_arcdnom');
 	v_check_arcdnom:= (SELECT value::json->>'diameter' FROM config_param_system WHERE parameter = 'edit_link_check_arcdnom');
+
+	IF v_man_table IN (SELECT id FROM cat_feature WHERE feature_type = 'LINK') THEN
+		v_customfeature := v_man_table;
+	END IF;
 
 	-- Control insertions ID
 	IF TG_OP = 'INSERT' THEN
@@ -108,14 +114,6 @@ BEGIN
 			IF (NEW.state IS NULL) THEN
 				NEW.state := 1;
 			END IF;
-		END IF;
-
-
-		-- Inserts to man tables
-		IF (NEW.link_type = 'SERVCONNECTION') THEN
-			INSERT INTO man_servconnection VALUES (NEW.link_id);
-		ELSEIF(NEW.link_type='INLETPIPE') THEN
-			INSERT INTO man_inletpipe VALUES (NEW.link_id);
 		END IF;
 
 	END IF;
@@ -626,6 +624,32 @@ BEGIN
 			END IF;
 		END IF;
 
+		-- State_type
+		IF (NEW.state=0) THEN
+			IF (NEW.state_type IS NULL) THEN
+				NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_statetype_0_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			END IF;
+		ELSIF (NEW.state=1) THEN
+			IF (NEW.state_type IS NULL) THEN
+				NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_statetype_1_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			END IF;
+		ELSIF (NEW.state=2) THEN
+			IF (NEW.state_type IS NULL) THEN
+				NEW.state_type := (SELECT "value" FROM config_param_user WHERE "parameter"='edit_statetype_2_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+			END IF;
+		END IF;
+
+			--check relation state - state_type
+		IF NEW.state_type NOT IN (SELECT id FROM value_state_type WHERE state = NEW.state) THEN
+			IF NEW.state IS NOT NULL THEN
+				v_sql = NEW.state;
+			ELSE
+				v_sql = 'null';
+			END IF;
+			EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+			"data":{"message":"3036", "function":"1318","parameters":{"state_id":"'||COALESCE(v_sql::text, '')||'"}}}$$);';
+		END IF;
+
 	END IF;
 
 	-- Verified
@@ -643,10 +667,14 @@ BEGIN
 		-- insert into link table
 		IF v_projectype = 'WS' THEN
 			IF NEW.linkcat_id IS NULL THEN
-				IF (SELECT value FROM config_param_user WHERE parameter = 'edit_connec_linkcat_vdefault' AND "cur_user"="current_user"() LIMIT 1) IS NOT NULL THEN
-					NEW.linkcat_id = (SELECT value FROM config_param_user WHERE parameter = 'edit_connec_linkcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+				IF v_customfeature IS NOT NULL THEN
+					NEW.linkcat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat('feat_',v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
 				ELSE
-					NEW.linkcat_id = (SELECT conneccat_id FROM connec WHERE connec_id = NEW.feature_id);
+					IF (SELECT value FROM config_param_user WHERE parameter = 'edit_connec_linkcat_vdefault' AND "cur_user"="current_user"() LIMIT 1) IS NOT NULL THEN
+						NEW.linkcat_id = (SELECT value FROM config_param_user WHERE parameter = 'edit_connec_linkcat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
+					ELSE
+						NEW.linkcat_id = (SELECT conneccat_id FROM connec WHERE connec_id = NEW.feature_id);
+					END IF;
 				END IF;
 			END IF;
 
@@ -685,20 +713,25 @@ BEGIN
 				END IF;
 			END IF;
 
-
-			IF NEW.feature_type ='GULLY' THEN
-				NEW.link_type = 'INLETPIPE';
-			ELSEIF NEW.feature_type ='CONNEC' THEN
-				NEW.link_type = 'SERVCONNECTION';
-			END IF;
-
 			INSERT INTO link (link_id, code, sys_code, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom, sector_id, fluid_type, omzone_id,
 			linkcat_id, workcat_id, workcat_id_end, builtdate, enddate, uncertain, muni_id, verified, custom_length, datasource, top_elev1, y1, top_elev2, y2, link_type, location_type, epa_type,
 			annotation, observ, comment, descript, link, num_value, drainzone_outfall, dwfzone_outfall)
-			VALUES (NEW.link_id, NEW.code, NEW.sys_code, NEW.feature_type, NEW.feature_id, v_expl, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom, v_sector, v_fluidtype, v_omzone,
+			VALUES (NEW.link_id, NEW.code, NEW.sys_code, NEW.feature_type, NEW.feature_id, v_expl, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom, v_sector, v_fluidtype::integer, v_omzone,
 			NEW.linkcat_id, NEW.workcat_id, NEW.workcat_id_end, NEW.builtdate, NEW.enddate, NEW.uncertain, NEW.muni_id, NEW.verified, NEW.custom_length, NEW.datasource,
 			NEW.top_elev1, NEW.y1, NEW.top_elev2, NEW.y2, NEW.link_type, NEW.location_type, NEW.epa_type,
 			NEW.annotation, NEW.observ, NEW.comment, NEW.descript, NEW.link, NEW.num_value, NEW.drainzone_outfall, NEW.dwfzone_outfall);
+		END IF;
+
+		IF v_man_table = 'VLINK' THEN
+			INSERT INTO man_vlink VALUES (NEW.link_id);
+		ELSIF v_man_table = 'CONDUITLINK' THEN
+			INSERT INTO man_conduitlink VALUES (NEW.link_id);
+		ELSIF v_man_table = 'PIPELINK' THEN
+			INSERT INTO man_pipelink VALUES (NEW.link_id);
+		ELSIF v_man_table='parent' THEN
+			v_man_table := (SELECT man_table FROM cat_feature_link c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id = NEW.link_type);
+			v_sql:= 'INSERT INTO '||v_man_table||' (link_id) VALUES ('||quote_literal(NEW.link_id)||')';
+			EXECUTE v_sql;
 		END IF;
 
 		-- update feature
@@ -727,17 +760,16 @@ BEGIN
 				-- update connect
 				IF NEW.feature_type='CONNEC' AND v_pjoint_id IS NOT NULL THEN
 					IF v_projectype = 'WS' THEN
-						UPDATE connec SET dma_id = v_dma WHERE connec_id = NEW.feature_id;
+						UPDATE connec SET dma_id = v_dma, fluid_type=v_fluidtype WHERE connec_id = NEW.feature_id;
+					ELSIF v_projectype = 'UD' THEN
+						UPDATE connec SET fluid_type=v_fluidtype::integer WHERE connec_id = NEW.feature_id;
 					END IF;
 					UPDATE connec SET arc_id = v_arc_id, pjoint_id = v_pjoint_id, pjoint_type = v_pjoint_type, sector_id = v_sector,
-					omzone_id = v_omzone, fluid_type=v_fluidtype WHERE connec_id = NEW.feature_id;
+					omzone_id = v_omzone WHERE connec_id = NEW.feature_id;
 
 				ELSIF NEW.feature_type='GULLY' AND v_pjoint_id IS NOT NULL  THEN
-					IF v_projectype = 'WS' THEN
-						UPDATE gully SET dma_id = v_dma WHERE gully_id = NEW.feature_id;
-					END IF;
 					UPDATE gully SET arc_id = v_arc_id, pjoint_id = v_pjoint_id, pjoint_type = v_pjoint_type, sector_id = v_sector,
-					omzone_id = v_omzone, fluid_type=v_fluidtype WHERE gully_id = NEW.feature_id;
+					omzone_id = v_omzone, fluid_type=v_fluidtype::integer WHERE gully_id = NEW.feature_id;
 				END IF;
 
 				-- update specific colums for ws-link
@@ -801,30 +833,30 @@ BEGIN
 
 			-- update link
 			IF v_projectype = 'WS' THEN
-				UPDATE link SET dma_id = v_dma WHERE link_id=NEW.link_id;
+				UPDATE link SET dma_id = v_dma, fluid_type=v_fluidtype WHERE link_id=NEW.link_id;
+			ELSIF v_projectype = 'UD' THEN
+				UPDATE link SET fluid_type = v_fluidtype::integer WHERE link_id=NEW.link_id;
 			END IF;
 			UPDATE link SET exit_id = NEW.exit_id , exit_type = NEW.exit_type, the_geom=NEW.the_geom, expl_id = v_expl, sector_id = v_sector,
-			omzone_id = v_omzone, fluid_type=v_fluidtype, uncertain = NEW.uncertain
+			omzone_id = v_omzone, uncertain = NEW.uncertain
 			WHERE link_id=NEW.link_id;
 
 			-- force reconnection on connecs
 			IF NEW.feature_type = 'CONNEC' THEN
 				IF v_projectype = 'WS' THEN
-					UPDATE connec SET dma_id = v_dma WHERE connec_id = NEW.feature_id;
+					UPDATE connec SET dma_id = v_dma, fluid_type=v_fluidtype WHERE connec_id = NEW.feature_id;
+				ELSIF v_projectype = 'UD' THEN
+					UPDATE connec SET fluid_type=v_fluidtype::integer WHERE connec_id = NEW.feature_id;
 				END IF;
 
 				UPDATE connec SET arc_id = v_arc_id, pjoint_type = NEW.exit_type, pjoint_id = NEW.exit_id,
-				omzone_id = v_omzone, fluid_type=v_fluidtype WHERE connec_id = NEW.feature_id;
+				omzone_id = v_omzone WHERE connec_id = NEW.feature_id;
 
 				UPDATE link SET linkcat_id = c.conneccat_id FROM connec c WHERE connec_id = NEW.feature_id AND link.state > 0;
 
 			ELSIF NEW.feature_type = 'GULLY' THEN
-				IF v_projectype = 'WS' THEN
-					UPDATE gully SET dma_id = v_dma WHERE gully_id = NEW.feature_id;
-				END IF;
-
 				UPDATE gully SET arc_id = v_arc_id, pjoint_type = NEW.exit_type, pjoint_id = NEW.exit_id,
-				omzone_id = v_omzone, fluid_type=v_fluidtype WHERE  gully_id = NEW.feature_id;
+				omzone_id = v_omzone, fluid_type=v_fluidtype::integer WHERE  gully_id = NEW.feature_id;
 			END IF;
 
 			-- update specific colums for ws-link
@@ -845,12 +877,14 @@ BEGIN
 
 			-- update specific colums for ws-link
 			IF v_projectype = 'WS' THEN
-				UPDATE link SET presszone_id = v_presszone, dqa_id = NEW.dqa_id, minsector_id = NEW.minsector_id WHERE link_id = NEW.link_id;
+				UPDATE link SET presszone_id = v_presszone, dqa_id = NEW.dqa_id, minsector_id = NEW.minsector_id, fluid_type = v_fluidtype WHERE link_id = NEW.link_id;
+			ELSIF v_projectype = 'UD' THEN
+				UPDATE link SET fluid_type = v_fluidtype::integer WHERE link_id = NEW.link_id;
 			END IF;
 
 			-- update link
 			UPDATE link SET exit_id = NEW.exit_id, exit_type = NEW.exit_type, the_geom = NEW.the_geom, expl_id = v_expl, sector_id = v_sector,
-			omzone_id = v_omzone, fluid_type=v_fluidtype, uncertain = NEW.uncertain
+			omzone_id = v_omzone, uncertain = NEW.uncertain
 			WHERE link_id = NEW.link_id;
 
 		END IF;
@@ -870,6 +904,18 @@ BEGIN
 		datasource = NEW.datasource, location_type=NEW.location_type, epa_type=NEW.epa_type, annotation=NEW.annotation, observ=NEW.observ, comment=NEW.comment,
 		descript=NEW.descript, link=NEW.link, num_value=NEW.num_value, state_type=NEW.state_type
 		WHERE link_id=NEW.link_id;
+
+		IF v_man_table = 'VLINK' THEN
+			UPDATE man_vlink SET link_id = NEW.link_id WHERE link_id = OLD.link_id;
+		ELSIF v_man_table = 'CONDUITLINK' THEN
+			UPDATE man_conduitlink SET link_id = NEW.link_id WHERE link_id = OLD.link_id;
+		ELSIF v_man_table = 'PIPELINK' THEN
+			UPDATE man_pipelink SET link_id = NEW.link_id WHERE link_id = OLD.link_id;
+		ELSIF v_man_table='parent' THEN
+			v_man_table := (SELECT man_table FROM cat_feature_link c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id = NEW.link_type);
+			v_sql:= 'UPDATE '||v_man_table||' SET link_id = '||quote_literal(NEW.link_id)||' WHERE link_id = '||quote_literal(OLD.link_id);
+			EXECUTE v_sql;
+		END IF;
 
 
 		-- Update state_type if edit_connect_update_statetype is TRUE

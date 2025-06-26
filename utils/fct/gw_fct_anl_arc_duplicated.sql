@@ -55,8 +55,9 @@ BEGIN
 	DELETE FROM anl_arc WHERE cur_user="current_user"() AND fid=v_fid;
 	DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=v_fid;
 
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('ARC DUPLICATED ANALYSIS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '-------------------------------------------------------------');
+	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"function":"3040", "fid":"'||v_fid||'", "criticity":"4", "is_process":true, "is_header":"true"}}$$)';
+
 
 	IF v_checktype='geometry' THEN
 		-- Computing process
@@ -86,8 +87,8 @@ BEGIN
 			FROM  '||v_worklayer||'  WHERE  arc_id IN ('||v_array||') AND  CONCAT(node_1,'':'',node_2) IN
 			(SELECT CONCAT(node_1,'':'',node_2) FROM '||v_worklayer||' WHERE arc_id IN ('||v_array||') GROUP BY node_1, node_2  HAVING count(*) >1))a';
 
-			EXECUTE 'UPDATE anl_arc aa SET arc_id_aux=va.arc_id FROM '||v_worklayer||' va
-			WHERE aa.node_1 = va.node_1 and aa.node_2=va.node_2 AND  aa.arc_id!=va.arc_id AND va.arc_id IN ('||v_array||') ;';
+			EXECUTE 'UPDATE anl_arc aa SET arc_id_aux=va.arc_id::text FROM '||v_worklayer||' va
+			WHERE aa.node_1 = va.node_1::text and aa.node_2=va.node_2::text AND  aa.arc_id!=va.arc_id::text AND va.arc_id IN ('||v_array||') ;';
 
 		ELSE
 			EXECUTE 'INSERT INTO anl_arc (arc_id, arccat_id, state,  node_1, node_2, expl_id, fid, the_geom)
@@ -95,8 +96,8 @@ BEGIN
 			FROM  '||v_worklayer||'  WHERE CONCAT(node_1,'':'',node_2) IN
 			(SELECT CONCAT(node_1,'':'',node_2) FROM '||v_worklayer||' GROUP BY node_1, node_2  HAVING count(*) >1))a';
 
-			EXECUTE 'UPDATE anl_arc aa SET arc_id_aux=va.arc_id FROM '||v_worklayer||' va
-			WHERE aa.node_1 = va.node_1 and aa.node_2=va.node_2 AND  aa.arc_id!=va.arc_id;';
+			EXECUTE 'UPDATE anl_arc aa SET arc_id_aux=va.arc_id::text FROM '||v_worklayer||' va
+			WHERE aa.node_1 = va.node_1::text and aa.node_2=va.node_2::text AND  aa.arc_id!=va.arc_id::text;';
 		END IF;
 	END IF;
 
@@ -128,11 +129,12 @@ BEGIN
 
 
 	IF v_count = 0 THEN
-		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		VALUES (v_fid,  'There are no duplicated arcs.', v_count);
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3574", "function":"3040", "fid":"'||v_fid||'", "fcount":"'||v_count||'", "is_process":true}}$$)';
+
 	ELSE
-		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		VALUES (v_fid,  concat ('There are ',v_count,' duplicated arcs.'), v_count);
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3576", "function":"3040", "fid":"'||v_fid||'", "parameters":{"v_count":"'||v_count||'"}, "fcount":"'||v_count||'", "is_process":true}}$$)';
 
 		INSERT INTO audit_check_data(fid,  error_message, fcount)
 		SELECT v_fid,  concat ('Arc_id: ',string_agg(arc_id, ', '), '.' ), v_count
@@ -161,7 +163,7 @@ BEGIN
 	-- Exception control
 	EXCEPTION WHEN OTHERS THEN
 	GET STACKED DIAGNOSTICS v_error_context = PG_EXCEPTION_CONTEXT;
-	RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM,  'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE, 
+	RETURN json_build_object('status', 'Failed', 'NOSQLERR', SQLERRM,  'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM), 'SQLSTATE', SQLSTATE,
 	'SQLCONTEXT', v_error_context)::json;
 
 

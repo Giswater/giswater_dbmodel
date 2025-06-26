@@ -20,7 +20,7 @@ SELECT has_table('man_waterwell'::name, 'Table man_waterwell should exist');
 SELECT columns_are(
     'man_waterwell',
     ARRAY[
-        'node_id', 'name'
+        'node_id', 'name', 'inlet_arc'
     ],
     'Table man_waterwell should have the correct columns'
 );
@@ -29,8 +29,9 @@ SELECT columns_are(
 SELECT col_is_pk('man_waterwell', ARRAY['node_id'], 'Column node_id should be primary key');
 
 -- Check column types
-SELECT col_type_is('man_waterwell', 'node_id', 'varchar(16)', 'Column node_id should be varchar(16)');
+SELECT col_type_is('man_waterwell', 'node_id', 'integer', 'Column node_id should be integer');
 SELECT col_type_is('man_waterwell', 'name', 'varchar(50)', 'Column name should be varchar(50)');
+SELECT col_type_is('man_waterwell', 'inlet_arc', 'integer[]', 'Column inlet_arc should be integer[]');
 
 -- Check foreign keys
 SELECT has_fk('man_waterwell', 'Table man_waterwell should have foreign keys');
@@ -41,4 +42,4 @@ SELECT col_not_null('man_waterwell', 'node_id', 'Column node_id should be NOT NU
 
 SELECT * FROM finish();
 
-ROLLBACK; 
+ROLLBACK;

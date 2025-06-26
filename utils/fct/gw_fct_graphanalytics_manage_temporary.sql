@@ -5,7 +5,7 @@ General Public License as published by the Free Software Foundation, either vers
 or (at your option) any later version.
 */
 
--- FUNCTION CODE: 3330
+-- FUNCTION CODE: 3402
 
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_graphanalytics_manage_temporary(json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_graphanalytics_manage_temporary(p_data json)
@@ -47,118 +47,55 @@ BEGIN
 
     IF v_action = 'CREATE' THEN
         -- Create temporary tables
-        CREATE TEMP TABLE temp_pgr_mapzone (
-            mapzone_id SERIAL NOT NULL,
+        CREATE TEMP TABLE IF NOT EXISTS temp_pgr_mapzone (
+            mapzone_id int4 NOT NULL,
             the_geom geometry(Geometry, SRID_VALUE),
             CONSTRAINT temp_pgr_mapzone_pkey PRIMARY KEY (mapzone_id)
         );
 
 
-        CREATE TEMP TABLE temp_pgr_node (
+        CREATE TEMP TABLE IF NOT EXISTS temp_pgr_node (
             pgr_node_id SERIAL NOT NULL,
-            node_id VARCHAR(16),
+            node_id int4,
+            old_node_id int4,
             mapzone_id INTEGER DEFAULT 0,
             old_mapzone_id INTEGER,
+            fluid_type INTEGER DEFAULT 0,
             modif BOOL DEFAULT FALSE,  -- True if nodes have to be disconnected - closed valves, starts of mapzones
-            graph_delimiter VARCHAR(30) DEFAULT 'none',
+            graph_delimiter VARCHAR(30) DEFAULT 'NONE',
             staticpressure FLOAT DEFAULT 0,
             CONSTRAINT temp_pgr_node_pkey PRIMARY KEY (pgr_node_id)
         );
-        CREATE INDEX temp_pgr_node_node_id ON temp_pgr_node USING btree (node_id);
-        GRANT UPDATE, INSERT, REFERENCES, SELECT, DELETE, TRUNCATE, TRIGGER ON TABLE temp_pgr_node TO role_basic;
+        CREATE INDEX IF NOT EXISTS temp_pgr_node_node_id_idx ON temp_pgr_node USING btree (node_id);
+        CREATE INDEX IF NOT EXISTS temp_pgr_node_old_node_id_idx ON temp_pgr_node USING btree (old_node_id);
 
 
-        CREATE TEMP TABLE temp_pgr_arc (
+        CREATE TEMP TABLE IF NOT EXISTS temp_pgr_arc (
             pgr_arc_id SERIAL NOT NULL,
-            arc_id VARCHAR(16),
+            arc_id int4,
+            old_arc_id int4,
             pgr_node_1 INT,
             pgr_node_2 INT,
-            node_1 VARCHAR(16),
-            node_2 VARCHAR(16),
+            node_1 int4,
+            node_2 int4,
             mapzone_id INTEGER DEFAULT 0,
             old_mapzone_id INTEGER,
-            graph_delimiter VARCHAR(30) DEFAULT 'none',
+            fluid_type INTEGER DEFAULT 0,
+            graph_delimiter VARCHAR(30) DEFAULT 'NONE',
             modif1 BOOL DEFAULT FALSE,  -- True if arcs have to be disconnected on node_1
             modif2 BOOL DEFAULT FALSE,  -- True if arcs have to be disconnected on node_2
             cost INT DEFAULT 1,
             reverse_cost INT DEFAULT 1,
             CONSTRAINT temp_pgr_arc_pkey PRIMARY KEY (pgr_arc_id)
         );
-        CREATE INDEX temp_pgr_arc_pgr_arc_id ON temp_pgr_arc USING btree (pgr_arc_id);
-        CREATE INDEX temp_pgr_arc_pgr_node1 ON temp_pgr_arc USING btree (pgr_node_1);
-        CREATE INDEX temp_pgr_arc_pgr_node2 ON temp_pgr_arc USING btree (pgr_node_2);
-        CREATE INDEX temp_pgr_arc_node1 ON temp_pgr_arc USING btree (node_1);
-        CREATE INDEX temp_pgr_arc_node2 ON temp_pgr_arc USING btree (node_2);
-        GRANT UPDATE, INSERT, REFERENCES, SELECT, DELETE, TRUNCATE, TRIGGER ON TABLE temp_pgr_arc TO role_basic;
+        CREATE INDEX IF NOT EXISTS temp_pgr_arc_arc_id_idx ON temp_pgr_arc USING btree (arc_id);
+        CREATE INDEX IF NOT EXISTS temp_pgr_arc_old_arc_id_idx ON temp_pgr_arc USING btree (old_arc_id);
+        CREATE INDEX IF NOT EXISTS temp_pgr_arc_pgr_node1_idx ON temp_pgr_arc USING btree (pgr_node_1);
+        CREATE INDEX IF NOT EXISTS temp_pgr_arc_pgr_node2_idx ON temp_pgr_arc USING btree (pgr_node_2);
+        CREATE INDEX IF NOT EXISTS temp_pgr_arc_node1_idx ON temp_pgr_arc USING btree (node_1);
+        CREATE INDEX IF NOT EXISTS temp_pgr_arc_node2_idx ON temp_pgr_arc USING btree (node_2);
 
-        CREATE TEMP TABLE temp_pgr_connec (
-            connec_id varchar(16),
-            arc_id varchar(16),
-            mapzone_id INTEGER DEFAULT 0,
-            old_mapzone_id INTEGER,
-            staticpressure FLOAT DEFAULT 0,
-            CONSTRAINT temp_pgr_connec_pkey PRIMARY KEY (connec_id)
-        );
-        CREATE INDEX temp_pgr_connec_connec_id ON temp_pgr_connec USING btree (connec_id);
-        CREATE INDEX temp_pgr_connec_arc_id ON temp_pgr_connec USING btree (arc_id);
-
-
-        CREATE TEMP TABLE temp_pgr_link (
-            link_id varchar(16),
-            feature_id varchar(16),
-            feature_type varchar(16),
-            mapzone_id INTEGER DEFAULT 0,
-            old_mapzone_id INTEGER,
-            staticpressure FLOAT DEFAULT 0,
-            CONSTRAINT temp_pgr_link_pkey PRIMARY KEY (link_id)
-        );
-        CREATE INDEX temp_pgr_link_link_id ON temp_pgr_link USING btree (link_id);
-        CREATE INDEX temp_pgr_link_feature_id ON temp_pgr_link USING btree (feature_id);
-
-        -- Create temporary layers depending on the project type
-        IF v_project_type = 'UD' THEN
-            CREATE TEMP TABLE temp_pgr_gully (
-                gully_id varchar(16),
-                arc_id varchar(16),
-                mapzone_id INTEGER DEFAULT 0,
-                old_mapzone_id INTEGER,
-                CONSTRAINT temp_pgr_gully_pkey PRIMARY KEY (gully_id)
-            );
-            CREATE INDEX temp_pgr_gully_gully_id ON temp_pgr_gully USING btree (gully_id);
-            CREATE INDEX temp_pgr_gully_arc_id ON temp_pgr_gully USING btree (arc_id);
-        ELSIF v_project_type = 'WS' THEN
-            ALTER TABLE temp_pgr_node ADD COLUMN closed BOOL;
-            ALTER TABLE temp_pgr_node ADD COLUMN broken BOOL;
-            ALTER TABLE temp_pgr_node ADD COLUMN to_arc VARCHAR(30);
-            IF v_fct_name = 'MINCUT' THEN
-                ALTER TABLE temp_pgr_arc ADD COLUMN cost_mapzone int default 1;
-                ALTER TABLE temp_pgr_arc ADD COLUMN reverse_cost_mapzone int default 1;
-                ALTER TABLE temp_pgr_arc ADD COLUMN unaccess BOOL DEFAULT FALSE; -- if TRUE, it means the valve is not accessible
-                ALTER TABLE temp_pgr_arc ADD COLUMN proposed BOOL DEFAULT FALSE;
-                -- "proposed"= FALSE AND mapzone_id <> '0' if it's in the mincut and it cannot be closed
-                -- "proposed" = TRUE if it's in the mincut and it has to be closed
-            END IF;
-        END IF;
-
-        -- Create other additional temporary tables
-        CREATE TEMP TABLE temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
-
-        -- For specific functions
-        IF v_fct_name = 'MINSECTOR' THEN
-            CREATE TEMP TABLE temp_pgr_connectedcomponents (
-                seq INT8 NOT NULL,
-                component INT8 NULL,
-                node INT8 NULL,
-                CONSTRAINT temp_pgr_connectedcomponents_pkey PRIMARY KEY (seq)
-            );
-            CREATE INDEX temp_pgr_connectedcomponents_component ON temp_pgr_connectedcomponents USING btree (component);
-            CREATE INDEX temp_pgr_connectedcomponents_node ON temp_pgr_connectedcomponents USING btree (node);
-            GRANT UPDATE, INSERT, REFERENCES, SELECT, DELETE, TRUNCATE, TRIGGER ON TABLE temp_pgr_connectedcomponents TO role_basic;
-
-            CREATE TEMP TABLE temp_minsector_graph (LIKE SCHEMA_NAME.minsector_graph INCLUDING ALL);
-            CREATE TEMP TABLE temp_minsector (LIKE SCHEMA_NAME.minsector INCLUDING ALL);
-        ELSE
-            CREATE TEMP TABLE temp_pgr_drivingdistance (
+        CREATE TEMP TABLE IF NOT EXISTS temp_pgr_drivingdistance (
                 seq INT8 NOT NULL,
                 "depth" INT8 NULL,
                 start_vid INT8 NULL,
@@ -169,10 +106,48 @@ BEGIN
                 agg_cost FLOAT8 NULL,
                 CONSTRAINT temp_pgr_drivingdistance_pkey PRIMARY KEY (seq)
             );
-            CREATE INDEX temp_pgr_drivingdistance_start_vid ON temp_pgr_drivingdistance USING btree (start_vid);
-            CREATE INDEX temp_pgr_drivingdistance_node ON temp_pgr_drivingdistance USING btree (node);
-            CREATE INDEX temp_pgr_drivingdistance_edge ON temp_pgr_drivingdistance USING btree (edge);
-            GRANT UPDATE, INSERT, REFERENCES, SELECT, DELETE, TRUNCATE, TRIGGER ON TABLE temp_pgr_drivingdistance TO role_basic;
+        CREATE INDEX IF NOT EXISTS temp_pgr_drivingdistance_start_vid_idx ON temp_pgr_drivingdistance USING btree (start_vid);
+        CREATE INDEX IF NOT EXISTS temp_pgr_drivingdistance_node_idx ON temp_pgr_drivingdistance USING btree (node);
+        CREATE INDEX IF NOT EXISTS temp_pgr_drivingdistance_edge_idx ON temp_pgr_drivingdistance USING btree (edge);
+
+        -- Create other additional temporary tables
+        CREATE TEMP TABLE IF NOT EXISTS temp_audit_check_data (LIKE SCHEMA_NAME.audit_check_data INCLUDING ALL);
+
+        -- Create temporary tables depending on the project type
+        IF v_project_type = 'WS' THEN
+            ALTER TABLE temp_pgr_node ADD COLUMN closed BOOL;
+            ALTER TABLE temp_pgr_node ADD COLUMN broken BOOL;
+            ALTER TABLE temp_pgr_node ADD COLUMN to_arc _int4;
+
+            ALTER TABLE temp_pgr_arc ADD COLUMN closed BOOL;
+            ALTER TABLE temp_pgr_arc ADD COLUMN broken BOOL;
+            ALTER TABLE temp_pgr_arc ADD COLUMN to_arc _int4;
+
+            -- for specific functions
+            IF v_fct_name = 'MINCUT' OR v_fct_name = 'MINSECTOR' THEN
+                ALTER TABLE temp_pgr_arc ADD COLUMN unaccess BOOL DEFAULT FALSE; -- if TRUE, it means the valve is not accessible
+                ALTER TABLE temp_pgr_arc ADD COLUMN proposed BOOL DEFAULT FALSE;
+                ALTER TABLE temp_pgr_arc ADD COLUMN cost_mincut INT DEFAULT 1;
+                ALTER TABLE temp_pgr_arc ADD COLUMN reverse_cost_mincut INT DEFAULT 1;
+            END IF;
+            IF v_fct_name = 'MINSECTOR' THEN
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_connectedcomponents (
+                    seq INT8 NOT NULL,
+                    component INT8 NULL,
+                    node INT8 NULL,
+                    CONSTRAINT temp_pgr_connectedcomponents_pkey PRIMARY KEY (seq)
+                );
+                CREATE INDEX IF NOT EXISTS temp_pgr_connectedcomponents_component_idx ON temp_pgr_connectedcomponents USING btree (component);
+                CREATE INDEX IF NOT EXISTS temp_pgr_connectedcomponents_node_idx ON temp_pgr_connectedcomponents USING btree (node);
+
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_graph (LIKE SCHEMA_NAME.minsector_graph INCLUDING ALL);
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector (LIKE SCHEMA_NAME.minsector INCLUDING ALL);
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_mincut (LIKE SCHEMA_NAME.minsector_mincut INCLUDING ALL);
+
+                -- used for MASSIVE MINCUT
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_node_minsector (LIKE temp_pgr_node INCLUDING ALL);
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_arc_minsector (LIKE temp_pgr_arc INCLUDING ALL);
+            END IF;
         END IF;
 
 
@@ -181,7 +156,7 @@ BEGIN
             -- with psectors
             IF v_project_type = 'WS' THEN
 
-                CREATE TEMPORARY VIEW v_temp_arc AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_arc AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), arc_psector AS (
@@ -208,12 +183,16 @@ BEGIN
                         a.arc_id,
                         a.node_1,
                         a.node_2,
-                        a.initoverflowpath,
                         a.expl_id,
                         a.sector_id,
                         a.presszone_id,
                         a.dma_id,
                         a.dqa_id,
+                        a.supplyzone_id,
+                        a.muni_id,
+                        a.minsector_id,
+                        a.arccat_id,
+                        a.state,
                         a.the_geom
                     FROM arc_selector
                     JOIN arc a USING (arc_id)
@@ -223,7 +202,7 @@ BEGIN
                 SELECT * FROM arc_selected
                 WHERE node_1 IS NOT NULL AND node_2 IS NOT NULL;
 
-                CREATE TEMPORARY VIEW v_temp_node AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_node AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), node_psector AS (
@@ -252,6 +231,9 @@ BEGIN
                     node.presszone_id,
                     node.dma_id,
                     node.dqa_id,
+                    node.supplyzone_id,
+                    node.muni_id,
+                    node.minsector_id,
                     node.the_geom
                     FROM node_selector
                     JOIN node ON node.node_id::text = node_selector.node_id::text
@@ -262,7 +244,7 @@ BEGIN
                 )
                 SELECT * FROM node_selected n;
 
-                CREATE TEMPORARY VIEW v_temp_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_connec AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), connec_psector AS (
@@ -302,6 +284,12 @@ BEGIN
                         connec.presszone_id,
                         connec.dma_id,
                         connec.dqa_id,
+                        connec.supplyzone_id,
+                        connec.plot_code,
+                        connec.muni_id,
+                        connec.conneccat_id,
+                        connec.state,
+                        connec.minsector_id,
                         connec.the_geom
                     FROM connec_selector
                     JOIN connec ON connec.connec_id::text = connec_selector.connec_id::text
@@ -310,7 +298,7 @@ BEGIN
                 )
                 SELECT * FROM connec_selected;
 
-                CREATE TEMPORARY VIEW v_temp_link_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_link_connec AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), link_psector AS (
@@ -352,6 +340,9 @@ BEGIN
                         l.presszone_id,
                         l.dma_id,
                         l.dqa_id,
+                        l.supplyzone_id,
+                        l.muni_id,
+                        l.minsector_id,
                         l.the_geom
                     FROM link_selector
                     JOIN link l USING (link_id)
@@ -362,7 +353,7 @@ BEGIN
 
             ELSIF v_project_type = 'UD' THEN
 
-                CREATE TEMPORARY VIEW v_temp_arc AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_arc AS
                 WITH sel_expl AS (
                     SELECT selector_expl.expl_id FROM selector_expl WHERE selector_expl.cur_user = CURRENT_USER
                 ), sel_ps AS (
@@ -397,6 +388,11 @@ BEGIN
                         a.drainzone_id,
                         a.dwfzone_id,
                         a.omzone_id,
+                        a.fluid_type,
+                        a.muni_id,
+                        a.minsector_id,
+                        a.arccat_id,
+                        a.state,
                         a.the_geom
                     FROM arc_selector
                     JOIN arc a USING (arc_id)
@@ -406,7 +402,7 @@ BEGIN
                 SELECT * FROM arc_selected
                 WHERE node_1 IS NOT NULL AND node_2 IS NOT NULL;
 
-                CREATE TEMPORARY VIEW v_temp_node AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_node AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), node_psector AS (
@@ -433,6 +429,9 @@ BEGIN
                     node.drainzone_id,
                     node.dwfzone_id,
                     node.omzone_id,
+                    node.fluid_type,
+                    node.muni_id,
+                    node.minsector_id,
                     node.the_geom
                     FROM node_selector
                     JOIN node ON node.node_id::text = node_selector.node_id::text
@@ -443,7 +442,7 @@ BEGIN
                 )
                 SELECT * FROM node_selected;
 
-                CREATE TEMPORARY VIEW v_temp_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_connec AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), connec_psector AS (
@@ -479,6 +478,12 @@ BEGIN
                         connec.drainzone_id,
                         connec.dwfzone_id,
                         connec.omzone_id,
+                        connec.fluid_type,
+                        connec.plot_code,
+                        connec.muni_id,
+                        connec.conneccat_id,
+                        connec.state,
+                        connec.minsector_id,
                         connec.the_geom
                     FROM connec_selector
                     JOIN connec ON connec.connec_id::text = connec_selector.connec_id::text
@@ -487,7 +492,7 @@ BEGIN
                 )
                 SELECT * FROM connec_selected;
 
-                CREATE TEMPORARY VIEW v_temp_gully AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_gully AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), gully_psector AS (
@@ -525,6 +530,9 @@ BEGIN
                         gully.drainzone_id,
                         gully.dwfzone_id,
                         gully.omzone_id,
+                        gully.fluid_type,
+                        gully.muni_id,
+                        gully.minsector_id,
                         gully.the_geom
                     FROM gully_selector
                     JOIN gully ON gully.gully_id::text = gully_selector.gully_id::text
@@ -533,7 +541,7 @@ BEGIN
                 )
                 SELECT * FROM gully_selected;
 
-                CREATE TEMPORARY VIEW v_temp_link_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_link_connec AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ),link_psector AS (
@@ -575,6 +583,9 @@ BEGIN
                         l.drainzone_id,
                         l.dwfzone_id,
                         l.omzone_id,
+                        l.fluid_type,
+                        l.muni_id,
+                        l.minsector_id,
                         l.the_geom
                     FROM link_selector
                     JOIN link l USING (link_id)
@@ -584,7 +595,7 @@ BEGIN
                 )
                 SELECT * FROM link_selected;
 
-                CREATE TEMPORARY VIEW v_temp_link_gully AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_link_gully AS
                 WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ),link_psector AS (
@@ -626,6 +637,9 @@ BEGIN
                         l.drainzone_id,
                         l.dwfzone_id,
                         l.omzone_id,
+                        l.fluid_type,
+                        l.muni_id,
+                        l.minsector_id,
                         l.the_geom
                     FROM link_selector
                     JOIN link l USING (link_id)
@@ -641,25 +655,28 @@ BEGIN
             -- without psectors
             IF v_project_type = 'WS' THEN
 
-                CREATE TEMPORARY VIEW v_temp_arc AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_arc AS
                 SELECT
                     a.arc_id,
                     a.node_1,
                     a.node_2,
-                    a.initoverflowpath,
                     a.expl_id,
                     a.sector_id,
                     a.minsector_id,
                     a.presszone_id,
                     a.dma_id,
                     a.dqa_id,
+                    a.supplyzone_id,
+                    a.muni_id,
+                    a.arccat_id,
+                    a.state,
                     a.the_geom
                 FROM arc a
                 JOIN value_state_type vst ON vst.id = a.state_type
                 WHERE a.state = 1 AND vst.is_operative = TRUE
                 AND node_1 IS NOT NULL AND node_2 IS NOT NULL;
 
-                CREATE TEMPORARY VIEW v_temp_node AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_node AS
                 SELECT
                     n.node_id,
                     cf.graph_delimiter,
@@ -670,6 +687,9 @@ BEGIN
                     n.presszone_id,
                     n.dma_id,
                     n.dqa_id,
+                    n.supplyzone_id,
+                    n.muni_id,
+                    n.minsector_id,
                     n.the_geom
                 FROM node n
                 JOIN value_state_type vst ON vst.id = n.state_type
@@ -677,23 +697,29 @@ BEGIN
                 JOIN cat_feature_node cf ON cf.id = cn.node_type
                 WHERE n.state = 1 AND vst.is_operative = TRUE;
 
-                CREATE TEMPORARY VIEW v_temp_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_connec AS
                 SELECT
-                    connec_id,
-                    arc_id,
-                    expl_id,
-                    top_elev,
-                    depth,
-                    sector_id,
-                    presszone_id,
-                    dma_id,
-                    dqa_id,
-                    the_geom
+                    c.connec_id,
+                    c.arc_id,
+                    c.expl_id,
+                    c.top_elev,
+                    c.depth,
+                    c.sector_id,
+                    c.presszone_id,
+                    c.dma_id,
+                    c.dqa_id,
+                    c.plot_code,
+                    c.supplyzone_id,
+                    c.muni_id,
+                    c.minsector_id,
+                    c.conneccat_id,
+                    c.state,
+                    c.the_geom
                 FROM connec c
                 JOIN value_state_type vst ON vst.id = c.state_type
                 WHERE c.state = 1 AND vst.is_operative = TRUE;
 
-                CREATE TEMPORARY VIEW v_temp_link_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_link_connec AS
                 SELECT
                     l.link_id,
                     c.arc_id,
@@ -704,6 +730,9 @@ BEGIN
                     l.presszone_id,
                     l.dma_id,
                     l.dqa_id,
+                    l.supplyzone_id,
+                    l.muni_id,
+                    l.minsector_id,
                     l.the_geom
                 FROM link l
                 JOIN connec c ON l.feature_id = c.connec_id
@@ -714,7 +743,7 @@ BEGIN
 
             ELSIF v_project_type = 'UD' THEN
 
-                CREATE TEMPORARY VIEW v_temp_arc AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_arc AS
                 SELECT
                     a.arc_id,
                     a.node_1,
@@ -725,12 +754,17 @@ BEGIN
                     a.drainzone_id,
                     a.dwfzone_id,
                     a.omzone_id,
+                    a.fluid_type,
+                    a.muni_id,
+                    a.minsector_id,
+                    a.arccat_id,
+                    a.state,
                     a.the_geom
                 FROM arc a
                 JOIN value_state_type vst ON vst.id = a.state_type
                 WHERE a.state = 1 AND vst.is_operative = TRUE;
 
-                CREATE TEMPORARY VIEW v_temp_node AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_node AS
                 SELECT
                     n.node_id,
                     cf.graph_delimiter,
@@ -739,6 +773,9 @@ BEGIN
                     n.drainzone_id,
                     n.dwfzone_id,
                     n.omzone_id,
+                    n.fluid_type,
+                    n.muni_id,
+                    n.minsector_id,
                     n.the_geom
                 FROM node n
                 JOIN value_state_type vst ON vst.id = n.state_type
@@ -746,7 +783,7 @@ BEGIN
                 JOIN cat_feature_node cf ON cf.id = cn.node_type
                 WHERE n.state = 1 AND vst.is_operative = TRUE;
 
-                CREATE TEMPORARY VIEW v_temp_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_connec AS
                 SELECT
                     c.connec_id,
                     c.arc_id,
@@ -755,12 +792,18 @@ BEGIN
                     c.drainzone_id,
                     c.dwfzone_id,
                     c.omzone_id,
+                    c.fluid_type,
+                    c.plot_code,
+                    c.muni_id,
+                    c.minsector_id,
+                    c.conneccat_id,
+                    c.state,
                     c.the_geom
                 FROM connec c
                 JOIN value_state_type vst ON vst.id = c.state_type
                 WHERE c.state = 1 AND vst.is_operative = TRUE;
 
-                CREATE TEMPORARY VIEW v_temp_gully AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_gully AS
                 SELECT
                     g.gully_id,
                     g.arc_id,
@@ -769,12 +812,15 @@ BEGIN
                     g.drainzone_id,
                     g.dwfzone_id,
                     g.omzone_id,
+                    g.fluid_type,
+                    g.muni_id,
+                    g.minsector_id,
                     g.the_geom
                 FROM gully g
                 JOIN value_state_type vst ON vst.id = g.state_type
                 WHERE g.state = 1 AND vst.is_operative = TRUE;
 
-                CREATE TEMPORARY VIEW v_temp_link_connec AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_link_connec AS
                 SELECT
                     l.link_id,
                     c.arc_id,
@@ -785,6 +831,9 @@ BEGIN
                     l.drainzone_id,
                     l.dwfzone_id,
                     l.omzone_id,
+                    l.fluid_type,
+                    l.muni_id,
+                    l.minsector_id,
                     l.the_geom
                 FROM link l
                 JOIN connec c ON l.feature_id = c.connec_id
@@ -793,7 +842,7 @@ BEGIN
                 AND vst.is_operative = TRUE
                 AND l.feature_type = 'CONNEC';
 
-                CREATE TEMPORARY VIEW v_temp_link_gully AS
+                CREATE OR REPLACE TEMPORARY VIEW v_temp_link_gully AS
                 SELECT
                     l.link_id,
                     g.arc_id,
@@ -804,6 +853,9 @@ BEGIN
                     l.drainzone_id,
                     l.dwfzone_id,
                     l.omzone_id,
+                    l.fluid_type,
+                    l.muni_id,
+                    l.minsector_id,
                     l.the_geom
                 FROM link l
                 JOIN gully g ON l.feature_id = g.gully_id
@@ -816,33 +868,80 @@ BEGIN
 
         END IF;
 
+        -- For specific functions
+        IF v_fct_name = 'MINSECTOR' THEN
+            CREATE OR REPLACE TEMPORARY VIEW v_temp_pgr_minsector_old AS
+            SELECT DISTINCT v.minsector_id
+            FROM temp_pgr_arc t
+            JOIN v_temp_arc v USING (arc_id)
+            WHERE v.minsector_id IS NOT NULL;
+
+            CREATE OR REPLACE TEMPORARY VIEW v_temp_minsector_mincut AS
+            WITH minsector_mapzones AS (
+                SELECT
+                    t.mincut_minsector_id AS minsector_id,
+                    array_agg(DISTINCT t.dma_id) AS dma_id,
+                    array_agg(DISTINCT t.dqa_id) AS dqa_id,
+                    array_agg(DISTINCT t.presszone_id) AS presszone_id,
+                    array_agg(DISTINCT t.expl_id) AS expl_id,
+                    array_agg(DISTINCT t.sector_id) AS sector_id,
+                    array_agg(DISTINCT t.muni_id) AS muni_id,
+                    array_agg(DISTINCT t.supplyzone_id) AS supplyzone_id,
+                    ST_Union(t.the_geom) AS the_geom
+                FROM (
+                    SELECT
+                        m.minsector_id,
+                        mm.minsector_id AS mincut_minsector_id,
+                        unnest(m.dma_id) AS dma_id,
+                        unnest(m.dqa_id) AS dqa_id,
+                        unnest(m.presszone_id) AS presszone_id,
+                        unnest(m.expl_id) AS expl_id,
+                        unnest(m.sector_id) AS sector_id,
+                        unnest(m.muni_id) AS muni_id,
+                        unnest(m.supplyzone_id) AS supplyzone_id,
+                        m.the_geom
+                    FROM temp_pgr_minsector m
+                    JOIN temp_pgr_minsector_mincut mm ON mm.mincut_minsector_id = m.minsector_id
+                ) t
+                GROUP BY t.mincut_minsector_id
+            ),
+            minsector_sums AS (
+                SELECT
+                    mm.minsector_id,
+                    SUM(m.num_border) AS num_border,
+                    SUM(m.num_connec) AS num_connec,
+                    SUM(m.num_hydro) AS num_hydro,
+                    SUM(m.length) AS length
+                FROM temp_pgr_minsector_mincut mm
+                JOIN temp_pgr_minsector m ON m.minsector_id = mm.mincut_minsector_id
+                GROUP BY mm.minsector_id
+            )
+            SELECT
+                m.minsector_id,
+                m.dma_id,
+                m.dqa_id,
+                m.presszone_id,
+                m.expl_id,
+                m.sector_id,
+                m.muni_id,
+                m.supplyzone_id,
+                s.num_border,
+                s.num_connec,
+                s.num_hydro,
+                s.length,
+                m.the_geom
+            FROM minsector_mapzones m
+            JOIN minsector_sums s ON s.minsector_id = m.minsector_id;
+        END IF;
 
 
 
         v_return_message = 'The temporary tables/views have been created successfully';
     ELSIF v_action = 'DROP' THEN
-        -- Drop temporary tables
-        DROP TABLE IF EXISTS temp_pgr_mapzone;
-        DROP TABLE IF EXISTS temp_pgr_node;
-        DROP TABLE IF EXISTS temp_pgr_arc;
-        DROP TABLE IF EXISTS temp_pgr_connec;
-        DROP TABLE IF EXISTS temp_pgr_gully;
-        DROP TABLE IF EXISTS temp_pgr_link;
-
-        -- Drop other additional temporary tables
-        DROP TABLE IF EXISTS temp_audit_check_data;
-
-        -- For specific functions
-        IF v_fct_name = 'MINSECTOR' THEN
-            DROP TABLE IF EXISTS temp_pgr_connectedcomponents;
-            DROP TABLE IF EXISTS temp_pgr_minsector;
-            DROP TABLE IF EXISTS temp_minsector_graph;
-            DROP TABLE IF EXISTS temp_minsector;
-        ELSE
-            DROP TABLE IF EXISTS temp_pgr_drivingdistance;
-        END IF;
 
         -- Drop temporary views
+        DROP VIEW IF EXISTS v_temp_pgr_minsector_old;
+        DROP VIEW IF EXISTS v_temp_minsector_mincut;
         DROP VIEW IF EXISTS v_temp_node;
         DROP VIEW IF EXISTS v_temp_arc;
         DROP VIEW IF EXISTS v_temp_connec;
@@ -850,7 +949,20 @@ BEGIN
         DROP VIEW IF EXISTS v_temp_link_connec;
         DROP VIEW IF EXISTS v_temp_link_gully;
 
-        v_return_message = 'The temporary tables have been dropped successfully';
+        -- Drop temporary tables
+        DROP TABLE IF EXISTS temp_pgr_mapzone;
+        DROP TABLE IF EXISTS temp_pgr_node_minsector;
+        DROP TABLE IF EXISTS temp_pgr_arc_minsector;
+        DROP TABLE IF EXISTS temp_pgr_node;
+        DROP TABLE IF EXISTS temp_pgr_arc;
+        DROP TABLE IF EXISTS temp_audit_check_data;
+        DROP TABLE IF EXISTS temp_pgr_connectedcomponents;
+        DROP TABLE IF EXISTS temp_pgr_minsector_graph;
+        DROP TABLE IF EXISTS temp_pgr_minsector;
+        DROP TABLE IF EXISTS temp_pgr_drivingdistance;
+        DROP TABLE IF EXISTS temp_pgr_minsector_mincut;
+
+        v_return_message = 'The temporary tables/views have been dropped successfully';
     END IF;
 
     RETURN jsonb_build_object(

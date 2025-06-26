@@ -125,7 +125,7 @@ BEGIN
 		END IF;
 
 		-- connec ID
-		IF NEW.connec_id != (SELECT last_value::text FROM urn_id_seq) OR NEW.connec_id IS NULL THEN
+		IF NEW.connec_id != (SELECT last_value FROM urn_id_seq) OR NEW.connec_id IS NULL THEN
 			NEW.connec_id = (SELECT nextval('urn_id_seq'));
 		END IF;
 
@@ -492,8 +492,8 @@ BEGIN
 		IF (NEW.crmzone_id IS NULL) THEN
 			-- getting value from geometry of mapzone
 			IF (NEW.crmzone_id IS NULL) THEN
-				SELECT count(*) INTO v_count FROM crm_zone WHERE ST_DWithin(NEW.the_geom, crm_zone.the_geom,0.001);
-				NEW.crmzone_id = (SELECT id FROM crm_zone WHERE ST_DWithin(NEW.the_geom, crm_zone.the_geom,0.001) LIMIT 1);
+				SELECT count(*) INTO v_count FROM crmzone WHERE ST_DWithin(NEW.the_geom, crmzone.the_geom,0.001);
+				NEW.crmzone_id = (SELECT id FROM crmzone WHERE ST_DWithin(NEW.the_geom, crmzone.the_geom,0.001) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -699,7 +699,7 @@ BEGIN
 		END IF;
 
 		-- Reconnect arc_id
-		IF (coalesce (NEW.arc_id,'') != coalesce(OLD.arc_id,'')) THEN
+		IF (coalesce (NEW.arc_id,0) != coalesce(OLD.arc_id,0)) THEN
 
 			-- when connec_id comes from psector_table
 			IF NEW.state = 1 AND (SELECT connec_id FROM plan_psector_x_connec JOIN selector_psector USING (psector_id)
@@ -729,16 +729,9 @@ BEGIN
 				END IF;
 			ELSE
 				-- when arc_id comes from connec table
-				UPDATE connec SET arc_id=NEW.arc_id where connec_id=NEW.connec_id;
+				UPDATE connec SET arc_id=COALESCE(NEW.arc_id, OLD.arc_id) where connec_id=NEW.connec_id RETURNING arc_id INTO v_arc_id;
 
-				IF NEW.arc_id IS NOT NULL THEN
-
-					-- when link exists
-					IF (SELECT link_id FROM link WHERE state = 1 and feature_id =  NEW.connec_id) IS NOT NULL THEN
-						EXECUTE 'SELECT gw_fct_linktonetwork($${"client":{"device":4, "infoType":1, "lang":"ES"},
-						"feature":{"id":'|| array_to_json(array_agg(NEW.connec_id))||'},"data":{"feature_type":"CONNEC", "forceEndPoint":"true",  "forcedArcs":["'||NEW.arc_id||'"]}}$$)';
-					END IF;
-
+				IF v_arc_id IS NOT NULL THEN
 					-- recover values in order to do not disturb this workflow
 					SELECT * INTO v_arc FROM arc WHERE arc_id = NEW.arc_id;
 					NEW.pjoint_id = v_arc.arc_id; NEW.pjoint_type = 'ARC'; NEW.sector_id = v_arc.sector_id; NEW.dma_id = v_arc.dma_id;
@@ -757,7 +750,7 @@ BEGIN
 		-- Looking for state control and insert planned connecs to default psector
 		IF (NEW.state != OLD.state) THEN
 
-			PERFORM gw_fct_state_control('CONNEC', NEW.connec_id, NEW.state, TG_OP);
+			PERFORM gw_fct_state_control(json_build_object('feature_type_aux', 'CONNEC', 'feature_id_aux', NEW.connec_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP));
 
 			IF NEW.state = 2 AND OLD.state=1 THEN
 
@@ -868,7 +861,7 @@ BEGIN
 		END IF;
 
 		UPDATE connec
-			SET code=NEW.code, sys_code=NEW.sys_code, top_elev=NEW.top_elev, datasource=NEW.datasource, "depth"=NEW.depth, conneccat_id=NEW.conneccat_id, sector_id=NEW.sector_id,
+			SET code=NEW.code, sys_code=NEW.sys_code, top_elev=NEW.top_elev, datasource=NEW.datasource, "depth"=NEW.depth, conneccat_id=NEW.conneccat_id, sector_id=COALESCE(NEW.sector_id, OLD.sector_id),
 			annotation=NEW.annotation, observ=NEW.observ, "comment"=NEW.comment, rotation=NEW.rotation,dma_id=NEW.dma_id, presszone_id=NEW.presszone_id,
 			soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type, location_type=NEW.location_type, workcat_id=NEW.workcat_id,
 			workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate, ownercat_id=NEW.ownercat_id, streetaxis2_id=NEW.streetaxis2_id,
@@ -882,7 +875,7 @@ BEGIN
 			crmzone_id=NEW.crmzone_id, expl_visibility=NEW.expl_visibility, plot_code=NEW.plot_code, brand_id=NEW.brand_id, model_id=NEW.model_id, serial_number=NEW.serial_number,
 			label_quadrant=NEW.label_quadrant, n_inhabitants = NEW.n_inhabitants, lock_level=NEW.lock_level, block_code=NEW.block_code, n_hydrometer=NEW.n_hydrometer
 			WHERE connec_id=OLD.connec_id;
-		
+
 		-- update connec_add table
 		UPDATE connec_add SET demand_base = NEW.demand_base, demand_max = NEW.demand_max, demand_min = NEW.demand_min, demand_avg = NEW.demand_avg, press_max = NEW.press_max,
 		press_min = NEW.press_min, press_avg = NEW.press_avg, quality_max = NEW.quality_max, quality_min = NEW.quality_min, quality_avg = NEW.quality_avg,

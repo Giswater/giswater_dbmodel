@@ -231,11 +231,19 @@ BEGIN
 		UPDATE temp_t_arc SET diameter = dint FROM (
 		SELECT node_2 as n2, diameter dint FROM temp_t_arc UNION SELECT node_2, diameter FROM temp_t_arc
 		)t WHERE t.dint IS NOT NULL AND t.n2 = node_2 AND diameter IS NULL;
+		
+		-- update roughness for shortpipes and valves using neighbourg
+		update temp_arc t set roughness = rough from (
+		select a.arc_id, (avg(a1.roughness))::numeric(12,3) as rough, 
+		a.epa_type from temp_arc a
+		left join temp_arc a1 on (a1.node_1 = a.node_1 or a1.node_2= a.node_1 or a1.node_1 = a.node_2 or a1.node_2= a.node_2)
+		where a.epa_type in ('SHORTPIPE', 'VALVE') and a.arc_id != a1.arc_id group by 1,3
+		) a where t.arc_id = a.arc_id;
 
 		-- other null values
 		UPDATE temp_t_arc SET minorloss = 0 WHERE minorloss IS NULL;
 
-		UPDATE temp_t_arc SET epa_type = 'VIRTUALVALVE' FROM arc WHERE arc.epa_type  ='VIRTUALVALVE' AND arc.arc_id = temp_t_arc.arc_id;
+		UPDATE temp_t_arc SET epa_type = 'VIRTUALVALVE' FROM arc WHERE arc.epa_type  ='VIRTUALVALVE' AND arc.arc_id::text = temp_t_arc.arc_id;
 
 		-- for those elements like filter o flowmeter which they do not have the attribute on the inventory table
 		UPDATE temp_t_arc SET status = 'OPEN' WHERE status IS NULL OR status = '';

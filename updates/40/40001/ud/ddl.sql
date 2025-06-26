@@ -18,15 +18,8 @@ ALTER TABLE inp_dscenario_froutlet RENAME TO _inp_dscenario_froutlet;
 ALTER TABLE inp_dscenario_frorifice RENAME TO _inp_dscenario_frorifice;
 ALTER TABLE inp_dscenario_frweir RENAME TO _inp_dscenario_frweir;
 
-
-CREATE TABLE man_inletpipe (
-	link_id int4 NOT NULL,
-	CONSTRAINT man_inletpipe_pkey PRIMARY KEY (link_id),
-	CONSTRAINT man_inletpipe_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
 CREATE TABLE inp_froutlet (
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     outlet_type character varying(16) NOT NULL,
     offsetval numeric(12,4),
     curve_id character varying(16),
@@ -38,7 +31,7 @@ CREATE TABLE inp_froutlet (
 );
 
 CREATE TABLE inp_frorifice(
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     orifice_type varchar(18) NOT NULL,
     offsetval numeric(12, 4) NULL,
     cd numeric(12, 4) NOT NULL,
@@ -56,7 +49,7 @@ CREATE TABLE inp_frorifice(
 );
 
 CREATE TABLE inp_frweir(
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     weir_type varchar(18) NOT NULL,
     offsetval numeric(12, 4) NULL,
     cd numeric(12, 4) NULL,
@@ -77,7 +70,7 @@ CREATE TABLE inp_frweir(
 );
 
 CREATE TABLE inp_frpump (
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     curve_id varchar(16) NOT NULL,
     status varchar(3) NULL,
     startup numeric(12, 4) NULL,
@@ -90,7 +83,7 @@ CREATE TABLE inp_frpump (
 
 CREATE TABLE inp_dscenario_frpump (
     dscenario_id int4 NOT NULL,
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     pump_type varchar(18) NOT NULL,
     curve_id varchar(16) NOT NULL,
     status varchar(3) NULL,
@@ -103,7 +96,7 @@ CREATE TABLE inp_dscenario_frpump (
 
 CREATE TABLE inp_dscenario_froutlet (
     dscenario_id int4 NOT NULL,
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     outlet_type character varying(16) NOT NULL,
     offsetval numeric(12,4),
     curve_id character varying(16),
@@ -117,7 +110,7 @@ CREATE TABLE inp_dscenario_froutlet (
 
 CREATE TABLE inp_dscenario_frorifice (
     dscenario_id int4 NOT NULL,
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     orifice_type varchar(18) NOT NULL,
     offsetval numeric(12, 4) NULL,
     cd numeric(12, 4) NOT NULL,
@@ -137,7 +130,7 @@ CREATE TABLE inp_dscenario_frorifice (
 
 CREATE TABLE inp_dscenario_frweir (
     dscenario_id int4 NOT NULL,
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     weir_type varchar(18) NOT NULL,
     offsetval numeric(12, 4) NULL,
     cd numeric(12, 4) NULL,
@@ -159,10 +152,6 @@ CREATE TABLE inp_dscenario_frweir (
 );
 
 DROP TABLE IF EXISTS ext_rtc_dma_period CASCADE;
-
-
-SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP", "table":"cat_link", "column":"link_type"}}$$);
-ALTER TABLE cat_link DROP CONSTRAINT IF EXISTS cat_link_linktype_fkey;
 
 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"archived_psector_gully_traceability", "column":"expl_visibility", "dataType":"int[]"}}$$);
@@ -268,3 +257,28 @@ CREATE INDEX subcathment_index ON inp_subcatchment USING gist (the_geom);
 
 -- 20/05/2025
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"arc_add", "column":"conduit_capacity", "dataType":"float", "isUtils":"False"}}$$);
+
+-- 10/06/2025
+CREATE TABLE man_vlink (
+	link_id int4 NOT NULL,
+	CONSTRAINT man_vlink_pkey PRIMARY KEY (link_id),
+	CONSTRAINT man_vlink_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE man_vgully (
+	gully_id int4 NOT NULL,
+	CONSTRAINT man_vgully_pkey PRIMARY KEY (gully_id),
+	CONSTRAINT man_vgully_gully_id_fkey FOREIGN KEY (gully_id) REFERENCES gully(gully_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE man_vconnec (
+	connec_id int4 NOT NULL,
+	CONSTRAINT man_vconnec_pkey PRIMARY KEY (connec_id),
+	CONSTRAINT man_vconnec_connec_id_fkey FOREIGN KEY (connec_id) REFERENCES connec(connec_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE man_conduitlink (
+	link_id int4 NOT NULL,
+	CONSTRAINT man_conduitlink_pkey PRIMARY KEY (link_id),
+	CONSTRAINT man_conduitlink_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
+);

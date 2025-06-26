@@ -8,15 +8,15 @@ or (at your option) any later version.
 --FUNCTION CODE: 3236
 
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_mincut_show_current(p_data json) ;
-CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_mincut_show_current(p_data json) 
-RETURNS json AS 
+CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_mincut_show_current(p_data json)
+RETURNS json AS
 $BODY$
 
 /*EXAMPLE
 
 SELECT SCHEMA_NAME.gw_fct_mincut_show_current($${
-"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":SRID_VALUE}, 
-"form":{}, "feature":{}, "data":{"filterFields":{}, 
+"client":{"device":4, "lang":"es_ES", "infoType":1, "epsg":SRID_VALUE},
+"form":{}, "feature":{}, "data":{"filterFields":{},
 "pageInfo":{}, "parameters":{"explId":"1"}}}$$);
 
 --fid: 490
@@ -48,12 +48,12 @@ BEGIN
 
 	-- Reset values
 	DELETE FROM anl_node WHERE cur_user="current_user"() AND anl_node.fid=v_fid;
-	DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=v_fid;	
-	
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, concat('SHOW CURRENTLY EXECUTED MINCUTS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (v_fid, null, 4, '-------------------------------------------------------------');
+	DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=v_fid;
 
-	-- getting input data 	
+	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"function":"3236", "fid":"'||v_fid||'", "criticity":"4", "is_process":true, "is_header":"true"}}$$)';
+
+	-- getting input data
 	v_expl_id := json_extract_path_text(p_data,'data','parameters','explId')::integer;
 
 	-- get results
@@ -78,33 +78,35 @@ BEGIN
 		where mincut_state = 1 and expl_id ='||v_expl_id||')row)features'
  		INTO v_result;
 
-  	v_result := COALESCE(v_result, '{}'); 
-  	v_result_line = concat ('{"geometryType":"Linestring", "features":',v_result, '}'); 
+  	v_result := COALESCE(v_result, '{}');
+  	v_result_line = concat ('{"geometryType":"Linestring", "features":',v_result, '}');
 
 	SELECT count(*) INTO v_count FROM om_mincut WHERE expl_id =v_expl_id and mincut_state = 1;
 
 	IF v_count = 0 THEN
-		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		VALUES (v_fid,  'No mincuts are being executed right now.', v_count);
+
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3542", "function":"3236", "v_count":"'||v_count||'", "fid":"'||v_fid||'",  "is_process":true}}$$)';
 	ELSE
-		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		VALUES (v_fid,  concat ('There are ',v_count,' mincuts being executed at the moment.'), v_count);
+
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3544", "function":"3236", "parameters":{"v_count":"'||v_count||'"}, "fid":"'||v_fid||'","fcount":"'||v_count||'",  "is_process":true}}$$)';
 
 		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		SELECT v_fid,  concat ('Mincut_id: ',string_agg(id::text, ', '), '.' ), v_count 
+		SELECT v_fid,  concat ('Mincut_id: ',string_agg(id::text, ', '), '.' ), v_count
 		FROM om_mincut WHERE expl_id =v_expl_id and mincut_state = 1;
 
 	END IF;
-	
+
 	-- info
-	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result 
+	SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result
 	FROM (SELECT id, error_message as message FROM audit_check_data WHERE cur_user="current_user"() AND fid=v_fid order by  id asc) row;
-	v_result := COALESCE(v_result, '{}'); 
+	v_result := COALESCE(v_result, '{}');
 	v_result_info = concat ('{"geometryType":"", "values":',v_result, '}');
 
 	-- Control nulls
-	v_result_info := COALESCE(v_result_info, '{}'); 
-	v_result_line := COALESCE(v_result_line, '{}'); 
+	v_result_info := COALESCE(v_result_info, '{}');
+	v_result_line := COALESCE(v_result_line, '{}');
 
 	-- Return
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
@@ -118,5 +120,4 @@ END;
 $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100;
-  
-  
+

@@ -34,9 +34,9 @@ SELECT col_is_pk('temp_arc', ARRAY['id'], 'Column id should be primary key');
 -- Check column types
 SELECT col_type_is('temp_arc', 'id', 'integer', 'Column id should be integer');
 SELECT col_type_is('temp_arc', 'result_id', 'character varying(30)', 'Column result_id should be character varying(30)');
-SELECT col_type_is('temp_arc', 'arc_id', 'character varying(16)', 'Column arc_id should be character varying(16)');
-SELECT col_type_is('temp_arc', 'node_1', 'character varying(16)', 'Column node_1 should be character varying(16)');
-SELECT col_type_is('temp_arc', 'node_2', 'character varying(16)', 'Column node_2 should be character varying(16)');
+SELECT col_type_is('temp_arc', 'arc_id', 'character varying(16)', 'Column arc_id should be varchar(16)');
+SELECT col_type_is('temp_arc', 'node_1', 'character varying(16)', 'Column node_1 should be varchar(16)');
+SELECT col_type_is('temp_arc', 'node_2', 'character varying(16)', 'Column node_2 should be varchar(16)');
 SELECT col_type_is('temp_arc', 'arc_type', 'character varying(30)', 'Column arc_type should be character varying(30)');
 SELECT col_type_is('temp_arc', 'arccat_id', 'character varying(30)', 'Column arccat_id should be character varying(30)');
 SELECT col_type_is('temp_arc', 'epa_type', 'character varying(16)', 'Column epa_type should be character varying(16)');
@@ -53,7 +53,7 @@ SELECT col_type_is('temp_arc', 'expl_id', 'integer', 'Column expl_id should be i
 SELECT col_type_is('temp_arc', 'flw_code', 'character varying(512)', 'Column flw_code should be character varying(512)');
 SELECT col_type_is('temp_arc', 'minorloss', 'numeric(12,6)', 'Column minorloss should be numeric(12,6)');
 SELECT col_type_is('temp_arc', 'addparam', 'text', 'Column addparam should be text');
-SELECT col_type_is('temp_arc', 'arcparent', 'character varying(16)', 'Column arcparent should be character varying(16)');
+SELECT col_type_is('temp_arc', 'arcparent', 'character varying(16)', 'Column arcparent should be varchar(16)');
 SELECT col_type_is('temp_arc', 'flag', 'boolean', 'Column flag should be boolean');
 SELECT col_type_is('temp_arc', 'dma_id', 'integer', 'Column dma_id should be integer');
 SELECT col_type_is('temp_arc', 'presszone_id', 'text', 'Column presszone_id should be text');

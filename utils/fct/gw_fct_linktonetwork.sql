@@ -71,13 +71,13 @@ v_connect record; -- Record to store the value for the used connect
 v_link record; -- Record to store the value for the used link
 v_link_point public.geometry;
 v_arc record; -- Record to store the value for the used arc
-v_connect_id  varchar; -- id for the used connect
+v_connect_id  integer; -- id for the used connect
 v_point_aux public.geometry; -- Variable to store the geometry of the end of the link
-v_feature_array text[]; -- Transforming v_feature_ids on real array
+v_feature_array integer[]; -- Transforming v_feature_ids on real array
 
 v_endfeature_geom public.geometry; -- Variable to store the geometry of the end object, as well as node, connec, gully or arc
 v_pjointtype text; -- Type for the destination feature (ARC, NODE, CONNEC, GULLY)
-v_pjointid text; -- Id for the destination feature
+v_pjointid integer; -- Id for the destination feature
 
 v_count integer; -- Counter
 v_count2 integer; -- Counter
@@ -111,7 +111,6 @@ v_check_maxdistance float;
 v_checkeddiam text;
 v_querytext text;
 v_linkcat_id text;
-v_link_type text;
 
 BEGIN
 
@@ -173,10 +172,10 @@ BEGIN
 
 	-- get values from feature array
 	IF v_feature_ids ILIKE '[%]' THEN
-		v_feature_array = ARRAY(SELECT json_array_elements_text(v_feature_ids::json));
+		v_feature_array = ARRAY(SELECT json_array_elements_text(v_feature_ids::json)::integer);
 	ELSE
 		EXECUTE v_feature_ids INTO v_feature_ids;
-		v_feature_array = ARRAY(SELECT json_array_elements_text(v_feature_ids::json));
+		v_feature_array = ARRAY(SELECT json_array_elements_text(v_feature_ids::json)::integer);
 	END IF;
 
 	-- delete old values on result table
@@ -518,21 +517,14 @@ BEGIN
 
 					IF v_projecttype = 'WS' THEN
 						INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, dma_id, omzone_id,
-						presszone_id, dqa_id, minsector_id, fluid_type, muni_id, linkcat_id)
+						presszone_id, dqa_id, minsector_id, fluid_type, muni_id, linkcat_id, state_type)
 						VALUES (v_link.link_id, v_link.the_geom, v_connect_id, v_feature_type, v_link.exit_type, v_link.exit_id,
 						v_connect.state, v_arc.expl_id, v_arc.sector_id, v_dma_value, v_arc.omzone_id, v_arc.presszone_id, v_arc.dqa_id, v_arc.minsector_id, v_fluidtype_value, v_connect.muni_id,
-						v_linkcat_id);
+						v_linkcat_id, v_connect.state_type);
 					ELSIF v_projecttype = 'UD' THEN
-
-						IF v_feature_type = 'CONNEC' THEN
-							v_link_type := 'SERVCONNECTION';
-						ELSIF v_feature_type = 'GULLY' THEN
-							v_link_type := 'INLETPIPE';
-						END IF;
-
-						INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, omzone_id, fluid_type, muni_id, linkcat_id, link_type)
+						INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, omzone_id, fluid_type, muni_id, linkcat_id, link_type, state_type)
 						VALUES (v_link.link_id, v_link.the_geom, v_connect_id, v_feature_type, v_link.exit_type, v_link.exit_id,
-						v_connect.state, v_arc.expl_id, v_arc.sector_id, v_arc.omzone_id, v_fluidtype_value::INTEGER, v_connect.muni_id, v_linkcat_id, v_link_type);
+						v_connect.state, v_arc.expl_id, v_arc.sector_id, v_arc.omzone_id, v_fluidtype_value::INTEGER, v_connect.muni_id, v_linkcat_id, 'LINK', v_connect.state_type);
 					END IF;
 				ELSE
 					IF v_linkcat_id IS NULL THEN

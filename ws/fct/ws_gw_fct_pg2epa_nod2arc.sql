@@ -63,27 +63,27 @@ BEGIN
 							UNION ALL SELECT node_2 FROM v_edit_arc) a using (node_id) group by n.node_id';
 
 	-- query text for mandatory node2arcs
-	v_querytext = 'SELECT a.*, v.to_arc FROM temp_t_node a JOIN man_valve v ON a.node_id=v.node_id JOIN inp_valve i ON i.node_id = v.node_id WHERE to_arc is not null
+	v_querytext = 'SELECT a.*, v.to_arc FROM temp_t_node a JOIN man_valve v ON a.node_id=v.node_id::text JOIN inp_valve i ON i.node_id = v.node_id WHERE to_arc is not null
 				UNION  
-				SELECT a.*, m.to_arc FROM temp_t_node a JOIN man_pump m ON a.node_id=m.node_id JOIN inp_pump i ON i.node_id=m.node_id WHERE to_arc is not null';
+				SELECT a.*, m.to_arc FROM temp_t_node a JOIN man_pump m ON a.node_id=m.node_id::text JOIN inp_pump i ON i.node_id=m.node_id WHERE to_arc is not null';
 
 
 	v_querytext = concat (' INSERT INTO t_anl_node (num_arcs, arc_id, node_id, top_elev, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, the_geom, fid, cur_user, 
 				dma_id, presszone_id, dqa_id, minsector_id)
-				SELECT c.numarcs, to_arc, b.node_id, top_elev, elev, nodecat_id, sector_id, state, state_type, ''MANDATORY'', demand, the_geom, 124, current_user, dma_id, 
+				SELECT c.numarcs, to_arc, b.node_id::integer, top_elev, elev, nodecat_id, sector_id, state, state_type, ''MANDATORY'', demand, the_geom, 124, current_user, dma_id, 
 				presszone_id, dqa_id, minsector_id
-				FROM ( ',v_querytext, ' ) b JOIN ( ',v_query_number,' ) c USING (node_id)');
+				FROM ( ',v_querytext, ' ) b JOIN ( ',v_query_number,' ) c ON b.node_id = c.node_id::text');
 	EXECUTE v_querytext;
 
 	-- query text for non-mandatory node2arcs
 	IF p_only_mandatory_nodarc IS FALSE THEN
-		v_querytext = 'SELECT a.*, s.to_arc FROM temp_t_node a JOIN man_valve s ON a.node_id=s.node_id JOIN inp_shortpipe i ON i.node_id = s.node_id WHERE s.to_arc IS NULL';
+		v_querytext = 'SELECT a.*, s.to_arc FROM temp_t_node a JOIN man_valve s ON a.node_id=s.node_id::text JOIN inp_shortpipe i ON i.node_id = s.node_id WHERE s.to_arc IS NULL';
 
 		v_querytext = concat (' INSERT INTO t_anl_node (num_arcs, arc_id, node_id, top_elev, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, 
 				the_geom, fid, cur_user, dma_id, presszone_id, dqa_id, minsector_id)
-				SELECT c.numarcs, to_arc, b.node_id, top_elev, elev, nodecat_id, sector_id, state, state_type, ''NOT-MANDATORY'', demand, the_geom, 124, 
+				SELECT c.numarcs, to_arc, b.node_id::integer, top_elev, elev, nodecat_id, sector_id, state, state_type, ''NOT-MANDATORY'', demand, the_geom, 124, 
 				current_user, dma_id, presszone_id, dqa_id, minsector_id
-				FROM ( ',v_querytext, ' ) b JOIN ( ',v_query_number,' ) c USING (node_id)');
+				FROM ( ',v_querytext, ' ) b JOIN ( ',v_query_number,' ) c ON b.node_id = c.node_id::text');
 		EXECUTE v_querytext;
 	END IF;
 
@@ -91,15 +91,15 @@ BEGIN
 	RAISE NOTICE ' reverse geometries when node acts as node1 from arc but must be node2';
 	EXECUTE 'UPDATE temp_t_arc SET the_geom = st_reverse(the_geom) , node_1 = node_2 , node_2 = node_1 WHERE arc_id IN (SELECT arc_id FROM (
 		SELECT c.arc_id, n.node_id, n.arc_id as to_arc
-		FROM temp_t_arc c JOIN t_anl_node n ON node_1 = node_id
-		WHERE c.arc_id != n.arc_id AND n.arc_id IS NOT NULL
+		FROM temp_t_arc c JOIN t_anl_node n ON node_1 = node_id::text
+		WHERE c.arc_id != n.arc_id::text AND n.arc_id IS NOT NULL
 		AND fid  = 124)b )';
 
 	RAISE NOTICE ' reverse geometries when node acts as node2 from arc but must be node1';
 	EXECUTE 'UPDATE temp_t_arc SET the_geom = st_reverse(the_geom) , node_1 = node_2 , node_2 = node_1 WHERE arc_id IN (SELECT arc_id FROM (
-		SELECT c.arc_id, n.node_id , n.arc_id as to_arc
-		FROM temp_t_arc c JOIN t_anl_node n ON node_2 = node_id
-		WHERE c.arc_id = n.arc_id AND n.arc_id IS NOT NULL
+		SELECT c.arc_id::text, n.node_id , n.arc_id as to_arc
+		FROM temp_t_arc c JOIN t_anl_node n ON node_2 = node_id::text
+		WHERE c.arc_id = n.arc_id::text AND n.arc_id IS NOT NULL
 		AND fid  = 124)b )';
 
 
@@ -107,9 +107,9 @@ BEGIN
 	EXECUTE 'INSERT INTO temp_t_node (result_id, node_id, top_elev, elev, node_type, 
 		nodecat_id, epa_type, sector_id, state, state_type, annotation, demand, 
 		the_geom, nodeparent, arcposition, dma_id, presszone_id, dqa_id, minsector_id) 
-		WITH querytext AS (SELECT node_id, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
+		WITH querytext AS (SELECT node_id::text, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
 		arc_distance, the_geom, minsector_id FROM t_anl_node WHERE fid = 124 AND cur_user = current_user)
-		SELECT c.result_id, concat(n.node_id, ''_n2a_1'') as node_id, top_elev, elev, ''NODE2ARC'',
+		SELECT c.result_id, concat(n.node_id::text, ''_n2a_1'') as node_id, top_elev, elev, ''NODE2ARC'',
 		nodecat_id, ''JUNCTION'', c.sector_id, n.state, n.state_type, n.descript as annotation, arc_distance as demand,
 		ST_LineInterpolatePoint (c.the_geom, ('||0.5*v_nod2arc||'/st_length(c.the_geom))) AS the_geom,
 		n.node_id,
@@ -121,9 +121,9 @@ BEGIN
 	EXECUTE 'INSERT INTO temp_t_node (result_id, node_id, top_elev, elev, node_type, 
 		nodecat_id, epa_type, sector_id, state, state_type, annotation, demand, 
 		the_geom, nodeparent, arcposition, dma_id, presszone_id, dqa_id, minsector_id) 
-		WITH querytext AS (SELECT node_id, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
+		WITH querytext AS (SELECT node_id::text, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
 		arc_distance, the_geom, minsector_id FROM t_anl_node WHERE fid = 124 AND cur_user = current_user)
-		SELECT c.result_id, concat(n.node_id, ''_n2a_2'') as node_id, top_elev, elev, ''NODE2ARC'', 
+		SELECT c.result_id, concat(n.node_id::text, ''_n2a_2'') as node_id, top_elev, elev, ''NODE2ARC'', 
 		nodecat_id, ''JUNCTION'', c.sector_id, n.state, n.state_type, n.descript as annotation, arc_distance as demand,
 		ST_LineInterpolatePoint (c.the_geom, (1 - '||0.5*v_nod2arc||'/st_length(c.the_geom))) AS the_geom,
 		n.node_id,
@@ -135,9 +135,9 @@ BEGIN
 	EXECUTE 'INSERT INTO temp_t_node (result_id, node_id, top_elev, elev, node_type, 
 		nodecat_id, epa_type, sector_id, state, state_type, annotation, demand, 
 		the_geom, nodeparent, arcposition, dma_id, presszone_id, dqa_id, minsector_id) 
-		WITH querytext AS (SELECT node_id, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
+		WITH querytext AS (SELECT node_id::text, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
 		arc_distance, the_geom, minsector_id FROM t_anl_node WHERE fid = 124 AND cur_user = current_user)
-		SELECT c.result_id, concat(n.node_id, ''_n2a_2'') as node_id, top_elev, elev, ''NODE2ARC'', 
+		SELECT c.result_id, concat(n.node_id::text, ''_n2a_2'') as node_id, top_elev, elev, ''NODE2ARC'', 
 		nodecat_id, ''JUNCTION'', c.sector_id, n.state, n.state_type, n.descript as annotation, arc_distance as demand,
 		ST_startpoint(c.the_geom) AS the_geom,
 		n.node_id,
@@ -149,9 +149,9 @@ BEGIN
 	EXECUTE 'INSERT INTO temp_t_node (result_id, node_id, top_elev, elev, node_type, 
 		nodecat_id, epa_type, sector_id, state, state_type, annotation, demand, 
 		the_geom, nodeparent, arcposition, dma_id, presszone_id, dqa_id, minsector_id) 
-		WITH querytext AS (SELECT node_id, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
+		WITH querytext AS (SELECT node_id::text, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
 		arc_distance, the_geom, minsector_id FROM t_anl_node WHERE fid = 124 AND cur_user = current_user)
-		SELECT c.result_id, concat(n.node_id, ''_n2a_1'') as node_id, top_elev, elev, ''NODE2ARC'', 
+		SELECT c.result_id, concat(n.node_id::text, ''_n2a_1'') as node_id, top_elev, elev, ''NODE2ARC'', 
 		nodecat_id, ''JUNCTION'', c.sector_id, n.state, n.state_type, n.descript as annotation, arc_distance as demand,
 		ST_endpoint(c.the_geom) AS the_geom,
 		n.node_id,
@@ -163,9 +163,9 @@ BEGIN
 	EXECUTE 'INSERT INTO temp_t_node (result_id, node_id, top_elev, elev, node_type, 
 		nodecat_id, epa_type, sector_id, state, state_type, annotation, demand, 
 		the_geom, nodeparent, arcposition, dma_id, presszone_id, dqa_id, minsector_id) 
-		WITH querytext AS (SELECT node_id, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
+		WITH querytext AS (SELECT node_id::text, num_arcs, top_elev, elev, nodecat_id,state, state_type, descript, 
 		arc_distance, the_geom, minsector_id FROM t_anl_node WHERE fid = 124 AND cur_user = current_user)
-		SELECT c.result_id, concat(n.node_id, ''_n2a_1'') as node_id, top_elev, elev, ''NODE2ARC'',
+		SELECT c.result_id, concat(n.node_id::text, ''_n2a_1'') as node_id, top_elev, elev, ''NODE2ARC'',
 		nodecat_id, ''JUNCTION'', c.sector_id, n.state, n.state_type, n.descript as annotation, arc_distance as demand,
 		ST_LineInterpolatePoint (c.the_geom, ('||0.5*v_nod2arc||'/st_length(c.the_geom))) AS the_geom,
 		n.node_id,
@@ -177,9 +177,9 @@ BEGIN
 	EXECUTE 'INSERT INTO temp_t_node (result_id, node_id, top_elev, elev, node_type, 
 		nodecat_id, epa_type, sector_id, state, state_type, annotation, demand, 
 		the_geom, nodeparent, arcposition, dma_id, presszone_id, dqa_id, minsector_id) 
-		WITH querytext AS (SELECT node_id, num_arcs, top_elev, elev, nodecat_id, state, state_type, descript, 
+		WITH querytext AS (SELECT node_id::text, num_arcs, top_elev, elev, nodecat_id, state, state_type, descript, 
 		arc_distance, minsector_id, the_geom FROM t_anl_node WHERE fid = 124 AND cur_user = current_user)
-		SELECT c.result_id, concat(n.node_id, ''_n2a_2'') as node_id, top_elev, elev, ''NODE2ARC'', 
+		SELECT c.result_id, concat(n.node_id::text, ''_n2a_2'') as node_id, top_elev, elev, ''NODE2ARC'', 
 		nodecat_id, ''JUNCTION'', c.sector_id, n.state, n.state_type, n.descript as annotation, arc_distance as demand,
 		ST_LineInterpolatePoint (c.the_geom, (1 - '||0.5*v_nod2arc||'/st_length(c.the_geom))) AS the_geom,
 		n.node_id,
@@ -265,7 +265,7 @@ BEGIN
 
 		RAISE NOTICE ' Mark old node from node table';
 		EXECUTE ' UPDATE temp_t_node SET epa_type =''TODELETE'' FROM (SELECT node_id FROM  t_anl_node a WHERE fid  = 124) b
-		  WHERE b.node_id  = temp_t_node.node_id';
+		  WHERE b.node_id::text  = temp_t_node.node_id';
 
 		RAISE NOTICE ' Update geometries and topology for existing arcs (REDUCED-PIPE)' ;
 		EXECUTE 'UPDATE temp_t_arc SET node_1=null, arc_type = ''REDUCED-PIPE'', epa_type = ''PIPE'', the_geom = ST_linesubstring(temp_t_arc.the_geom, ('||0.5*v_nod2arc||' / st_length(temp_t_arc.the_geom)) , 1) 

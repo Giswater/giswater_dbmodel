@@ -46,7 +46,7 @@ BEGIN
     SELECT * INTO rec FROM sys_version ORDER BY id DESC LIMIT 1;
 
 	-- assign value for record_new_arc
-	SELECT * INTO record_new_arc FROM arc LIMIT 1;
+	SELECT * INTO record_new_arc FROM temp_t_arc LIMIT 1;
 
 	--  Start process
     RAISE NOTICE 'Starting additional pumps process.';
@@ -57,7 +57,7 @@ BEGIN
 		SELECT * INTO arc_rec FROM temp_t_arc WHERE arc_id=concat(node_id_aux,'_n2a');
 
 		-- Loop for additional pumps
-		FOR pump_rec IN SELECT * FROM inp_pump_additional WHERE node_id=node_id_aux
+		FOR pump_rec IN SELECT * FROM inp_pump_additional WHERE node_id::text=node_id_aux
 		LOOP
 
 			-- Id creation from pattern arc

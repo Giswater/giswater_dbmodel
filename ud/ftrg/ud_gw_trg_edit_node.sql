@@ -29,7 +29,6 @@ v_old_value_param text;
 v_customfeature text;
 v_featurecat text;
 v_matfromcat boolean = false;
-v_sys_type text;
 v_doublegeometry boolean;
 v_length float;
 v_width float;
@@ -212,16 +211,11 @@ BEGIN
 		END IF;
 
 		-- Node ID
-		IF NEW.node_id != (SELECT last_value::text FROM urn_id_seq) OR NEW.node_id IS NULL THEN
+		IF NEW.node_id != (SELECT last_value FROM urn_id_seq) OR NEW.node_id IS NULL THEN
 			NEW.node_id:= (SELECT nextval('urn_id_seq'));
 		END IF;
 
 		v_input = concat('{"feature":{"type":"node", "childLayer":"',v_man_view,'", "id":"',NEW.node_id,'"}}');
-
-		-- get sys type for parent table
-		IF v_man_table = 'parent' THEN
-			v_sys_type := (SELECT type FROM cat_feature_node JOIN cat_node ON cat_node.node_type=cat_feature_node.id WHERE cat_node.id = NEW.nodecat_id);
-		END IF;
 
 		-- Node type
 		IF NEW.node_type IS NULL THEN
@@ -245,7 +239,7 @@ BEGIN
 			END IF;
 
 			IF NEW.node_type IS NULL AND v_man_table !='parent' THEN
-				NEW.node_type:= (SELECT id FROM cat_feature_node c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE man_table=v_type_v_man_table LIMIT 1);
+				NEW.node_type:= (SELECT id FROM cat_feature_node c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE man_table=v_type_v_man_table LIMIT 1);
 			END IF;
 		END IF;
 
@@ -583,14 +577,14 @@ BEGIN
 		-- feature insert
 		IF v_matfromcat THEN
 			INSERT INTO node (node_id, code, sys_code, top_elev, custom_top_elev, ymax, custom_ymax, elev, custom_elev, node_type,nodecat_id,epa_type,sector_id,"state", state_type, annotation,observ,"comment",
-			omzone_id,soilcat_id, function_type, category_type,fluid_type,location_type,workcat_id, workcat_id_end, workcat_id_plan, builtdate, enddate, ownercat_id,
+			omzone_id,soilcat_id, function_type, category_type,fluid_type,location_type,workcat_id, workcat_id_end, workcat_id_plan, builtdate, enddate, ownercat_id, conserv_state,
 			muni_id, streetaxis_id, postcode, district_id, streetaxis2_id,postnumber, postnumber2, postcomplement, postcomplement2, descript,rotation,link,verified,
 			label_x,label_y,label_rotation,the_geom, expl_id, publish, inventory, uncertain, xyz_date, unconnected, num_value, updated_at, updated_by,
 			asset_id, drainzone_id, parent_id, arc_id, expl_visibility, adate, adescript, placement_type, label_quadrant, access_type, brand_id, model_id, serial_number, lock_level, is_scadamap, pavcat_id, hemisphere,
 			drainzone_outfall, dwfzone_outfall, omunit_id)
 			VALUES (NEW.node_id, NEW.code, NEW.sys_code, NEW.top_elev,NEW.custom_top_elev, NEW.ymax, NEW. custom_ymax, NEW. elev, NEW. custom_elev, NEW.node_type,NEW.nodecat_id,NEW.epa_type,NEW.sector_id,
-			NEW.state, NEW.state_type, NEW.annotation,NEW.observ, NEW.comment,NEW.omzone_id,NEW.soilcat_id, NEW. function_type, NEW.category_type,NEW.fluid_type,NEW.location_type,
-			NEW.workcat_id, NEW.workcat_id_end, NEW.workcat_id_plan,NEW.builtdate, NEW.enddate, NEW.ownercat_id,
+			NEW.state, NEW.state_type, NEW.annotation,NEW.observ, NEW.comment,NEW.omzone_id,NEW.soilcat_id, NEW. function_type, NEW.category_type,COALESCE(NEW.fluid_type, 0),NEW.location_type,
+			NEW.workcat_id, NEW.workcat_id_end, NEW.workcat_id_plan,NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.conserv_state,
 			NEW.muni_id, NEW.streetaxis_id, NEW.postcode, NEW.district_id,NEW.streetaxis2_id,NEW.postnumber,NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 			NEW.descript, NEW.rotation,NEW.link, NEW.verified, NEW.label_x,NEW.label_y,NEW.label_rotation,NEW.the_geom,
 			NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.xyz_date, NEW.unconnected, NEW.num_value, NEW.updated_at, NEW.updated_by,
@@ -599,14 +593,14 @@ BEGIN
 			NEW.drainzone_outfall, NEW.dwfzone_outfall, NEW.omunit_id);
 		ELSE
 			INSERT INTO node (node_id, code, sys_code, top_elev, custom_top_elev, ymax, custom_ymax, elev, custom_elev, node_type,nodecat_id,epa_type,sector_id,"state", state_type, annotation,observ,"comment",
-			omzone_id,soilcat_id, function_type, category_type,fluid_type,location_type,workcat_id, workcat_id_end, workcat_id_plan, builtdate, enddate, ownercat_id,
+			omzone_id,soilcat_id, function_type, category_type,fluid_type,location_type,workcat_id, workcat_id_end, workcat_id_plan, builtdate, enddate, ownercat_id, conserv_state,
 			muni_id, streetaxis_id, postcode, district_id, streetaxis2_id,postnumber, postnumber2, postcomplement, postcomplement2, descript,rotation,link,verified,
 			label_x,label_y,label_rotation,the_geom, expl_id, publish, inventory, uncertain, xyz_date, unconnected, num_value, updated_at, updated_by, matcat_id,
 			asset_id, drainzone_id, parent_id, arc_id, expl_visibility, adate, adescript, placement_type, label_quadrant, access_type, brand_id, model_id, serial_number, lock_level, is_scadamap, pavcat_id, hemisphere,
 			drainzone_outfall, dwfzone_outfall, omunit_id)
 			VALUES (NEW.node_id, NEW.code, NEW.sys_code, NEW.top_elev,NEW.custom_top_elev, NEW.ymax, NEW. custom_ymax, NEW. elev, NEW. custom_elev, NEW.node_type,NEW.nodecat_id,NEW.epa_type,NEW.sector_id,
-			NEW.state, NEW.state_type, NEW.annotation,NEW.observ, NEW.comment,NEW.omzone_id,NEW.soilcat_id, NEW. function_type, NEW.category_type,NEW.fluid_type,NEW.location_type,
-			NEW.workcat_id, NEW.workcat_id_end, NEW.workcat_id_plan,NEW.builtdate, NEW.enddate, NEW.ownercat_id,
+			NEW.state, NEW.state_type, NEW.annotation,NEW.observ, NEW.comment,NEW.omzone_id,NEW.soilcat_id, NEW. function_type, NEW.category_type,COALESCE(NEW.fluid_type, 0),NEW.location_type,
+			NEW.workcat_id, NEW.workcat_id_end, NEW.workcat_id_plan,NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.conserv_state,
 			NEW.muni_id, NEW.streetaxis_id, NEW.postcode, NEW.district_id, NEW.streetaxis2_id,NEW.postnumber,NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 			NEW.descript, NEW.rotation,NEW.link, NEW.verified, NEW.label_x,NEW.label_y,NEW.label_rotation,NEW.the_geom,
 			NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.xyz_date, NEW.unconnected, NEW.num_value,  NEW.updated_at, NEW.updated_by,NEW.matcat_id,
@@ -685,7 +679,7 @@ BEGIN
 
 		ELSIF v_man_table='parent' THEN
 
-			v_man_table:= (SELECT man_table FROM cat_feature_node c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id=NEW.node_type);
+			v_man_table:= (SELECT man_table FROM cat_feature_node c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id=NEW.node_type);
 			v_sql:= 'INSERT INTO '||v_man_table||' (node_id) VALUES ('||quote_literal(NEW.node_id)||')';
 			EXECUTE v_sql;
 		END IF;
@@ -785,8 +779,8 @@ BEGIN
 
 		-- node type
 		IF (NEW.node_type <> OLD.node_type) THEN
-			v_new_v_man_table:= (SELECT man_table FROM cat_feature_node c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id = NEW.node_type);
-			v_old_v_man_table:= (SELECT man_table FROM cat_feature_node c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id = OLD.node_type);
+			v_new_v_man_table:= (SELECT man_table FROM cat_feature_node c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id = NEW.node_type);
+			v_old_v_man_table:= (SELECT man_table FROM cat_feature_node c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id = OLD.node_type);
 			IF v_new_v_man_table IS NOT NULL THEN
 				v_sql:= 'DELETE FROM '||v_old_v_man_table||' WHERE node_id= '||quote_literal(OLD.node_id);
 				EXECUTE v_sql;
@@ -884,9 +878,9 @@ BEGIN
 		IF v_matfromcat THEN
 			UPDATE node
 			SET code=NEW.code, sys_code=NEW.sys_code, node_type=NEW.node_type, nodecat_id=NEW.nodecat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type, annotation=NEW.annotation,
-			"observ"=NEW.observ, "comment"=NEW.comment, omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type,fluid_type=NEW.fluid_type,
+			"observ"=NEW.observ, "comment"=NEW.comment, omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type,fluid_type=COALESCE(NEW.fluid_type, 0),
 			location_type=NEW.location_type, workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate,
-			ownercat_id=NEW.ownercat_id, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, muni_id=NEW.muni_id,
+			ownercat_id=NEW.ownercat_id, conserv_state=NEW.conserv_state, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, muni_id=NEW.muni_id,
 			streetaxis_id=NEW.streetaxis_id, postcode=NEW.postcode, district_id=NEW.district_id,
 			streetaxis2_id=NEW.streetaxis2_id, postnumber=NEW.postnumber, postnumber2=NEW.postnumber2, descript=NEW.descript, link=NEW.link, verified=NEW.verified,
 			label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, rotation=NEW.rotation, uncertain=NEW.uncertain,
@@ -900,9 +894,9 @@ BEGIN
 		ELSE
 			UPDATE node
 			SET code=NEW.code, sys_code=NEW.sys_code, node_type=NEW.node_type, nodecat_id=NEW.nodecat_id, epa_type=NEW.epa_type, sector_id=NEW.sector_id, state_type=NEW.state_type, annotation=NEW.annotation,
-			"observ"=NEW.observ, "comment"=NEW.comment, omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type,fluid_type=NEW.fluid_type,
+			"observ"=NEW.observ, "comment"=NEW.comment, omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type,fluid_type=COALESCE(NEW.fluid_type, 0),
 			location_type=NEW.location_type, workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate,
-			ownercat_id=NEW.ownercat_id, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, muni_id=NEW.muni_id,
+			ownercat_id=NEW.ownercat_id, conserv_state=NEW.conserv_state, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, muni_id=NEW.muni_id,
 			streetaxis_id=NEW.streetaxis_id, postcode=NEW.postcode, district_id=NEW.district_id,
 			streetaxis2_id=NEW.streetaxis2_id, postnumber=NEW.postnumber, postnumber2=NEW.postnumber2, descript=NEW.descript, link=NEW.link, verified=NEW.verified,
 			label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, publish=NEW.publish, inventory=NEW.inventory, rotation=NEW.rotation, uncertain=NEW.uncertain,

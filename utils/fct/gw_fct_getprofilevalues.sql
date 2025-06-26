@@ -55,11 +55,11 @@ Is mandatory start-end nodes must have data, and must be profile_surface = true
 
 DECLARE
 
-v_init  text;
-v_init_aux text;
-v_mid text;
-v_end text;
-v_end_aux text;
+v_init  integer;
+v_init_aux integer;
+v_mid integer;
+v_end integer;
+v_end_aux integer;
 v_query_dijkstra text;
 v_i json;
 v_hs float;
@@ -99,7 +99,7 @@ i integer = 0;
 v_dist float[];
 v_telev float[];
 v_elev float[];
-v_nid text[];
+v_nid integer[];
 v_systype text[];
 v_elevation float;
 v_distance float;
@@ -201,8 +201,8 @@ BEGIN
 	  dma_id integer,
 	  exit_topelev double precision,
 	  exit_elev double precision,
-	  the_geom geometry(LineString,SRID_VALUE),
-	  the_geom_endpoint geometry(Point,SRID_VALUE),
+	  the_geom geometry(LineString,25831),
+	  the_geom_endpoint geometry(Point,25831),
 	  flag boolean,
 	  CONSTRAINT temp_link_pkey PRIMARY KEY (link_id));
 
@@ -260,19 +260,6 @@ BEGIN
 		END IF;
 	END IF;
 
-	-- Check not integer id''s
-	FOR object_rec IN SELECT json_array_elements_text('["arc", "node"]'::json) as idval
-	LOOP
-		EXECUTE 'SELECT count(*) FROM v_edit_'||object_rec.idval||' ' INTO v_count;
-		EXECUTE 'SELECT count(*) FROM v_edit_'||object_rec.idval||' WHERE '||object_rec.idval||'_id ~ ''^\d+$''' INTO v_count_int;
-		v_count = v_count - v_count_int;
-
-		IF v_count > 0 THEN
-			v_level = 2;
-			v_message = concat('There is/are ',v_count, ' ',object_rec.idval,'(s) with id''s not integer on the system. It is not possible to build the graph matrix to check shortestpath.');
-		END IF;
-	END LOOP;
-
 	IF v_level = 3 THEN
 
 		-- define variables in function of the project type
@@ -320,7 +307,7 @@ BEGIN
 		END IF;
 
 
-		v_query_dijkstra := 'SELECT edge::text AS arc_id, node::text AS node_id, agg_cost as total_length FROM pgr_dijkstra(''SELECT arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, 
+		v_query_dijkstra := 'SELECT edge AS arc_id, node AS node_id, agg_cost as total_length FROM pgr_dijkstra(''SELECT arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, 
 					'||v_cost_string||' as cost, '||v_cost_string||' as reverse_cost FROM v_edit_arc WHERE node_1 is not null AND node_2 is not null'', '||v_init||','||v_end||')';
 
 		IF v_mid IS NOT NULL THEN
@@ -332,7 +319,7 @@ BEGIN
 				v_end_aux = v_i;
 
 				-- DIJKSTRA v_init_aux -> v_end_aux
-				v_query_dijkstra = 'SELECT edge::text AS arc_id, node::text AS node_id, (select coalesce(max(total_distance), 0) from temp_anl_node where fid = ''222'' and cur_user = current_user) + agg_cost as total_length 
+				v_query_dijkstra = 'SELECT edge AS arc_id, node AS node_id, (select coalesce(max(total_distance), 0) from temp_anl_node where fid = ''222'' and cur_user = current_user) + agg_cost as total_length 
 				FROM pgr_dijkstra(''SELECT arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, '||v_cost_string||' as cost, 
 					'||v_cost_string||' as reverse_cost FROM v_edit_arc WHERE node_1 is not null AND node_2 is not null'', '||v_init_aux||','||v_end_aux||')';
 
@@ -358,7 +345,7 @@ BEGIN
 			END LOOP;
 
 			-- Last DIJKSTRA
-			v_query_dijkstra = concat('SELECT edge::text AS arc_id, node::text AS node_id, (select coalesce(max(total_distance), 0) from temp_anl_node where fid = ''222'' and cur_user = current_user) + agg_cost as total_length 
+			v_query_dijkstra = concat('SELECT edge AS arc_id, node AS node_id, (select coalesce(max(total_distance), 0) from temp_anl_node where fid = ''222'' and cur_user = current_user) + agg_cost as total_length 
 			FROM pgr_dijkstra(''SELECT arc_id::int8 as id, node_1::int8 as source, node_2::int8 as target, 
 			 '||v_cost_string||' as cost, '||v_cost_string||' as reverse_cost 
 			FROM v_edit_arc WHERE node_1 is not null AND node_2 is not null'', '||v_init_aux||','||v_end||')');
@@ -516,14 +503,14 @@ BEGIN
 
 		-- update descript and code field
 		EXECUTE 'UPDATE temp_anl_arc SET descript = a.descript, code=a.code 
-		FROM (SELECT arc_id, (row_to_json(row)) AS descript, case when code is null then arc_id else code end as code FROM ('||v_textarc||')row)a WHERE a.arc_id = temp_anl_arc.arc_id AND fid=222';
+		FROM (SELECT arc_id, (row_to_json(row)) AS descript, case when code is null then arc_id else code end as code FROM ('||v_textarc||')row)a WHERE a.arc_id::text = temp_anl_arc.arc_id AND fid=222';
 		EXECUTE' UPDATE temp_anl_node SET descript = a.descript FROM (SELECT node_id, (row_to_json(row)) AS descript FROM 
-					(SELECT node_id, '||v_ftopelev||' as top_elev, '||v_fymax||' as ymax, elev , case when code is null then node_id else code end as code, 
+					(SELECT node_id, '||v_ftopelev||' as top_elev, '||v_fymax||' as ymax, elev , case when code is null then node_id::text else code end as code, 
 					total_distance FROM temp_anl_node WHERE fid=222 AND cur_user = current_user)row)a
 					WHERE a.node_id = temp_anl_node.node_id';
 
 		EXECUTE 'UPDATE temp_anl_node SET  descript = gw_fct_json_object_set_key(descript::json, ''code'', a.code) 
-		FROM (SELECT node_id, case when code is null then node_id else code end code FROM ('||v_textnode||')row)a WHERE a.node_id = temp_anl_node.node_id ';
+		FROM (SELECT node_id, case when code is null then node_id::text else code end code FROM ('||v_textnode||')row)a WHERE a.node_id::text = temp_anl_node.node_id ';
 
 		-- delete not used keys
 		UPDATE temp_anl_arc SET descript = gw_fct_json_object_delete_keys(descript::json, 'arc_id')  ;
@@ -599,7 +586,7 @@ BEGIN
 				WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i];
 			END IF;
 
-			UPDATE 	temp_anl_node SET nodecat_id = 'VNODE' WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i] AND nodecat_id IS NULL;
+			UPDATE 	temp_anl_node SET nodecat_id = 'VNODE' WHERE fid=222 AND cur_user = current_user AND node_id = v_nid[i]::text AND nodecat_id IS NULL;
 		END LOOP;
 
 		-- update node table those ymax nulls
@@ -732,7 +719,7 @@ BEGIN
 				select row_number() over (order by a.total_distance) as rid, a.'||v_ftopelev||' as top_n1, b.'||v_ftopelev||' as top_n2, (b.'||v_ftopelev||'-a.'||v_ftopelev||')::numeric(12,3) as delta_y, 
 				b.total_distance - a.total_distance as delta_x, a.total_distance as total_x, a.descript as label_n1, a.nodecat_id as surface_type from querytext a
 				left join querytext b ON a.rid = b.rid-1 
-				left join (select * from temp_anl_arc where fid = 222 AND cur_user = current_user) c ON a.arc_id = c.arc_id) row'
+				left join (select * from temp_anl_arc where fid = 222 AND cur_user = current_user) c ON a.arc_id::text = c.arc_id::text) row'
 				INTO v_terrain;
 				/*
 				WITH querytext AS (SELECT row_number() over (order by total_distance) as rid, * FROM temp_anl_node where fid = 222 AND cur_user = current_user ORDER by total_distance)

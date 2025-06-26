@@ -30,7 +30,7 @@ SELECT columns_are(
         'minsector_id', 'dqa_id', 'staticpressure', 'district_id', 'adate', 'adescript', 'accessibility',
         'workcat_id_plan', 'asset_id', 'epa_type', 'om_state', 'conserv_state', 'priority',
         'access_type', 'placement_type', 'crmzone_id', 'expl_visibility', 'plot_code',
-        'brand_id', 'model_id', 'serial_number', 'label_quadrant', 'macrominsector_id', 'n_hydrometer',
+        'brand_id', 'model_id', 'serial_number', 'label_quadrant', 'n_hydrometer',
         'n_inhabitants', 'supplyzone_id', 'datasource', 'lock_level', 'block_code',
         'omzone_id', 'the_geom', 'created_at', 'created_by', 'updated_at', 'updated_by'
     ],
@@ -41,7 +41,7 @@ SELECT columns_are(
 SELECT col_is_pk('connec', ARRAY['connec_id'], 'Column connec_id should be primary key');
 
 -- Check column types
-SELECT col_type_is('connec', 'connec_id', 'varchar(16)', 'Column connec_id should be varchar(16)');
+SELECT col_type_is('connec', 'connec_id', 'integer', 'Column connec_id should be integer');
 SELECT col_type_is('connec', 'code', 'text', 'Column code should be text');
 SELECT col_type_is('connec', 'sys_code', 'text', 'Column sys_code should be text');
 SELECT col_type_is('connec', 'top_elev', 'numeric(12,4)', 'Column top_elev should be numeric(12,4)');
@@ -51,7 +51,7 @@ SELECT col_type_is('connec', 'sector_id', 'int4', 'Column sector_id should be in
 SELECT col_type_is('connec', 'customer_code', 'varchar(30)', 'Column customer_code should be varchar(30)');
 SELECT col_type_is('connec', 'state', 'int2', 'Column state should be int2');
 SELECT col_type_is('connec', 'state_type', 'int2', 'Column state_type should be int2');
-SELECT col_type_is('connec', 'arc_id', 'varchar(16)', 'Column arc_id should be varchar(16)');
+SELECT col_type_is('connec', 'arc_id', 'integer', 'Column arc_id should be integer');
 SELECT col_type_is('connec', 'connec_length', 'numeric(12,3)', 'Column connec_length should be numeric(12,3)');
 SELECT col_type_is('connec', 'annotation', 'text', 'Column annotation should be text');
 SELECT col_type_is('connec', 'observ', 'text', 'Column observ should be text');
@@ -89,7 +89,7 @@ SELECT col_type_is('connec', 'expl_id', 'int4', 'Column expl_id should be int4')
 SELECT col_type_is('connec', 'num_value', 'numeric(12,3)', 'Column num_value should be numeric(12,3)');
 SELECT col_type_is('connec', 'feature_type', 'varchar(16)', 'Column feature_type should be varchar(16)');
 SELECT col_type_is('connec', 'pjoint_type', 'varchar(16)', 'Column pjoint_type should be varchar(16)');
-SELECT col_type_is('connec', 'pjoint_id', 'varchar(16)', 'Column pjoint_id should be varchar(16)');
+SELECT col_type_is('connec', 'pjoint_id', 'integer', 'Column pjoint_id should be integer');
 SELECT col_type_is('connec', 'minsector_id', 'int4', 'Column minsector_id should be int4');
 SELECT col_type_is('connec', 'dqa_id', 'int4', 'Column dqa_id should be int4');
 SELECT col_type_is('connec', 'staticpressure', 'numeric(12,3)', 'Column staticpressure should be numeric(12,3)');
@@ -112,7 +112,6 @@ SELECT col_type_is('connec', 'brand_id', 'varchar(50)', 'Column brand_id should 
 SELECT col_type_is('connec', 'model_id', 'varchar(50)', 'Column model_id should be varchar(50)');
 SELECT col_type_is('connec', 'serial_number', 'varchar(100)', 'Column serial_number should be varchar(100)');
 SELECT col_type_is('connec', 'label_quadrant', 'varchar(12)', 'Column label_quadrant should be varchar(12)');
-SELECT col_type_is('connec', 'macrominsector_id', 'int4', 'Column macrominsector_id should be int4');
 SELECT col_type_is('connec', 'n_hydrometer', 'int4', 'Column n_hydrometer should be int4');
 SELECT col_type_is('connec', 'n_inhabitants', 'int4', 'Column n_inhabitants should be int4');
 SELECT col_type_is('connec', 'supplyzone_id', 'int4', 'Column supplyzone_id should be int4');
@@ -165,7 +164,6 @@ SELECT col_default_is('connec', 'connec_id', 'nextval(''urn_id_seq''::regclass)'
 SELECT col_default_is('connec', 'feature_type', 'CONNEC', 'Column feature_type should default to CONNEC');
 SELECT col_default_is('connec', 'created_at', 'now()', 'Column created_at should default to now()');
 SELECT col_default_is('connec', 'created_by', 'CURRENT_USER', 'Column created_by should default to CURRENT_USER');
-SELECT col_default_is('connec', 'macrominsector_id', '0', 'Column macrominsector_id should default to 0');
 
 -- Check indexes
 SELECT has_index('connec', 'connec_sys_code_idx', 'Table should have index on sys_code');

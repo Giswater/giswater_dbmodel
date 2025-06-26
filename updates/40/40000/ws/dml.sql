@@ -2986,7 +2986,7 @@ UPDATE config_form_fields
 	WHERE formname='mincut_manager' AND formtype='form_mincut' AND columnname='cancel_mincut';
 
 UPDATE config_form_fields
-	SET widgetcontrols='{"saveValue":false,"text":"Cancel mincut", "onContextMenu":"Delete mincut"}'::json
+	SET widgetcontrols='{"saveValue":false,"text":"Delete mincut", "onContextMenu":"Delete mincut"}'::json
 	WHERE formname='mincut_manager' AND formtype='form_mincut' AND columnname='delete';
 
 UPDATE config_function SET "style"='{
@@ -3074,39 +3074,6 @@ UPDATE config_form_fields SET "datatype"='string', "label"='macrodqa', tooltip='
 INSERT INTO edit_typevalue VALUES('supplyzone_type', 'DISTRIBUTION', 'DISTRIBUTION', NULL, NULL);
 INSERT INTO edit_typevalue VALUES('supplyzone_type', 'SOURCE', 'SOURCE', NULL, NULL);
 INSERT INTO edit_typevalue VALUES('supplyzone_type', 'UNDEFINED', 'UNDEFINED', NULL, NULL);
-
--- Insert mapzone supplyzones widgets
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'supplyzone_id', 'lyt_data_1', 1, 'integer', 'text', 'supplyzone_id', 'supplyzone_id', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline": false, "valueRelation":{"NULLValue":true, "layer": "v_edit_supplyzone", "activated": true, "keyColumn": "supplyzone_id", "valueColumn": "name", "filterExpression": null}}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'name', 'lyt_data_1', 2, 'string', 'text', 'name', 'name', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'supplyzone_type', 'lyt_data_1', 3, 'string', 'combo', 'supplyzone_type', 'supplyzone_type', NULL, false, false, true, false, NULL, 'SELECT id, idval FROM edit_typevalue WHERE typevalue=''supplyzone_type''', true, true, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'macrosector', 'lyt_data_1', 4, 'string', 'combo', 'macrosector', 'macrosector', NULL, false, false, true, false, NULL, 'SELECT name as id, name as idval FROM macrosector WHERE macrosector_id IS NOT NULL', true, false, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'descript', 'lyt_data_1', 5, 'text', 'text', 'descript', 'descript', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'active', 'lyt_data_1', 6, 'boolean', 'check', 'active', 'active', NULL, false, false, true, false, false, NULL, NULL, false, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'lock_level', 'lyt_data_1', 7, 'integer', 'combo', 'lock_level', 'lock_level', NULL, false, false, true, false, NULL, 'SELECT id, idval FROM edit_typevalue WHERE typevalue = ''value_lock_level'' AND id IS NOT NULL', true, false, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'parent_id', 'lyt_data_1', 8, 'string', 'combo', 'parent_id', 'parent_id', NULL, false, false, true, false, false, 'SELECT supplyzone_id as id,name as idval FROM v_ui_supplyzone WHERE supplyzone_id > -1 AND active IS TRUE', true, true, NULL, NULL, NULL, '{"setMultiline": false, "valueRelation":{"NULLValue":true, "layer": "v_edit_supplyzone", "activated": true, "keyColumn": "supplyzone_id", "valueColumn": "name", "filterExpression": "supplyzone_id > -1 AND active IS TRUE"}}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'pattern_id', 'lyt_data_1', 9, 'string', 'combo', 'pattern_id', 'pattern_id', NULL, false, false, true, false, false, 'SELECT DISTINCT (pattern_id) AS id,  pattern_id  AS idval FROM inp_pattern WHERE pattern_id IS NOT NULL', true, true, NULL, NULL, NULL, '{"setMultiline": false, "valueRelation":{"NULLValue":true, "layer": "v_edit_inp_pattern", "activated": true, "keyColumn": "pattern_id", "valueColumn": "pattern_id", "filterExpression": null}}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'graphconfig', 'lyt_data_1', 10, 'string', 'text', 'graphconfig', 'graphconfig', NULL, false, false, false, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_supplyzone', 'form_feature', 'tab_none', 'stylesheet', 'lyt_data_1', 11, 'string', 'text', 'stylesheet', 'stylesheet', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES ('v_ui_supplyzone','form_feature','tab_none','avg_press','lyt_data_1',12,'numeric','text','average pressure','avg_press', NULL,false,false,true,false, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"setMultiline":false}'::json, NULL, NULL,false, NULL);
-INSERT INTO config_form_fields VALUES ('v_ui_supplyzone','form_feature','tab_none','link','lyt_data_1',13,'text','text','link','link', NULL,false,false,true,false, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"setMultiline":false}'::json, NULL, NULL,false, NULL);
-INSERT INTO config_form_fields VALUES ('v_ui_supplyzone','form_feature','tab_none','muni_id','lyt_data_1',14,'text','text','muni_id','muni_id', 'Ex: 1,2',false,false,true,false, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"setMultiline":false}'::json, NULL, NULL,false, NULL);
-INSERT INTO config_form_fields VALUES ('v_ui_supplyzone','form_feature','tab_none','expl_id','lyt_data_1',15,'text','text','expl_id','expl_id', 'Ex: 1,2',false,false,true,false, NULL, NULL, NULL, NULL, NULL, NULL, NULL,'{"setMultiline":false}'::json, NULL, NULL,false, NULL);
-
-
--- Insert mapzone macrodma widgets
-INSERT INTO config_form_fields VALUES('v_ui_macrodma', 'form_feature', 'tab_none', 'macrodma_id', 'lyt_data_1', 1, 'integer', 'text', 'macrodma_id', 'macrodma_id', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false, "valueRelation":{"NULLValue":true, "layer": "v_edit_macrodma", "activated": true, "keyColumn": "macrodma_id", "valueColumn": "name", "filterExpression": null}}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrodma', 'form_feature', 'tab_none', 'name', 'lyt_data_1', 2, 'string', 'text', 'name', 'name', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrodma', 'form_feature', 'tab_none', 'descript', 'lyt_data_1', 3, 'text', 'text', 'descript', 'descript', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrodma', 'form_feature', 'tab_none', 'active', 'lyt_data_1', 4, 'boolean', 'check', 'active', 'active', NULL, false, false, true, false, false, NULL, NULL, false, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrodma', 'form_feature', 'tab_none', 'lock_level', 'lyt_data_1', 5, 'integer', 'combo', 'lock_level', 'lock_level', NULL, false, false, true, false, NULL, 'SELECT id, idval FROM edit_typevalue WHERE typevalue = ''value_lock_level'' AND id IS NOT NULL', true, false, NULL, NULL, NULL, '{"setMultiline":false}', NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrodma', 'form_feature', 'tab_none', 'expl_id', 'lyt_data_1',6, 'text', 'text', 'expl_id', 'expl_id', 'Ex: 1,2', false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}'::json, NULL, NULL, false, NULL);
-
--- Insert mapzone macrosector widgets
-INSERT INTO config_form_fields VALUES('v_ui_macrosector', 'form_feature', 'tab_none', 'macrosector_id', 'lyt_data_1', 1, 'integer', 'text', 'macrosector_id', 'macrosector_id', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false, "valueRelation":{"NULLValue":true, "layer": "v_edit_macrosector", "activated": true, "keyColumn": "macrosector_id", "valueColumn": "name", "filterExpression": null}}'::json, NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrosector', 'form_feature', 'tab_none', 'name', 'lyt_data_1', 2, 'string', 'text', 'name', 'name', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}'::json, NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrosector', 'form_feature', 'tab_none', 'descript', 'lyt_data_1', 3, 'text', 'text', 'descript', 'descript', NULL, false, false, true, false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"setMultiline":false}'::json, NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrosector', 'form_feature', 'tab_none', 'active', 'lyt_data_1', 4, 'boolean', 'check', 'active', 'active', NULL, false, false, true, false, false, NULL, NULL, false, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL);
-INSERT INTO config_form_fields VALUES('v_ui_macrosector', 'form_feature', 'tab_none', 'lock_level', 'lyt_data_1', 5, 'integer', 'combo', 'lock_level', 'lock_level', NULL, false, false, true, false, NULL, 'SELECT id, idval FROM edit_typevalue WHERE typevalue = ''value_lock_level'' AND id IS NOT NULL', true, false, NULL, NULL, NULL, '{"setMultiline":false}'::json, NULL, NULL, false, NULL);
 
 -- 28/01/2025
 
@@ -3339,13 +3306,13 @@ soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id,
 postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, link, verified, the_geom, label_x, label_y, label_rotation, publish,
 inventory, expl_id, num_value, feature_type, created_at, created_by, updated_at, updated_by, minsector_id, dqa_id, district_id, adate, adescript, workcat_id_plan,
 asset_id, pavcat_id, nodetype_1, elevation1, depth1, staticpress1, nodetype_2, elevation2, depth2, staticpress2, om_state, conserv_state, parent_id, expl_visibility, brand_id,
-model_id, serial_number, label_quadrant, macrominsector_id, supplyzone_id, lock_level, is_scadamap)
-SELECT arc_id, code, code, node_1, node_2, arccat_id, epa_type, sector_id, state, state_type, annotation, observ, "comment", custom_length, dma_id, presszone_id,
+model_id, serial_number, label_quadrant, supplyzone_id, lock_level, is_scadamap)
+SELECT arc_id::int4, code, code, node_1::int4, node_2::int4, arccat_id, epa_type, sector_id, state, state_type, annotation, observ, "comment", custom_length, dma_id, presszone_id,
 soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, builtdate, enddate, ownercat_id, muni_id, postcode, streetaxis_id,
 postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, link, verified, the_geom, label_x, label_y, label_rotation, publish,
 inventory, expl_id, num_value, feature_type, tstamp, insert_user, lastupdate, lastupdate_user, minsector_id, dqa_id, district_id, adate, adescript, workcat_id_plan,
-asset_id, pavcat_id, nodetype_1, elevation1, depth1, staticpress1, nodetype_2, elevation2, depth2, staticpress2, om_state, conserv_state, parent_id, ARRAY[expl_id2], brand_id,
-model_id, serial_number, label_quadrant, macrominsector_id, supplyzone_id, lock_level, is_scadamap
+asset_id, pavcat_id, nodetype_1, elevation1, depth1, staticpress1, nodetype_2, elevation2, depth2, staticpress2, om_state, conserv_state, parent_id::int4, ARRAY[expl_id2], brand_id,
+model_id, serial_number, label_quadrant, supplyzone_id, lock_level, is_scadamap
 FROM _arc;
 
 
@@ -3355,22 +3322,22 @@ postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2
 label_y, label_rotation, publish, inventory, expl_id, num_value, feature_type, created_at, pjoint_type, pjoint_id, updated_at, updated_by, created_by, minsector_id,
 dqa_id, staticpressure, district_id, adate, adescript, accessibility, workcat_id_plan, asset_id, epa_type, om_state, conserv_state, priority,
 _valve_type, _shutoff_valve, access_type, placement_type, crmzone_id, expl_visibility, plot_code, brand_id, model_id, serial_number, label_quadrant,
-macrominsector_id, n_hydrometer, n_inhabitants, supplyzone_id, lock_level, block_code)
-SELECT connec_id, code, top_elev, "depth", conneccat_id, sector_id, customer_code, state, state_type, arc_id, connec_length, annotation, observ, "comment",
+n_hydrometer, n_inhabitants, supplyzone_id, lock_level, block_code)
+SELECT connec_id::int4, code, top_elev, "depth", conneccat_id, sector_id, customer_code, state, state_type, arc_id::int4, connec_length, annotation, observ, "comment",
 dma_id, presszone_id, soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, builtdate, enddate, ownercat_id, muni_id,
 postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, link, verified, rotation, the_geom, label_x,
-label_y, label_rotation, publish, inventory, expl_id, num_value, feature_type, tstamp, pjoint_type, pjoint_id, lastupdate, lastupdate_user, insert_user, minsector_id,
+label_y, label_rotation, publish, inventory, expl_id, num_value, feature_type, tstamp, pjoint_type, pjoint_id::int4, lastupdate, lastupdate_user, insert_user, minsector_id,
 dqa_id, staticpressure, district_id, adate, adescript, accessibility, workcat_id_plan, asset_id, epa_type, om_state, conserv_state, priority,
 valve_type, shutoff_valve, access_type, placement_type, crmzone_id, ARRAY[expl_id2], plot_code, brand_id, model_id, serial_number, label_quadrant,
-macrominsector_id, n_hydrometer, n_inhabitants, supplyzone_id, lock_level, block_zone
+n_hydrometer, n_inhabitants, supplyzone_id, lock_level, block_zone
 FROM _connec;
 
 
-INSERT INTO element (element_id, code, sys_code, elementcat_id, serial_number, num_elements, state, state_type, observ, "comment", function_type, category_type, fluid_type,
+INSERT INTO element (element_id, code, sys_code, elementcat_id, serial_number, num_elements, state, state_type, observ, "comment", function_type, category_type,
 location_type, workcat_id, workcat_id_end, builtdate, enddate, ownercat_id, rotation, link, verified, the_geom, label_x, label_y, label_rotation, publish,
 inventory, expl_id, feature_type, created_at, updated_at, created_by, updated_by, top_elev, expl_visibility, trace_featuregeom, muni_id, sector_id, brand_id,
 model_id, asset_id, lock_level)
-SELECT element_id, code, code, elementcat_id, serial_number, num_elements, state, state_type, observ, "comment", function_type, category_type, fluid_type,
+SELECT element_id::int4, code, code, elementcat_id, serial_number, num_elements, state, state_type, observ, "comment", function_type, category_type,
 location_type, workcat_id, workcat_id_end, builtdate, enddate, ownercat_id, rotation, link, verified, the_geom, label_x, label_y, label_rotation, publish,
 inventory, expl_id, feature_type, tstamp, lastupdate, lastupdate_user, insert_user, top_elev, ARRAY[expl_id2], trace_featuregeom, muni_id, sector_id, brand_id,
 model_id, asset_id, lock_level
@@ -3382,14 +3349,14 @@ observ, "comment", dma_id, presszone_id, soilcat_id, function_type, category_typ
 ownercat_id, muni_id, postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, link, verified, rotation,
 the_geom, label_x, label_y, label_rotation, publish, inventory, hemisphere, expl_id, num_value, feature_type, created_at, updated_at, updated_by,
 created_by, minsector_id, dqa_id, staticpressure, district_id, adate, adescript, accessibility, workcat_id_plan, asset_id, om_state, conserv_state, access_type,
-placement_type, expl_visibility, brand_id, model_id, serial_number, label_quadrant, macrominsector_id, supplyzone_id, lock_level, is_scadamap,
+placement_type, expl_visibility, brand_id, model_id, serial_number, label_quadrant, supplyzone_id, lock_level, is_scadamap,
 pavcat_id)
-SELECT node_id, code, top_elev, custom_top_elev, "depth", nodecat_id, epa_type, sector_id, arc_id, parent_id, state, state_type, annotation,
+SELECT node_id::int4, code, top_elev, custom_top_elev, "depth", nodecat_id, epa_type, sector_id, arc_id::int4, parent_id::int4, state, state_type, annotation,
 observ, "comment", dma_id, presszone_id, soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, builtdate, enddate,
 ownercat_id, muni_id, postcode, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, link, verified, rotation,
 the_geom, label_x, label_y, label_rotation, publish, inventory, hemisphere, expl_id, num_value, feature_type, tstamp, lastupdate, lastupdate_user,
 insert_user, minsector_id, dqa_id, staticpressure, district_id, adate, adescript, accessibility, workcat_id_plan, asset_id, om_state, conserv_state, access_type,
-placement_type, ARRAY[expl_id2], brand_id, model_id, serial_number, label_quadrant, macrominsector_id, supplyzone_id, lock_level, is_scadamap,
+placement_type, ARRAY[expl_id2], brand_id, model_id, serial_number, label_quadrant, supplyzone_id, lock_level, is_scadamap,
 pavcat_id
 FROM _node;
 
@@ -3448,3 +3415,12 @@ UPDATE config_form_fields
 INSERT INTO edit_typevalue VALUES('omzone_type', 'UNDEFINED', 'UNDEFINED', NULL, NULL);
 
 ALTER TABLE config_form_fields ENABLE TRIGGER gw_trg_config_control;
+
+DROP TRIGGER gw_trg_typevalue_fk ON sys_table;
+DELETE FROM sys_foreignkey WHERE typevalue_table = 'config_typevalue' AND typevalue_name = 'sys_table_context' AND target_table = 'sys_table' AND target_field = 'context';
+
+UPDATE sys_table SET id = 'crmzone'	WHERE id = 'crm_zone';
+
+UPDATE config_form_fields
+SET dv_querytext = REPLACE(dv_querytext, 'crm_zone', 'crmzone')
+WHERE dv_querytext ILIKE '%crm_zone%';

@@ -133,11 +133,11 @@ BEGIN
 	UNION
 	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id FROM inp_pump_additional p LEFT JOIN temp_arc ON concat(p.node_id, '_n2a') = temp_arc.arc_id::text WHERE p.energy_pattern_id IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'EFFIC'::text,p.effic_curve_id FROM inp_virtualpump p LEFT JOIN temp_arc ON p.arc_id = temp_arc.arc_id::text WHERE p.effic_curve_id IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'EFFIC'::text,p.effic_curve_id FROM inp_virtualpump p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.effic_curve_id IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PRICE'::text, p.energy_price::text FROM inp_virtualpump p LEFT JOIN temp_arc ON p.arc_id = temp_arc.arc_id::text WHERE p.energy_price IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PRICE'::text, p.energy_price::text FROM inp_virtualpump p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.energy_price IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id FROM inp_virtualpump p LEFT JOIN temp_arc ON p.arc_id = temp_arc.arc_id::text WHERE p.energy_pattern_id IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id FROM inp_virtualpump p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id WHERE p.energy_pattern_id IS NOT NULL
 	UNION
 	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'EFFIC'::text, p.effic_curve_id FROM inp_dscenario_pump p LEFT JOIN temp_arc ON concat(p.node_id, '_n2a') = temp_arc.arc_id::text WHERE p.effic_curve_id IS NOT NULL
 	UNION
@@ -149,13 +149,13 @@ BEGIN
 	UNION
 	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PRICE'::text, p.energy_price::text  FROM inp_dscenario_pump_additional p LEFT JOIN temp_arc ON concat(p.node_id, '_n2a') = temp_arc.arc_id::text WHERE p.energy_price IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id  FROM inp_dscenario_pump_additional p LEFT JOIN temp_arc ON concat(p.node_id, '_n2a') = temp_arc.arc_id::text WHERE p.energy_pattern_id IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id  FROM inp_dscenario_pump_additional p LEFT JOIN temp_arc ON concat(p.node_id, '_n2a')::text = temp_arc.arc_id WHERE p.energy_pattern_id IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'EFFIC'::text, p.effic_curve_id FROM inp_dscenario_virtualpump p LEFT JOIN temp_arc ON p.arc_id = temp_arc.arc_id::text WHERE p.effic_curve_id IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'EFFIC'::text, p.effic_curve_id FROM inp_dscenario_virtualpump p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.effic_curve_id IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PRICE'::text, p.energy_price::text  FROM inp_dscenario_virtualpump p LEFT JOIN temp_arc ON p.arc_id = temp_arc.arc_id::text WHERE p.energy_price IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PRICE'::text, p.energy_price::text  FROM inp_dscenario_virtualpump p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id WHERE p.energy_price IS NOT NULL
 	UNION
-	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id  FROM inp_dscenario_virtualpump p LEFT JOIN temp_arc ON p.arc_id = temp_arc.arc_id::text WHERE p.energy_pattern_id IS NOT NULL
+	 SELECT concat('PUMP ', temp_arc.arc_id) AS pump_id,'PATTERN'::text, p.energy_pattern_id  FROM inp_dscenario_virtualpump p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id WHERE p.energy_pattern_id IS NOT NULL
 	UNION
 	 SELECT sys_param_user.idval AS pump_id, config_param_user.value, NULL::text  FROM config_param_user JOIN sys_param_user ON sys_param_user.id = config_param_user.parameter::text
 	 WHERE (config_param_user.parameter::text = 'inp_energy_price'::text OR config_param_user.parameter::text = 'inp_energy_pump_effic'::text OR config_param_user.parameter::text = 'inp_energy_price_pattern'::text)
@@ -181,33 +181,33 @@ BEGIN
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_mixing AS
-	 SELECT inp_tank.node_id,
-	    inp_tank.mixing_model,
-	    inp_tank.mixing_fraction
-	   FROM inp_tank
-	     LEFT JOIN temp_t_node USING (node_id)
-	  WHERE inp_tank.mixing_model IS NOT NULL OR inp_tank.mixing_fraction IS NOT NULL
-	UNION
-	 SELECT inp_dscenario_tank.node_id,
-	    inp_dscenario_tank.mixing_model,
-	    inp_dscenario_tank.mixing_fraction
-	   FROM inp_dscenario_tank
-	     LEFT JOIN temp_t_node USING (node_id)
-	  WHERE inp_dscenario_tank.mixing_model IS NOT NULL OR inp_dscenario_tank.mixing_fraction IS NOT NULL
-	UNION
-	 SELECT inp_inlet.node_id,
-	    inp_inlet.mixing_model,
-	    inp_inlet.mixing_fraction
-	   FROM inp_inlet
-	     LEFT JOIN temp_t_node USING (node_id)
-	  WHERE (inp_inlet.mixing_model IS NOT NULL OR inp_inlet.mixing_fraction IS NOT NULL) AND temp_t_node.epa_type::text = 'TANK'::text
-	UNION
-	 SELECT inp_dscenario_inlet.node_id,
-	    inp_dscenario_inlet.mixing_model,
-	    inp_dscenario_inlet.mixing_fraction
-	   FROM inp_dscenario_inlet
-	     LEFT JOIN temp_t_node USING (node_id)
-	  WHERE (inp_dscenario_inlet.mixing_model IS NOT NULL OR inp_dscenario_inlet.mixing_fraction IS NOT NULL) AND temp_t_node.epa_type::text = 'TANK'::text;
+     SELECT inp_tank.node_id,
+        inp_tank.mixing_model,
+        inp_tank.mixing_fraction
+       FROM inp_tank
+         LEFT JOIN temp_t_node ON inp_tank.node_id::text = temp_t_node.node_id
+      WHERE inp_tank.mixing_model IS NOT NULL OR inp_tank.mixing_fraction IS NOT NULL
+    UNION
+     SELECT inp_dscenario_tank.node_id,
+        inp_dscenario_tank.mixing_model,
+        inp_dscenario_tank.mixing_fraction
+       FROM inp_dscenario_tank
+         LEFT JOIN temp_t_node ON inp_dscenario_tank.node_id::text = temp_t_node.node_id
+      WHERE inp_dscenario_tank.mixing_model IS NOT NULL OR inp_dscenario_tank.mixing_fraction IS NOT NULL
+    UNION
+     SELECT inp_inlet.node_id,
+        inp_inlet.mixing_model,
+        inp_inlet.mixing_fraction
+       FROM inp_inlet
+         LEFT JOIN temp_t_node ON inp_inlet.node_id::text = temp_t_node.node_id
+      WHERE (inp_inlet.mixing_model IS NOT NULL OR inp_inlet.mixing_fraction IS NOT NULL) AND temp_t_node.epa_type::text = 'TANK'::text
+    UNION
+     SELECT inp_dscenario_inlet.node_id,
+        inp_dscenario_inlet.mixing_model,
+        inp_dscenario_inlet.mixing_fraction
+       FROM inp_dscenario_inlet
+         LEFT JOIN temp_t_node ON inp_dscenario_inlet.node_id::text = temp_t_node.node_id
+      WHERE (inp_dscenario_inlet.mixing_model IS NOT NULL OR inp_dscenario_inlet.mixing_fraction IS NOT NULL) AND temp_t_node.epa_type::text = 'TANK'::text;
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_options AS
@@ -365,35 +365,35 @@ BEGIN
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_quality AS
-	 SELECT inp_junction.node_id,inp_junction.init_quality FROM inp_junction LEFT JOIN temp_t_node USING (node_id) WHERE inp_junction.init_quality IS NOT NULL
+	 SELECT inp_junction.node_id,inp_junction.init_quality FROM inp_junction LEFT JOIN temp_t_node ON inp_junction.node_id::text = temp_t_node.node_id WHERE inp_junction.init_quality IS NOT NULL
 	UNION
-	 SELECT inp_dscenario_junction.node_id,inp_dscenario_junction.init_quality FROM inp_dscenario_junction  LEFT JOIN temp_t_node USING (node_id) WHERE inp_dscenario_junction.init_quality IS NOT NULL
+	 SELECT inp_dscenario_junction.node_id,inp_dscenario_junction.init_quality FROM inp_dscenario_junction  LEFT JOIN temp_t_node ON inp_dscenario_junction.node_id::text = temp_t_node.node_id WHERE inp_dscenario_junction.init_quality IS NOT NULL
 	UNION
-	 SELECT inp_inlet.node_id, inp_inlet.init_quality FROM inp_inlet LEFT JOIN temp_t_node USING (node_id) WHERE inp_inlet.init_quality IS NOT NULL
+	 SELECT inp_inlet.node_id, inp_inlet.init_quality FROM inp_inlet LEFT JOIN temp_t_node ON inp_inlet.node_id::text = temp_t_node.node_id WHERE inp_inlet.init_quality IS NOT NULL
 	 UNION
-	  SELECT inp_dscenario_inlet.node_id, inp_dscenario_inlet.init_quality FROM inp_dscenario_inlet LEFT JOIN temp_t_node USING (node_id) WHERE inp_dscenario_inlet.init_quality IS NOT NULL
+	  SELECT inp_dscenario_inlet.node_id, inp_dscenario_inlet.init_quality FROM inp_dscenario_inlet LEFT JOIN temp_t_node ON inp_dscenario_inlet.node_id::text = temp_t_node.node_id WHERE inp_dscenario_inlet.init_quality IS NOT NULL
 	UNION
-	 SELECT inp_tank.node_id, inp_tank.init_quality FROM inp_tank LEFT JOIN temp_t_node USING (node_id) WHERE inp_tank.init_quality IS NOT NULL
+	 SELECT inp_tank.node_id, inp_tank.init_quality FROM inp_tank LEFT JOIN temp_t_node ON inp_tank.node_id::text = temp_t_node.node_id WHERE inp_tank.init_quality IS NOT NULL
 	 UNION
-	 SELECT inp_dscenario_tank.node_id,inp_dscenario_tank.init_quality FROM inp_dscenario_tank LEFT JOIN temp_t_node USING (node_id) WHERE inp_dscenario_tank.init_quality IS NOT NULL
+	 SELECT inp_dscenario_tank.node_id,inp_dscenario_tank.init_quality FROM inp_dscenario_tank LEFT JOIN temp_t_node ON inp_dscenario_tank.node_id::text = temp_t_node.node_id WHERE inp_dscenario_tank.init_quality IS NOT NULL
 	UNION
-	 SELECT inp_reservoir.node_id,inp_reservoir.init_quality FROM inp_reservoir LEFT JOIN temp_t_node USING (node_id) WHERE inp_reservoir.init_quality IS NOT NULL
+	 SELECT inp_reservoir.node_id,inp_reservoir.init_quality FROM inp_reservoir LEFT JOIN temp_t_node ON inp_reservoir.node_id::text = temp_t_node.node_id WHERE inp_reservoir.init_quality IS NOT NULL
 	 UNION
-	 SELECT inp_dscenario_reservoir.node_id, inp_dscenario_reservoir.init_quality FROM inp_dscenario_reservoir LEFT JOIN temp_t_node USING (node_id) WHERE inp_dscenario_reservoir.init_quality IS NOT NULL
+	 SELECT inp_dscenario_reservoir.node_id, inp_dscenario_reservoir.init_quality FROM inp_dscenario_reservoir LEFT JOIN temp_t_node ON inp_dscenario_reservoir.node_id::text = temp_t_node.node_id WHERE inp_dscenario_reservoir.init_quality IS NOT NULL
 	UNION
-	 SELECT inp_virtualvalve.arc_id AS node_id, inp_virtualvalve.init_quality FROM inp_virtualvalve LEFT JOIN temp_t_arc USING (arc_id) WHERE inp_virtualvalve.init_quality IS NOT NULL
+	 SELECT inp_virtualvalve.arc_id AS node_id, inp_virtualvalve.init_quality FROM inp_virtualvalve LEFT JOIN temp_t_arc ON inp_virtualvalve.arc_id::text = temp_t_arc.arc_id WHERE inp_virtualvalve.init_quality IS NOT NULL
 	 UNION
-	  SELECT inp_dscenario_virtualvalve.arc_id AS node_id, inp_dscenario_virtualvalve.init_quality FROM inp_dscenario_virtualvalve LEFT JOIN temp_t_arc USING (arc_id) WHERE inp_dscenario_virtualvalve.init_quality IS NOT NULL;
+	  SELECT inp_dscenario_virtualvalve.arc_id AS node_id, inp_dscenario_virtualvalve.init_quality FROM inp_dscenario_virtualvalve LEFT JOIN temp_t_arc ON inp_dscenario_virtualvalve.arc_id::text = temp_t_arc.arc_id WHERE inp_dscenario_virtualvalve.init_quality IS NOT NULL;
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_reactions AS
-	 SELECT 'BULK'::text AS param, inp_pipe.arc_id, inp_pipe.bulk_coeff::text AS coeff FROM inp_pipe LEFT JOIN temp_arc ON inp_pipe.arc_id::text = temp_arc.arc_id::text WHERE inp_pipe.bulk_coeff IS NOT NULL
+	 SELECT 'BULK'::text AS param, inp_pipe.arc_id::text, inp_pipe.bulk_coeff::text AS coeff FROM inp_pipe LEFT JOIN temp_arc ON inp_pipe.arc_id::text = temp_arc.arc_id::text WHERE inp_pipe.bulk_coeff IS NOT NULL
 	UNION
-	 SELECT 'WALL'::text AS param, inp_pipe.arc_id, inp_pipe.wall_coeff::text AS coeff FROM inp_pipe JOIN temp_arc ON inp_pipe.arc_id::text = temp_arc.arc_id::text WHERE inp_pipe.wall_coeff IS NOT NULL
+	 SELECT 'WALL'::text AS param, inp_pipe.arc_id::text, inp_pipe.wall_coeff::text AS coeff FROM inp_pipe JOIN temp_arc ON inp_pipe.arc_id::text = temp_arc.arc_id::text WHERE inp_pipe.wall_coeff IS NOT NULL
 	UNION
-	 SELECT 'BULK'::text AS param, p.arc_id, p.bulk_coeff::text AS coeff  FROM inp_dscenario_pipe p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.bulk_coeff IS NOT NULL
+	 SELECT 'BULK'::text AS param, p.arc_id::text, p.bulk_coeff::text AS coeff  FROM inp_dscenario_pipe p LEFT JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.bulk_coeff IS NOT NULL
 	 UNION
-	 SELECT 'WALL'::text AS param, p.arc_id, p.wall_coeff::text AS coeff  FROM inp_dscenario_pipe p JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.wall_coeff IS NOT NULL
+	 SELECT 'WALL'::text AS param, p.arc_id::text, p.wall_coeff::text AS coeff  FROM inp_dscenario_pipe p JOIN temp_arc ON p.arc_id::text = temp_arc.arc_id::text WHERE p.wall_coeff IS NOT NULL
 	UNION
 	 SELECT sys_param_user.idval AS param, NULL::character varying AS arc_id, config_param_user.value::character varying AS coeff FROM config_param_user
 	  JOIN sys_param_user ON sys_param_user.id = config_param_user.parameter::text
@@ -434,7 +434,7 @@ BEGIN
 	    inp_junction.source_quality,
 	    inp_junction.source_pattern_id
 	   FROM inp_junction
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_junction.node_id::text = temp_t_node.node_id
 	  WHERE inp_junction.source_type IS NOT NULL OR inp_junction.source_quality IS NOT NULL OR inp_junction.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_dscenario_junction.node_id,
@@ -442,7 +442,7 @@ BEGIN
 	    inp_dscenario_junction.source_quality,
 	    inp_dscenario_junction.source_pattern_id
 	   FROM inp_dscenario_junction
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_dscenario_junction.node_id::text = temp_t_node.node_id
 	  WHERE inp_dscenario_junction.source_type IS NOT NULL OR inp_dscenario_junction.source_quality IS NOT NULL OR inp_dscenario_junction.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_tank.node_id,
@@ -450,7 +450,7 @@ BEGIN
 	    inp_tank.source_quality,
 	    inp_tank.source_pattern_id
 	   FROM inp_tank
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_tank.node_id::text = temp_t_node.node_id
 	  WHERE inp_tank.source_type IS NOT NULL OR inp_tank.source_quality IS NOT NULL OR inp_tank.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_dscenario_tank.node_id,
@@ -458,7 +458,7 @@ BEGIN
 	    inp_dscenario_tank.source_quality,
 	    inp_dscenario_tank.source_pattern_id
 	   FROM inp_dscenario_tank
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_dscenario_tank.node_id::text = temp_t_node.node_id
 	  WHERE inp_dscenario_tank.source_type IS NOT NULL OR inp_dscenario_tank.source_quality IS NOT NULL OR inp_dscenario_tank.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_reservoir.node_id,
@@ -466,7 +466,7 @@ BEGIN
 	    inp_reservoir.source_quality,
 	    inp_reservoir.source_pattern_id
 	   FROM inp_reservoir
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_reservoir.node_id::text = temp_t_node.node_id
 	  WHERE inp_reservoir.source_type IS NOT NULL OR inp_reservoir.source_quality IS NOT NULL OR inp_reservoir.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_dscenario_reservoir.node_id,
@@ -474,7 +474,7 @@ BEGIN
 	    inp_dscenario_reservoir.source_quality,
 	    inp_dscenario_reservoir.source_pattern_id
 	   FROM inp_dscenario_reservoir
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_dscenario_reservoir.node_id::text = temp_t_node.node_id
 	  WHERE inp_dscenario_reservoir.source_type IS NOT NULL OR inp_dscenario_reservoir.source_quality IS NOT NULL OR inp_dscenario_reservoir.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_inlet.node_id,
@@ -482,7 +482,7 @@ BEGIN
 	    inp_inlet.source_quality,
 	    inp_inlet.source_pattern_id
 	   FROM inp_inlet
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_inlet.node_id::text = temp_t_node.node_id
 	  WHERE inp_inlet.source_type IS NOT NULL OR inp_inlet.source_quality IS NOT NULL OR inp_inlet.source_pattern_id IS NOT NULL
 	UNION
 	 SELECT inp_dscenario_inlet.node_id,
@@ -490,7 +490,7 @@ BEGIN
 	    inp_dscenario_inlet.source_quality,
 	    inp_dscenario_inlet.source_pattern_id
 	   FROM inp_dscenario_inlet
-	     LEFT JOIN temp_t_node USING (node_id)
+	     LEFT JOIN temp_t_node ON inp_dscenario_inlet.node_id::text = temp_t_node.node_id
 	  WHERE inp_dscenario_inlet.source_type IS NOT NULL OR inp_dscenario_inlet.source_quality IS NOT NULL OR inp_dscenario_inlet.source_pattern_id IS NOT NULL;
 
 

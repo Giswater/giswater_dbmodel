@@ -50,6 +50,10 @@ v_function_alias text;
 v_querytext text;
 v_separator text;
 v_prefix_id integer;
+v_fcount integer;
+v_table_id text;
+v_column_id text;
+v_cur_user text;
 
 BEGIN
 
@@ -61,17 +65,22 @@ BEGIN
 	-- Get parameters from input json
 	v_message_id = lower(((p_data ->>'data')::json->>'message')::text);
 	v_function_id = lower(((p_data ->>'data')::json->>'function')::text);
-	v_parameters = lower(((p_data ->>'data')::json->>'parameters')::text);
+	v_parameters = ((p_data ->>'data')::json->>'parameters')::text;
 	v_variables = lower(((p_data ->>'data')::json->>'variables')::text);
 	v_isprocess = lower(((p_data ->>'data')::json->>'is_process')::text);
 
 	v_fid = lower(((p_data ->>'data')::json->>'fid')::text);
-	v_result_id = lower(((p_data ->>'data')::json->>'result_id')::text);
+	v_result_id = ((p_data ->>'data')::json->>'result_id')::text;
 	v_temp_table = ((p_data ->>'data')::json->>'tempTable')::text;
 	v_criticity = ((p_data ->>'data')::json->>'criticity')::integer;
 	v_is_header = ((p_data ->>'data')::json->>'is_header')::boolean;
-	v_label_id = ((p_data ->>'data')::json->>'label_id')::text;
+	v_label_id = ((p_data ->>'data')::json->>'label_id')::integer;
+	v_prefix_id = ((p_data ->>'data')::json->>'prefix_id')::integer;
+	v_fcount = ((p_data ->>'data')::json->>'fcount')::integer;
 	v_header_separator_id = ((p_data ->>'data')::json->>'separator_id')::integer;
+	v_table_id = ((p_data ->>'data')::json->>'table_id')::text;
+	v_column_id = ((p_data ->>'data')::json->>'column_id')::text;
+	v_cur_user = ((p_data ->>'data')::json->>'cur_user')::text;
 
 	SELECT giswater, project_type INTO v_version, v_projectype FROM sys_version ORDER BY id DESC LIMIT 1;
 
@@ -97,26 +106,57 @@ BEGIN
 			END LOOP;
 		END IF;
 
-		
+
 
 		IF rec_cat_label IS NULL THEN
-
-			v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message)
-			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(COALESCE(v_function_alias, ''))||');';
+			IF v_cur_user IS NOT NULL THEN
+				v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id, cur_user)
+				VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(COALESCE(v_function_alias, ''))||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||', '||v_cur_user||');';
+			ELSE
+				v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id)
+				VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(COALESCE(v_function_alias, ''))||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||');';
+			END IF;
 		ELSE
-
-			v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message)
-			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(rec_cat_label.idval)||');';
+			IF v_cur_user IS NOT NULL THEN
+				v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id, cur_user)
+				VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(rec_cat_label.idval)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||', '||v_cur_user||');';
+			ELSE
+				v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id)
+				VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(rec_cat_label.idval)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||');';
+			END IF;
 		END IF;
 
 		EXECUTE v_querytext;
 
 		SELECT idval INTO v_separator FROM sys_label WHERE id = COALESCE(v_header_separator_id, 2030);
+		IF v_cur_user IS NOT NULL THEN
+			v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id, cur_user)
+			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(v_separator)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||', '||v_cur_user||');';
+		ELSE
+			v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id)
+			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(v_separator)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||');';
+		END IF;
 
-		v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message)
-		VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(v_separator)||');';
-		
 		EXECUTE v_querytext;
+
+		RETURN ('{"status":"Accepted", "message":{"level":3, "text":"Message passed successfully"}, "version":"'||v_version||'"'||
+       ',"body":{"form":{}'||
+           ',"data":{"info":"" }}'||
+            '}')::json;
+    END IF;
+
+	IF v_header_separator_id IS NOT NULL THEN
+        SELECT idval INTO v_separator FROM sys_label WHERE id = COALESCE(v_header_separator_id, 2030);
+
+		IF v_cur_user IS NOT NULL THEN
+			v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id, cur_user)
+			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(v_separator)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||', '||v_cur_user||');';
+		ELSE
+			v_querytext := 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id)
+        	VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||quote_nullable(v_criticity)||','||quote_literal(v_separator)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||');';
+		END IF;
+
+        EXECUTE v_querytext;
 
 		RETURN ('{"status":"Accepted", "message":{"level":3, "text":"Message passed successfully"}, "version":"'||v_version||'"'||
        ',"body":{"form":{}'||
@@ -126,7 +166,7 @@ BEGIN
 
 	-- get flow parameters
 	SELECT * INTO rec_cat_error FROM sys_message WHERE sys_message.id=v_message_id;
-	
+
 	IF NOT FOUND THEN
 		RETURN json_build_object('status', 'Failed', 'message', json_build_object('level', 1, 'text', 'The process has returned an error code, but this error code is not present on the sys_message table. Please contact with your system administrator in order to update your sys_message table'))::json;
 	END IF;
@@ -171,7 +211,11 @@ BEGIN
 			rec_cat_error.error_message = concat(rec_cat_label.idval, ': ', rec_cat_error.error_message);
 		ELSIF rec_cat_error.message_type = 'AUDIT' THEN
 			-- add header to message if message type is AUDIT
-			rec_cat_error.error_message = concat(rec_cat_label.idval, ' ', COALESCE(v_fid, ''), ': ', rec_cat_error.error_message);
+			IF v_result_id IS NOT NULL THEN
+				rec_cat_error.error_message = concat(rec_cat_label.idval, ' ', COALESCE(v_result_id, ''), ': ', rec_cat_error.error_message);
+			ELSE
+				rec_cat_error.error_message = concat(rec_cat_label.idval, ' ', COALESCE(v_fid, ''), ': ', rec_cat_error.error_message);
+			END IF;
 		END IF;
 	END IF;
 
@@ -285,17 +329,22 @@ BEGIN
 		END IF;
 
 	ELSIF rec_cat_error.message_type = 'AUDIT' THEN
-		IF rec_cat_error.log_level = 0 AND v_criticity IS NOT NULL THEN
-			rec_cat_error.log_level = v_criticity;
+        IF rec_cat_error.log_level = 0 AND v_criticity IS NOT NULL THEN
+            rec_cat_error.log_level = v_criticity;
+        END IF;
+
+		IF v_cur_user IS NOT NULL THEN
+			v_querytext = 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id, cur_user)
+			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||rec_cat_error.log_level||','||quote_literal(rec_cat_error.error_message)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||', '||v_cur_user||');';
+		ELSE
+			v_querytext = 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message, fcount, table_id, column_id)
+			VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||rec_cat_error.log_level||','||quote_literal(rec_cat_error.error_message)||', '||quote_nullable(v_fcount)||', '||quote_nullable(v_table_id)||', '||quote_nullable(v_column_id)||');';
 		END IF;
 
-		v_querytext = 'INSERT INTO '||COALESCE(v_temp_table, '')||'audit_check_data (fid, result_id, criticity, error_message)
-		VALUES ('||v_fid||','||quote_nullable(v_result_id)||','||rec_cat_error.log_level||','||quote_literal(rec_cat_error.error_message)||');';
-		
-		EXECUTE v_querytext;
+        EXECUTE v_querytext;
 
 
-	ELSIF rec_cat_error.message_type = 'DEBUG' THEN
+    ELSIF rec_cat_error.message_type = 'DEBUG' THEN
 
 	END IF;
 

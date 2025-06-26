@@ -29,7 +29,7 @@ SELECT columns_are(
         'minsector_id', 'dqa_id', 'district_id', 'adate', 'adescript', 'workcat_id_plan', 'asset_id', 'pavcat_id',
         'nodetype_1', 'elevation1', 'depth1', 'staticpress1', 'nodetype_2', 'elevation2', 'depth2', 'staticpress2',
         'om_state', 'conserv_state', 'parent_id', 'expl_visibility', 'brand_id', 'model_id', 'serial_number', 'label_quadrant',
-        'macrominsector_id', 'supplyzone_id', 'datasource', 'lock_level', 'is_scadamap',
+        'supplyzone_id', 'datasource', 'lock_level', 'is_scadamap',
         'omzone_id', 'the_geom', 'created_at', 'created_by', 'updated_at', 'updated_by'
     ],
     'Table arc should have the correct columns'
@@ -56,11 +56,11 @@ SELECT has_index('arc', 'arc_sys_code_idx', 'Table should have index on sys_code
 SELECT has_index('arc', 'arc_asset_id_idx', 'Table should have index on asset_id');
 
 -- Check column types
-SELECT col_type_is('arc', 'arc_id', 'varchar(16)', 'Column arc_id should be varchar(16)');
+SELECT col_type_is('arc', 'arc_id', 'integer', 'Column arc_id should be integer');
 SELECT col_type_is('arc', 'code', 'text', 'Column code should be text');
 SELECT col_type_is('arc', 'sys_code', 'text', 'Column sys_code should be text');
-SELECT col_type_is('arc', 'node_1', 'varchar(16)', 'Column node_1 should be varchar(16)');
-SELECT col_type_is('arc', 'node_2', 'varchar(16)', 'Column node_2 should be varchar(16)');
+SELECT col_type_is('arc', 'node_1', 'integer', 'Column node_1 should be integer');
+SELECT col_type_is('arc', 'node_2', 'integer', 'Column node_2 should be integer');
 SELECT col_type_is('arc', 'arccat_id', 'varchar(30)', 'Column arccat_id should be varchar(30)');
 SELECT col_type_is('arc', 'epa_type', 'varchar(16)', 'Column epa_type should be varchar(16)');
 SELECT col_type_is('arc', 'sector_id', 'integer', 'Column sector_id should be integer');
@@ -119,13 +119,12 @@ SELECT col_type_is('arc', 'depth2', 'numeric(12,4)', 'Column depth2 should be nu
 SELECT col_type_is('arc', 'staticpress2', 'numeric(12,3)', 'Column staticpress2 should be numeric(12,3)');
 SELECT col_type_is('arc', 'om_state', 'text', 'Column om_state should be text');
 SELECT col_type_is('arc', 'conserv_state', 'text', 'Column conserv_state should be text');
-SELECT col_type_is('arc', 'parent_id', 'varchar(16)', 'Column parent_id should be varchar(16)');
+SELECT col_type_is('arc', 'parent_id', 'integer', 'Column parent_id should be integer');
 SELECT col_type_is('arc', 'expl_visibility', 'smallint[]', 'Column expl_visibility should be integer[]');
 SELECT col_type_is('arc', 'brand_id', 'varchar(50)', 'Column brand_id should be varchar(50)');
 SELECT col_type_is('arc', 'model_id', 'varchar(50)', 'Column model_id should be varchar(50)');
 SELECT col_type_is('arc', 'serial_number', 'varchar(100)', 'Column serial_number should be varchar(100)');
 SELECT col_type_is('arc', 'label_quadrant', 'varchar(12)', 'Column label_quadrant should be varchar(12)');
-SELECT col_type_is('arc', 'macrominsector_id', 'integer', 'Column macrominsector_id should be integer');
 SELECT col_type_is('arc', 'supplyzone_id', 'integer', 'Column supplyzone_id should be integer');
 SELECT col_type_is('arc', 'datasource', 'integer', 'Column datasource should be integer');
 SELECT col_type_is('arc', 'lock_level', 'integer', 'Column lock_level should be integer');

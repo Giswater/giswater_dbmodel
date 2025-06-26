@@ -17,6 +17,9 @@ FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_node('parent');
 CREATE TRIGGER gw_trg_edit_connec INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_connec
 FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_connec('parent');
 
+CREATE TRIGGER gw_trg_edit_link INSTEAD OF INSERT OR UPDATE OR DELETE ON v_edit_link
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_link('parent');
+
 CREATE TRIGGER gw_trg_edit_element_pol INSTEAD OF INSERT OR DELETE OR UPDATE ON ve_pol_element
 FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_element_pol();
 
@@ -131,10 +134,6 @@ ON dqa FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_controls('dqa_id');
 CREATE TRIGGER gw_trg_edit_controls BEFORE DELETE OR UPDATE
 ON supplyzone FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_controls('supplyzone_id');
 
-
-CREATE TRIGGER gw_trg_edit_link INSTEAD OF INSERT OR UPDATE OR DELETE ON v_edit_link
-FOR EACH ROW EXECUTE PROCEDURE gw_trg_edit_link();
-
 CREATE TRIGGER gw_trg_edit_plan_netscenario INSTEAD OF INSERT OR DELETE OR UPDATE ON
 v_edit_plan_netscenario_presszone FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_plan_netscenario('PRESSZONE');
 
@@ -149,9 +148,6 @@ dqa FOR EACH ROW EXECUTE FUNCTION gw_trg_typevalue_fk('dqa');
 
 CREATE TRIGGER gw_trg_typevalue_fk AFTER INSERT OR UPDATE ON
 sector FOR EACH ROW EXECUTE FUNCTION gw_trg_typevalue_fk('sector');
-
-CREATE TRIGGER gw_trg_edit_review_connec INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_review_connec
-FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_connec();
 
 -- 05/12/24
 CREATE TRIGGER gw_trg_dscenario_demand_feature AFTER INSERT ON inp_dscenario_demand
@@ -304,8 +300,6 @@ CREATE TRIGGER gw_trg_typevalue_fk_update AFTER UPDATE OF verified ON node
 FOR EACH ROW WHEN (((old.verified)::TEXT IS DISTINCT
 FROM (new.verified)::TEXT)) EXECUTE FUNCTION gw_trg_typevalue_fk('node');
 
-CREATE TRIGGER gw_trg_edit_review_node INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_review_node
-FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_node();
 
 -- 10/02/2025
 CREATE TRIGGER gw_trg_ui_doc_x_arc INSTEAD OF INSERT OR DELETE OR UPDATE ON v_ui_doc_x_arc
@@ -471,13 +465,62 @@ FROM (new.omzone_type)::TEXT)) EXECUTE FUNCTION gw_trg_typevalue_fk('omzone');
 CREATE TRIGGER gw_trg_edit_cat_feature INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_cat_feature_node
 FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_cat_feature('node');
 
+CREATE TRIGGER gw_trg_edit_cat_feature INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_cat_feature_connec
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_cat_feature('connec');
+
+CREATE TRIGGER gw_trg_edit_plan_netscenario INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_plan_netscenario_valve
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_plan_netscenario('VALVE');
+
+CREATE TRIGGER gw_trg_plan_psector_x_node BEFORE INSERT OR UPDATE OF node_id, state ON plan_psector_x_node
+FOR EACH ROW EXECUTE FUNCTION gw_trg_plan_psector_x_node();
+
+CREATE TRIGGER gw_trg_plan_psector_x_arc BEFORE INSERT OR UPDATE OF arc_id, state ON plan_psector_x_arc
+FOR EACH ROW EXECUTE FUNCTION gw_trg_plan_psector_x_arc();
+
+CREATE TRIGGER gw_trg_plan_psector_link AFTER INSERT OR UPDATE OF arc_id ON plan_psector_x_connec
+FOR EACH ROW EXECUTE FUNCTION gw_trg_plan_psector_link('connec');
+
+CREATE TRIGGER gw_trg_plan_psector_x_connec BEFORE INSERT OR UPDATE OF connec_id, state ON plan_psector_x_connec
+FOR EACH ROW EXECUTE FUNCTION gw_trg_plan_psector_x_connec();
+
+CREATE TRIGGER gw_trg_edit_plan_psector_connec INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_plan_psector_x_connec
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_plan_psector_x_connect('plan_psector_x_connec');
+
+CREATE TRIGGER gw_trg_om_visit_singlevent INSTEAD OF INSERT OR DELETE OR UPDATE ON ve_visit_node_singlevent
+FOR EACH ROW EXECUTE FUNCTION gw_trg_om_visit_singlevent('node');
+
+CREATE TRIGGER gw_trg_om_visit_singlevent INSTEAD OF INSERT OR DELETE OR UPDATE ON ve_visit_arc_singlevent
+FOR EACH ROW EXECUTE FUNCTION gw_trg_om_visit_singlevent('arc');
+
+CREATE TRIGGER gw_trg_om_visit_singlevent INSTEAD OF INSERT OR DELETE OR UPDATE ON ve_visit_connec_singlevent
+FOR EACH ROW EXECUTE FUNCTION gw_trg_om_visit_singlevent('connec');
+
+
+CREATE TRIGGER gw_trg_edit_review_audit_node INSTEAD OF DELETE OR UPDATE ON v_edit_review_audit_node
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_audit_node();
+
+CREATE TRIGGER gw_trg_edit_review_audit_arc INSTEAD OF DELETE OR UPDATE ON v_edit_review_audit_arc
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_audit_arc();
+
+CREATE TRIGGER gw_trg_edit_review_audit_connec INSTEAD OF DELETE OR UPDATE ON v_edit_review_audit_connec
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_audit_connec();
+
+CREATE TRIGGER gw_trg_edit_review_node INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_review_node
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_node();
+
+CREATE TRIGGER gw_trg_edit_review_arc INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_review_arc
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_arc();
+
+CREATE TRIGGER gw_trg_edit_review_connec INSTEAD OF INSERT OR DELETE OR UPDATE ON v_edit_review_connec
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_review_connec();
+
 
 -- 22/05/2025
 CREATE TRIGGER gw_trg_fk_array_id_table BEFORE DELETE ON arc
-FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_id_table('arc_id', '{"man_source":"inlet_arc", "man_tank":"inlet_arc", "man_wtp":"inlet_arc", "man_valve":"to_arc", "man_pump":"to_arc", "man_meter":"to_arc"}');
+FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_id_table('arc_id', '{"man_source":"inlet_arc", "man_tank":"inlet_arc", "man_wtp":"inlet_arc", "man_waterwell":"inlet_arc", "man_valve":"to_arc", "man_pump":"to_arc", "man_meter":"to_arc"}');
 
 CREATE TRIGGER gw_trg_fk_array_id_table_update AFTER UPDATE ON arc
-FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_id_table('arc_id', '{"man_source":"inlet_arc", "man_tank":"inlet_arc", "man_wtp":"inlet_arc", "man_valve":"to_arc", "man_pump":"to_arc", "man_meter":"to_arc"}');
+FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_id_table('arc_id', '{"man_source":"inlet_arc", "man_tank":"inlet_arc", "man_wtp":"inlet_arc", "man_waterwell":"inlet_arc", "man_valve":"to_arc", "man_pump":"to_arc", "man_meter":"to_arc"}');
 
 CREATE TRIGGER gw_trg_fk_array_array_table AFTER INSERT OR UPDATE ON man_source
 FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_array_table('inlet_arc', 'arc', 'arc_id');
@@ -496,3 +539,9 @@ FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_array_table('to_arc', 'arc', 'arc_
 
 CREATE TRIGGER gw_trg_fk_array_array_table AFTER INSERT OR UPDATE ON man_meter
 FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_array_table('to_arc', 'arc', 'arc_id');
+
+CREATE TRIGGER gw_trg_fk_array_array_table AFTER INSERT OR UPDATE ON man_waterwell
+FOR EACH ROW EXECUTE FUNCTION gw_trg_array_fk_array_table('inlet_arc', 'arc', 'arc_id');
+
+CREATE TRIGGER gw_trg_edit_plot INSTEAD OF INSERT OR DELETE OR UPDATE ON v_ext_plot
+FOR EACH ROW EXECUTE FUNCTION gw_trg_edit_plot();

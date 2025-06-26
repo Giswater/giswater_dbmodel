@@ -258,14 +258,6 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"inp_virtua
 
 -- 21/11/24
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"minsector_graph", "column":"expl_id"}}$$);
-SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"minsector_graph", "column":"macrominsector_id", "dataType":"integer"}}$$);
-
--- 29/11/24
-ALTER TABLE node ALTER COLUMN macrominsector_id SET DEFAULT 0;
-ALTER TABLE arc ALTER COLUMN macrominsector_id SET DEFAULT 0;
-ALTER TABLE connec ALTER COLUMN macrominsector_id SET DEFAULT 0;
-ALTER TABLE link ALTER COLUMN macrominsector_id SET DEFAULT 0;
-ALTER TABLE minsector_graph ALTER COLUMN macrominsector_id SET DEFAULT 0;
 
 -- 02/12/2024
 
@@ -473,7 +465,8 @@ CREATE TABLE arc_add (
 	mincut_hydrometers int NULL,
 	mincut_length numeric(12, 3) NULL,
 	mincut_watervol numeric(12, 3) NULL,
-	mincut_criticity numeric(12, 3) NULL,
+	mincut_criticality numeric(12, 3) NULL,
+	hydraulic_criticality numeric(12, 3) NULL,
 	CONSTRAINT arc_add_pkey PRIMARY KEY (arc_id)
 );
 
@@ -826,6 +819,7 @@ ALTER TABLE node ADD CONSTRAINT cat_pavement_id_fkey FOREIGN KEY (pavcat_id) REF
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_valve", "column":"automated", "dataType":"boolean", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_valve", "column":"connection_type", "dataType":"integer", "isUtils":"False"}}$$);
 UPDATE man_valve SET connection_type=0 WHERE connection_type IS NULL;
+ALTER TABLE man_valve ALTER COLUMN connection_type SET DEFAULT 0;
 ALTER TABLE man_valve ALTER COLUMN connection_type SET NOT NULL;
 
 -- man_tank
@@ -836,6 +830,7 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_tank", 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_tank", "column":"fence_type", "dataType":"integer", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_tank", "column":"fence_length", "dataType":"float", "isUtils":"False"}}$$);
 UPDATE man_tank SET shape=0 WHERE shape IS NULL;
+ALTER TABLE man_tank ALTER COLUMN shape SET DEFAULT 0;
 ALTER TABLE man_tank ALTER COLUMN shape SET NOT NULL;
 
 -- man_netelement
@@ -873,18 +868,20 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_source"
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_source", "column":"subbasin_id", "dataType":"integer", "isUtils":"False"}}$$);
 
 UPDATE man_source SET source_type=0 WHERE source_type IS NULL;
+ALTER TABLE man_source ALTER COLUMN source_type SET DEFAULT 0;
 ALTER TABLE man_source ALTER COLUMN source_type SET NOT NULL;
 
 UPDATE man_source SET aquifer_type=0 WHERE aquifer_type IS NULL;
+ALTER TABLE man_source ALTER COLUMN aquifer_type SET DEFAULT 0;
 ALTER TABLE man_source ALTER COLUMN aquifer_type SET NOT NULL;
 
 UPDATE man_source SET basin_id=0 WHERE basin_id IS NULL;
+ALTER TABLE man_source ALTER COLUMN basin_id SET DEFAULT 0;
 ALTER TABLE man_source ALTER COLUMN basin_id SET NOT NULL;
 
 UPDATE man_source SET subbasin_id=0 WHERE subbasin_id IS NULL;
+ALTER TABLE man_source ALTER COLUMN subbasin_id SET DEFAULT 0;
 ALTER TABLE man_source ALTER COLUMN subbasin_id SET NOT NULL;
-
-ALTER TABLE man_source ADD CONSTRAINT man_wtp_id_fkey FOREIGN KEY (wtp_id) REFERENCES man_wtp(node_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 -- 03/03/2025
@@ -980,7 +977,7 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"RENAME","table":"cat_arc"
 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_meter", "column":"closed", "dataType":"boolean", "isUtils":"False"}}$$);
 
-
+ALTER TABLE crm_zone RENAME TO crmzone;
 
 -- 13/03/2025
 -- arc
@@ -1062,15 +1059,15 @@ DROP INDEX IF EXISTS arc_streetname2;
 
 -- New order to table arc
 CREATE TABLE arc (
-	arc_id varchar(16) DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
+	arc_id int4 DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
 	code text NULL,
 	sys_code text NULL,
-	node_1 varchar(16) NULL,
+	node_1 int4 NULL,
 	nodetype_1 varchar(30) NULL,
 	elevation1 numeric(12, 4) NULL,
 	depth1 numeric(12, 4) NULL,
 	staticpress1 numeric(12, 3) NULL,
-	node_2 varchar(16) NULL,
+	node_2 int4 NULL,
 	nodetype_2 varchar(30) NULL,
 	elevation2 numeric(12, 4) NULL,
 	depth2 numeric(12, 4) NULL,
@@ -1080,7 +1077,7 @@ CREATE TABLE arc (
 	epa_type varchar(16) NOT NULL,
 	state int2 NOT NULL,
 	state_type int2 NOT NULL,
-	parent_id varchar(16) NULL,
+	parent_id int4 NULL,
 	expl_id int4 DEFAULT 0 NOT NULL,
 	muni_id int4 DEFAULT 0 NOT NULL,
 	sector_id int4 DEFAULT 0 NOT NULL,
@@ -1090,7 +1087,6 @@ CREATE TABLE arc (
 	dqa_id int4 DEFAULT 0 NULL,
 	omzone_id int4 DEFAULT 0 NULL,
 	minsector_id int4 DEFAULT 0 NULL,
-	macrominsector_id int4 DEFAULT 0 NULL,
 	pavcat_id varchar(30) NULL,
 	soilcat_id varchar(30) NULL,
 	function_type varchar(50) NULL,
@@ -1232,7 +1228,6 @@ ALTER TABLE _pool_ DROP CONSTRAINT pool_connec_id_fkey;
 ALTER TABLE _connec DROP CONSTRAINT connec_cat_valve_fkey;
 ALTER TABLE _connec DROP CONSTRAINT connec_connecat_id_fkey;
 ALTER TABLE _connec DROP CONSTRAINT connec_buildercat_id_fkey;
-ALTER TABLE _connec DROP CONSTRAINT connec_crmzone_id_fkey;
 ALTER TABLE _connec DROP CONSTRAINT connec_district_id_fkey;
 ALTER TABLE _connec DROP CONSTRAINT connec_expl_fkey;
 ALTER TABLE _connec DROP CONSTRAINT connec_expl_id2_fkey;
@@ -1280,7 +1275,7 @@ DROP INDEX IF EXISTS connec_streetname2;
 
 -- New order to table connec
 CREATE TABLE connec (
-	connec_id varchar(16) DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
+	connec_id int4 DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
 	code text NULL,
 	sys_code text NULL,
 	top_elev numeric(12, 4) NULL,
@@ -1292,7 +1287,7 @@ CREATE TABLE connec (
 	epa_type text NOT NULL,
 	state int2 NOT NULL,
 	state_type int2 NOT NULL,
-	arc_id varchar(16) NULL,
+	arc_id int4 NULL,
 	expl_id int4 DEFAULT 0 NOT NULL,
 	muni_id int4 DEFAULT 0 NOT NULL,
 	sector_id int4 DEFAULT 0 NOT NULL,
@@ -1303,7 +1298,6 @@ CREATE TABLE connec (
 	omzone_id int4 DEFAULT 0 NULL,
 	crmzone_id int4 DEFAULT 0 NULL,
 	minsector_id int4 DEFAULT 0 NULL,
-	macrominsector_id int4 DEFAULT 0 NULL,
 	soilcat_id varchar(16) NULL,
 	function_type varchar(50) NULL,
 	category_type varchar(50) NULL,
@@ -1334,7 +1328,7 @@ CREATE TABLE connec (
 	builtdate date NULL,
 	enddate date NULL,
 	ownercat_id varchar(30) NULL,
-	pjoint_id varchar(16) NULL,
+	pjoint_id int4 NULL,
 	pjoint_type varchar(16) NULL,
 	om_state text NULL,
 	conserv_state text NULL,
@@ -1370,7 +1364,7 @@ CREATE TABLE connec (
 	CONSTRAINT connec_pjoint_type_check CHECK (((pjoint_type)::text = ANY (ARRAY['NODE'::text, 'ARC'::text, 'CONNEC'::text]))),
 	CONSTRAINT connec_pkey PRIMARY KEY (connec_id),
 	CONSTRAINT connec_connecat_id_fkey FOREIGN KEY (conneccat_id) REFERENCES cat_connec(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-	CONSTRAINT connec_crmzone_id_fkey FOREIGN KEY (crmzone_id) REFERENCES crm_zone(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT connec_crmzone_id_fkey FOREIGN KEY (crmzone_id) REFERENCES crmzone(id) ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT connec_district_id_fkey FOREIGN KEY (district_id) REFERENCES ext_district(district_id) ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT connec_expl_fkey FOREIGN KEY (expl_id) REFERENCES exploitation(expl_id) ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT connec_feature_type_fkey FOREIGN KEY (feature_type) REFERENCES sys_feature_type(id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -1450,12 +1444,13 @@ DROP INDEX IF EXISTS element_sector;
 
 -- New order to table element
 CREATE TABLE element (
-	element_id varchar(16) DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
+	element_id int4 DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
 	code text NULL,
 	sys_code text NULL,
 	top_elev numeric(12, 4) NULL,
 	feature_type varchar(16) DEFAULT 'ELEMENT'::character varying NULL,
 	elementcat_id varchar(30) NOT NULL,
+	epa_type varchar(16) NULL,
 	num_elements int4 NULL,
 	state int2 NOT NULL,
 	state_type int2 NOT NULL,
@@ -1466,7 +1461,6 @@ CREATE TABLE element (
 	function_type varchar(50) NULL,
 	category_type varchar(50) NULL,
 	location_type varchar(50) NULL,
-	fluid_type varchar(50) NULL,
 	observ varchar(254) NULL,
 	"comment" varchar(254) NULL,
 	link varchar(512) NULL,
@@ -1490,6 +1484,7 @@ CREATE TABLE element (
 	trace_featuregeom bool DEFAULT true NULL,
 	lock_level int4 NULL,
 	expl_visibility int2[] NULL,
+	geometry_type text NULL,
 	created_at timestamp with time zone DEFAULT now() NULL,
 	created_by varchar(50) DEFAULT CURRENT_USER NULL,
 	updated_at timestamp with time zone NULL,
@@ -1506,7 +1501,8 @@ CREATE TABLE element (
 	CONSTRAINT element_state_fkey FOREIGN KEY (state) REFERENCES value_state(id) ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT element_state_type_fkey FOREIGN KEY (state_type) REFERENCES value_state_type(id) ON DELETE RESTRICT ON UPDATE CASCADE,
 	CONSTRAINT element_workcat_id_end_fkey FOREIGN KEY (workcat_id_end) REFERENCES cat_work(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-	CONSTRAINT element_workcat_id_fkey FOREIGN KEY (workcat_id) REFERENCES cat_work(id) ON DELETE RESTRICT ON UPDATE CASCADE
+	CONSTRAINT element_workcat_id_fkey FOREIGN KEY (workcat_id) REFERENCES cat_work(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+	CONSTRAINT element_epa_type_check CHECK ((epa_type = ANY (ARRAY['FRPUMP'::text, 'VALVE'::text])))
 );
 
 CREATE INDEX element_index ON element USING gist (the_geom);
@@ -1616,7 +1612,7 @@ DROP INDEX IF EXISTS node_streetname2;
 
 
 CREATE TABLE node (
-	node_id varchar(16) DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
+	node_id int4 DEFAULT nextval('urn_id_seq'::regclass) NOT NULL,
 	code text NULL,
 	sys_code text NULL,
 	top_elev numeric(12, 4) NULL,
@@ -1627,8 +1623,8 @@ CREATE TABLE node (
 	epa_type varchar(16) NOT NULL,
 	state int2 NOT NULL,
 	state_type int2 NOT NULL,
-	arc_id varchar(16) NULL,
-	parent_id varchar(16) NULL,
+	arc_id int4 NULL,
+	parent_id int4 NULL,
 	expl_id int4 DEFAULT 0 NOT NULL,
 	muni_id int4 DEFAULT 0 NOT NULL,
 	sector_id int4 DEFAULT 0 NOT NULL,
@@ -1638,7 +1634,6 @@ CREATE TABLE node (
 	dqa_id int4 NULL,
 	omzone_id int4 NULL,
 	minsector_id int4 NULL,
-	macrominsector_id int4 DEFAULT 0 NULL,
 	pavcat_id text NULL,
 	soilcat_id varchar(30) NULL,
 	function_type varchar(50) NULL,
@@ -1768,12 +1763,12 @@ CREATE TABLE link (
 	sys_code text NULL,
 	top_elev1 float8 NULL,
 	depth1 numeric(12, 4) NULL,
-	exit_id varchar(16) NULL,
+	exit_id int4 NULL,
 	exit_type varchar(16) NULL,
 	top_elev2 float8 NULL,
 	depth2 numeric(12, 4) NULL,
 	feature_type varchar(16) NULL,
-	feature_id varchar(16) NULL,
+	feature_id int4 NULL,
 	linkcat_id varchar(30) NOT NULL,
 	epa_type varchar(16) NULL,
 	state int2 NOT NULL,
@@ -1787,7 +1782,6 @@ CREATE TABLE link (
 	dqa_id int4 NULL,
 	omzone_id int4 NULL,
 	minsector_id int4 NULL,
-	macrominsector_id int4 DEFAULT 0 NULL,
 	location_type varchar(50) NULL,
 	fluid_type varchar(50) NULL,
 	custom_length numeric(12, 2) NULL,
@@ -2153,3 +2147,25 @@ CREATE TABLE IF NOT EXISTS omzone (
     CONSTRAINT omzone_macroomzone_id_fkey FOREIGN KEY (macroomzone_id) REFERENCES macroomzone (macroomzone_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
+
+CREATE TABLE macrocrmzone (
+	macrocrmzone_id serial4 NOT NULL,
+	code text NULL,
+	"name" varchar(50) NOT NULL,
+	descript text NULL,
+	lock_level int4 NULL,
+	active bool DEFAULT true NULL,
+	the_geom public.geometry(multipolygon, SRID_VALUE) NULL,
+	created_at timestamp with time zone DEFAULT now() NULL,
+	created_by varchar(50) DEFAULT CURRENT_USER NULL,
+	updated_at timestamp with time zone NULL,
+	updated_by varchar(50) NULL,
+	CONSTRAINT macrocrmzone_pkey PRIMARY KEY (macrocrmzone_id)
+);
+
+ALTER TABLE crmzone ADD COLUMN macrocrmzone_id integer;
+ALTER TABLE crmzone ADD CONSTRAINT crmzone_macrocrmzone_id_fkey FOREIGN KEY (macrocrmzone_id) REFERENCES macrocrmzone (macrocrmzone_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT;
+ALTER TABLE crmzone ADD COLUMN created_at timestamp with time zone DEFAULT now() NULL;
+ALTER TABLE crmzone ADD COLUMN created_by varchar(50) DEFAULT CURRENT_USER NULL;
+ALTER TABLE crmzone ADD COLUMN updated_at timestamp with time zone NULL;
+ALTER TABLE crmzone ADD COLUMN updated_by varchar(50) NULL;

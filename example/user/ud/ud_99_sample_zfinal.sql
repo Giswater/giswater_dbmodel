@@ -89,7 +89,8 @@ UPDATE cat_arc SET visitability_vdef = 3 WHERE geom1 >= 1.6; -- VISITABLE
 UPDATE link SET muni_id = c.muni_id FROM connec c WHERE connec_id =  feature_id;
 UPDATE link SET muni_id = g.muni_id FROM gully g WHERE gully_id =  feature_id;
 
-SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"DRAINZONE", "exploitation":"1", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "commitChanges":"true", "valueForDisconnected":null, "updateMapZone":"2", "geomParamUpdate":"8"}, "aux_params":null}}$$);
+-- TODO: revise is this is needed
+-- SELECT gw_fct_graphanalytics_mapzones_advanced($${"client":{"device":4, "lang":"en_US", "infoType":1, "epsg":25831}, "form":{}, "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "parameters":{"graphClass":"DRAINZONE", "exploitation":"1", "floodOnlyMapzone":null, "forceOpen":null, "forceClosed":null, "usePlanPsector":"false", "commitChanges":"true", "valueForDisconnected":null, "updateMapZone":"2", "geomParamUpdate":"8"}, "aux_params":null}}$$);
 
 UPDATE arc SET muni_id = 1, streetaxis_id  ='1-9150C' WHERE arc_id = '179';
 
@@ -167,9 +168,9 @@ UPDATE config_param_system SET isenabled = false where parameter = ' basic_selec
 
 
 INSERT INTO element  (element_id, code, elementcat_id, epa_type, state, state_type, num_elements, rotation, verified, publish, inventory, expl_id, feature_type, top_elev, muni_id, sector_id, the_geom) VALUES
-('100020', 'E100020', 'EWEIR-01','EWEIR', 1,2,1,79.731, 1,true,true,2,'ELEMENT',30.190,2,2,'POINT (418716.0233455198 4577601.812087212)'),
-('100021', 'E100021', 'EWEIR-01','EWEIR', 1,2,1,122.505,1,true,true,1,'ELEMENT',19.230,1,1,'POINT (419597.7191116698 4576460.6400896525)'),
-('100022', 'E100022', 'PUMP-01','PUMP', 1,2,1,79.731, 1,true,true,2,'ELEMENT',30.190,2,2,'POINT (418716.0233455198 4577601.812087212)');
+('100020', 'E100020', 'EWEIR-01','FRWEIR', 1,2,1,79.731, 1,true,true,2,'ELEMENT',30.190,2,2,'POINT (418716.0233455198 4577601.812087212)'),
+('100021', 'E100021', 'EWEIR-01','FRWEIR', 1,2,1,122.505,1,true,true,1,'ELEMENT',19.230,1,1,'POINT (419597.7191116698 4576460.6400896525)'),
+('100022', 'E100022', 'PUMP-01','FRPUMP', 1,2,1,79.731, 1,true,true,2,'ELEMENT',30.190,2,2,'POINT (418716.0233455198 4577601.812087212)');
 
 INSERT INTO man_frelem (element_id, node_id, order_id, to_arc, flwreg_length) VALUES
 ('100020','18828',1,'18969',0.5),

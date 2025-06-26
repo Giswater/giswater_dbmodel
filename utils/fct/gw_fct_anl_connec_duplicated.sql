@@ -32,6 +32,7 @@ v_array text;
 v_version text;
 v_error_context text;
 v_count integer;
+v_msgerr json;
 
 BEGIN
 
@@ -53,8 +54,8 @@ BEGIN
     DELETE FROM anl_connec WHERE cur_user="current_user"() AND fid=105;
     DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=105;
 
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (105, null, 4, concat('CONNEC DUPLICATED ANALYSIS'));
-	INSERT INTO audit_check_data (fid, result_id, criticity, error_message) VALUES (105, null, 4, '-------------------------------------------------------------');
+	EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"function":"2106", "fid":"105", "criticity":"4", "is_process":true, "is_header":"true"}}$$)';
 
 	-- Computing process
 	IF v_selectionmode = 'previousSelection' THEN
@@ -103,14 +104,15 @@ BEGIN
 	SELECT count(*) INTO v_count FROM anl_connec WHERE cur_user="current_user"() AND fid=105;
 
 	IF v_count = 0 THEN
-		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		VALUES (105,  'There are no duplicated connecs.', v_count);
+
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3590", "function":"2106", "fid":"105", "fcount":"'||v_count||'", "is_process":true}}$$)';
 	ELSE
-		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		VALUES (105,  concat ('There are ',v_count,' duplicated connecs.'), v_count);
+		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+                       "data":{"message":"3592", "function":"2106", "parameters":{"v_count":"'||v_count||'"}, "fid":"105", "fcount":"'||v_count||'", "is_process":true}}$$)';
 
 		INSERT INTO audit_check_data(fid,  error_message, fcount)
-		SELECT 105,  concat ('Connec_id: ',string_agg(connec_id, ', '), '.' ), v_count
+		SELECT 105,  concat ('Connec_id: ',array_agg(connec_id), '.' ), v_count
 		FROM anl_connec WHERE cur_user="current_user"() AND fid=105;
 
 	END IF;
@@ -132,6 +134,11 @@ BEGIN
 				'"point":'||v_result_point||
 			'}}'||
 	    '}')::json, 2106, null, null, null);
+
+
+	EXCEPTION WHEN OTHERS THEN
+	GET STACKED DIAGNOSTICS v_error_context = pg_exception_context;
+	RETURN json_build_object('status', 'Failed','NOSQLERR', SQLERRM, 'version', v_version, 'SQLSTATE', SQLSTATE, 'MSGERR', (v_msgerr::json ->> 'MSGERR'))::json;
 
 END;
 $BODY$

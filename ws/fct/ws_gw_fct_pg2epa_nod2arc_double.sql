@@ -90,6 +90,7 @@ BEGIN
 
 	FOR v_arc_id, v_node_1, v_geom, v_curve IN EXECUTE v_query_text
 	LOOP
+raise notice 'hola';
 		-- New node
 		SELECT * INTO v_record FROM temp_t_node WHERE node_id = v_node_1;
 		v_record.node_id = concat (reverse(substring(reverse(v_record.node_id),2)), '3');
@@ -113,7 +114,7 @@ BEGIN
 		VALUES(v_record_a1.result_id, v_record_a1.arc_id, v_record_a1.node_1, v_record_a1.node_2, v_record_a1.arc_type, v_record_a1.arccat_id, v_record_a1.epa_type, v_record_a1.sector_id,
 		v_record_a1.state, v_record_a1.state_type, v_record_a1.annotation, v_record_a1.diameter, v_record_a1.roughness, v_record_a1.length, v_record_a1.status, v_record_a1.the_geom,
 		v_record_a1.expl_id, v_record_a1.flw_code, v_record_a1.addparam, v_record_a1.dma_id, v_record_a1.presszone_id, v_record_a1.dqa_id, v_record_a1.minsector_id);
-
+raise notice 'adeu';
 		-- New arc (PRV)
 		SELECT * INTO v_record_a2 FROM temp_t_arc WHERE arc_id = v_arc_id;
 		v_record_a2.arc_id = concat (v_record_a2.arc_id, '_5');
@@ -132,7 +133,7 @@ BEGIN
 
 		-- Deleting old arc
 		DELETE FROM temp_t_arc WHERE arc_id = v_arc_id;
-
+raise notice 'adeuadure';
 	END LOOP;
 
 

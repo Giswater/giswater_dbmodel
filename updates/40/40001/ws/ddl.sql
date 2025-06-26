@@ -8,7 +8,7 @@ or (at your option) any later version.
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 CREATE TABLE inp_frvalve (
-	element_id varchar(16) NOT NULL,
+	element_id int4 NOT NULL,
 	valve_type varchar(18) NULL,
 	custom_dint numeric(12, 4) NULL,
 	setting numeric(12, 4) NULL,
@@ -24,7 +24,7 @@ CREATE TABLE inp_frvalve (
 
 CREATE TABLE inp_dscenario_frvalve (
     dscenario_id int4 NOT NULL,
-	element_id varchar(16) NOT NULL,
+	element_id int4 NOT NULL,
 	valve_type varchar(18) NULL,
 	custom_dint numeric(12, 4) NULL,
 	setting numeric(12, 4) NULL,
@@ -39,7 +39,7 @@ CREATE TABLE inp_dscenario_frvalve (
 );
 
 CREATE TABLE inp_frpump (
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     curve_id varchar(16) NOT NULL,
     status varchar(3) NULL,
     startup numeric(12, 4) NULL,
@@ -52,7 +52,7 @@ CREATE TABLE inp_frpump (
 
 CREATE TABLE inp_dscenario_frpump (
     dscenario_id int4 NOT NULL,
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     pump_type varchar(18) NOT NULL,
     curve_id varchar(16) NOT NULL,
     status varchar(3) NULL,
@@ -88,6 +88,7 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"CHANGETYPE","table":"man_
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_source", "column":"inlet_arc", "dataType":"integer[]", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_tank", "column":"inlet_arc", "dataType":"integer[]", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_wtp", "column":"inlet_arc", "dataType":"integer[]", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_waterwell", "column":"inlet_arc", "dataType":"integer[]", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_meter", "column":"to_arc", "dataType":"int4", "isUtils":"False"}}$$);
 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"man_register", "column":"length", "dataType":"numeric(12,3)", "isUtils":"False"}}$$);
@@ -101,6 +102,7 @@ ALTER TABLE inp_virtualpump ALTER COLUMN pump_type SET DEFAULT 'POWERPUMP';
 ALTER TABLE inp_dscenario_virtualpump ALTER COLUMN pump_type SET DEFAULT 'POWERPUMP';
 
 --15/05/2025
+ALTER TABLE connec_add ALTER COLUMN connec_id TYPE int4 USING connec_id::int4;
 ALTER TABLE connec_add ADD CONSTRAINT connec_add_connec_id_fkey FOREIGN KEY (connec_id) REFERENCES connec(connec_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- 19/05/2025
@@ -117,3 +119,50 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"arc_add", "
 -- 27/05/2025
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"arc_add", "column":"mincut_impact", "dataType":"json", "isUtils":"False"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"arc_add", "column":"mincut_affectation", "dataType":"json", "isUtils":"False"}}$$);
+
+-- 09/06/2025
+-- Convert dma_id, dqa_id, presszone_id, expl_id, sector_id, muni_id to arrays in minsector
+ALTER TABLE minsector DROP CONSTRAINT minsector_dma_id_fkey;
+ALTER TABLE minsector ALTER COLUMN dma_id TYPE _int4 USING ARRAY[dma_id::int4];
+ALTER TABLE minsector DROP CONSTRAINT minsector_dqa_id_fkey;
+ALTER TABLE minsector ALTER COLUMN dqa_id TYPE _int4 USING ARRAY[dqa_id::int4];
+ALTER TABLE minsector DROP CONSTRAINT minsector_presszonecat_id_fkey;
+ALTER TABLE minsector ALTER COLUMN presszone_id TYPE _int4 USING ARRAY[presszone_id::int4];
+ALTER TABLE minsector DROP CONSTRAINT minsector_expl_id_fkey;
+ALTER TABLE minsector ALTER COLUMN expl_id TYPE _int4 USING ARRAY[expl_id::int4];
+ALTER TABLE minsector ALTER COLUMN sector_id TYPE _int4 USING ARRAY[sector_id::int4];
+ALTER TABLE minsector DROP CONSTRAINT minsectormuni_id_fkey;
+ALTER TABLE minsector ALTER COLUMN muni_id TYPE _int4 USING ARRAY[muni_id::int4];
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"minsector", "column":"supplyzone_id", "dataType":"integer[]", "isUtils":"False"}}$$);
+
+-- 10/06/2025
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"minsector_graph", "column":"macrominsector_id"}}$$);
+ALTER TABLE minsector_graph ADD CONSTRAINT minsector_graph_minsector_1_fk FOREIGN KEY (minsector_1) REFERENCES minsector(minsector_id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE minsector_graph ADD CONSTRAINT minsector_graph_minsector_2_fk FOREIGN KEY (minsector_2) REFERENCES minsector(minsector_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE man_pipelink (
+	link_id int4 NOT NULL,
+	CONSTRAINT man_pipelink_pkey PRIMARY KEY (link_id),
+	CONSTRAINT man_pipelink_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE man_vconnec (
+	connec_id int4 NOT NULL,
+	CONSTRAINT man_vconnec_pkey PRIMARY KEY (connec_id),
+	CONSTRAINT man_vconnec_connec_id_fkey FOREIGN KEY (connec_id) REFERENCES connec(connec_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE man_vlink (
+	link_id int4 NOT NULL,
+	CONSTRAINT man_vlink_pkey PRIMARY KEY (link_id),
+	CONSTRAINT man_vlink_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- 16/06/2025
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"om_mincut_valve", "column":"to_arc", "dataType":"int4", "isUtils":"False"}}$$);
+
+-- 23/06/2025
+DROP VIEW IF EXISTS v_ext_plot;
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"CHANGETYPE","table":"ext_plot", "column":"plot_code", "dataType":"varchar(100)", "isUtils":"False"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"CHANGETYPE","table":"ext_rtc_hydrometer", "column":"plot_code", "dataType":"varchar(100)", "isUtils":"False"}}$$);

@@ -10,10 +10,10 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 DROP TABLE IF EXISTS flwreg CASCADE;
 DROP TABLE IF EXISTS cat_flwreg CASCADE;
 
-CREATE TABLE man_servconnection (
+CREATE TABLE man_link (
 	link_id int4 NOT NULL,
-	CONSTRAINT man_servconnection_pkey PRIMARY KEY (link_id),
-	CONSTRAINT man_servconnection_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
+	CONSTRAINT man_link_pkey PRIMARY KEY (link_id),
+	CONSTRAINT man_link_link_id_fkey FOREIGN KEY (link_id) REFERENCES link(link_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 ALTER TABLE sys_feature_class DROP CONSTRAINT sys_feature_cat_check;
@@ -69,16 +69,16 @@ ALTER TABLE link ADD CONSTRAINT link_linkcat_id_fkey FOREIGN KEY (linkcat_id) RE
 
 
 CREATE TABLE man_genelem (
-    element_id varchar(16) NOT NULL,
+    element_id int4 NOT NULL,
     CONSTRAINT man_genelem_pkey PRIMARY KEY (element_id),
 	CONSTRAINT man_genelem_fkey_element_id FOREIGN KEY (element_id) REFERENCES element(element_id) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE man_frelem (
-    element_id varchar(16) NOT NULL,
-    node_id varchar NULL,
+    element_id int4 NOT NULL,
+    node_id int4 NULL,
     order_id numeric NULL,
-    to_arc varchar NULL,
+    to_arc int4 NULL,
     flwreg_length numeric NULL,
     CONSTRAINT man_frelem_pkey PRIMARY KEY (element_id),
 	CONSTRAINT man_frelem_fkey_element_id FOREIGN KEY (element_id) REFERENCES element(element_id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -109,7 +109,7 @@ SET layoutname='lyt_document_1', layoutorder=3, "datatype"='string', widgettype=
 WHERE formname='v_edit_link' AND formtype='form_feature' AND columnname='doc_type' AND tabname='tab_documents';
 UPDATE config_form_fields
 SET layoutname='lyt_document_1', layoutorder=3, "datatype"='string', widgettype='combo', "label"='Doc type:', tooltip=NULL, placeholder=NULL, ismandatory=false, isparent=false, iseditable=true, isautoupdate=false, isfilter=true, dv_querytext='SELECT id as id, idval as idval FROM edit_typevalue WHERE typevalue = ''doc_type''', dv_orderby_id=NULL, dv_isnullvalue=true, dv_parent_id=NULL, dv_querytext_filterc=NULL, stylesheet=NULL, widgetcontrols='{"labelPosition": "top"}'::json, widgetfunction='{"functionName": "filter_table", "parameters":{}}'::json, linkedobject='tbl_doc_x_link', hidden=false, web_layoutorder=3
-WHERE formname='ve_link_servconnection' AND formtype='form_feature' AND columnname='doc_type' AND tabname='tab_documents';
+WHERE formname='ve_link_link' AND formtype='form_feature' AND columnname='doc_type' AND tabname='tab_documents';
 UPDATE config_form_fields
 SET layoutname='lyt_document_1', layoutorder=3, "datatype"='string', widgettype='combo', "label"='Doc type:', tooltip='Doc type:', placeholder=NULL, ismandatory=false, isparent=false, iseditable=true, isautoupdate=false, isfilter=true, dv_querytext='SELECT id as id, idval as idval FROM edit_typevalue WHERE typevalue = ''doc_type''', dv_orderby_id=NULL, dv_isnullvalue=true, dv_parent_id=NULL, dv_querytext_filterc=NULL, stylesheet=NULL, widgetcontrols='{"labelPosition": "top"}'::json, widgetfunction='{"functionName": "filter_table", "parameters":{}}'::json, linkedobject='tbl_doc_x_arc', hidden=false, web_layoutorder=3
 WHERE formname='arc' AND formtype='form_feature' AND columnname='doc_type' AND tabname='tab_documents';
@@ -126,9 +126,6 @@ ALTER TABLE doc DROP CONSTRAINT IF EXISTS doc_doc_type_fkey;
 
 DROP TABLE IF EXISTS doc_type;
 
--- ALTER TABLE element ADD COLUMN epa_type varchar(16) NULL;
-SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"element", "column":"epa_type", "dataType":"varchar(16)", "isUtils":"False"}}$$);
-
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_arc_traceability", "column":"undelete"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_connec_traceability", "column":"undelete"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_gully_traceability", "column":"undelete"}}$$);
@@ -138,7 +135,7 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_p
 -- 22/04/2025
 CREATE TABLE doc_x_element (
 	doc_id varchar(30) NOT NULL,
-	element_id varchar(16) NOT NULL,
+	element_id int4 NOT NULL,
 	CONSTRAINT doc_x_element_pkey PRIMARY KEY (doc_id, element_id),
 	CONSTRAINT doc_x_element_fkey_doc_id FOREIGN KEY (doc_id) REFERENCES doc(id) ON DELETE CASCADE ON UPDATE CASCADE,
 	CONSTRAINT doc_x_element_fkey_element_id FOREIGN KEY (element_id) REFERENCES element(element_id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -175,12 +172,17 @@ ALTER TABLE dimensions ALTER COLUMN muni_id SET DEFAULT 0;
 
 -- 12/05/2025
 CREATE TABLE minsector_mincut (
-	minsector_id integer PRIMARY KEY,
-	minsectors integer[]
+    minsector_id int4 NOT NULL,
+    mincut_minsector_id int4 NOT NULL,
+    CONSTRAINT minsector_mincut_pkey PRIMARY KEY (minsector_id, mincut_minsector_id),
+    CONSTRAINT minsector_mincut_minsector_id_fkey FOREIGN KEY (minsector_id) REFERENCES minsector(minsector_id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT minsector_mincut_mincut_minsector_id_fkey FOREIGN KEY (mincut_minsector_id) REFERENCES minsector(minsector_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- 15/05/2025
+ALTER TABLE node_add ALTER COLUMN node_id TYPE int4 USING node_id::int4;
 ALTER TABLE node_add ADD CONSTRAINT node_add_node_id_fkey FOREIGN KEY (node_id) REFERENCES node(node_id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE arc_add ALTER COLUMN arc_id TYPE int4 USING arc_id::int4;
 ALTER TABLE arc_add ADD CONSTRAINT arc_add_arc_id_fkey FOREIGN KEY (arc_id) REFERENCES arc(arc_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 
@@ -194,3 +196,41 @@ UPDATE sys_table SET project_template = NULL;
 
 -- 21/05/2025
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"sys_function", "column":"function_alias", "dataType":"text"}}$$);
+
+ALTER TABLE element_type RENAME TO _element_type;
+
+-- 09/06/2025
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"CHANGETYPE","table":"audit_check_data", "column":"result_id", "dataType":"varchar(50)", "isUtils":"False"}}$$);
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_node_traceability", "column":"macrominsector_id"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_arc_traceability", "column":"macrominsector_id"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_connec_traceability", "column":"macrominsector_id"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"archived_psector_gully_traceability", "column":"macrominsector_id"}}$$);
+
+-- 10/06/2025
+DELETE FROM config_toolbox WHERE id=3336;
+DELETE FROM sys_function WHERE id=3336; -- gw_fct_graphanalytics_macrominsector
+
+-- Update sys_table project_template to jsonb
+DO $$
+DECLARE
+	roww record;
+	layers text[] := ARRAY[]::text[];
+	item text;
+BEGIN
+
+	FOR roww IN (SELECT * FROM sys_table WHERE project_template IS NOT NULL)
+	LOOP
+		IF 1 = ANY(roww.project_template) THEN
+			layers := layers || roww.id;
+		END IF;
+	END LOOP;
+
+	ALTER TABLE sys_table ALTER COLUMN project_template TYPE jsonb USING to_jsonb(project_template);
+
+	FOREACH item IN ARRAY layers
+	LOOP
+		UPDATE sys_table SET project_template = '{"template": [1]}'::jsonb WHERE id = item;
+	END LOOP;
+END
+$$;

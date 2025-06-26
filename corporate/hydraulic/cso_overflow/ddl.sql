@@ -10,7 +10,7 @@ SET search_path = "SCHEMA_NAME", public;
 
 CREATE TABLE cso_inp_system_subc (
 	node_id varchar NOT NULL,
-	drainzone_id varchar NULL,
+	drainzone_id integer NULL,
 	thyssen_plv_area numeric NULL,
 	imperv_area numeric NULL,
 	mean_coef_runoff numeric NULL,
@@ -25,9 +25,8 @@ CREATE TABLE cso_inp_system_subc (
 	CONSTRAINT unique_node_id_drainzone_id UNIQUE (node_id, drainzone_id)
 );
 
-
 CREATE TABLE cso_out_vol (
-	rowid serial4 NOT NULL,
+	rowid serial4 NOT NULL PRIMARY KEY,
 	node_id text NOT NULL,
 	drainzone_id text NULL,
 	rf_name text NULL,
@@ -51,12 +50,36 @@ CREATE TABLE cso_out_vol (
 	rf_intensity numeric(10,3) NULL
 );
 
+CREATE TABLE cso_subc_wwf (
+	node_id text NULL,
+	node_type text NULL,
+	drainzone_id int4 NULL,
+	lito_reclass text NULL,
+	landuse_reclass text NULL,
+	slope_reclass text NULL,
+	cn_code text NULL,
+	cn_value int4 NULL,
+	po_value numeric(10,3) NULL,
+	c_value numeric(10,3) NULL,
+	ci_value numeric(10,3) NULL,
+	the_geom public.geometry(MULTIPOLYGON, SRID_VALUE) NULL
+	CONSTRAINT cso_subc_wwf_pkey PRIMARY KEY (node_id)
+);
 
-CREATE INDEX cso_out_vol_node_id ON cso_out_vol (node_id);
-CREATE INDEX cso_out_vol_rf_name ON cso_out_vol (rf_name);
-CREATE INDEX cso_out_vol_rf_tstep ON cso_out_vol (rf_tstep);
+CREATE TABLE cso_subc_dwf (
+	node_id text NOT NULL,
+	node_type text NULL,
+	drainzone_id int4 NULL,
+	consumption numeric(10,3) NULL,
+	the_geom public.geometry(MULTIPOLYGON, SRID_VALUE) NULL
+	CONSTRAINT cso_subc_dwf_pkey PRIMARY KEY (node_id)
+);
 
 
+ALTER TABLE cso_out_vol ADD CONSTRAINT cso_out_vol_rf_name_fkey FOREIGN KEY (rf_name) REFERENCES inp_timeseries(id);
+ALTER TABLE cso_out_vol ADD CONSTRAINT node_id_fkey FOREIGN KEY (node_id) REFERENCES node(node_id);
+ALTER TABLE cso_out_vol ADD CONSTRAINT drainzone_id_fkey FOREIGN KEY (drainzone_id) REFERENCES drainzone(drainzone_id);
 
-
-
+CREATE INDEX cso_out_vol_node_id ON cso_out_vol USING btree (node_id);
+CREATE INDEX cso_out_vol_rf_name ON cso_out_vol USING btree (rf_name);
+CREATE INDEX cso_out_vol_rf_tstep ON cso_out_vol USING btree (rf_tstep);
