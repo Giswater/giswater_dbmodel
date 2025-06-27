@@ -6,6 +6,8 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
+DROP VIEW IF EXISTS v_edit_dma;
+
 CREATE OR REPLACE view v_edit_dma AS
 SELECT DISTINCT d.dma_id,
     d.name,
@@ -19,7 +21,7 @@ SELECT DISTINCT d.dma_id,
     d.effc,
     d.pattern_id,
     d.link,
-    d.graphconfig,
+    d.graphconfig::text,
     d.stylesheet::TEXT,
     d.avg_press,
     d.tstamp,
