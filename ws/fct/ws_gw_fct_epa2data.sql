@@ -187,7 +187,7 @@ BEGIN
 			loop
 				
 				if v_mapzone = 'expl' then
-				raise exception 'a';
+
 					execute '
 					UPDATE exploitation set avg_press = null where '||v_mapzone||'_id in 
 					(select distinct '||v_mapzone||'_id from node where node_id in (select distinct node_id from rpt_node where result_id = '||quote_literal(v_result_id)||'))';
