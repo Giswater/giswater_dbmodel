@@ -6,21 +6,4 @@ This version of Giswater is provided by Giswater Association
 
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
-
-create trigger gw_trg_edit_dma instead of
-insert
-    or
-delete
-    or
-update
-    on
-    v_edit_dma for each row execute function gw_trg_edit_dma('edit');
-
-create trigger gw_trg_edit_exploitation instead of
-insert
-    or
-delete
-    or
-update
-    on
-    v_edit_exploitation for each row execute function gw_trg_edit_exploitation();
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD","table":"exploitation", "column":"avg_press", "dataType":"numeric(12,3)"}}$$);
