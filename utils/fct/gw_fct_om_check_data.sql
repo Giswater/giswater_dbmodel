@@ -1328,7 +1328,7 @@ BEGIN
 					SELECT DISTINCT t1.arc_id, t1.arccat_id, t1.state as state1, t2.arc_id as arc_id_aux, 
 					t2.state as state2, t1.node_1, t1.node_2, t1.expl_id, t1.the_geom
 					FROM '||v_edit||'arc AS t1 JOIN '||v_edit||'arc AS t2 USING(the_geom)
-					WHERE t1.arc_id != t2.arc_id ORDER BY t1.arc_id ) a where a.state1 > 0 AND a.state2 > 0) a';
+					WHERE t1.arc_id != t2.arc_id ORDER BY t1.arc_id ) a where a.state1 =1  AND a.state2 = 1) a';
 
 	EXECUTE concat('SELECT count(*) FROM ',v_querytext) INTO v_count;
 	IF v_count > 0 THEN
