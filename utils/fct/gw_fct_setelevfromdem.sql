@@ -89,14 +89,15 @@ BEGIN
 
 				--Select nodes on which the process will be executed - all values or only nulls from selected exploitation
 			IF v_updatevalues = 'allValues' THEN 
+			
 				IF v_project_type = 'WS' and v_feature_type='vnode' THEN
-					v_query = 'SELECT '||v_feature_type||'_id as feature_id, elev as elevation, the_geom, state FROM '||v_worklayer||'';
+					v_query = 'SELECT '||v_feature_type||'_id as feature_id, elev as elevation, the_geom, state, expl_id FROM '||v_worklayer||'';
 
 				ELSIF v_project_type = 'WS' THEN
-					v_query = 'SELECT '||v_feature_type||'_id as feature_id, elevation, the_geom, state FROM '||v_worklayer||'';
+					v_query = 'SELECT '||v_feature_type||'_id as feature_id, elevation, the_geom, state, expl_id FROM '||v_worklayer||'';
 
 				ELSE
-					v_query = 'SELECT '||v_feature_type||'_id as feature_id, top_elev as elevation, the_geom, state FROM '||v_worklayer||'';
+					v_query = 'SELECT '||v_feature_type||'_id as feature_id, top_elev as elevation, the_geom, state, expl_id FROM '||v_worklayer||'';
 				END IF;
 				
 				--Filter features if there are only some selected
@@ -128,6 +129,8 @@ BEGIN
 					INSERT INTO audit_check_data(fid,result_id, error_message)
 					VALUES (168,'elevation from raster','There are no features with NULL elevation');
 				END IF;
+			
+			end if;
 
 			--loop over selected nodes, intersect node with raster
 			FOR rec IN EXECUTE v_query LOOP
@@ -166,8 +169,8 @@ BEGIN
 				
 			END LOOP;
 
-			END IF;
 		END IF;
+	
 	END IF;
 
 	--count updated elements
