@@ -64,7 +64,7 @@ BEGIN
 	-- query text for mandatory node2arcs
 	v_querytext = 'SELECT a.*, v.to_arc FROM temp_t_node a JOIN man_valve v ON a.node_id=v.node_id WHERE to_arc is not null
 				UNION  
-				SELECT a.*, m.to_arc FROM temp_t_node a JOIN man_pump m ON a.node_id=m.node_id WHERE to_arc is not null';;
+				SELECT a.*, m.to_arc FROM temp_t_node a JOIN man_pump m ON a.node_id=m.node_id WHERE to_arc is not null';
 
 	v_querytext = concat (' INSERT INTO temp_anl_node (num_arcs, arc_id, node_id, elevation, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, the_geom, fid, cur_user, 
 				dma_id, presszone_id, dqa_id, minsector_id)
