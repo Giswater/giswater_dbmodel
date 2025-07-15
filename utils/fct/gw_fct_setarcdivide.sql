@@ -269,8 +269,8 @@ BEGIN
 							rec_aux2.code=concat(v_code_prefix,v_seq_code);
 					ELSIF v_set_old_code IS TRUE THEN
 						rec_aux2.code := v_code;
-					ELSE						
-						rec_aux2.code := rec_aux1.arc_id;
+					ELSE
+						rec_aux2.code := rec_aux2.arc_id;
 					END IF;
 
 					-- node and geom
