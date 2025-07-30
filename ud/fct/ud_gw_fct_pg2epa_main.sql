@@ -46,7 +46,7 @@ v_sector_0 boolean = false;
 v_expl_id integer[];
 v_sector_id integer[];
 v_network_type integer;
-
+v_fid integer = 227;
 
 
 BEGIN
@@ -194,6 +194,29 @@ BEGIN
 	ELSIF v_step=6 THEN
 
 		SELECT gw_fct_pg2epa_check_result(v_input) INTO v_return;
+		
+		-- deleting arcs without nodes
+		UPDATE temp_t_arc t SET epa_type = 'TODELETE' FROM (SELECT a.id FROM temp_t_arc a LEFT JOIN temp_t_node ON node_1=node_id WHERE temp_t_node.node_id is null) a WHERE t.id = a.id;
+		UPDATE temp_t_arc t SET epa_type = 'TODELETE' FROM (SELECT a.id FROM temp_t_arc a LEFT JOIN temp_t_node ON node_2=node_id WHERE temp_t_node.node_id is null) a WHERE t.id = a.id;
+
+		INSERT INTO temp_audit_log_data (fid, feature_id, feature_type, log_message)
+		SELECT v_fid, arc_id, 'ARC', '23 - Profilactic last delete' FROM temp_t_arc WHERE epa_type  ='TODELETE';
+
+		DELETE FROM temp_t_arc WHERE epa_type = 'TODELETE';
+
+		UPDATE temp_t_arc SET result_id = v_result WHERE result_id IS NULL;
+		UPDATE temp_t_node SET result_id = v_result WHERE result_id IS NULL;
+
+		-- deleting nodes without arcs
+		UPDATE temp_t_node t SET epa_type = 'TODELETE' FROM
+		(SELECT id FROM temp_t_node LEFT JOIN (SELECT node_1 as node_id FROM temp_t_arc UNION SELECT node_2 FROM temp_t_arc) a USING (node_id) WHERE a.node_id IS NULL) a
+		WHERE t.id = a.id;
+
+		INSERT INTO temp_audit_log_data (fid, feature_id, feature_type, log_message)
+		SELECT v_fid, node_id, 'NODE', '23 - Profilactic last delete' FROM temp_t_node WHERE epa_type  ='TODELETE';
+
+		DELETE FROM temp_t_node WHERE epa_type = 'TODELETE';
+		
 		SELECT gw_fct_pg2epa_export_inp(p_data) INTO v_file;
 		v_body = gw_fct_json_object_set_key((v_return->>'body')::json, 'file', v_file);
 		v_return = gw_fct_json_object_set_key(v_return, 'body', v_body);
