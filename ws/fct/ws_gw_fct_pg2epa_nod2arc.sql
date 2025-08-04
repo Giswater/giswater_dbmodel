@@ -74,10 +74,13 @@ BEGIN
 	EXECUTE v_querytext; 
 
 	-- query text for non-mandatory node2arcs
-	IF p_only_mandatory_nodarc IS FALSE THEN
+	IF p_only_mandatory_nodarc IS FALSE THEN -- shortpipes & tcv valves
 		v_querytext = 'SELECT a.*, s.to_arc FROM temp_t_node a JOIN inp_shortpipe i ON i.node_id = a.node_id 
+					   LEFT JOIN man_valve s ON i.node_id = s.node_id WHERE s.to_arc IS NULL
+					   UNION
+					   SELECT a.*, s.to_arc FROM temp_t_node a JOIN inp_valve i ON i.node_id = a.node_id 
 					   LEFT JOIN man_valve s ON i.node_id = s.node_id WHERE s.to_arc IS NULL';
-					   
+
 		v_querytext = concat (' INSERT INTO temp_anl_node (num_arcs, arc_id, node_id, elevation, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, 
 				the_geom, fid, cur_user, dma_id, presszone_id, dqa_id, minsector_id)
 				SELECT c.numarcs, to_arc, b.node_id, elevation, elev, nodecat_id, sector_id, state, state_type, ''NOT-MANDATORY'', demand, the_geom, 124, 
@@ -319,7 +322,7 @@ BEGIN
 	(SELECT node_1 as node_id, arc_id, 'n1' as position FROM v_edit_inp_pipe 
 	UNION 
 	ALL SELECT node_2, arc_id , 'n2' FROM v_edit_inp_pipe) a using (node_id) group by n.node_id) a 
-	USING (node_id) WHERE a.numarcs = 1 AND epa_type ='SHORTPIPE')
+	USING (node_id) WHERE a.numarcs = 1 AND epa_type in ('SHORTPIPE', 'VALVE'))
 	SELECT arc_id,node_1 AS node_id FROM arc JOIN query ON query.node_id = node_1 
 	UNION
 	SELECT arc_id,node_2 FROM arc JOIN query ON query.node_id = node_2;
