@@ -438,7 +438,7 @@ BEGIN
 			SELECT DISTINCT sector_id,current_user FROM node WHERE expl_id2 IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user) AND sector_id > 0
 			ON CONFLICT (sector_id, cur_user) DO NOTHING;
 
-			-- scenarios
+			-- dscenarios
 			IF (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, 'member') AND rolname = 'role_epa') IS NOT NULL THEN
 				DELETE FROM selector_inp_dscenario WHERE dscenario_id NOT IN
 				(SELECT dscenario_id FROM cat_dscenario WHERE active is true and expl_id IS NULL OR expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
@@ -447,6 +447,18 @@ BEGIN
 			-- psector
 			DELETE FROM selector_psector WHERE psector_id NOT IN
 			(SELECT psector_id FROM cat_dscenario WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+
+			-- manage add schema for muni
+			IF v_addschema IS NOT NULL THEN
+				EXECUTE 'SET search_path = '||v_addschema||', public';
+	
+				EXECUTE' DELETE FROM selector_municipality WHERE cur_user = current_user';
+				EXECUTE' INSERT INTO selector_municipality 
+				SELECT muni_id, current_user FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
+
+				EXECUTE 'SET search_path = '||v_schemaname||', public';
+
+			END IF;
 
 		END IF;
 
