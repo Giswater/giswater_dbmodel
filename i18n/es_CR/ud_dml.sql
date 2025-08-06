@@ -7,7 +7,7 @@ This version of Giswater is provided by Giswater Association,
 
 SET search_path = SCHEMA_NAME, public, pg_catalog;
 
-UPDATE config_form_fields SET formname = 've_node_camera' WHERE formname LIKE 've_node_chamber';
+UPDATE config_form_fields SET formname = 've_node_camara' WHERE formname LIKE 've_node_chamber';
 UPDATE config_form_fields SET formname = 've_node_desague' WHERE formname LIKE 've_node_outfall';
 UPDATE config_form_fields SET formname = 've_arc_sifon' WHERE formname LIKE 've_arc_siphon';
 UPDATE config_form_fields SET formname = 've_node_deposito_desbordamiento' WHERE formname LIKE 've_node_overflow_storage';
