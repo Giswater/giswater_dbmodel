@@ -58,14 +58,20 @@ BEGIN
 	delete from t_anl_node WHERE fid = 124;
 
 	-- check number of times each node appears in terms of identify nodearcs <> 2
-	v_query_number = 'SELECT count(*)as numarcs, node_id FROM node n JOIN 
-						      (SELECT node_1 as node_id FROM v_edit_arc 
-							UNION ALL SELECT node_2 FROM v_edit_arc) a using (node_id) group by n.node_id';
+	v_query_number = 'SELECT count(*)as numarcs, n.node_id FROM node n JOIN 
+						      (SELECT node_1 as node_id FROM ve_arc 
+							UNION ALL SELECT node_2 FROM ve_arc) a ON n.node_id=a.node_id group by n.node_id';
 
 	-- query text for mandatory node2arcs
 	v_querytext = 'SELECT a.*, v.to_arc FROM temp_t_node a JOIN man_valve v ON a.node_id=v.node_id::text WHERE to_arc is not null
 				UNION  
-				SELECT a.*, m.to_arc FROM temp_t_node a JOIN man_pump m ON a.node_id=m.node_id::text WHERE to_arc is not null';
+				SELECT a.*, m.to_arc FROM temp_t_node a JOIN man_pump m ON a.node_id=m.node_id::text WHERE to_arc is not null
+				UNION
+				SELECT a.*, v.to_arc FROM temp_t_node a  JOIN ve_inp_frvalve v ON a.node_id=v.node_id::text WHERE to_arc is not null
+				UNION
+				SELECT a.*, v.to_arc FROM temp_t_node a  JOIN ve_inp_frpump v ON a.node_id=v.node_id::text WHERE to_arc is not null
+				UNION
+				SELECT a.*, v.to_arc FROM temp_t_node a  JOIN ve_inp_frshortpipe v ON a.node_id=v.node_id::text WHERE to_arc is not null';
 
 
 	v_querytext = concat (' INSERT INTO t_anl_node (num_arcs, arc_id, node_id, top_elev, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, the_geom, fid, cur_user, 
@@ -76,8 +82,14 @@ BEGIN
 	EXECUTE v_querytext;
 
 	-- query text for non-mandatory node2arcs
-	IF p_only_mandatory_nodarc IS FALSE THEN
-		v_querytext = 'SELECT a.*, s.to_arc FROM temp_t_node a JOIN man_valve s ON a.node_id=s.node_id::text JOIN inp_shortpipe i ON i.node_id = s.node_id WHERE s.to_arc IS NULL';
+	IF p_only_mandatory_nodarc IS FALSE THEN -- shortpipes & tcv valves
+		v_querytext = 'SELECT a.*, s.to_arc FROM temp_t_node a JOIN inp_shortpipe i ON i.node_id::text = a.node_id 
+					   LEFT JOIN man_valve s ON i.node_id = s.node_id
+					   LEFT JOIN man_frelem ON s.node_id=man_frelem.node_id WHERE s.to_arc IS NULL and man_frelem.node_id IS NULL
+					   UNION
+					   SELECT a.*, s.to_arc FROM temp_t_node a JOIN inp_valve i ON i.node_id::text = a.node_id 
+					   LEFT JOIN man_valve s ON i.node_id = s.node_id
+					   LEFT JOIN man_frelem ON s.node_id=man_frelem.node_id WHERE s.to_arc IS NULL and man_frelem.node_id IS NULL';
 
 		v_querytext = concat (' INSERT INTO t_anl_node (num_arcs, arc_id, node_id, top_elev, elev, nodecat_id, sector_id, state, state_type, descript, arc_distance, 
 				the_geom, fid, cur_user, dma_id, presszone_id, dqa_id, minsector_id)
@@ -210,7 +222,7 @@ BEGIN
 				WITH result AS (SELECT * FROM temp_t_node)
 				SELECT DISTINCT ON (a.nodeparent)
 				a.result_id,
-				concat (a.nodeparent, ''_n2a'') as arc_id,
+				concat (a.nodeparent, ''_n2a'') AS arc_id,
 				b.node_id,
 				a.node_id,
 				''NODE2ARC-ENDPOINT'', 
@@ -240,7 +252,7 @@ BEGIN
 			WITH result AS (SELECT * FROM temp_t_node) 
 			SELECT DISTINCT ON (a.nodeparent)
 			a.result_id,
-			concat (a.nodeparent, ''_n2a'') as arc_id,
+			concat (a.nodeparent, ''_n2a'') AS arc_id,
 			b.node_id,
 			a.node_id,
 			''NODE2ARC'', 
@@ -316,12 +328,12 @@ BEGIN
 
 	CREATE TEMP TABLE t_arc_endpoint AS
 	WITH query as (SELECT node_id FROM node JOIN
-	(SELECT count(*)as numarcs, node_id FROM node n JOIN
-	(SELECT node_1 as node_id, arc_id, 'n1' as position FROM v_edit_inp_pipe
-	UNION
-	ALL SELECT node_2, arc_id , 'n2' FROM v_edit_inp_pipe) a using (node_id) group by n.node_id) a
-	USING (node_id) WHERE a.numarcs = 1 AND epa_type ='SHORTPIPE')
-	SELECT arc_id,node_1 AS node_id FROM arc JOIN query ON query.node_id = node_1
+	(SELECT count(*)as numarcs, node_id FROM node n JOIN 
+	(SELECT node_1 as node_id, arc_id, 'n1' as position FROM ve_inp_pipe 
+	UNION 
+	ALL SELECT node_2, arc_id , 'n2' FROM ve_inp_pipe) a using (node_id) group by n.node_id) a 
+	USING (node_id) WHERE a.numarcs = 1 AND epa_type in ('SHORTPIPE', 'VALVE'))
+	SELECT arc_id,node_1 AS node_id FROM arc JOIN query ON query.node_id = node_1 
 	UNION
 	SELECT arc_id,node_2 FROM arc JOIN query ON query.node_id = node_2;
 

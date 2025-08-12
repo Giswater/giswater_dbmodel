@@ -27,7 +27,7 @@ xvar double precision;
 yvar double precision;
 pol_id_var varchar;
 v_arc record;
-v_arcrecord "SCHEMA_NAME".v_edit_arc;
+v_arcrecord "SCHEMA_NAME".ve_arc;
 v_arcrecordtb "SCHEMA_NAME".arc;
 v_plan_statetype_ficticius int2;
 v_node_proximity_control boolean;
@@ -42,7 +42,7 @@ v_manquerytext2 text;
 v_epaquerytext1 text;
 v_epaquerytext2 text;
 v_schemaname text;
-v_connec_id varchar;
+v_connec_id INTEGER;
 v_linkrec record;
 v_message text;
 v_nodetype text;
@@ -85,7 +85,7 @@ BEGIN
 	-- For state=1,2
 	ELSE
 
-		IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE ' THEN
+		IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
 
 			-- Checking conflict state=1 nodes (exiting vs new one)
 			IF (NEW.state=1) AND (v_node_proximity_control IS TRUE) THEN
@@ -132,8 +132,8 @@ BEGIN
 				INSERT INTO plan_psector_x_node (psector_id, node_id, state) VALUES (v_psector_id, node_rec.node_id, 0) ON CONFLICT (psector_id, node_id) DO NOTHING;
 
 				-- looking for all the arcs (1 and 2) using existing node
-				FOR v_arc IN (SELECT arc_id, node_1 as node_id FROM v_edit_arc WHERE node_1=node_rec.node_id AND state >0
-				UNION SELECT arc_id, node_2 FROM v_edit_arc WHERE node_2=node_rec.node_id AND state >0)
+				FOR v_arc IN (SELECT arc_id, node_1 as node_id FROM ve_arc WHERE node_1=node_rec.node_id AND state >0
+				UNION SELECT arc_id, node_2 FROM ve_arc WHERE node_2=node_rec.node_id AND state >0)
 				LOOP
 
 					-- if exists some arc planified on same alternative attached to that existing node
@@ -147,7 +147,7 @@ BEGIN
 						END IF;
 					ELSE
 						-- getting values to create new 'ficticius' arc
-						SELECT * INTO v_arcrecordtb FROM arc WHERE arc_id = v_arc.arc_id::text;
+						SELECT * INTO v_arcrecordtb FROM arc WHERE arc_id = v_arc.arc_id;
 
 						-- refactoring values fo new one
 						v_arcrecordtb.arc_id:= (SELECT nextval('urn_id_seq'));
@@ -181,8 +181,8 @@ BEGIN
 						UPDATE config_param_user SET value=FALSE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;
 
 						-- getting table child information (man_table)
-						v_mantable = (SELECT man_table FROM cat_feature_arc c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id JOIN v_edit_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
-						v_epatable = (SELECT epa_table FROM cat_feature_arc c JOIN sys_feature_epa_type s ON epa_default = s.id JOIN v_edit_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
+						v_mantable = (SELECT man_table FROM cat_feature_arc c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id JOIN ve_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
+						v_epatable = (SELECT epa_table FROM cat_feature_arc c JOIN sys_feature_epa_type s ON epa_default = s.id JOIN ve_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
 
 						-- building querytext for man_table
 						v_querytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','')
@@ -191,7 +191,7 @@ BEGIN
 							v_querytext='';
 						END IF;
 						v_manquerytext1 =  'INSERT INTO '||v_mantable||' SELECT ';
-						v_manquerytext2 =  v_querytext||' FROM '||v_mantable||' WHERE arc_id= '||v_arc.arc_id||'::text';
+						v_manquerytext2 =  v_querytext||' FROM '||v_mantable||' WHERE arc_id= '||v_arc.arc_id||'';
 
 						-- building querytext for epa_table
 						v_querytext:= (SELECT replace (replace (array_agg(column_name::text)::text,'{',','),'}','')
@@ -200,13 +200,13 @@ BEGIN
 							v_querytext='';
 						END IF;
 						v_epaquerytext1 =  'INSERT INTO '||v_epatable||' (arc_id' ||v_querytext||') SELECT ';
-						v_epaquerytext2 =  v_querytext||' FROM '||v_epatable||' WHERE arc_id= '||v_arc.arc_id||'::text';
+						v_epaquerytext2 =  v_querytext||' FROM '||v_epatable||' WHERE arc_id= '||v_arc.arc_id||'';
 
 						-- insert new records into man_table
-						EXECUTE v_manquerytext1||v_arcrecordtb.arc_id::text||v_manquerytext2;
+						EXECUTE v_manquerytext1||v_arcrecordtb.arc_id||v_manquerytext2;
 
 						-- insert new records into epa_table
-						EXECUTE v_epaquerytext1||v_arcrecordtb.arc_id::text||v_epaquerytext2;
+						EXECUTE v_epaquerytext1||v_arcrecordtb.arc_id||v_epaquerytext2;
 
 						--Copy addfields from old arc to new arcs
 						v_arc_childtable_name := 'man_arc_' || lower(v_arc_type);
@@ -278,7 +278,9 @@ BEGIN
 				END LOOP;
 			END IF;
 
-		ELSIF TG_OP ='UPDATE' THEN
+		END IF;
+
+		IF TG_OP ='UPDATE' THEN
 
 			-- Updating expl / dma
 			IF (NEW.the_geom IS DISTINCT FROM OLD.the_geom)THEN
@@ -315,8 +317,8 @@ BEGIN
 				FOR arcrec IN EXECUTE v_querytext
 				LOOP
 					-- Initial and final node of the arc
-					SELECT * INTO nodeRecord1 FROM v_edit_node WHERE node_id = arcrec.node_1;
-					SELECT * INTO nodeRecord2 FROM v_edit_node WHERE node_id = arcrec.node_2;
+					SELECT * INTO nodeRecord1 FROM ve_node WHERE node_id = arcrec.node_1;
+					SELECT * INTO nodeRecord2 FROM ve_node WHERE node_id = arcrec.node_2;
 
 					-- Control de lineas de longitud 0
 					IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN

@@ -17,6 +17,7 @@ v_code_autofill_bool boolean;
 v_link_path varchar;
 v_record_link record;
 v_record_vnode record;
+v_man_table varchar;
 v_customfeature text;
 v_addfields record;
 v_new_value_param text;
@@ -70,13 +71,19 @@ v_code_prefix text;
 v_gully_id text;
 v_childtable_name text;
 v_schemaname text;
+v_featureclass text;
 
 BEGIN
 
     EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 	-- get custom gully type
-	v_customfeature:= TG_ARGV[0];
+	v_man_table:= TG_ARGV[0];
     v_schemaname:= TG_TABLE_SCHEMA;
+
+	IF v_man_table IN (SELECT id FROM cat_feature WHERE feature_type = 'GULLY') THEN
+		v_customfeature:=v_man_table;
+		v_man_table:=(SELECT man_table FROM cat_feature_gully c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id=v_man_table);
+	END IF;
 
 	IF v_customfeature='parent' THEN
 		v_customfeature:=NULL;
@@ -181,8 +188,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.expl_id =(SELECT expl_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -214,8 +221,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.sector_id =(SELECT sector_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -246,8 +253,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.omzone_id = (SELECT omzone_id FROM omzone WHERE ST_DWithin(NEW.the_geom, omzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.omzone_id =(SELECT omzone_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.omzone_id =(SELECT omzone_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -273,8 +280,8 @@ BEGIN
 					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001)
 					AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.muni_id =(SELECT muni_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -288,8 +295,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.district_id = (SELECT district_id FROM ext_district WHERE ST_DWithin(NEW.the_geom, ext_district.the_geom,0.001) LIMIT 1);
 				ELSIF v_count > 1 THEN
-					NEW.district_id =(SELECT district_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.district_id =(SELECT district_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -392,7 +399,7 @@ BEGIN
 		END IF;
 
 		-- Code
-		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix' INTO v_code_autofill_bool, v_featurecat, v_code_prefix
+		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix', feature_class INTO v_code_autofill_bool, v_featurecat, v_code_prefix, v_featureclass
 		FROM cat_feature WHERE id=NEW.gully_type;
 
 		IF v_featurecat IS NOT NULL THEN
@@ -556,7 +563,7 @@ BEGIN
 					INTO v_the_geom_pol;
 
 				INSERT INTO polygon(sys_type, the_geom, featurecat_id,feature_id )
-				VALUES ('GULLY', v_the_geom_pol, NEW.gully_type, NEW.gully_id);
+				VALUES (v_featureclass, v_the_geom_pol, NEW.gully_type, NEW.gully_id);
 			END IF;
 		END IF;
 
@@ -567,7 +574,7 @@ BEGIN
 				connec_depth, siphon, arc_id, sector_id, "state",state_type, annotation, "observ", "comment", omzone_id, soilcat_id, function_type,
 				category_type, fluid_type, location_type, workcat_id, workcat_id_end, workcat_id_plan, builtdate, enddate, ownercat_id, muni_id,
 				postcode, district_id, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, rotation,
-				link,verified, the_geom,label_x, label_y,label_rotation, expl_id, publish, inventory,uncertain, num_value,
+				link,verified, the_geom,label_x, label_y,label_rotation, expl_id, publish, inventory,uncertain, num_value, brand_id, model_id,
 				updated_at, updated_by, asset_id, epa_type, units_placement, groove_height, groove_length, expl_visibility, adate, adescript,
 				siphon_type, odorflap, connec_y2, placement_type, label_quadrant, access_type, lock_level, length, width, drainzone_outfall, dwfzone_outfall, omunit_id, dma_id)
 			VALUES (NEW.gully_id, NEW.code, NEW.sys_code, NEW.top_elev, NEW."ymax",NEW.sandbox, NEW.matcat_id, NEW.gully_type, NEW.gullycat_id, NEW.units, NEW.groove,
@@ -577,7 +584,7 @@ BEGIN
 				NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id, NEW.streetaxis_id, NEW.postnumber, NEW.postcomplement, NEW.streetaxis2_id,
 				NEW.postnumber2, NEW.postcomplement2, NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom,
 				NEW.label_x, NEW.label_y, NEW.label_rotation,  NEW.expl_id , NEW.publish, NEW.inventory,
-				NEW.uncertain, NEW.num_value,NEW.updated_at, NEW.updated_by, NEW.asset_id, NEW.epa_type, NEW.units_placement,
+				NEW.uncertain, NEW.num_value, NEW.brand_id, NEW.model_id, NEW.updated_at, NEW.updated_by, NEW.asset_id, NEW.epa_type, NEW.units_placement,
 				NEW.groove_height, NEW.groove_length, NEW.expl_visibility, NEW.adate, NEW.adescript, NEW.siphon_type, NEW.odorflap,
 				NEW.connec_y2, NEW.placement_type, NEW.label_quadrant, NEW.access_type, NEW.lock_level, NEW.length, NEW.width, NEW.drainzone_outfall, NEW.dwfzone_outfall, NEW.omunit_id, NEW.dma_id);
 		ELSE
@@ -586,7 +593,7 @@ BEGIN
 				connec_depth, siphon, arc_id, sector_id, "state",state_type, annotation, "observ", "comment", omzone_id, soilcat_id, function_type,
 				category_type, fluid_type, location_type, workcat_id, workcat_id_end, workcat_id_plan, builtdate, enddate, ownercat_id, muni_id,
 				postcode, district_id, streetaxis_id, postnumber, postcomplement, streetaxis2_id, postnumber2, postcomplement2, descript, rotation,
-				link,verified, the_geom, label_x, label_y,label_rotation, expl_id, publish, inventory,uncertain, num_value,
+				link,verified, the_geom, label_x, label_y,label_rotation, expl_id, publish, inventory,uncertain, num_value, brand_id, model_id,
 				updated_at, updated_by, asset_id, connec_matcat_id, epa_type, units_placement, groove_height, groove_length, expl_visibility, adate, adescript,
 				siphon_type, odorflap, connec_y2, placement_type, label_quadrant, access_type, lock_level, length, width, drainzone_outfall, dwfzone_outfall, omunit_id, dma_id)
 			VALUES (NEW.gully_id, NEW.code, NEW.sys_code, NEW.top_elev, NEW."ymax",NEW.sandbox, NEW.matcat_id, NEW.gully_type, NEW.gullycat_id, NEW.units, NEW.groove,
@@ -596,10 +603,24 @@ BEGIN
 				NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id, NEW.streetaxis_id, NEW.postnumber, NEW.postcomplement, NEW.streetaxis2_id,
 				NEW.postnumber2, NEW.postcomplement2, NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom,
 				NEW.label_x, NEW.label_y, NEW.label_rotation,  NEW.expl_id , NEW.publish, NEW.inventory,
-				NEW.uncertain, NEW.num_value,NEW.updated_at, NEW.updated_by, NEW.asset_id, NEW.connec_matcat_id,
+				NEW.uncertain, NEW.num_value, NEW.brand_id, NEW.model_id, NEW.updated_at, NEW.updated_by, NEW.asset_id, NEW.connec_matcat_id,
 				NEW.epa_type, NEW.units_placement, NEW.groove_height, NEW.groove_length, NEW.expl_visibility, NEW.adate, NEW.adescript,
 				NEW.siphon_type, NEW.odorflap, NEW.connec_y2, NEW.placement_type, NEW.label_quadrant, NEW.access_type, NEW.lock_level, NEW.length, NEW.width, NEW.drainzone_outfall, NEW.dwfzone_outfall, NEW.omunit_id, NEW.dma_id);
 
+		END IF;
+
+		IF v_man_table = 'man_ginlet' THEN
+			INSERT INTO man_ginlet (gully_id) VALUES (NEW.gully_id);
+		ELSIF v_man_table = 'man_vgully' THEN
+			INSERT INTO man_vgully (gully_id) VALUES (NEW.gully_id);
+		ELSIF v_man_table = 'parent' THEN
+			v_man_table:= (SELECT man_table FROM cat_feature_gully c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id JOIN cat_gully ON cat_gully.id=NEW.gullycat_id
+		    	WHERE c.id = cat_gully.gully_type LIMIT 1)::text;
+
+			IF v_man_table IS NOT NULL THEN
+			    v_sql:= 'INSERT INTO '||v_man_table||' (gully_id) VALUES ('||quote_literal(NEW.gully_id)||')';
+			    EXECUTE v_sql;
+			END IF;
 		END IF;
 
 		-- insertint on psector table and setting visible
@@ -664,6 +685,7 @@ BEGIN
 		END IF;
 
 		-- UPDATE geom
+		UPDATE gully SET connec_length = NEW.connec_length WHERE gully_id = OLD.gully_id;
 		IF st_equals(NEW.the_geom, OLD.the_geom)is false THEN
 			UPDATE gully SET the_geom=NEW.the_geom WHERE gully_id = OLD.gully_id;
 
@@ -680,7 +702,7 @@ BEGIN
                 WHERE gully_id=NEW.gully_id AND the_geom IS NOT NULL LIMIT 1);
 			-- if trace_featuregeom is false, do nothing
 			IF v_trace_featuregeom IS TRUE THEN
-			UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001)
+			UPDATE ve_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001)
 				AND element_id IN (SELECT element_id FROM element_x_gully WHERE gully_id = NEW.gully_id);
 			END IF;
 
@@ -771,7 +793,7 @@ BEGIN
 		-- Looking for state control and insert planified connecs to default psector
 		IF (NEW.state != OLD.state) THEN
 
-			PERFORM gw_fct_state_control(json_build_object('feature_type_aux', 'GULLY', 'feature_id_aux', NEW.gully_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP));
+			PERFORM gw_fct_state_control(json_build_object('parameters', json_build_object('feature_type_aux', 'GULLY', 'feature_id_aux', NEW.gully_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP)));
 
 			IF NEW.state = 2 AND OLD.state=1 THEN
 
@@ -883,7 +905,7 @@ BEGIN
 
 					IF (SELECT pol_id FROM polygon WHERE feature_id = NEW.gully_id) IS NULL THEN
 						INSERT INTO polygon(sys_type, the_geom, featurecat_id,feature_id )
-						VALUES ('GULLY', v_the_geom_pol, NEW.gully_type, NEW.gully_id);
+						VALUES (v_featureclass, v_the_geom_pol, NEW.gully_type, NEW.gully_id);
 					ELSE
 						UPDATE polygon SET the_geom = v_the_geom_pol WHERE feature_id =NEW.gully_id;
 					END IF;
@@ -899,7 +921,7 @@ BEGIN
 		IF v_matfromcat THEN
 			UPDATE gully
 			SET code=NEW.code, sys_code=NEW.sys_code, top_elev=NEW.top_elev, ymax=NEW."ymax", sandbox=NEW.sandbox, matcat_id=NEW.matcat_id, gully_type=NEW.gully_type, gullycat_id=NEW.gullycat_id, units=NEW.units,
-			groove=NEW.groove, _connec_arccat_id=NEW.connec_arccat_id, connec_length=NEW.connec_length, connec_depth=NEW.connec_depth, siphon=NEW.siphon, sector_id=NEW.sector_id,
+			groove=NEW.groove, _connec_arccat_id=NEW.connec_arccat_id, connec_depth=NEW.connec_depth, siphon=NEW.siphon, sector_id=NEW.sector_id,
 			"state"=NEW."state",  state_type=NEW.state_type, annotation=NEW.annotation, "observ"=NEW."observ", "comment"=NEW."comment", omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id,
 			function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type, location_type=NEW.location_type, workcat_id=NEW.workcat_id,
 			workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate,
@@ -915,7 +937,7 @@ BEGIN
 		ELSE
 			UPDATE gully
 			SET code=NEW.code, sys_code=NEW.sys_code, top_elev=NEW.top_elev, ymax=NEW."ymax", sandbox=NEW.sandbox, matcat_id=NEW.matcat_id, gully_type=NEW.gully_type, gullycat_id=NEW.gullycat_id, units=NEW.units,
-			groove=NEW.groove, _connec_arccat_id=NEW.connec_arccat_id, connec_length=NEW.connec_length, connec_depth=NEW.connec_depth, siphon=NEW.siphon, sector_id=NEW.sector_id,
+			groove=NEW.groove, _connec_arccat_id=NEW.connec_arccat_id, connec_depth=NEW.connec_depth, siphon=NEW.siphon, sector_id=NEW.sector_id,
 			"state"=NEW."state",  state_type=NEW.state_type, annotation=NEW.annotation, "observ"=NEW."observ", "comment"=NEW."comment", omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id,
 			function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type, location_type=NEW.location_type, workcat_id=NEW.workcat_id,
 			workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate,

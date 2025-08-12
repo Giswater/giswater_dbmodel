@@ -49,7 +49,9 @@ BEGIN
 	SELECT json_extract_path_text (value::json,'rename_view_x_id')::boolean INTO v_isrenameview FROM config_param_system
 	WHERE parameter='admin_manage_cat_feature';
 
+
 	IF (TG_OP = 'INSERT' OR  TG_OP = 'UPDATE') THEN
+
 		--Controls on update or insert of cat_feature.id check if the new id or child layer has accents, dots or dashes. If so, give an error.
 		v_id = array_to_string(ts_lexize('unaccent',NEW.id),',','*');
 
@@ -144,8 +146,8 @@ BEGIN
 
         SELECT parent_layer INTO v_parent_layer FROM cat_feature WHERE id=NEW.id;
 		IF v_parent_layer IS NULL THEN
-        	EXECUTE 'UPDATE cat_feature SET parent_layer =  concat(''v_edit_'',lower('||quote_literal(v_feature.type)||'))
-        	WHERE id = '||quote_literal(NEW.id)||';';
+			EXECUTE 'UPDATE cat_feature SET parent_layer =  concat(''ve_'',lower('||quote_literal(v_feature.type)||'))
+			WHERE id = '||quote_literal(NEW.id)||';';
 		END IF;
 		EXECUTE 'UPDATE cat_feature SET feature_type = '||quote_literal(v_feature.type)||' WHERE id = '||quote_literal(NEW.id)||';';
 
@@ -324,7 +326,7 @@ BEGIN
 
 			v_new_child_layer = replace(NEW.child_layer,lower(OLD.feature_type),lower(NEW.feature_type));
 
-			EXECUTE 'UPDATE cat_feature SET parent_layer = concat(''v_edit_'',lower('||quote_literal(NEW.feature_type)||')),
+			EXECUTE 'UPDATE cat_feature SET parent_layer = concat(''ve_'',lower('||quote_literal(NEW.feature_type)||')),
 			child_layer = '||quote_literal(v_new_child_layer)||' WHERE id = '||quote_literal(NEW.id)||';';
 
 			EXECUTE 'DELETE FROM cat_feature_'||lower(OLD.feature_type)||' WHERE id = '||quote_literal(NEW.id)||';';

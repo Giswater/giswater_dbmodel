@@ -22,14 +22,15 @@ v_samenode_init_end_control boolean;
 v_nodeinsert_arcendpoint boolean;
 v_arc_searchnodes_control boolean;
 v_arc_searchnodes double precision;
-v_user_statetopocontrol boolean;
 v_node2 text;
 v_nodecat text;
 v_message text;
 v_msg boolean = false;
 v_check_conflictmapzones boolean = false;
 v_zone text;
-v_edit_disable_arctopocontrol boolean;
+v_user_disable_statetopocontrol boolean;
+v_user_disable_arctopocontrol boolean;
+
 
 BEGIN
 
@@ -44,8 +45,8 @@ BEGIN
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 
 	-- get user variables
-	SELECT value::boolean INTO v_user_statetopocontrol FROM config_param_user WHERE parameter='edit_disable_statetopocontrol' AND cur_user = current_user;
-	SELECT value::boolean INTO v_edit_disable_arctopocontrol FROM config_param_user WHERE parameter='edit_disable_arctopocontrol' AND cur_user = current_user;
+	SELECT value::boolean INTO v_user_disable_statetopocontrol FROM config_param_user WHERE parameter='edit_disable_statetopocontrol' AND cur_user = current_user;
+	SELECT value::boolean INTO v_user_disable_arctopocontrol FROM config_param_user WHERE parameter='edit_disable_arctopocontrol' AND cur_user = current_user;
 	SELECT value::boolean INTO v_nodeinsert_arcendpoint FROM config_param_user WHERE parameter='edit_arc_insert_automatic_endpoint' AND cur_user = current_user;
 
 
@@ -56,11 +57,11 @@ BEGIN
 	END IF;
 
 	-- disable trigger
-	IF v_arc_searchnodes_control IS FALSE OR v_edit_disable_arctopocontrol THEN
+	IF v_arc_searchnodes_control IS FALSE OR v_user_disable_arctopocontrol THEN
 		RETURN NEW;
 	END IF;
 
-	IF v_sys_statetopocontrol IS NOT TRUE OR v_user_statetopocontrol IS TRUE THEN
+	IF v_sys_statetopocontrol IS NOT TRUE OR v_user_disable_statetopocontrol IS TRUE THEN
 
 		-- working without statetopocontrol
 		SELECT node.*,node_type INTO nodeRecord1 FROM node
@@ -79,7 +80,7 @@ BEGIN
 
 	ELSE
 		-- Looking for state control
-		PERFORM gw_fct_state_control(json_build_object('feature_type_aux', 'ARC', 'feature_id_aux', NEW.arc_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP));
+		PERFORM gw_fct_state_control(json_build_object('parameters', json_build_object('feature_type_aux', 'ARC', 'feature_id_aux', NEW.arc_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP)));
 
 		-- Lookig for state=0
 		IF NEW.state=0 THEN
@@ -220,7 +221,7 @@ BEGIN
 
 
     -- only if user variable is not disabled
-    IF v_user_statetopocontrol IS FALSE THEN
+    IF v_user_disable_statetopocontrol IS FALSE THEN
 
         --  Control of start/end node
         IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN
@@ -258,7 +259,7 @@ BEGIN
                 END IF;
 
                 -- Inserting new node
-                INSERT INTO v_edit_node (node_id, sector_id, state, state_type, dma_id, presszone_id, soilcat_id, workcat_id, builtdate, nodecat_id, ownercat_id, muni_id,
+                INSERT INTO ve_node (node_id, sector_id, state, state_type, dma_id, presszone_id, soilcat_id, workcat_id, builtdate, nodecat_id, ownercat_id, muni_id,
                 postcode, district_id, expl_id, the_geom)
                 VALUES ((SELECT nextval('urn_id_seq')), NEW.sector_id, NEW.state, NEW.state_type, NEW.dma_id, NEW.presszone_id, NEW.soilcat_id, NEW.workcat_id, NEW.builtdate, v_nodecat,
                 NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id, NEW.expl_id, st_endpoint(NEW.the_geom))

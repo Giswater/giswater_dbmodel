@@ -139,7 +139,7 @@ BEGIN
 		END IF;
 
 		--copy arcs with state 0 inside plan_psector tables
-		SELECT string_agg(DISTINCT arc_id,',') INTO v_list_features_obsolete FROM plan_psector_x_arc  WHERE psector_id= ANY(v_psector_ids) AND state=0;
+		SELECT string_agg(DISTINCT arc_id::text,',') INTO v_list_features_obsolete FROM plan_psector_x_arc  WHERE psector_id= ANY(v_psector_ids) AND state=0;
 
 		IF v_list_features_obsolete IS NOT NULL THEN
 			UPDATE config_param_user SET value='false' WHERE parameter='edit_plan_order_control' AND cur_user=current_user;
@@ -155,7 +155,7 @@ BEGIN
 		END IF;
 
 		--copy nodes with state 0 inside plan_psector tables
-		SELECT string_agg(node_id,',') INTO v_list_features_obsolete FROM plan_psector_x_node  WHERE psector_id=ANY(v_psector_ids) AND state=0;
+		SELECT string_agg(node_id::text,',') INTO v_list_features_obsolete FROM plan_psector_x_node  WHERE psector_id=ANY(v_psector_ids) AND state=0;
 
 		IF v_list_features_obsolete IS NOT NULL THEN
 			PERFORM setval('SCHEMA_NAME.plan_psector_x_node_id_seq', (select max(id) from plan_psector_x_node) , true);
@@ -168,7 +168,7 @@ BEGIN
 		END IF;
 
 		--copy connecs with state 0 inside plan_psector tables
-		SELECT string_agg(connec_id,',') INTO v_list_features_obsolete FROM plan_psector_x_connec WHERE psector_id=ANY(v_psector_ids) AND state=0;
+		SELECT string_agg(connec_id::text,',') INTO v_list_features_obsolete FROM plan_psector_x_connec WHERE psector_id=ANY(v_psector_ids) AND state=0;
 
 		IF v_list_features_obsolete IS NOT NULL THEN
 			PERFORM setval('SCHEMA_NAME.plan_psector_x_connec_id_seq', (select max(id) from plan_psector_x_connec) , true);
@@ -182,7 +182,7 @@ BEGIN
 		END IF;
 
 		--copy connecs with state 1 inside plan_psector tables
-		SELECT string_agg(connec_id,',') INTO v_list_connec_undoable FROM plan_psector_x_connec WHERE psector_id=ANY(v_psector_ids) AND state=1 AND doable=false;
+		SELECT string_agg(connec_id::text,',') INTO v_list_connec_undoable FROM plan_psector_x_connec WHERE psector_id=ANY(v_psector_ids) AND state=1 AND doable=false;
 
 		IF v_list_connec_undoable IS NOT NULL THEN
 			PERFORM setval('SCHEMA_NAME.plan_psector_x_connec_id_seq', (select max(id) from plan_psector_x_connec) , true);
@@ -197,7 +197,7 @@ BEGIN
 
 		IF v_project_type='UD' THEN
 			--copy gullies with state 0 inside plan_psector tables
-			SELECT string_agg(gully_id,',') INTO v_list_features_obsolete FROM plan_psector_x_gully WHERE psector_id=ANY(v_psector_ids) AND state=0;
+			SELECT string_agg(gully_id::text,',') INTO v_list_features_obsolete FROM plan_psector_x_gully WHERE psector_id=ANY(v_psector_ids) AND state=0;
 			IF v_list_features_obsolete IS NOT NULL THEN
 				PERFORM setval('SCHEMA_NAME.plan_psector_x_gully_id_seq', (select max(id) from plan_psector_x_gully) , true);
 				INSERT INTO plan_psector_x_gully(gully_id, psector_id, state, doable, descript, arc_id, link_id)
@@ -210,7 +210,7 @@ BEGIN
 			END IF;
 
 			--copy gullies with state 1 inside plan_psector tables
-			SELECT string_agg(gully_id,',') INTO v_list_gully_undoable FROM plan_psector_x_gully WHERE psector_id=ANY(v_psector_ids) AND state=1 AND doable=false;
+			SELECT string_agg(gully_id::text,',') INTO v_list_gully_undoable FROM plan_psector_x_gully WHERE psector_id=ANY(v_psector_ids) AND state=1 AND doable=false;
 
 			IF v_list_gully_undoable IS NOT NULL THEN
 				PERFORM setval('SCHEMA_NAME.plan_psector_x_gully_id_seq', (select max(id) from plan_psector_x_gully) , true);
@@ -239,7 +239,7 @@ BEGIN
 			INSERT INTO selector_psector (psector_id, cur_user) VALUES (v_psector_id, current_user) ON CONFLICT DO NOTHING;
 		END LOOP;
 
-		--insert copy of the planified feature in the corresponding v_edit_* view and insert it into plan_psector_x_* table
+		--insert copy of the planified feature in the corresponding ve_* view and insert it into plan_psector_x_* table
 		FOR rec_type IN (SELECT * FROM sys_feature_type WHERE classlevel=1 OR classlevel = 2 ORDER BY CASE
 			WHEN id='NODE' THEN 1
 			WHEN id='ARC' THEN 2
@@ -247,7 +247,7 @@ BEGIN
 			WHEN id='GULLY' THEN 4 END) LOOP
 
 			EXECUTE 'SELECT DISTINCT string_agg(column_name::text,'' ,'')
-			FROM information_schema.columns where table_name=''v_edit_'||lower(rec_type.id)||''' and table_schema='''||v_schemaname||'''
+			FROM information_schema.columns where table_name=''ve_'||lower(rec_type.id)||''' and table_schema='''||v_schemaname||'''
 			and column_name IN (SELECT column_name FROM information_schema.columns where table_name='''||lower(rec_type.id)||''' and table_schema='''||v_schemaname||''') 
 			AND column_name!='''||lower(rec_type.id)||'_id'' and column_name!=''state'' and column_name != ''node_1'' and  column_name != ''node_2'' and column_name != ''code'';'
 			INTO v_insert_fields;
@@ -276,13 +276,13 @@ BEGIN
 					UPDATE config_param_system SET value ='TRUE' WHERE parameter='edit_topocontrol_disable_error';
 				END IF;
 
-				EXECUTE 'INSERT INTO v_edit_'||lower(rec_type.id)||' ('||v_insert_fields||',state) SELECT '||v_insert_fields||',2 FROM '||lower(rec_type.id)||'
+				EXECUTE 'INSERT INTO ve_'||lower(rec_type.id)||' ('||v_insert_fields||',state) SELECT '||v_insert_fields||',2 FROM '||lower(rec_type.id)||'
 				WHERE '||lower(rec_type.id)||'_id='''||v_field_id||''';';
 
 
 			END LOOP;
 
-			EXECUTE 'SELECT string_agg('||lower(rec_type.id)||'_id,'','') FROM plan_psector_x_'||lower(rec_type.id)||' WHERE psector_id=ANY($1) and state=1'
+			EXECUTE 'SELECT string_agg('||lower(rec_type.id)||'_id::text,'','') FROM plan_psector_x_'||lower(rec_type.id)||' WHERE psector_id=ANY($1) and state=1'
 			into v_list_features_obsolete USING v_psector_ids;
 
 			IF v_list_features_obsolete IS NOT NULL THEN
@@ -300,7 +300,7 @@ BEGIN
                        "data":{"message":"3798", "function":"3284", "fid":"518", "result_id":"'||v_result_id||'", "parameters":{"v_new_psector_name":"'||v_new_psector_name||'"}, "is_process":true}}$$)';
 
 		-- select forced arcs to connect with
-		SELECT string_agg(arc_id,',') INTO v_list_arc_new FROM plan_psector_x_arc WHERE psector_id=v_new_psector_id;
+		SELECT string_agg(arc_id::text,',') INTO v_list_arc_new FROM plan_psector_x_arc WHERE psector_id=v_new_psector_id;
 
 		IF v_list_connec_undoable IS NOT NULL AND v_list_arc_new IS NOT NULL THEN
 			-- connect to network connecs with state 1 from v_list_connec_undoable
@@ -316,7 +316,7 @@ BEGIN
 			END IF;
 		END IF;
 
-		SELECT string_agg(connec_id,',') INTO v_list_connec_doable FROM plan_psector_x_connec WHERE psector_id=v_new_psector_id AND doable=true AND state=1 AND
+		SELECT string_agg(connec_id::text,',') INTO v_list_connec_doable FROM plan_psector_x_connec WHERE psector_id=v_new_psector_id AND doable=true AND state=1 AND
 		connec_id NOT IN (SELECT feature_id FROM link WHERE feature_type='CONNEC');
 
 		IF v_list_connec_doable IS NOT NULL THEN
@@ -326,7 +326,7 @@ BEGIN
 		END IF;
 
 		IF v_project_type='UD' THEN
-	        SELECT string_agg(gully_id,',') INTO v_list_gully_doable FROM plan_psector_x_gully WHERE psector_id=v_new_psector_id AND doable=true AND state=1 AND
+	        SELECT string_agg(gully_id::text,',') INTO v_list_gully_doable FROM plan_psector_x_gully WHERE psector_id=v_new_psector_id AND doable=true AND state=1 AND
 	        gully_id NOT IN (SELECT feature_id FROM link WHERE feature_type='GULLY');
 
 	        IF v_list_gully_doable IS NOT NULL THEN

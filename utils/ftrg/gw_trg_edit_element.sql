@@ -53,6 +53,7 @@ v_json_new_data JSON;
 v_sql TEXT;
 v_rec_sentence record;
 v_tg_table_name TEXT;
+v_epa_type text;
 v_result text;
 v_input_json JSON;
 v_result_rec record;
@@ -64,6 +65,8 @@ v_customfeature TEXT;
 v_childtable_name TEXT;
 v_element_id TEXT;
 v_feature_type TEXT;
+v_length_arc numeric;
+v_inp_table TEXT;
 
 BEGIN
 
@@ -90,7 +93,7 @@ BEGIN
         JOIN cat_feature cf ON cf.id = n.id
         JOIN sys_feature_class s ON cf.feature_class = s.id
         JOIN cat_'||v_feature_type||' ON cat_'||v_feature_type||'.id= '||quote_literal(NEW.elementcat_id)||'
-        WHERE n.id = cat_'||v_feature_type||'.'||v_feature_type||'_type AND child_layer = '||quote_literal(v_tg_table_name)||' LIMIT 1'
+        WHERE n.id = cat_'||v_feature_type||'.'||v_feature_type||'_type LIMIT 1'
         INTO v_man_table;
 
 
@@ -104,16 +107,22 @@ BEGIN
             v_unitsfactor = 1;
         END IF;
 
+		IF v_man_table='man_frelem' THEN
+			v_length_arc := (SELECT ST_Length(the_geom) FROM arc WHERE arc_id = NEW.to_arc);
+			IF v_length_arc < NEW.flwreg_length THEN
+				RAISE EXCEPTION 'Element is longer than to_arc length';
+			END IF;
+		END IF;
 
         -- get element_type and associated feature
         SELECT element_type INTO v_element_type FROM cat_element WHERE id=NEW.elementcat_id;
-		SELECT node_id, 'node'::text INTO v_feature, v_tablefeature FROM v_edit_node WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
+		SELECT node_id, 'node'::text INTO v_feature, v_tablefeature FROM ve_node WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 		IF v_feature IS NULL THEN
-			SELECT connec_id, 'connec'::text INTO v_feature, v_tablefeature FROM v_edit_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
+			SELECT connec_id, 'connec'::text INTO v_feature, v_tablefeature FROM ve_connec WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 			IF v_feature IS NULL THEN
-				SELECT arc_id, 'arc'::text INTO v_feature, v_tablefeature FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
+				SELECT arc_id, 'arc'::text INTO v_feature, v_tablefeature FROM ve_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 				IF v_feature IS NULL AND v_project_type='UD' THEN
-					SELECT gully_id, 'gully'::text INTO v_feature, v_tablefeature FROM v_edit_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
+					SELECT gully_id, 'gully'::text INTO v_feature, v_tablefeature FROM ve_gully WHERE st_dwithin(the_geom, NEW.the_geom, 0.01);
 				END IF;
 			END IF;
 		END IF;
@@ -268,6 +277,9 @@ BEGIN
 			END IF;
 		END IF;
 
+		IF v_man_table = 'man_frelem' THEN
+			NEW.the_geom = NULL;
+		END IF;
 
 		INSERT INTO "element" (element_id, code, sys_code, elementcat_id, serial_number, num_elements, state, state_type, observ, "comment", function_type, category_type,
 		location_type, workcat_id, workcat_id_end, builtdate, enddate, ownercat_id, rotation, link, verified, label_x, label_y, label_rotation,
@@ -278,44 +290,38 @@ BEGIN
 		NEW.publish, NEW.inventory, NEW.expl_id, upper(v_feature_type), NEW.top_elev, NEW.expl_visibility, NEW.trace_featuregeom, NEW.muni_id, NEW.sector_id, NEW.brand_id, NEW.model_id, /*NEW.asset_id,*/ NEW.datasource,
 		NEW.lock_level, NEW.the_geom, NEW.created_at, NEW.created_by, NEW.updated_at, NEW.updated_by, NEW.epa_type, NEW.omzone_id);
 
+		-- MAN TABLE INSERT AND EPA_TYPE INSERT
 		IF v_man_table='man_frelem' THEN
-			INSERT INTO man_frelem (element_id, node_id, order_id, to_arc, flwreg_length)
-			VALUES(NEW.element_id, NEW.node_id, NEW.order_id, NEW.to_arc, NEW.flwreg_length);
+			INSERT INTO man_frelem (element_id, node_id, to_arc, flwreg_length)
+			VALUES(NEW.element_id, NEW.node_id, NEW.to_arc, NEW.flwreg_length);
+			UPDATE "element" SET epa_type = NEW.epa_type WHERE element_id = NEW.element_id;
 		ELSIF v_man_table='man_genelem' THEN
-			INSERT INTO man_genelem (element_id)
-			VALUES(NEW.element_id);
+			INSERT INTO man_genelem (element_id) VALUES (NEW.element_id);
+			UPDATE "element" SET epa_type = 'UNDEFINED' WHERE element_id = NEW.element_id;
 		END IF;
 
+		-- EPA INSERT
+		IF (NEW.epa_type = 'FRPUMP') THEN
+		    INSERT INTO inp_frpump (element_id) VALUES (NEW.element_id);
+			
+		ELSIF (NEW.epa_type = 'FRVALVE') THEN
+		    INSERT INTO inp_frvalve (element_id) VALUES (NEW.element_id);
 
+		ELSIF (NEW.epa_type = 'FRWEIR') THEN
+		    INSERT INTO inp_frweir (element_id) VALUES (NEW.element_id);
 
+		ELSIF (NEW.epa_type = 'FRORIFICE') THEN
+		    INSERT INTO inp_frorifice (element_id) VALUES (NEW.element_id);
 
-		-- -- FEATURE INSERT (DYNAMIC TRIGGER)
-		-- SELECT row_to_json(NEW) INTO v_json_new_data;
-		-- SELECT row_to_json(OLD) INTO v_json_old_data;
+		ELSIF (NEW.epa_type = 'FROUTLET') THEN
+		    INSERT INTO inp_froutlet (element_id) VALUES (NEW.element_id);
+		
+		ELSIF (NEW.epa_type = 'FRSHORTPIPE') THEN
+		    INSERT INTO inp_frshortpipe (element_id) VALUES (NEW.element_id);
 
-		-- v_input_json := jsonb_build_object(
-        -- 'client', jsonb_build_object(
-        --     'device', 4,
-        --     'infoType', 1,
-        --     'lang', 'ES'
-        -- 	),
-        -- 'feature', '{}'::jsonb,
-        -- 'data', jsonb_build_object(
-        --     'parameters', jsonb_build_object(
-        --         'jsonNewData', v_json_new_data,
-        --         'jsonOldData', v_json_old_data,
-        --         'action', 'INSERT',
-        --         'originTable', v_tg_table_name,
-        --         'pkeyColumn', 'element_id',
-        --         'pkeyValue', NEW.element_id
-        --     	)
-        -- 	)
-    	-- );
+		END IF;
 
-		-- PERFORM gw_fct_admin_dynamic_trigger(v_input_json);
-
-
-		-- update element_x_feature table
+		-- insert into element_x_feature table
 		IF v_tablefeature IS NOT NULL AND v_feature IS NOT NULL THEN
 			EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_tablefeature||'_id, element_id) VALUES ('||v_feature||','||NEW.element_id||') ON CONFLICT 
 			('||v_tablefeature||'_id, element_id) DO NOTHING';
@@ -338,10 +344,55 @@ BEGIN
 
 	-- UPDATE
 	ELSIF TG_OP = 'UPDATE' THEN
+		-- epa type
+		IF (NEW.epa_type != OLD.epa_type) THEN
+			IF (OLD.epa_type = 'FRPUMP') THEN
+				v_inp_table:= 'inp_frpump';
+			ELSIF (OLD.epa_type = 'FRVALVE') THEN
+				v_inp_table:= 'inp_frvalve';
+			ELSIF (OLD.epa_type = 'FRWEIR') THEN
+				v_inp_table:= 'inp_frweir';
+			ELSIF (OLD.epa_type = 'FRORIFICE') THEN
+				v_inp_table:= 'inp_frorifice';
+			ELSIF (OLD.epa_type = 'FROUTLET') THEN
+				v_inp_table:= 'inp_froutlet';
+			ELSIF (OLD.epa_type = 'FRSHORTPIPE') THEN
+				v_inp_table:= 'inp_frshortpipe';
+			END IF;
+
+			IF v_inp_table IS NOT NULL THEN
+				v_sql:= 'DELETE FROM '||v_inp_table||' WHERE element_id = '||quote_literal(OLD.element_id);
+				EXECUTE v_sql;
+			END IF;
+
+			v_inp_table := NULL;
+
+			IF (NEW.epa_type = 'FRPUMP') THEN
+				v_inp_table:= 'inp_frpump';
+			ELSIF (NEW.epa_type = 'FRVALVE') THEN
+				v_inp_table:= 'inp_frvalve';
+			ELSIF (NEW.epa_type = 'FRWEIR') THEN
+				v_inp_table:= 'inp_frweir';
+			ELSIF (NEW.epa_type = 'FRORIFICE') THEN
+				v_inp_table:= 'inp_frorifice';
+			ELSIF (NEW.epa_type = 'FROUTLET') THEN
+				v_inp_table:= 'inp_froutlet';
+			ELSIF (NEW.epa_type = 'FRSHORTPIPE') THEN
+				v_inp_table:= 'inp_frshortpipe';
+			END IF;
+			IF v_inp_table IS NOT NULL THEN
+				v_sql:= 'INSERT INTO '||v_inp_table||' (element_id) VALUES ('||quote_literal(NEW.element_id)||') ON CONFLICT (element_id) DO NOTHING';
+				EXECUTE v_sql;
+			END IF;
+		END IF;
 
 		-- Sector
 		IF (NEW.sector_id IS NULL AND NEW.the_geom IS NOT NULL) THEN
 			NEW.sector_id := (SELECT sector_id FROM sector WHERE ST_intersects(NEW.the_geom, sector.the_geom) AND active IS TRUE limit 1);
+		END IF;
+
+		IF v_man_table='man_genelem' THEN
+			UPDATE element SET the_geom = NEW.the_geom WHERE element_id = OLD.element_id;
 		END IF;
 
 		UPDATE "element" SET code=NEW.code, sys_code=NEW.sys_code, elementcat_id=NEW.elementcat_id, serial_number=NEW.serial_number, num_elements=NEW.num_elements, state=NEW.state,
@@ -350,12 +401,12 @@ BEGIN
 		rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, publish=NEW.publish,
 		inventory=NEW.inventory, expl_id=NEW.expl_id, feature_type=upper(v_feature_type), top_elev=NEW.top_elev, expl_visibility=NEW.expl_visibility, trace_featuregeom=NEW.trace_featuregeom,
 		muni_id=NEW.muni_id, sector_id=NEW.sector_id, brand_id=NEW.brand_id, model_id=NEW.model_id, asset_id=NEW.asset_id, datasource=NEW.datasource,
-		lock_level=NEW.lock_level, the_geom=NEW.the_geom, created_at=NEW.created_at, created_by=NEW.created_by, updated_at=NEW.updated_at, updated_by=NEW.updated_by, epa_type=NEW.epa_type, omzone_id=NEW.omzone_id
+		lock_level=NEW.lock_level, created_at=NEW.created_at, created_by=NEW.created_by, updated_at=NEW.updated_at, updated_by=NEW.updated_by, epa_type=NEW.epa_type, omzone_id=NEW.omzone_id
 		WHERE element_id=OLD.element_id;
 
 
 		IF v_man_table='man_frelem' THEN
-			UPDATE man_frelem SET node_id=NEW.node_id, order_id=NEW.order_id, to_arc=NEW.to_arc, flwreg_length=NEW.flwreg_length
+			UPDATE man_frelem SET node_id=NEW.node_id, to_arc=NEW.to_arc, flwreg_length=NEW.flwreg_length
 			WHERE element_id=OLD.element_id;
 		ELSIF v_man_table='man_genelem' THEN
 			UPDATE man_genelem SET element_id=NEW.element_id

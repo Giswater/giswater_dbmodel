@@ -32,7 +32,7 @@ BEGIN
 				depth1 = COALESCE(NEW.depth1, (SELECT depth FROM connec WHERE connec_id=NEW.feature_id LIMIT 1))
 				WHERE l.feature_id = NEW.feature_id AND l.state > 0 AND l.link_id = NEW.link_id;
 
-				UPDATE link l SET epa_type = c.epa_type, is_operative = v.is_operative, expl_visibility = c.expl_visibility, fluid_type = c.fluid_type, muni_id = c.muni_id
+				UPDATE link l SET is_operative = v.is_operative, expl_visibility = c.expl_visibility, fluid_type = c.fluid_type, muni_id = c.muni_id
 				FROM connec c
 				JOIN value_state_type v ON v.id = c.state_type WHERE l.feature_id = c.connec_id AND c.connec_id = NEW.feature_id AND l.state > 0 AND link_id = NEW.link_id;
 			ELSE
@@ -48,7 +48,7 @@ BEGIN
 				SET linkcat_id = NEW.linkcat_id, top_elev1 = NEW.top_elev1
 				WHERE l.feature_id = NEW.feature_id AND l.state > 0 AND l.link_id = NEW.link_id;
 
-				UPDATE link l SET epa_type = c.epa_type, is_operative = v.is_operative, expl_visibility = c.expl_visibility, fluid_type = c.fluid_type, muni_id = c.muni_id
+				UPDATE link l SET is_operative = v.is_operative, expl_visibility = c.expl_visibility, fluid_type = c.fluid_type, muni_id = c.muni_id
 				FROM gully c
 				JOIN value_state_type v ON v.id = c.state_type WHERE l.feature_id = c.gully_id AND c.gully_id = NEW.feature_id AND l.state > 0 AND link_id = NEW.link_id;
 
@@ -58,9 +58,9 @@ BEGIN
 			END IF;
 
 			IF (SELECT value::boolean FROM config_param_system WHERE parameter ='edit_link_autoupdate_connect_length') IS true AND NEW.uncertain IS FALSE THEN
-				UPDATE connec c SET connec_length = st_length(NEW.the_geom) WHERE c.connec_id = NEW.feature_id AND l.state > 0 AND link_id = NEW.link_id;
+				UPDATE connec c SET connec_length = st_length(NEW.the_geom) WHERE c.connec_id = NEW.feature_id;
 				IF v_projecttype = 'UD' THEN
-					UPDATE gully g SET connec_length = st_length(NEW.the_geom) WHERE g.gully_id = NEW.feature_id AND l.state > 0 AND link_id = NEW.link_id;
+					UPDATE gully g SET connec_length = st_length(NEW.the_geom) WHERE g.gully_id = NEW.feature_id;
 				END IF;
 			END IF;
 		END IF;
@@ -71,7 +71,7 @@ BEGIN
 		IF v_feature_type = 'CONNEC'  THEN
 
 			IF v_projecttype = 'WS' THEN
-				UPDATE link SET epa_type = NEW.epa_type, is_operative = v.is_operative, expl_visibility = NEW.expl_visibility, fluid_type = NEW.fluid_type, muni_id = NEW.muni_id
+				UPDATE link SET is_operative = v.is_operative, expl_visibility = NEW.expl_visibility, fluid_type = NEW.fluid_type, muni_id = NEW.muni_id
 				FROM value_state_type v WHERE id = NEW.state_type AND feature_id = NEW.connec_id;
 			ELSE
 				UPDATE link SET is_operative = v.is_operative, expl_visibility = NEW.expl_visibility, fluid_type = NEW.fluid_type,muni_id = NEW.muni_id
@@ -79,7 +79,7 @@ BEGIN
 			END IF;
 
 		ELSIF v_feature_type = 'GULLY' THEN
-			UPDATE link SET epa_type = NEW.epa_type, is_operative = v.is_operative, expl_visibility = NEW.expl_visibility, fluid_type = NEW.fluid_type, muni_id = NEW.muni_id
+			UPDATE link SET is_operative = v.is_operative, expl_visibility = NEW.expl_visibility, fluid_type = NEW.fluid_type, muni_id = NEW.muni_id
 			FROM value_state_type v WHERE id = NEW.state_type AND feature_id = NEW.gully_id;
 
 		ELSIF v_feature_type = 'LINK' THEN

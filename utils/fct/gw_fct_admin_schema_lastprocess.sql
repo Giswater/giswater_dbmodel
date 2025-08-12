@@ -167,32 +167,32 @@ BEGIN
 
 			-- drop deprecated views
 			IF v_projecttype = 'WS' THEN
-				DROP VIEW IF EXISTS v_edit_man_varc;
-				DROP VIEW IF EXISTS v_edit_man_pipe;
-				DROP VIEW IF EXISTS v_edit_man_expansiontank;
-				DROP VIEW IF EXISTS v_edit_man_filter;
-				DROP VIEW IF EXISTS v_edit_man_flexunion;
-				DROP VIEW IF EXISTS v_edit_man_hydrant;
-				DROP VIEW IF EXISTS v_edit_man_junction;
-				DROP VIEW IF EXISTS v_edit_man_meter;
-				DROP VIEW IF EXISTS v_edit_man_netsamplepoint;
-				DROP VIEW IF EXISTS v_edit_man_netwjoin;
-				DROP VIEW IF EXISTS v_edit_man_pump;
-				DROP VIEW IF EXISTS v_edit_man_reduction;
-				DROP VIEW IF EXISTS v_edit_man_register;
-				DROP VIEW IF EXISTS v_edit_man_source;
-				DROP VIEW IF EXISTS v_edit_man_tank;
-				DROP VIEW IF EXISTS v_edit_man_valve;
-				DROP VIEW IF EXISTS v_edit_man_waterwell;
-				DROP VIEW IF EXISTS v_edit_man_manhole;
-				DROP VIEW IF EXISTS v_edit_man_wtp;
-				DROP VIEW IF EXISTS v_edit_man_fountain;
-				DROP VIEW IF EXISTS v_edit_man_tap;
-				DROP VIEW IF EXISTS v_edit_man_greentap;
-				DROP VIEW IF EXISTS v_edit_man_wjoin;
-				DROP VIEW IF EXISTS v_edit_man_fountain_pol;
-				DROP VIEW IF EXISTS v_edit_man_register_pol;
-				DROP VIEW IF EXISTS v_edit_man_tank_pol;
+				DROP VIEW IF EXISTS ve_man_varc;
+				DROP VIEW IF EXISTS ve_man_pipe;
+				DROP VIEW IF EXISTS ve_man_expansiontank;
+				DROP VIEW IF EXISTS ve_man_filter;
+				DROP VIEW IF EXISTS ve_man_flexunion;
+				DROP VIEW IF EXISTS ve_man_hydrant;
+				DROP VIEW IF EXISTS ve_man_junction;
+				DROP VIEW IF EXISTS ve_man_meter;
+				DROP VIEW IF EXISTS ve_man_netsamplepoint;
+				DROP VIEW IF EXISTS ve_man_netwjoin;
+				DROP VIEW IF EXISTS ve_man_pump;
+				DROP VIEW IF EXISTS ve_man_reduction;
+				DROP VIEW IF EXISTS ve_man_register;
+				DROP VIEW IF EXISTS ve_man_source;
+				DROP VIEW IF EXISTS ve_man_tank;
+				DROP VIEW IF EXISTS ve_man_valve;
+				DROP VIEW IF EXISTS ve_man_waterwell;
+				DROP VIEW IF EXISTS ve_man_manhole;
+				DROP VIEW IF EXISTS ve_man_wtp;
+				DROP VIEW IF EXISTS ve_man_fountain;
+				DROP VIEW IF EXISTS ve_man_tap;
+				DROP VIEW IF EXISTS ve_man_greentap;
+				DROP VIEW IF EXISTS ve_man_wjoin;
+				DROP VIEW IF EXISTS ve_man_fountain_pol;
+				DROP VIEW IF EXISTS ve_man_register_pol;
+				DROP VIEW IF EXISTS ve_man_tank_pol;
 				DROP VIEW IF EXISTS v_anl_mincut_planified_arc;
 				DROP VIEW IF EXISTS v_anl_mincut_planified_valve;
 				DROP VIEW IF EXISTS v_anl_mincut_result_arc;
@@ -205,27 +205,27 @@ BEGIN
 				DROP VIEW IF EXISTS v_anl_mincut_result_polygon;
 				DROP VIEW IF EXISTS v_anl_mincut_result_valve;
 			ELSIF v_projecttype = 'UD' THEN
-				DROP VIEW IF EXISTS v_edit_man_chamber;
-				DROP VIEW IF EXISTS v_edit_man_chamber_pol;
-				DROP VIEW IF EXISTS v_edit_man_conduit;
-				DROP VIEW IF EXISTS v_edit_man_connec;
-				DROP VIEW IF EXISTS v_edit_man_gully;
-				DROP VIEW IF EXISTS v_edit_man_gully_pol;
-				DROP VIEW IF EXISTS v_edit_man_junction;
-				DROP VIEW IF EXISTS v_edit_man_manhole;
-				DROP VIEW IF EXISTS v_edit_man_netgully;
-				DROP VIEW IF EXISTS v_edit_man_netgully_pol;
-				DROP VIEW IF EXISTS v_edit_man_netinit;
-				DROP VIEW IF EXISTS v_edit_man_outfall;
-				DROP VIEW IF EXISTS v_edit_man_siphon;
-				DROP VIEW IF EXISTS v_edit_man_storage;
-				DROP VIEW IF EXISTS v_edit_man_storage_pol;
-				DROP VIEW IF EXISTS v_edit_man_valve;
-				DROP VIEW IF EXISTS v_edit_man_varc;
-				DROP VIEW IF EXISTS v_edit_man_waccel;
-				DROP VIEW IF EXISTS v_edit_man_wjump;
-				DROP VIEW IF EXISTS v_edit_man_wwtp;
-				DROP VIEW IF EXISTS v_edit_man_wwtp_pol;
+				DROP VIEW IF EXISTS ve_man_chamber;
+				DROP VIEW IF EXISTS ve_man_chamber_pol;
+				DROP VIEW IF EXISTS ve_man_conduit;
+				DROP VIEW IF EXISTS ve_man_connec;
+				DROP VIEW IF EXISTS ve_man_gully;
+				DROP VIEW IF EXISTS ve_man_gully_pol;
+				DROP VIEW IF EXISTS ve_man_junction;
+				DROP VIEW IF EXISTS ve_man_manhole;
+				DROP VIEW IF EXISTS ve_man_netgully;
+				DROP VIEW IF EXISTS ve_man_netgully_pol;
+				DROP VIEW IF EXISTS ve_man_netinit;
+				DROP VIEW IF EXISTS ve_man_outfall;
+				DROP VIEW IF EXISTS ve_man_siphon;
+				DROP VIEW IF EXISTS ve_man_storage;
+				DROP VIEW IF EXISTS ve_man_storage_pol;
+				DROP VIEW IF EXISTS ve_man_valve;
+				DROP VIEW IF EXISTS ve_man_varc;
+				DROP VIEW IF EXISTS ve_man_waccel;
+				DROP VIEW IF EXISTS ve_man_wjump;
+				DROP VIEW IF EXISTS ve_man_wwtp;
+				DROP VIEW IF EXISTS ve_man_wwtp_pol;
 			END IF;
 
 			-- drop deprecated columns
@@ -309,10 +309,10 @@ BEGIN
 				WHERE columnname='matcat_id' AND formname LIKE 've_arc%';
 
 				UPDATE config_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_material WHERE ''NODE'' = ANY(feature_type)'
-				WHERE columnname='matcat_id' AND formname IN ('v_edit_node');
+				WHERE columnname='matcat_id' AND formname IN ('ve_node');
 
 				UPDATE config_form_fields SET iseditable=TRUE, widgettype='combo', dv_isnullvalue=TRUE, dv_querytext='SELECT id, id AS idval FROM cat_material WHERE ''ARC'' = ANY(feature_type)'
-				WHERE columnname='matcat_id' AND formname IN ('v_edit_arc', 'v_edit_connec');
+				WHERE columnname='matcat_id' AND formname IN ('ve_arc', 've_connec');
 
 			END IF;
 
@@ -356,53 +356,35 @@ BEGIN
 				columnname IN ('om_state', 'conserv_state', 'priority', 'valve_location', 'valve_type', 'shutoff_valve', 'access_type', 'placement_type', 'crmzone_id'))
 				AND formname ilike 've_connec%';
 
-				UPDATE config_form_fields SET hidden=true WHERE formname = 'v_edit_arc' AND columnname='parent_id';
+				UPDATE config_form_fields SET hidden=true WHERE formname = 've_arc' AND columnname='parent_id';
 				UPDATE config_form_fields SET hidden=true WHERE formname like 've_arc%' AND columnname='parent_id';
-				UPDATE config_form_fields SET hidden=true WHERE formname = 'v_edit_arc' AND columnname='observ';
+				UPDATE config_form_fields SET hidden=true WHERE formname = 've_arc' AND columnname='observ';
 				UPDATE config_form_fields SET hidden=true WHERE formname like 've_arc%' AND columnname='observ';
 
-				-- setting mapzone graph analytics without value in terms of mapzone constructor and graphclass
-				UPDATE config_toolbox SET inputparams = '[
-					{"widgetname":"graphClass", "label":"Graph class:", "widgettype":"combo","datatype":"text","tooltip": "Graphanalytics method used", "layoutname":"grl_option_parameters","layoutorder":1,"comboIds":["PRESSZONE","DQA","DMA","SECTOR"],
-					"comboNames":["Pressure Zonification (PRESSZONE)", "District Quality Areas (DQA) ", "District Metering Areas (DMA)", "Inlet Sectorization (SECTOR-HIGH / SECTOR-LOW)"], "selectedId":""}, 
-					{"widgetname":"exploitation", "label":"Exploitation:","widgettype":"combo","datatype":"text","tooltip": "Choose exploitation to work with", "layoutname":"grl_option_parameters","layoutorder":2, 
-					"dvQueryText":"select expl_id as id, name as idval from exploitation where active is not false order by name", "selectedId":"$userExploitation"},
-					{"widgetname":"floodOnlyMapzone", "label":"Flood only one mapzone: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Flood only identified mapzones. The purpose of this is update only network elements affected by this flooding keeping rest of network as is. Recommended to gain performance when mapzones ecosystem is under work", "placeholder":"1001", "layoutname":"grl_option_parameters","layoutorder":3, "value":""},
-					{"widgetname":"forceOpen", "label":"Force open nodes: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary open closed node(s) in order to force algorithm to continue there", "placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":5, "value":""},
-					{"widgetname":"forceClosed", "label":"Force closed nodes: (*)","widgettype":"text","datatype":"text", "isMandatory":false, "tooltip":"Optative node id(s) to temporary close open node(s) to force algorithm to stop there","placeholder":"1015,2231,3123", "layoutname":"grl_option_parameters","layoutorder":6,"value":""},
-					{"widgetname":"usePlanPsector", "label":"Use selected psectors:", "widgettype":"check","datatype":"boolean","tooltip":"If true, use selected psectors. If false ignore selected psectors and only works with on-service network" , "layoutname":"grl_option_parameters","layoutorder":7,"value":""},
-					{"widgetname":"commitChanges", "label":"Commit changes:", "widgettype":"check","datatype":"boolean","tooltip":"If true, changes will be applied to DB. If false, algorithm results will be saved in anl tables" , "layoutname":"grl_option_parameters","layoutorder":8,"value":""},
-					{"widgetname":"valueForDisconnected", "label":"Value for disconn. and conflict: (*)","widgettype":"linetext","datatype":"text", "isMandatory":false, "tooltip":"Value to use for disconnected features. Usefull for work in progress with dynamic mpzonesnode" , "placeholder":"", "layoutname":"grl_option_parameters","layoutorder":9, "value":""},
-					{"widgetname":"updateMapZone", "label":"Mapzone constructor method:","widgettype":"combo","datatype":"integer","layoutname":"grl_option_parameters","layoutorder":10,
-					"comboIds":[0,1,2,3,4], "comboNames":["NONE", "CONCAVE POLYGON", "PIPE BUFFER", "PLOT & PIPE BUFFER", "LINK & PIPE BUFFER"], "selectedId":""}, 
-					{"widgetname":"geomParamUpdate", "label":"Pipe buffer","widgettype":"text","datatype":"float","tooltip":"Buffer from arcs to create mapzone geometry using [PIPE BUFFER] options. Normal values maybe between 3-20 mts.", "layoutname":"grl_option_parameters","layoutorder":11, "isMandatory":false, "placeholder":"5-30", "value":""}
-					]'
-				WHERE id = 2768;
-
 			ELSIF v_projecttype = 'UD' THEN
-				UPDATE config_form_fields SET layoutorder=30 WHERE formname = 'v_edit_arc' AND columnname='pavcat_id';
+				UPDATE config_form_fields SET layoutorder=30 WHERE formname = 've_arc' AND columnname='pavcat_id';
 				UPDATE config_form_fields SET layoutorder=30 WHERE formname like 've_arc%' AND columnname='pavcat_id';
 			END IF;
 
 			-- setting search where search_field is arc_id, node_id, connec_id, gully_id
 			UPDATE config_param_system SET value =
-			'{"sys_table_id":"v_edit_arc","sys_id_field":"arc_id","sys_search_field":"arc_id","alias":"Arcs","cat_field":"arccat_id","orderby":"1","search_type":"arc"}'
+			'{"sys_table_id":"ve_arc","sys_id_field":"arc_id","sys_search_field":"arc_id","alias":"Arcs","cat_field":"arccat_id","orderby":"1","search_type":"arc"}'
 			WHERE parameter = 'basic_search_network_arc';
 
 			UPDATE config_param_system SET value =
-			'{"sys_table_id":"v_edit_connec","sys_id_field":"connec_id","sys_search_field":"connec_id","alias":"Connecs","cat_field":"conneccat_id","orderby":"3","search_type":"connec"}'
+			'{"sys_table_id":"ve_connec","sys_id_field":"connec_id","sys_search_field":"connec_id","alias":"Connecs","cat_field":"conneccat_id","orderby":"3","search_type":"connec"}'
 			WHERE parameter = 'basic_search_network_connec';
 
 			UPDATE config_param_system SET value =
-			'{"sys_table_id":"v_edit_element","sys_id_field":"element_id","sys_search_field":"element_id","alias":"Elements","cat_field":"elementcat_id","orderby":"5","search_type":"element"}'
+			'{"sys_table_id":"ve_element","sys_id_field":"element_id","sys_search_field":"element_id","alias":"Elements","cat_field":"elementcat_id","orderby":"5","search_type":"element"}'
 			WHERE parameter = 'basic_search_network_element';
 
 			UPDATE config_param_system SET value =
-			'{"sys_table_id":"v_edit_node","sys_id_field":"node_id","sys_search_field":"node_id","alias":"Nodes","cat_field":"nodecat_id","orderby":"2","search_type":"node"}'
+			'{"sys_table_id":"ve_node","sys_id_field":"node_id","sys_search_field":"node_id","alias":"Nodes","cat_field":"nodecat_id","orderby":"2","search_type":"node"}'
 			WHERE  parameter = 'basic_search_network_node';
 
 			UPDATE config_param_system SET value =
-			'{"sys_table_id":"v_edit_gully","sys_id_field":"gully_id","sys_search_field":"gully_id","alias":"Gullies","cat_field":"gullycat_id","orderby":"3","search_type":"gully"}'
+			'{"sys_table_id":"ve_gully","sys_id_field":"gully_id","sys_search_field":"gully_id","alias":"Gullies","cat_field":"gullycat_id","orderby":"3","search_type":"gully"}'
 			WHERE  parameter = 'basic_search_network_gully';
 
 		ELSIF v_isnew IS FALSE THEN

@@ -155,6 +155,7 @@ SELECT gw_fct_admin_manage_fields($${"data":{"action":"RENAME","table":"inp_gull
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"RENAME","table":"inp_netgully", "column":"method", "newName":"gully_method"}}$$);
 
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"RENAME","table":"ve_epa_netgully", "column":"method", "newName":"gully_method"}}$$);
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"RENAME","table":"ve_epa_gully", "column":"method", "newName":"gully_method"}}$$);
 SELECT gw_fct_admin_manage_fields($${"data":{"action":"CHANGETYPE","table":"temp_arc_flowregulator", "column":"arc_id", "dataType":"varchar(30)"}}$$);
 
 -- 15/07/2025
@@ -195,3 +196,96 @@ ALTER TABLE macroomzone DROP CONSTRAINT IF EXISTS macroomzone_expl_id_fkey;
 ALTER TABLE macroomzone ALTER COLUMN expl_id TYPE INT4[] USING ARRAY[expl_id];
 
 */
+
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"RENAME", "table":"man_outfall", "column":"discharge_medium", "newName":"outfall_medium", "isUtils":"False"}}$$);
+DELETE FROM sys_foreignkey WHERE typevalue_name='discharge_medium_typevalue';
+UPDATE edit_typevalue SET typevalue='outfall_medium_typevalue' WHERE typevalue='discharge_medium_typevalue';
+INSERT INTO sys_foreignkey (typevalue_table, typevalue_name, target_table, target_field, parameter_id, active) VALUES('edit_typevalue', 'outfall_medium_typevalue', 'man_outfall', 'outfall_medium', NULL, true);
+UPDATE config_form_fields SET "label"='outfall_medium', tooltip='outfall_medium', dv_querytext='SELECT id, idval FROM edit_typevalue WHERE typevalue = ''outfall_medium_typevalue''' WHERE formname='ve_node_outfall' AND formtype='form_feature' AND columnname='discharge_medium' AND tabname='tab_data';
+
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"ADD", "table":"man_netinit", "column":"inlet_medium", "dataType":"int4", "isUtils":"False"}}$$);
+INSERT INTO edit_typevalue (typevalue, id, idval, descript, addparam) VALUES('inlet_medium_typevalue', '0', 'Undefined', NULL, NULL) ON CONFLICT (typevalue, id) DO NOTHING;
+INSERT INTO sys_foreignkey (typevalue_table, typevalue_name, target_table, target_field, parameter_id, active) VALUES('edit_typevalue', 'inlet_medium_typevalue', 'man_netinit', 'inlet_medium', NULL, true) ON CONFLICT (typevalue_table, typevalue_name, target_table, target_field) DO NOTHING;
+UPDATE config_form_fields SET layoutname='lyt_data_1', widgettype='combo', dv_querytext='SELECT id, idval FROM edit_typevalue WHERE typevalue = ''inlet_medium_typevalue''', dv_isnullvalue=TRUE WHERE columnname='inlet_medium' AND formname ILIKE '%netinit%';
+
+-- 07/08/2025
+SELECT gw_fct_admin_manage_fields($${"data":{"action":"DROP", "table":"inp_dscenario_frpump", "column":"pump_type", "isUtils":"False"}}$$);
+ALTER TABLE inp_dscenario_froutlet ALTER COLUMN outlet_type DROP NOT NULL;
+ALTER TABLE inp_dscenario_frorifice ALTER COLUMN orifice_type DROP NOT NULL;
+ALTER TABLE inp_dscenario_frweir ALTER COLUMN weir_type DROP NOT NULL;
+ALTER TABLE inp_froutlet ALTER COLUMN outlet_type DROP NOT NULL;
+ALTER TABLE inp_frorifice ALTER COLUMN orifice_type DROP NOT NULL;
+ALTER TABLE inp_frweir ALTER COLUMN weir_type DROP NOT NULL;
+
+ALTER TABLE archived_psector_gully_traceability RENAME COLUMN tstamp TO created_at;
+ALTER TABLE archived_psector_gully_traceability RENAME COLUMN insert_user TO created_by;
+ALTER TABLE archived_psector_gully_traceability RENAME COLUMN lastupdate TO updated_at;
+ALTER TABLE archived_psector_gully_traceability RENAME COLUMN lastupdate_user TO updated_by;
+
+ALTER TABLE archived_psector_gully_traceability RENAME to archived_psector_gully;
+ALTER SEQUENCE archived_psector_gully_traceability_id_seq RENAME TO archived_psector_gully_id_seq;
+ALTER TABLE archived_psector_gully RENAME CONSTRAINT audit_psector_gully_traceability_pkey TO archived_psector_gully_pkey;
+
+ALTER TABLE archived_psector_gully drop column streetname;
+ALTER TABLE archived_psector_gully drop column streetname2;
+
+UPDATE sys_foreignkey SET target_table='archived_psector_gully' WHERE typevalue_table='om_typevalue' AND typevalue_name='fluid_type' AND target_table='archived_psector_gully_traceability' AND target_field='fluid_type';
+UPDATE sys_table SET descript='archived_psector_gully', id='archived_psector_gully' WHERE id='archived_psector_gully_traceability';
+
+-- 06/08/2025
+DO $function$
+DECLARE
+    v_crm boolean;
+BEGIN
+
+    SELECT value::boolean INTO v_crm FROM config_param_system WHERE parameter='admin_crm_schema';
+
+    PERFORM gw_fct_admin_manage_fields(format($${"data":{"action":"RENAME", "table":"ext_cat_hydrometer", "column":"voltman_flow", "newName":"type", "isCrm":%s}}$$, v_crm::text)::json);
+    PERFORM gw_fct_admin_manage_fields(format($${"data":{"action":"RENAME", "table":"ext_cat_hydrometer", "column":"multi_jet_flow", "newName":"flownom", "isCrm":%s}}$$, v_crm::text)::json);
+
+END $function$;
+
+
+CREATE TABLE om_waterbalance_dma_graph (
+    node_id int4 NOT NULL,
+    dma_id int4 NOT NULL,
+    flow_sign int2 NULL,
+    CONSTRAINT om_waterbalance_dma_graph_unique UNIQUE (dma_id, node_id),
+    CONSTRAINT om_waterbalance_dma_graph_pkey PRIMARY KEY (node_id, dma_id),
+    CONSTRAINT om_waterbalance_dma_graph_dma_id_fkey FOREIGN KEY (dma_id) REFERENCES dma(dma_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT om_waterbalance_dma_graph_node_id_fkey FOREIGN KEY (node_id) REFERENCES node(node_id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE man_cjoin (
+	connec_id int4 NOT NULL,
+	CONSTRAINT man_cjoin_pkey PRIMARY KEY (connec_id),
+	CONSTRAINT man_cjoin_connec_id_fkey FOREIGN KEY (connec_id) REFERENCES connec(connec_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE man_ginlet (
+	gully_id int4 NOT NULL,
+	CONSTRAINT man_ginlet_pkey PRIMARY KEY (gully_id),
+	CONSTRAINT man_ginlet_gully_id_fkey FOREIGN KEY (gully_id) REFERENCES gully(gully_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+DROP VIEW IF EXISTS v_edit_inp_dscenario_frorifice;
+DROP VIEW IF EXISTS v_edit_inp_frorifice;
+DROP VIEW IF EXISTS v_edit_inp_dscenario_frpump;
+DROP VIEW IF EXISTS v_edit_inp_frpump;
+DROP VIEW IF EXISTS v_edit_inp_dscenario_frweir;
+DROP VIEW IF EXISTS v_edit_inp_frweir;
+DROP VIEW IF EXISTS v_edit_inp_dscenario_froutlet;
+DROP VIEW IF EXISTS v_edit_inp_froutlet;
+DROP VIEW IF EXISTS ve_epa_frorifice;
+DROP VIEW IF EXISTS ve_epa_frweir;
+DROP VIEW IF EXISTS ve_epa_froutlet;
+DROP VIEW IF EXISTS ve_epa_frpump;
+DROP VIEW IF EXISTS ve_element_eorifice;
+DROP VIEW IF EXISTS ve_element_eweir;
+DROP VIEW IF EXISTS ve_element_eoutlet;
+DROP VIEW IF EXISTS ve_element_epump;
+DROP VIEW IF EXISTS ve_man_frelem;
+DROP VIEW IF EXISTS ve_frelem;
+SELECT SCHEMA_NAME.gw_fct_admin_manage_fields($${"data":{"action":"DROP","table":"man_frelem", "column":"order_id"}}$$);

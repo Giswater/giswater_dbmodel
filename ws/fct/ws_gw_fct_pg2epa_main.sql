@@ -65,6 +65,9 @@ v_expl_id integer[];
 v_sector_id integer[];
 v_network_type integer;
 v_epa_maxresults integer;
+v_dma_id integer[];
+v_flow_units text;
+v_quality_units text;
 
 BEGIN
 
@@ -103,6 +106,27 @@ BEGIN
 		SELECT array_agg(expl_id) INTO v_expl_id FROM selector_expl WHERE expl_id > 0 AND cur_user = current_user;
 		SELECT array_agg(sector_id) INTO v_sector_id FROM selector_sector WHERE sector_id > 0 AND cur_user = current_user;
 		SELECT value::integer INTO v_network_type FROM config_param_user WHERE parameter = 'inp_options_networkmode' AND cur_user = current_user;
+		SELECT value INTO v_flow_units FROM config_param_user WHERE parameter = 'inp_options_units' AND cur_user = current_user;
+		SELECT value INTO v_quality_units FROM config_param_user WHERE parameter = 'inp_options_quality_mode' AND cur_user = current_user;
+
+		IF v_quality_units = 'AGE' THEN
+			v_quality_units = 'hours';
+		ELSIF v_quality_units = 'TRACE' THEN
+			v_quality_units = concat(v_quality_units, ' % - ', (SELECT value FROM config_param_user WHERE parameter = 'inp_options_node_id' AND cur_user = current_user));
+		ELSIF v_quality_units = 'NONE' THEN
+			v_quality_units = NULL;
+		ELSIF v_quality_units = 'CHEMICAL mg/L' THEN
+			v_quality_units = 'mg/L';
+		ELSIF v_quality_units = 'CHEMICAL ug/L' THEN
+			v_quality_units = 'ug/L';
+		END IF;
+
+
+		IF v_network_type = 1 THEN
+			SELECT array_agg(dma_id) INTO v_dma_id FROM dma WHERE dma_type = 'TRANSMISSION' AND dma_id > 0;
+		ELSIF v_network_type = 5 THEN
+			SELECT array_agg(dma_id) INTO v_dma_id FROM dma WHERE dma_id = (SELECT value::integer FROM config_param_user WHERE parameter = 'inp_options_selecteddma' AND cur_user = current_user);
+		END IF;
 
 		-- setting selectors
 		v_inpoptions = (SELECT (replace (replace (replace (array_to_json(array_agg(json_build_object((t.parameter),(t.value))))::text,'},{', ' , '),'[',''),']',''))::json
@@ -110,8 +134,8 @@ BEGIN
 			JOIN sys_param_user a ON a.id=parameter	WHERE cur_user=current_user AND formname='epaoptions')t);
 
 		DELETE FROM rpt_cat_result WHERE result_id=v_result;
-		INSERT INTO rpt_cat_result (result_id, inp_options, status, expl_id, sector_id, network_type)
-			VALUES (v_result, v_inpoptions, 1, v_expl_id, v_sector_id, v_network_type);
+		INSERT INTO rpt_cat_result (result_id, inp_options, status, expl_id, sector_id, network_type, dma_id, flow_units, quality_units)
+			VALUES (v_result, v_inpoptions, 1, v_expl_id, v_sector_id, v_network_type, v_dma_id, v_flow_units, v_quality_units);
 		DELETE FROM rpt_inp_pattern_value WHERE result_id=v_result;
 		DELETE FROM selector_inp_result WHERE cur_user=current_user;
 		INSERT INTO selector_inp_result (result_id, cur_user) VALUES (v_result, current_user);

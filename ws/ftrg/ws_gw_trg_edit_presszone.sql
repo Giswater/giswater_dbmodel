@@ -65,8 +65,8 @@ BEGIN
 			END IF;
 		END IF;
 
-		INSERT INTO presszone (presszone_id, name, expl_id, graphconfig, head, stylesheet, descript, avg_press, presszone_type, link, muni_id, sector_id, lock_level)
-		VALUES (NEW.presszone_id, NEW.name, NEW.expl_id, NEW.graphconfig::json, NEW.head, NEW.stylesheet::json, NEW.descript,
+		INSERT INTO presszone (presszone_id, code, name, expl_id, graphconfig, head, stylesheet, descript, avg_press, presszone_type, link, muni_id, sector_id, lock_level)
+		VALUES (NEW.presszone_id, NEW.presszone_id, NEW.name, NEW.expl_id, NEW.graphconfig::json, NEW.head, NEW.stylesheet::json, NEW.descript,
 		NEW.avg_press, NEW.presszone_type, NEW.link, NEW.muni_id, NEW.sector_id, NEW.lock_level);
 
 		IF v_view_name = 'UI' THEN
@@ -78,6 +78,12 @@ BEGIN
 		RETURN NEW;
 
 	ELSIF TG_OP = 'UPDATE' THEN
+
+		IF v_view_name = 'UI' THEN
+			IF NEW.active IS FALSE AND OLD.active IS TRUE THEN
+				PERFORM gw_fct_check_linked_mapzones(json_build_object('parameters', json_build_object('mapzoneName', 'presszone', 'mapzoneId', OLD.presszone_id)));
+			END IF;
+		END IF;
 
 		UPDATE presszone
 		SET presszone_id=NEW.presszone_id, name=NEW.name, expl_id=NEW.expl_id, graphconfig=NEW.graphconfig::json,

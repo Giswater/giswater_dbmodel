@@ -139,6 +139,7 @@ CREATE TABLE config_form_fields (
 	linkedobject text NULL,
 	hidden bool DEFAULT false NOT NULL,
 	web_layoutorder int4 NULL,
+	field_layoutorder int4 NULL,
 	CONSTRAINT config_form_fields_pkey PRIMARY KEY (formname, formtype, columnname, tabname)
 );
 
@@ -235,7 +236,7 @@ CREATE TABLE cat_team (
 	teamname text not NULL,
 	organization_id int4 NOT NULL,
 	descript text NULL,
-	role_id TEXT NULL,
+	role_id TEXT NULL DEFAULT 'role_cm_field',
 	active bool NULL DEFAULT true,
 	CONSTRAINT cat_team_pkey PRIMARY KEY (team_id),
 	CONSTRAINT cat_team_unique UNIQUE (teamname, organization_id),
@@ -245,12 +246,9 @@ CREATE TABLE cat_team (
 
 CREATE TABLE cat_user (
   user_id serial4 PRIMARY KEY,
-  code text NULL,
-  loginname text not NULL,
   username text not NULL,
-  fullname varchar(200) not null,
-  descript text,
   team_id int4,
+  roles text[],
   active boolean DEFAULT TRUE,
   CONSTRAINT cat_user_unique UNIQUE (username),
   CONSTRAINT cat_user_team_id_fkey FOREIGN KEY (team_id) REFERENCES cat_team(team_id)
@@ -344,10 +342,12 @@ CREATE TABLE om_campaign (
   descript text,
   active boolean DEFAULT true,
   organization_id integer,
-  duration text,
   status integer not NULL,
   expl_id integer,
   sector_id integer,
+  qindex1 numeric(12, 3) NULL,
+  qindex2 numeric(12, 3) NULL,
+  rating int2 NULL,
   the_geom geometry(MultiPolygon,SRID_VALUE),
   CONSTRAINT om_campaign_pkey PRIMARY KEY (campaign_id),
   CONSTRAINT om_campaign_check_type check (campaign_type in (1,2,3)),
@@ -435,12 +435,16 @@ CREATE TABLE om_campaign_x_arc (
 	id serial4 NOT NULL,
 	campaign_id int4 NOT NULL,
 	arc_id int4 NOT NULL,
+	node_1 int4 NULL,
+	node_2 int4 NULL,
 	code varchar(30) NULL,
 	status int2 NULL,
 	admin_observ text NULL,
 	org_observ text NULL,
 	arccat_id text NULL,
 	arc_type text NULL,
+	qindex1 numeric(12, 3) NULL,
+	qindex2 numeric(12, 3) NULL,
 	the_geom geometry(linestring, SRID_VALUE) NULL,
 	CONSTRAINT om_campaign_x_arc_pkey PRIMARY KEY (id),
 	CONSTRAINT om_campaign_x_arc_un UNIQUE (campaign_id, arc_id),
@@ -456,6 +460,8 @@ CREATE TABLE om_campaign_x_connec (
 	admin_observ text NULL,
 	org_observ text NULL,
 	connectcat_id text NULL,
+	qindex1 numeric(12, 3) NULL,
+	qindex2 numeric(12, 3) NULL,
 	the_geom geometry(point, SRID_VALUE) NULL,
 	CONSTRAINT om_campaign_x_connec_pkey PRIMARY KEY (id),
 	CONSTRAINT om_campaign_x_connec_un UNIQUE (campaign_id, connec_id),
@@ -472,6 +478,8 @@ CREATE TABLE om_campaign_x_link (
 	admin_observ text NULL,
 	org_observ text NULL,
 	linkcat_id text NULL,
+	qindex1 numeric(12, 3) NULL,
+	qindex2 numeric(12, 3) NULL,
 	the_geom geometry(polygon, SRID_VALUE) NULL,
 	CONSTRAINT om_campaign_x_link_pkey PRIMARY KEY (id),
 	CONSTRAINT om_campaign_x_link_un UNIQUE (campaign_id, link_id),
@@ -488,6 +496,8 @@ CREATE TABLE om_campaign_x_node (
 	org_observ text NULL,
 	nodecat_id text NULL,
 	node_type text NULL,
+	qindex1 numeric(12, 3) NULL,
+	qindex2 numeric(12, 3) NULL,
 	the_geom geometry(point, SRID_VALUE) NULL,
 	CONSTRAINT om_campaign_x_node_pkey PRIMARY KEY (id),
 	CONSTRAINT om_campaign_x_node_un UNIQUE (campaign_id, node_id),
@@ -506,10 +516,12 @@ CREATE TABLE om_campaign_lot (
   descript text,
   active boolean DEFAULT true,
   team_id integer, -- fk cat_team
-  duration text,
   status int2 not NULL,
   expl_id integer,
   sector_id integer,
+  qindex1 numeric(12, 3) NULL,
+  qindex2 numeric(12, 3) NULL,
+  rating int2 NULL,
   the_geom geometry(MULTIPOLYGON,SRID_VALUE),
   CONSTRAINT om_campaign_lot_pkey PRIMARY KEY (lot_id),
   CONSTRAINT om_campaign_lot_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES om_campaign (campaign_id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -522,6 +534,8 @@ CREATE TABLE om_campaign_lot_x_arc (
 	id serial4 NOT NULL,
 	lot_id int4 NOT NULL,
 	arc_id int4 NOT NULL,
+	node_1 int4 NULL,
+	node_2 int4 NULL,
 	code varchar(30) NULL,
 	status int2 NULL,
 	org_observ text NULL,
@@ -590,6 +604,31 @@ CREATE TABLE om_campaign_lot_x_node (
 	CONSTRAINT om_campaign_lot_x_node_pkey PRIMARY KEY (id),
 	CONSTRAINT om_campaign_lot_x_node_un UNIQUE (lot_id, node_id),
 	CONSTRAINT om_campaign_lot_x_node_lot_id_fkey FOREIGN KEY (lot_id) REFERENCES om_campaign_lot(lot_id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE config_outlayers (
+	feature_type text NOT NULL,
+	column_name text NOT NULL,
+	min_value text,
+	max_value text,
+	except_error boolean,
+	except_message text,
+	CONSTRAINT config_outlayers_pkey PRIMARY KEY (feature_type, column_name)
+);
+
+-- New rating configuration tables
+CREATE TABLE config_qindex_rating (
+  id serial4 PRIMARY KEY,
+  minval numeric(12,3),
+  maxval numeric(12,3),
+  rating text
+);
+
+CREATE TABLE config_qindex_keyparam (
+  layer text NOT NULL,
+  column_name text NOT NULL,
+  active boolean DEFAULT true,
+  CONSTRAINT config_qindex_keyparam_pkey PRIMARY KEY (layer, column_name)
 );
 
 CREATE TABLE selector_campaign (

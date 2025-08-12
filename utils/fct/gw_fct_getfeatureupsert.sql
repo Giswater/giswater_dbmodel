@@ -115,7 +115,7 @@ v_active_feature text;
 v_proximity_buffer double precision;
 v_sys_raster_dem boolean=false;
 v_connec_autofill_plotcode boolean = false;
-v_edit_insert_elevation_from_dem boolean=false;
+ve_insert_elevation_from_dem boolean=false;
 v_noderecord1 record;
 v_noderecord2 record;
 v_input json;
@@ -167,14 +167,14 @@ v_schemaname text;
 
 v_idname_aux text;
 
-v_nodarc_id varchar;
-v_toarc varchar;
-v_order_id integer;
-v_flwreg_type text;
-v_flwreg_length numeric(14,2);
 v_toarc_geom public.geometry;
 
 vdefault_querytext text;
+
+v_featureclass text;
+v_tablefeature text;
+v_toarc	integer;
+
 
 BEGIN
 
@@ -234,7 +234,7 @@ BEGIN
  	END IF;
 
 	-- get user parameters
-	SELECT (value)::boolean INTO v_edit_insert_elevation_from_dem FROM config_param_user WHERE parameter='edit_insert_elevation_from_dem' AND cur_user = current_user;
+	SELECT (value)::boolean INTO ve_insert_elevation_from_dem FROM config_param_user WHERE parameter='edit_insert_elevation_from_dem' AND cur_user = current_user;
 	SELECT (value)::boolean INTO v_arc_insert_automatic_endpoint FROM config_param_user WHERE parameter='edit_arc_insert_automatic_endpoint' AND cur_user = current_user;
 
 	-- get tablename and formname
@@ -310,7 +310,7 @@ BEGIN
 		END IF;
 
 		IF v_catfeature.code_autofill IS TRUE THEN
-			v_code=v_id;
+			v_code=concat(v_catfeature.addparam::json->>'code_prefix',v_id);
 		END IF;
 
 		-- check if v_table_id is defined on cat_feature
@@ -344,11 +344,11 @@ BEGIN
 
 			ELSIF upper(v_catfeature.feature_type) ='ARC' THEN
 
-				SELECT * INTO v_noderecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(v_reduced_geometry), v_edit_node.the_geom, v_arc_searchnodes)
-				ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(v_reduced_geometry)) LIMIT 1;
+				SELECT * INTO v_noderecord1 FROM ve_node WHERE ST_DWithin(ST_startpoint(v_reduced_geometry), ve_node.the_geom, v_arc_searchnodes)
+				ORDER BY ST_Distance(ve_node.the_geom, ST_startpoint(v_reduced_geometry)) LIMIT 1;
 
-				SELECT * INTO v_noderecord2 FROM v_edit_node WHERE ST_DWithin(ST_endpoint(v_reduced_geometry), v_edit_node.the_geom, v_arc_searchnodes)
-				ORDER BY ST_Distance(v_edit_node.the_geom, ST_endpoint(v_reduced_geometry)) LIMIT 1;
+				SELECT * INTO v_noderecord2 FROM ve_node WHERE ST_DWithin(ST_endpoint(v_reduced_geometry), ve_node.the_geom, v_arc_searchnodes)
+				ORDER BY ST_Distance(ve_node.the_geom, ST_endpoint(v_reduced_geometry)) LIMIT 1;
 
 				IF (v_noderecord1.node_id IS NOT NULL) AND (v_noderecord2.node_id IS NOT NULL) THEN
 
@@ -501,29 +501,29 @@ BEGIN
 				IF (v_numnodes >1) AND (v_gully_proximity_control IS TRUE) THEN
 					v_message = (SELECT concat('ERROR-1045:',error_message, v_id,'. ',hint_message) FROM sys_message WHERE id=1045);
 					v_status = false;
-				END IF;
-
-			--- get Flowreg Defaults
-			-- TODO: Review if this is correct. Reference 'FLWREG' in this function
-            ELSIF upper(v_catfeature.feature_type) = 'FLWREG' THEN
-                -- Get toarc
-                SELECT arc_id , the_geom into v_toarc, v_toarc_geom FROM v_edit_arc WHERE ST_DWithin(ST_endpoint(v_reduced_geometry), v_edit_arc.the_geom, 0.001) LIMIT 1;
-                -- Get flwreg_length
-                SELECT abs(ST_LineLocatePoint(v_toarc_geom, ST_startpoint(v_reduced_geometry)) - ST_LineLocatePoint(v_toarc_geom, ST_endpoint(v_reduced_geometry))) * ST_Length(v_toarc_geom)
-                INTO v_flwreg_length;
-
-                -- WARNING: this code is also in gw_fct_infofromid. If it needs to be changed here, it will most likely have to be changed there too.
-                -- Get node id from initial clicked point
-                SELECT * INTO v_noderecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(v_reduced_geometry), v_edit_node.the_geom, v_arc_searchnodes)
-                ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(v_reduced_geometry)) LIMIT 1;
-                -- Get flowreg_type
-                v_querystring = concat('SELECT feature_class FROM cat_feature WHERE child_layer = ' , quote_nullable(v_table_id) ,' LIMIT 1');
-                EXECUTE v_querystring INTO v_flwreg_type;
-				-- Get order_id
-                SELECT COALESCE(MAX(order_id), 0) + 1 INTO v_order_id FROM ve_frelem WHERE node_id = v_noderecord1.node_id ::text AND flwreg_type = v_flwreg_type;
-                -- Set nodarc_id
-                v_nodarc_id = concat(v_noderecord1.node_id,upper(substring(v_flwreg_type FROM 1 FOR 2)), v_order_id);
+				END IF;              
 			END IF;
+		END IF;
+		
+		-- get flreg vdefaults (Node ID & to_arc)
+		IF upper(v_catfeature.feature_class) = 'FRELEM' THEN
+			
+			-- get node_id
+			SELECT node_id INTO v_node_id FROM ve_node WHERE ST_DWithin(ST_startpoint(v_reduced_geometry), ve_node.the_geom, v_arc_searchnodes)
+			ORDER BY ST_Distance(ve_node.the_geom, ST_startpoint(v_reduced_geometry)) LIMIT 1;
+			if v_node_id is NULL THEN
+				SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"3694", "function":"2560","parameters":null, "is_process":true}}$$);
+			END IF;
+							
+			-- get to_arc
+			SELECT sys_type INTO v_featureclass FROM ve_node WHERE node_id = v_node_id;
+			IF v_featureclass IS NOT NULL AND v_featureclass IN ('PUMP', 'VALVE', 'METER') THEN
+				v_tablefeature = concat('man_',lower(v_featureclass));
+				EXECUTE 'SELECT to_arc FROM '||v_tablefeature||' WHERE node_id = '||v_node_id
+				INTO v_toarc;
+			END IF;
+			
 		END IF;
 
 		-- get NODE vdefaults user's mapzones only for nodes (for arcs is disabled because values are taken using heritage from nodes. For connect also because they takes from arc)
@@ -540,8 +540,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_presszone_id = (SELECT presszone_id FROM presszone WHERE ST_DWithin(v_reduced_geometry, presszone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_presszone_id =(SELECT presszone_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_presszone_id =(SELECT presszone_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -551,18 +551,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(v_reduced_geometry, sector.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
-			END IF;
-		END IF;
-
-		-- Node ID
-		IF upper(v_catfeature.feature_type) = 'ELEMENT' AND upper(v_catfeature.feature_class) = 'FRELEM' THEN
-			SELECT node_id INTO v_node_id FROM v_edit_node WHERE ST_DWithin(ST_startpoint(v_reduced_geometry), v_edit_node.the_geom, v_arc_searchnodes)
-			ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(v_reduced_geometry)) LIMIT 1;
-			if v_node_id is NULL THEN
-				SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"3694", "function":"2560","parameters":null, "is_process":true}}$$);
+				v_sector_id =(SELECT sector_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -572,8 +562,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_dma_id = (SELECT dma_id FROM dma WHERE ST_DWithin(v_reduced_geometry, dma.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_dma_id =(SELECT dma_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -582,8 +572,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_omzone_id = (SELECT omzone_id FROM omzone WHERE ST_DWithin(v_reduced_geometry, omzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_omzone_id =(SELECT omzone_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_omzone_id =(SELECT omzone_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -593,8 +583,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(v_reduced_geometry, exploitation.the_geom,0.001)  AND active=true LIMIT 1);
 			ELSE
-				v_expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_expl_id =(SELECT expl_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -604,8 +594,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_supplyzone_id = (SELECT supplyzone_id FROM supplyzone WHERE ST_DWithin(v_reduced_geometry, supplyzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_supplyzone_id =(SELECT supplyzone_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_supplyzone_id =(SELECT supplyzone_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -615,8 +605,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_dwfzone_id = (SELECT dwfzone_id FROM dwfzone WHERE ST_DWithin(v_reduced_geometry, dwfzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_dwfzone_id =(SELECT dwfzone_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_dwfzone_id =(SELECT dwfzone_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -626,8 +616,8 @@ BEGIN
 			IF count_aux = 1 THEN
 				v_drainzone_id = (SELECT drainzone_id FROM drainzone WHERE ST_DWithin(v_reduced_geometry, drainzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 			ELSE
-				v_drainzone_id =(SELECT drainzone_id FROM v_edit_arc WHERE ST_DWithin(v_reduced_geometry, v_edit_arc.the_geom, v_proximity_buffer)
-				order by ST_Distance (v_reduced_geometry, v_edit_arc.the_geom) LIMIT 1);
+				v_drainzone_id =(SELECT drainzone_id FROM ve_arc WHERE ST_DWithin(v_reduced_geometry, ve_arc.the_geom, v_proximity_buffer)
+				order by ST_Distance (v_reduced_geometry, ve_arc.the_geom) LIMIT 1);
 			END IF;
 		END IF;
 
@@ -665,7 +655,7 @@ BEGIN
 						order by ST_Distance(v_reduced_geometry, ext_address.the_geom) LIMIT 1);
 
 		-- Dem elevation
-		IF v_sys_raster_dem AND v_edit_insert_elevation_from_dem AND v_idname IN ('node_id', 'connec_id', 'gully_id') THEN
+		IF v_sys_raster_dem AND ve_insert_elevation_from_dem AND v_idname IN ('node_id', 'connec_id', 'gully_id') THEN
 			v_elevation = (SELECT ST_Value(rast,1, v_reduced_geometry, true) FROM ext_raster_dem WHERE id =
 			(SELECT id FROM ext_raster_dem WHERE st_dwithin (envelope, v_reduced_geometry, 1) LIMIT 1) limit 1);
 		END IF;
@@ -679,7 +669,14 @@ BEGIN
 		IF v_project_type = 'WS' AND v_presszone_id IS NOT NULL THEN
 			v_staticpressure = (SELECT head from presszone WHERE presszone_id = v_presszone_id) - v_elevation;
 		END IF;
-
+	
+		-- force state vdefault in function of psector mode
+		IF (SELECT value FROM config_param_user WHERE "parameter" = 'plan_psector_current' and value::integer in (select psector_id from plan_psector)) IS NOT NULL THEN
+				UPDATE config_param_user SET value = 2 WHERE PARAMETER = 'edit_state_vdefault';
+			else
+				UPDATE config_param_user SET value = 1 WHERE PARAMETER = 'edit_state_vdefault';			
+		END IF;
+	
 	ELSIF v_tg_op ='UPDATE' OR v_tg_op ='SELECT' then
 
 		-- getting values from feature
@@ -801,9 +798,6 @@ BEGIN
 			END IF;
 		END IF;
 	END IF;
-
-	v_node1 = COALESCE (v_node1, '');
-	v_node2 = COALESCE (v_node2, '');
 
 	-- gettingf minvalue & maxvalues for widgetcontrols
 	IF v_project_type = 'UD' AND v_catfeature.feature_type IS NOT NULL THEN
@@ -1003,17 +997,20 @@ BEGIN
 						IF (v_auto_streetvalues_field = 'postnumber') THEN
 							field_value = v_postnumber;
 						ELSE field_value = NULL;
+						END IF;
 					END IF;
-				END IF;
 
 				WHEN 'postcomplement' THEN
 					IF (v_auto_streetvalues_status IS TRUE) THEN
 						IF (v_auto_streetvalues_field = 'postcomplement') THEN
 							field_value = v_postnumber;
 						ELSE field_value = NULL;
+						END IF;
 					END IF;
-				END IF;
-
+				WHEN 'to_arc' THEN
+                        IF v_catfeature.feature_type = 'FLWREG' THEN
+                            field_value = v_toarc;
+                        END IF;
 				WHEN 'ownercat_id' THEN
 					field_value = (SELECT owner_vdefault FROM exploitation WHERE expl_id = v_expl_id LIMIT 1);
 				WHEN 'node_id' THEN
@@ -1045,22 +1042,6 @@ BEGIN
                         IF v_catfeature.feature_type = 'FLWREG' THEN
                             field_value = v_noderecord1.node_id;
                         END IF;
-                     WHEN 'to_arc' THEN
-                        IF v_catfeature.feature_type = 'FLWREG' THEN
-                            field_value = v_toarc;
-                        END IF;
-                    WHEN 'order_id' THEN
-                        IF v_catfeature.feature_type = 'FLWREG' THEN
-                            field_value = v_order_id;
-                        END IF;
-                    WHEN 'nodarc_id' THEN
-                        IF v_catfeature.feature_type = 'FLWREG' THEN
-                            field_value = v_nodarc_id;
-                        END IF;
-                    when 'flwreg_type' then
-                        field_value = v_flwreg_type;
-                    when 'flwreg_length' then
-                        field_value = v_flwreg_length;
 					WHEN 'dwfzone_id' THEN
 						field_value = v_dwfzone_id;
 					WHEN 'drainzone_id' THEN

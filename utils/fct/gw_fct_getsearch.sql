@@ -15,8 +15,8 @@ $BODY$
 
 /*EXAMPLE
 
-SELECT SCHEMA_NAME.gw_fct_getsearch($${"client":{"device": 5, "lang": "es_ES", "cur_user": "bgeo", "infoType": 1}, "form":{}, "feature":{}, "data":{"filterFields":{"searchText":{"filterSign":"", "value":""}}, "pageInfo":{}}}$$);
-SELECT SCHEMA_NAME.gw_fct_getsearch($${"client":{"device": 5, "lang": "es_ES", "cur_user": "bgeo", "infoType": 1}, "form":{}, "feature":{}, "data":{"filterFields":{"searchText":{"filterSign":"", "value":"calle"}}, "pageInfo":{}}}$$);
+SELECT SCHEMA_NAME.gw_fct_getsearch($${"client":{"device": 5, "lang": "es_ES", "cur_user": "bgeo", "infoType": 1}, "form":{}, "feature":{}, "data":{"parameters":{"searchText":""}, "pageInfo":{}}}$$);
+SELECT SCHEMA_NAME.gw_fct_getsearch($${"client":{"device": 5, "lang": "es_ES", "cur_user": "bgeo", "infoType": 1}, "form":{}, "feature":{}, "data":{"parameters":{"searchText":"calle"}}, "pageInfo":{}}}$$);
 
 */
 
@@ -99,7 +99,7 @@ BEGIN
     -- get values from input
     v_addschema = (p_data ->>'data')::json->>'addSchema';
     v_singletab = (p_data ->>'form')::json->>'singleTab';
-   	v_filter = (((p_data ->>'data')::json->>'filterFields')::json->>'searchText')::json->>'value';
+	v_filter = ((p_data ->>'data')::json->>'parameters')::json->>'searchText';
     v_tiled = ((p_data ->>'client')::json->>'tiled')::boolean;
     v_device = ((p_data ->>'client')::json->>'device');
 	v_filter_poly = ((p_data ->>'data')::json->>'filterFields')::json->>'searchPoly';
@@ -402,7 +402,7 @@ BEGIN
 
 				-- get muni default from user variable or map
 				IF v_search_vdef IS NULL THEN
-					v_search_vdef = (SELECT m.muni_id FROM ext_municipality m, v_edit_exploitation e WHERE st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) limit 1);
+					v_search_vdef = (SELECT m.muni_id FROM ext_municipality m, ve_exploitation e WHERE st_dwithin(st_centroid(e.the_geom), m.the_geom, 0) limit 1);
 				END IF;
 
 				-- Init combo json

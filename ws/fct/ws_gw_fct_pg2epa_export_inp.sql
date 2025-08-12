@@ -58,7 +58,7 @@ BEGIN
 		UNION
 		 SELECT d.id,
 		    d.text
-		   FROM selector_sector s, v_edit_inp_dscenario_controls d
+		   FROM selector_sector s, ve_inp_dscenario_controls d
 		  WHERE s.sector_id = d.sector_id AND s.cur_user = "current_user"()::text AND d.active IS NOT FALSE
 	  ORDER BY 1) c  ORDER BY c.id;
 
@@ -251,7 +251,7 @@ BEGIN
 	CREATE OR REPLACE TEMP VIEW vi_t_pipes AS
 	 SELECT arc_id, node_1, node_2, length, diameter, roughness, minorloss, status::character varying(30) AS status,
 	 concat(';', sector_id, ' ', COALESCE(presszone_id, '0'::text), ' ', COALESCE(dma_id, 0), ' ', COALESCE(dqa_id, 0), ' ', COALESCE(minsector_id, 0), ' ', arccat_id) AS other
-	 FROM temp_t_arc  WHERE epa_type::text = ANY (ARRAY['PIPE'::character varying::text, 'SHORTPIPE'::character varying::text, 'NODE2NODE'::character varying::text]);
+	 FROM temp_t_arc  WHERE epa_type::text = ANY (ARRAY['PIPE'::character varying::text, 'SHORTPIPE'::character varying::text, 'NODE2NODE'::character varying::text, 'FRSHORTPIPE'::character varying::text]);
 
 
 
@@ -337,7 +337,23 @@ BEGIN
 		    dqa_id,
 		    minsector_id,
 		    arccat_id
-		   FROM temp_t_arc t JOIN inp_pump ON arc_id::text = concat(inp_pump.node_id, '_n2a_4')) a;
+		   FROM temp_t_arc t JOIN inp_pump ON arc_id::text = concat(inp_pump.node_id, '_n2a_4')
+		UNION
+		 SELECT arc_id,
+		    node_1,
+		    node_2,
+		    diameter,
+		    'PRV'::character varying(18) AS valve_type,
+		    addparam::json ->> 'pressure'::text AS setting,
+		    minorloss,
+		    sector_id,
+		    dma_id,
+		    presszone_id,
+		    dqa_id,
+		    minsector_id,
+		    arccat_id
+		   FROM temp_t_arc t JOIN inp_frpump ON arc_id::text = concat(inp_frpump.element_id::text, '_n2a_1')) a;
+
 
 
 	CREATE OR REPLACE TEMP VIEW vi_t_pumps AS
@@ -361,6 +377,29 @@ BEGIN
 	    concat(';', sector_id, ' ', dma_id, ' ', presszone_id, ' ', dqa_id, ' ', minsector_id, ' ', arccat_id) AS other
 	   FROM temp_t_arc
 	  WHERE (epa_type::text = ANY (ARRAY['PUMP'::text, 'VIRTUALPUMP'::text])) AND NOT (arc_id::text IN ( SELECT arc_id FROM vi_t_valves))
+	  UNION
+	  SELECT arc_id, node_1, node_2,
+	  	CASE
+		    WHEN (addparam::json ->> 'power'::text) <> ''::text THEN ('POWER'::text || ' '::text) || (addparam::json ->> 'power'::text)
+		    ELSE NULL::text
+		END AS power,
+		CASE
+		    WHEN (addparam::json ->> 'curve_id'::text) <> ''::text THEN ('HEAD'::text || ' '::text) || (addparam::json ->> 'curve_id'::text)
+		    ELSE NULL::text
+		END AS head,
+		CASE
+		    WHEN (addparam::json ->> 'speed'::text) <> ''::text THEN ('SPEED'::text || ' '::text) || (addparam::json ->> 'speed'::text)
+		    ELSE NULL::text
+		END AS speed,
+		CASE
+		    WHEN (addparam::json ->> 'pattern'::text) <> ''::text THEN ('PATTERN'::text || ' '::text) || (addparam::json ->> 'pattern'::text)
+		    ELSE NULL::text
+		END AS pattern_id,
+	    concat(';', sector_id, ' ', dma_id, ' ', presszone_id, ' ', dqa_id, ' ', minsector_id, ' ', arccat_id) AS other
+	   FROM ve_inp_frpump w
+			JOIN man_frelem m ON m.element_id = w.element_id
+			JOIN temp_t_arc a ON a.arc_id = w.element_id::text
+		WHERE (a.arc_type::text = 'NODE2ARC' AND a.epa_type::text = 'FRPUMP'::text) OR (a.arc_type::text = 'DOUBLE-NOD2ARC(PUMP)' AND a.epa_type::text = 'PUMP'::text)
 	  ORDER BY arc_id;
 
 
@@ -423,7 +462,7 @@ BEGIN
 	CREATE OR REPLACE TEMP VIEW vi_t_rules AS
 	 SELECT c.text FROM ( SELECT inp_rules.id, inp_rules.text FROM selector_sector s, inp_rules  WHERE s.sector_id = inp_rules.sector_id AND s.cur_user = "current_user"()::text AND inp_rules.active IS NOT FALSE
 	UNION
-	 SELECT d.id, d.text FROM selector_sector s, v_edit_inp_dscenario_rules d WHERE s.sector_id = d.sector_id AND s.cur_user = "current_user"()::text AND d.active IS NOT FALSE
+	 SELECT d.id, d.text FROM selector_sector s, ve_inp_dscenario_rules d WHERE s.sector_id = d.sector_id AND s.cur_user = "current_user"()::text AND d.active IS NOT FALSE
 	  ORDER BY 1) c
 	  ORDER BY c.id;
 

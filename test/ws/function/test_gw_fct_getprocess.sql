@@ -11,8 +11,8 @@ SET client_min_messages TO WARNING;
 
 SET search_path = "SCHEMA_NAME", public, pg_catalog;
 
--- Plan for 2 test
-SELECT plan(2);
+-- Plan for 7 test
+SELECT plan(7);
 
 -- Create roles for testing
 CREATE USER plan_user;
@@ -45,6 +45,45 @@ SELECT is (
     'Check if gw_fct_getprocess --> "functionId":"3160" returns status "Accepted"'
 );
 
+-- Create Demand Dscenario from ToC
+SELECT is (
+    (gw_fct_getprocess($${"client":{"device":4, "lang":"es_ES", "version":"4.2.0", "infoType":1, "epsg":25831}, "form":{},
+    "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "functionId":"3112"}}$$)::JSON)->>'status',
+    'Accepted',
+    'Check if gw_fct_getprocess --> "functionId":"3112" returns status "Accepted"'
+);
+
+-- Create Network Dscenario from ToC
+SELECT is (
+    (gw_fct_getprocess($${"client":{"device":4, "lang":"es_ES", "version":"4.2.0", "infoType":1, "epsg":25831}, "form":{},
+    "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "functionId":"3108"}}$$)::JSON)->>'status',
+    'Accepted',
+    'Check if gw_fct_getprocess --> "functionId":"3108" returns status "Accepted"'
+);
+
+-- Manage Dscenario values
+SELECT is (
+    (gw_fct_getprocess($${"client":{"device":4, "lang":"es_ES", "version":"4.2.0", "infoType":1, "epsg":25831}, "form":{},
+    "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "functionId":"3042"}}$$)::JSON)->>'status',
+    'Accepted',
+    'Check if gw_fct_getprocess --> "functionId":"3042" returns status "Accepted"'
+);
+
+-- Create Demand Dscenario from CRM
+SELECT is (
+    (gw_fct_getprocess($${"client":{"device":4, "lang":"es_ES", "version":"4.2.0", "infoType":1, "epsg":25831}, "form":{},
+    "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "functionId":"3110"}}$$)::JSON)->>'status',
+    'Accepted',
+    'Check if gw_fct_getprocess --> "functionId":"3110" returns status "Accepted"'
+);
+
+-- Set cost for removed material on psectors
+SELECT is (
+    (gw_fct_getprocess($${"client":{"device":4, "lang":"es_ES", "version":"4.2.0", "infoType":1, "epsg":25831}, "form":{},
+    "feature":{}, "data":{"filterFields":{}, "pageInfo":{}, "functionId":"3322"}}$$)::JSON)->>'status',
+    'Accepted',
+    'Check if gw_fct_getprocess --> "functionId":"3322" returns status "Accepted"'
+);
 
 
 -- Finish the test

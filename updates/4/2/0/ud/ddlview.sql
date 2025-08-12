@@ -11,6 +11,16 @@ SET search_path = SCHEMA_NAME, public, pg_catalog;
 
 DROP VIEW IF EXISTS v_edit_dwfzone;
 DROP VIEW IF EXISTS v_ui_dwfzone;
+DROP VIEW IF EXISTS v_state_samplepoint;
+DROP VIEW IF EXISTS v_expl_gully;
+DROP VIEW IF EXISTS v_man_gully;
+DROP VIEW IF EXISTS v_state_link_connec;
+DROP VIEW IF EXISTS v_state_link_gully;
+DROP VIEW IF EXISTS v_state_gully;
+DROP VIEW IF EXISTS vi_pollutants;
+DROP VIEW IF EXISTS v_state_element;
+
+
 
 CREATE OR REPLACE VIEW v_edit_dwfzone
 AS SELECT d.dwfzone_id,
@@ -21,7 +31,9 @@ AS SELECT d.dwfzone_id,
     d.graphconfig::text AS graphconfig,
     d.stylesheet::text AS stylesheet,
     d.link,
+    d.muni_id,
     d.expl_id,
+    d.sector_id,
     d.lock_level,
     d.drainzone_id,
     d.the_geom,
@@ -44,7 +56,9 @@ AS SELECT DISTINCT ON (d.dwfzone_id) d.dwfzone_id,
     d.graphconfig,
     d.stylesheet,
     d.link,
+    d.muni_id,
     d.expl_id,
+    d.sector_id,
     d.lock_level,
     d.drainzone_id,
     d.active,
@@ -1087,6 +1101,8 @@ AS WITH typevalue AS (
             connec.access_type,
             connec.placement_type,
             connec.accessibility,
+            connec.brand_id,
+            connec.model_id,
             connec.asset_id,
             connec.adate,
             connec.adescript,
@@ -1203,6 +1219,8 @@ AS WITH typevalue AS (
     access_type,
     placement_type,
     accessibility,
+    brand_id,
+    model_id,
     asset_id,
     adate,
     adescript,
@@ -1334,7 +1352,6 @@ AS WITH typevalue AS (
             l.link_type,
             cat_feature.feature_class AS sys_type,
             l.linkcat_id,
-            l.epa_type,
             l.state,
             l.state_type,
             l.expl_id,
@@ -1367,6 +1384,8 @@ AS WITH typevalue AS (
             l.workcat_id_end,
             l.builtdate,
             l.enddate,
+            l.brand_id,
+            l.model_id,
             l.private_linkcat_id,
             l.verified,
             l.uncertain,
@@ -1412,7 +1431,6 @@ AS WITH typevalue AS (
     link_type,
     sys_type,
     linkcat_id,
-    epa_type,
     state,
     state_type,
     expl_id,
@@ -1445,6 +1463,8 @@ AS WITH typevalue AS (
     workcat_id_end,
     builtdate,
     enddate,
+    brand_id,
+    model_id,
     private_linkcat_id,
     verified,
     uncertain,
@@ -1481,7 +1501,6 @@ AS SELECT link_id,
     link_type,
     sys_type,
     linkcat_id,
-    epa_type,
     state,
     state_type,
     expl_id,
@@ -1514,6 +1533,8 @@ AS SELECT link_id,
     workcat_id_end,
     builtdate,
     enddate,
+    brand_id,
+    model_id,
     private_linkcat_id,
     verified,
     uncertain,
@@ -1534,77 +1555,6 @@ AS SELECT link_id,
    FROM v_edit_link
   WHERE feature_type::text = 'GULLY'::text;
 
-CREATE OR REPLACE VIEW ve_link_link
-AS SELECT v_edit_link.link_id,
-    v_edit_link.code,
-    v_edit_link.sys_code,
-    v_edit_link.top_elev1,
-    v_edit_link.y1,
-    v_edit_link.elevation1,
-    v_edit_link.exit_id,
-    v_edit_link.exit_type,
-    v_edit_link.top_elev2,
-    v_edit_link.y2,
-    v_edit_link.elevation2,
-    v_edit_link.feature_type,
-    v_edit_link.feature_id,
-    v_edit_link.link_type,
-    v_edit_link.sys_type,
-    v_edit_link.linkcat_id,
-    v_edit_link.epa_type,
-    v_edit_link.state,
-    v_edit_link.state_type,
-    v_edit_link.expl_id,
-    v_edit_link.macroexpl_id,
-    v_edit_link.muni_id,
-    v_edit_link.sector_id,
-    v_edit_link.macrosector_id,
-    v_edit_link.sector_type,
-    v_edit_link.drainzone_id,
-    v_edit_link.drainzone_type,
-    v_edit_link.drainzone_outfall,
-    v_edit_link.dwfzone_id,
-    v_edit_link.dwfzone_type,
-    v_edit_link.dwfzone_outfall,
-    v_edit_link.omzone_id,
-    v_edit_link.macroomzone_id,
-    v_edit_link.dma_id,
-    v_edit_link.location_type,
-    v_edit_link.fluid_type,
-    v_edit_link.custom_length,
-    v_edit_link.gis_length,
-    v_edit_link.sys_slope,
-    v_edit_link.annotation,
-    v_edit_link.observ,
-    v_edit_link.comment,
-    v_edit_link.descript,
-    v_edit_link.link,
-    v_edit_link.num_value,
-    v_edit_link.workcat_id,
-    v_edit_link.workcat_id_end,
-    v_edit_link.builtdate,
-    v_edit_link.enddate,
-    v_edit_link.private_linkcat_id,
-    v_edit_link.verified,
-    v_edit_link.uncertain,
-    v_edit_link.userdefined_geom,
-    v_edit_link.datasource,
-    v_edit_link.is_operative,
-    v_edit_link.sector_style,
-    v_edit_link.omzone_style,
-    v_edit_link.drainzone_style,
-    v_edit_link.dwfzone_style,
-    v_edit_link.lock_level,
-    v_edit_link.expl_visibility,
-    v_edit_link.created_at,
-    v_edit_link.created_by,
-    v_edit_link.updated_at,
-    v_edit_link.updated_by,
-    v_edit_link.the_geom,
-    NULL::text AS "?column?"
-   FROM v_edit_link
-     JOIN man_link USING (link_id)
-  WHERE v_edit_link.link_type::text = 'LINK'::text;
 
 CREATE OR REPLACE VIEW v_edit_link_connec
 AS SELECT link_id,
@@ -1623,7 +1573,6 @@ AS SELECT link_id,
     link_type,
     sys_type,
     linkcat_id,
-    epa_type,
     state,
     state_type,
     expl_id,
@@ -1656,6 +1605,8 @@ AS SELECT link_id,
     workcat_id_end,
     builtdate,
     enddate,
+    brand_id,
+    model_id,
     private_linkcat_id,
     verified,
     uncertain,
@@ -1907,6 +1858,8 @@ AS WITH typevalue AS (
                 END AS pjoint_type,
             gully.placement_type,
             gully.access_type,
+            gully.brand_id,
+            gully.model_id,
             gully.asset_id,
             gully.adate,
             gully.adescript,
@@ -2033,6 +1986,8 @@ AS WITH typevalue AS (
     pjoint_type,
     placement_type,
     access_type,
+    brand_id,
+    model_id,
     asset_id,
     adate,
     adescript,
@@ -4975,3 +4930,4360 @@ AS SELECT inp_inlet.node_id,
      LEFT JOIN v_rpt_nodedepth_sum d ON inp_inlet.node_id::text = d.node_id::text
      LEFT JOIN v_rpt_nodesurcharge_sum s ON d.node_id::text = s.node_id::text
      LEFT JOIN v_rpt_nodeflooding_sum f ON s.node_id::text = f.node_id::text;
+
+
+-- CREATE PARENT VIEWS WITH NEW NAMES
+SELECT SCHEMA_NAME.gw_fct_admin_manage_child_views($${"data":{"action":"MULTI-DELETE" }}$$);
+
+ALTER VIEW v_edit_arc RENAME TO ve_arc;
+ALTER VIEW v_edit_connec RENAME TO ve_connec;
+ALTER VIEW v_edit_node RENAME TO ve_node;
+ALTER VIEW v_edit_link RENAME TO ve_link;
+ALTER VIEW v_edit_gully RENAME TO ve_gully;
+ALTER VIEW v_edit_link_connec RENAME TO ve_link_connec;
+ALTER VIEW v_edit_link_gully RENAME TO ve_link_gully;
+--
+CREATE OR REPLACE VIEW ve_arc
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), arc_psector AS (
+         SELECT pp.arc_id,
+            pp.state AS p_state
+           FROM plan_psector_x_arc pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+        ), arc_selector AS (
+         SELECT arc.arc_id
+           FROM arc
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND arc.state = s.state_id
+             LEFT JOIN ( SELECT arc_psector.arc_id
+                   FROM arc_psector
+                  WHERE arc_psector.p_state = 0) a USING (arc_id)
+          WHERE a.arc_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(arc.expl_visibility::integer[], arc.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = arc.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = arc.muni_id))
+        UNION ALL
+         SELECT arc_psector.arc_id
+           FROM arc_psector
+          WHERE arc_psector.p_state = 1
+        ), arc_selected AS (
+         SELECT arc.arc_id,
+            arc.code,
+            arc.sys_code,
+            arc.node_1,
+            arc.nodetype_1,
+            arc.elev1,
+            arc.custom_elev1,
+                CASE
+                    WHEN arc.sys_elev1 IS NULL THEN arc.node_sys_elev_1
+                    ELSE arc.sys_elev1
+                END AS sys_elev1,
+            arc.y1,
+            arc.custom_y1,
+                CASE
+                    WHEN
+                    CASE
+                        WHEN arc.custom_y1 IS NULL THEN arc.y1
+                        ELSE arc.custom_y1
+                    END IS NULL THEN arc.node_sys_top_elev_1 - arc.sys_elev1
+                    ELSE
+                    CASE
+                        WHEN arc.custom_y1 IS NULL THEN arc.y1
+                        ELSE arc.custom_y1
+                    END
+                END AS sys_y1,
+            arc.node_sys_top_elev_1 -
+                CASE
+                    WHEN arc.sys_elev1 IS NULL THEN arc.node_sys_elev_1
+                    ELSE arc.sys_elev1
+                END - cat_arc.geom1 AS r1,
+                CASE
+                    WHEN arc.sys_elev1 IS NULL THEN arc.node_sys_elev_1
+                    ELSE arc.sys_elev1
+                END - arc.node_sys_elev_1 AS z1,
+            arc.node_2,
+            arc.nodetype_2,
+            arc.elev2,
+            arc.custom_elev2,
+                CASE
+                    WHEN arc.sys_elev2 IS NULL THEN arc.node_sys_elev_2
+                    ELSE arc.sys_elev2
+                END AS sys_elev2,
+            arc.y2,
+            arc.custom_y2,
+                CASE
+                    WHEN
+                    CASE
+                        WHEN arc.custom_y2 IS NULL THEN arc.y2
+                        ELSE arc.custom_y2
+                    END IS NULL THEN arc.node_sys_top_elev_2 - arc.sys_elev2
+                    ELSE
+                    CASE
+                        WHEN arc.custom_y2 IS NULL THEN arc.y2
+                        ELSE arc.custom_y2
+                    END
+                END AS sys_y2,
+            arc.node_sys_top_elev_2 -
+                CASE
+                    WHEN arc.sys_elev2 IS NULL THEN arc.node_sys_elev_2
+                    ELSE arc.sys_elev2
+                END - cat_arc.geom1 AS r2,
+                CASE
+                    WHEN arc.sys_elev2 IS NULL THEN arc.node_sys_elev_2
+                    ELSE arc.sys_elev2
+                END - arc.node_sys_elev_2 AS z2,
+            cat_feature.feature_class AS sys_type,
+            arc.arc_type::text AS arc_type,
+            arc.arccat_id,
+                CASE
+                    WHEN arc.matcat_id IS NULL THEN cat_arc.matcat_id
+                    ELSE arc.matcat_id
+                END AS matcat_id,
+            cat_arc.shape AS cat_shape,
+            cat_arc.geom1 AS cat_geom1,
+            cat_arc.geom2 AS cat_geom2,
+            cat_arc.width AS cat_width,
+            cat_arc.area AS cat_area,
+            arc.epa_type,
+            arc.state,
+            arc.state_type,
+            arc.parent_id,
+            arc.expl_id,
+            e.macroexpl_id,
+            arc.muni_id,
+            arc.sector_id,
+            sector_table.macrosector_id,
+            sector_table.sector_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            arc.drainzone_outfall,
+            arc.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            arc.dwfzone_outfall,
+            arc.omzone_id,
+            omzone_table.macroomzone_id,
+            omzone_table.omzone_type,
+            arc.dma_id,
+            arc.omunit_id,
+            arc.minsector_id,
+            arc.pavcat_id,
+            arc.soilcat_id,
+            arc.function_type,
+            arc.category_type,
+            arc.location_type,
+            arc.fluid_type,
+            arc.custom_length,
+            st_length(arc.the_geom)::numeric(12,2) AS gis_length,
+            arc.sys_slope AS slope,
+            arc.descript,
+            arc.annotation,
+            arc.observ,
+            arc.comment,
+            concat(cat_feature.link_path, arc.link) AS link,
+            arc.num_value,
+            arc.district_id,
+            arc.postcode,
+            arc.streetaxis_id,
+            arc.postnumber,
+            arc.postcomplement,
+            arc.streetaxis2_id,
+            arc.postnumber2,
+            arc.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            arc.workcat_id,
+            arc.workcat_id_end,
+            arc.workcat_id_plan,
+            arc.builtdate,
+            arc.registration_date,
+            arc.enddate,
+            arc.ownercat_id,
+            arc.last_visitdate,
+            arc.visitability,
+            arc.om_state,
+            arc.conserv_state,
+            arc.brand_id,
+            arc.model_id,
+            arc.serial_number,
+            arc.asset_id,
+            arc.adate,
+            arc.adescript,
+            arc.verified,
+            arc.uncertain,
+            arc.datasource,
+            cat_arc.label,
+            arc.label_x,
+            arc.label_y,
+            arc.label_rotation,
+            arc.label_quadrant,
+            arc.inventory,
+            arc.publish,
+            vst.is_operative,
+            arc.is_scadamap,
+                CASE
+                    WHEN arc.sector_id > 0 AND vst.is_operative = true AND arc.epa_type::text <> 'UNDEFINED'::character varying(16)::text THEN arc.epa_type
+                    ELSE NULL::character varying(16)
+                END AS inp_type,
+            arc_add.result_id,
+            arc_add.max_flow,
+            arc_add.max_veloc,
+            arc_add.mfull_flow,
+            arc_add.mfull_depth,
+            arc_add.manning_veloc,
+            arc_add.manning_flow,
+            arc_add.dwf_minflow,
+            arc_add.dwf_maxflow,
+            arc_add.dwf_minvel,
+            arc_add.dwf_maxvel,
+            arc_add.conduit_capacity,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            arc.lock_level,
+            arc.initoverflowpath,
+            arc.inverted_slope,
+            arc.negative_offset,
+            arc.expl_visibility,
+            date_trunc('second'::text, arc.created_at) AS created_at,
+            arc.created_by,
+            date_trunc('second'::text, arc.updated_at) AS updated_at,
+            arc.updated_by,
+            arc.the_geom,
+            arc.meandering
+           FROM arc_selector
+             JOIN arc USING (arc_id)
+             JOIN cat_arc ON arc.arccat_id::text = cat_arc.id::text
+             JOIN cat_feature ON arc.arc_type::text = cat_feature.id::text
+             JOIN exploitation e ON e.expl_id = arc.expl_id
+             JOIN ext_municipality mu ON arc.muni_id = mu.muni_id
+             JOIN value_state_type vst ON vst.id = arc.state_type
+             JOIN sector_table ON sector_table.sector_id = arc.sector_id
+             LEFT JOIN omzone_table ON omzone_table.omzone_id = arc.omzone_id
+             LEFT JOIN drainzone_table ON arc.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON arc.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN arc_add ON arc_add.arc_id = arc.arc_id
+        )
+ SELECT arc_id,
+    code,
+    sys_code,
+    node_1,
+    nodetype_1,
+    elev1,
+    custom_elev1,
+    sys_elev1,
+    y1,
+    custom_y1,
+    sys_y1,
+    r1,
+    z1,
+    node_2,
+    nodetype_2,
+    elev2,
+    custom_elev2,
+    sys_elev2,
+    y2,
+    custom_y2,
+    sys_y2,
+    r2,
+    z2,
+    sys_type,
+    arc_type,
+    arccat_id,
+    matcat_id,
+    cat_shape,
+    cat_geom1,
+    cat_geom2,
+    cat_width,
+    cat_area,
+    epa_type,
+    state,
+    state_type,
+    parent_id,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    omzone_type,
+    omunit_id,
+    minsector_id,
+    pavcat_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    custom_length,
+    gis_length,
+    slope,
+    descript,
+    annotation,
+    observ,
+    comment,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    registration_date,
+    enddate,
+    ownercat_id,
+    last_visitdate,
+    visitability,
+    om_state,
+    conserv_state,
+    brand_id,
+    model_id,
+    serial_number,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    uncertain,
+    datasource,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    label_quadrant,
+    inventory,
+    publish,
+    is_operative,
+    is_scadamap,
+    inp_type,
+    result_id,
+    max_flow,
+    max_veloc,
+    mfull_flow,
+    mfull_depth,
+    manning_veloc,
+    manning_flow,
+    dwf_minflow,
+    dwf_maxflow,
+    dwf_minvel,
+    dwf_maxvel,
+    conduit_capacity,
+    sector_style,
+    drainzone_style,
+    dwfzone_style,
+    omzone_style,
+    lock_level,
+    initoverflowpath,
+    inverted_slope,
+    negative_offset,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom,
+    meandering
+   FROM arc_selected;
+
+CREATE OR REPLACE VIEW ve_node
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), node_psector AS (
+         SELECT pp.node_id,
+            pp.state AS p_state
+           FROM plan_psector_x_node pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+        ), node_selector AS (
+         SELECT node.node_id
+           FROM node
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND node.state = s.state_id
+             LEFT JOIN ( SELECT node_psector.node_id
+                   FROM node_psector
+                  WHERE node_psector.p_state = 0) a USING (node_id)
+          WHERE a.node_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(node.expl_visibility::integer[], node.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = node.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = node.muni_id))
+        UNION ALL
+         SELECT node_psector.node_id
+           FROM node_psector
+          WHERE node_psector.p_state = 1
+        ), node_selected AS (
+         SELECT node.node_id,
+            node.code,
+            node.sys_code,
+            node.top_elev,
+            node.custom_top_elev,
+                CASE
+                    WHEN node.custom_top_elev IS NOT NULL THEN node.custom_top_elev
+                    ELSE node.top_elev
+                END AS sys_top_elev,
+            node.ymax,
+            node.custom_ymax,
+                CASE
+                    WHEN node.custom_ymax IS NOT NULL THEN node.custom_ymax
+                    ELSE node.ymax
+                END AS sys_ymax,
+            node.elev,
+            node.custom_elev,
+                CASE
+                    WHEN node.elev IS NOT NULL AND node.custom_elev IS NULL THEN node.elev
+                    WHEN node.custom_elev IS NOT NULL THEN node.custom_elev
+                    ELSE NULL::numeric(12,3)
+                END AS sys_elev,
+            cat_feature.feature_class AS sys_type,
+            node.node_type::text AS node_type,
+                CASE
+                    WHEN node.matcat_id IS NULL THEN cat_node.matcat_id
+                    ELSE node.matcat_id
+                END AS matcat_id,
+            node.nodecat_id,
+            node.epa_type,
+            node.state,
+            node.state_type,
+            node.arc_id,
+            node.parent_id,
+            node.expl_id,
+            exploitation.macroexpl_id,
+            node.muni_id,
+            node.sector_id,
+            sector_table.macrosector_id,
+            sector_table.sector_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            node.drainzone_outfall,
+            node.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            node.dwfzone_outfall,
+            node.omzone_id,
+            omzone_table.macroomzone_id,
+            node.dma_id,
+            node.omunit_id,
+            node.minsector_id,
+            node.pavcat_id,
+            node.soilcat_id,
+            node.function_type,
+            node.category_type,
+            node.location_type,
+            node.fluid_type,
+            node.annotation,
+            node.observ,
+            node.comment,
+            node.descript,
+            concat(cat_feature.link_path, node.link) AS link,
+            node.num_value,
+            node.district_id,
+            node.postcode,
+            node.streetaxis_id,
+            node.postnumber,
+            node.postcomplement,
+            node.streetaxis2_id,
+            node.postnumber2,
+            node.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            node.workcat_id,
+            node.workcat_id_end,
+            node.workcat_id_plan,
+            node.builtdate,
+            node.enddate,
+            node.ownercat_id,
+            node.conserv_state,
+            node.access_type,
+            node.placement_type,
+            node.brand_id,
+            node.model_id,
+            node.serial_number,
+            node.asset_id,
+            node.adate,
+            node.adescript,
+            node.verified,
+            node.xyz_date,
+            node.uncertain,
+            node.datasource,
+            node.unconnected,
+            cat_node.label,
+            node.label_x,
+            node.label_y,
+            node.label_rotation,
+            node.rotation,
+            node.label_quadrant,
+            node.hemisphere,
+            cat_node.svg,
+            node.inventory,
+            node.publish,
+            vst.is_operative,
+            node.is_scadamap,
+                CASE
+                    WHEN node.sector_id > 0 AND vst.is_operative = true AND node.epa_type::text <> 'UNDEFINED'::character varying(16)::text THEN node.epa_type
+                    ELSE NULL::character varying(16)
+                END AS inp_type,
+            node_add.result_id,
+            node_add.max_depth,
+            node_add.max_height,
+            node_add.flooding_rate,
+            node_add.flooding_vol,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            node.lock_level,
+            node.expl_visibility,
+            ( SELECT st_x(node.the_geom) AS st_x) AS xcoord,
+            ( SELECT st_y(node.the_geom) AS st_y) AS ycoord,
+            ( SELECT st_y(st_transform(node.the_geom, 4326)) AS st_y) AS lat,
+            ( SELECT st_x(st_transform(node.the_geom, 4326)) AS st_x) AS long,
+            date_trunc('second'::text, node.created_at) AS created_at,
+            node.created_by,
+            date_trunc('second'::text, node.updated_at) AS updated_at,
+            node.updated_by,
+            node.the_geom
+           FROM node_selector
+             JOIN node USING (node_id)
+             JOIN cat_node ON node.nodecat_id::text = cat_node.id::text
+             JOIN cat_feature ON cat_feature.id::text = node.node_type::text
+             JOIN exploitation ON node.expl_id = exploitation.expl_id
+             JOIN ext_municipality mu ON node.muni_id = mu.muni_id
+             JOIN value_state_type vst ON vst.id = node.state_type
+             JOIN sector_table ON sector_table.sector_id = node.sector_id
+             LEFT JOIN omzone_table ON omzone_table.omzone_id = node.omzone_id
+             LEFT JOIN drainzone_table ON node.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON node.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN node_add ON node_add.node_id = node.node_id
+        ), node_base AS (
+         SELECT node_selected.node_id,
+            node_selected.code,
+            node_selected.sys_code,
+            node_selected.top_elev,
+            node_selected.custom_top_elev,
+            node_selected.sys_top_elev,
+            node_selected.ymax,
+            node_selected.custom_ymax,
+                CASE
+                    WHEN node_selected.sys_ymax IS NOT NULL THEN node_selected.sys_ymax
+                    ELSE (node_selected.sys_top_elev - node_selected.sys_elev)::numeric(12,3)
+                END AS sys_ymax,
+            node_selected.elev,
+            node_selected.custom_elev,
+                CASE
+                    WHEN node_selected.elev IS NOT NULL AND node_selected.custom_elev IS NULL THEN node_selected.elev
+                    WHEN node_selected.custom_elev IS NOT NULL THEN node_selected.custom_elev
+                    ELSE (node_selected.sys_top_elev - node_selected.sys_ymax)::numeric(12,3)
+                END AS sys_elev,
+            node_selected.node_type,
+            node_selected.sys_type,
+            node_selected.matcat_id,
+            node_selected.nodecat_id,
+            node_selected.epa_type,
+            node_selected.state,
+            node_selected.state_type,
+            node_selected.arc_id,
+            node_selected.parent_id,
+            node_selected.expl_id,
+            node_selected.macroexpl_id,
+            node_selected.muni_id,
+            node_selected.sector_id,
+            node_selected.macrosector_id,
+            node_selected.sector_type,
+            node_selected.drainzone_id,
+            node_selected.drainzone_type,
+            node_selected.drainzone_outfall,
+            node_selected.dwfzone_id,
+            node_selected.dwfzone_type,
+            node_selected.dwfzone_outfall,
+            node_selected.omzone_id,
+            node_selected.macroomzone_id,
+            node_selected.dma_id,
+            node_selected.omunit_id,
+            node_selected.minsector_id,
+            node_selected.pavcat_id,
+            node_selected.soilcat_id,
+            node_selected.function_type,
+            node_selected.category_type,
+            node_selected.location_type,
+            node_selected.fluid_type,
+            node_selected.annotation,
+            node_selected.observ,
+            node_selected.comment,
+            node_selected.descript,
+            node_selected.link,
+            node_selected.num_value,
+            node_selected.district_id,
+            node_selected.postcode,
+            node_selected.streetaxis_id,
+            node_selected.postnumber,
+            node_selected.postcomplement,
+            node_selected.streetaxis2_id,
+            node_selected.postnumber2,
+            node_selected.postcomplement2,
+            node_selected.region_id,
+            node_selected.province_id,
+            node_selected.workcat_id,
+            node_selected.workcat_id_end,
+            node_selected.workcat_id_plan,
+            node_selected.builtdate,
+            node_selected.enddate,
+            node_selected.ownercat_id,
+            node_selected.conserv_state,
+            node_selected.access_type,
+            node_selected.placement_type,
+            node_selected.brand_id,
+            node_selected.model_id,
+            node_selected.serial_number,
+            node_selected.asset_id,
+            node_selected.adate,
+            node_selected.adescript,
+            node_selected.verified,
+            node_selected.xyz_date,
+            node_selected.uncertain,
+            node_selected.datasource,
+            node_selected.unconnected,
+            node_selected.label,
+            node_selected.label_x,
+            node_selected.label_y,
+            node_selected.label_rotation,
+            node_selected.rotation,
+            node_selected.label_quadrant,
+            node_selected.hemisphere,
+            node_selected.svg,
+            node_selected.inventory,
+            node_selected.publish,
+            node_selected.is_operative,
+            node_selected.is_scadamap,
+            node_selected.inp_type,
+            node_selected.result_id,
+            node_selected.max_depth,
+            node_selected.max_height,
+            node_selected.flooding_rate,
+            node_selected.flooding_vol,
+            node_selected.sector_style,
+            node_selected.omzone_style,
+            node_selected.drainzone_style,
+            node_selected.dwfzone_style,
+            node_selected.lock_level,
+            node_selected.expl_visibility,
+            node_selected.xcoord,
+            node_selected.ycoord,
+            node_selected.lat,
+            node_selected.long,
+            node_selected.created_at,
+            node_selected.created_by,
+            node_selected.updated_at,
+            node_selected.updated_by,
+            node_selected.the_geom
+           FROM node_selected
+        )
+ SELECT node_id,
+    code,
+    sys_code,
+    top_elev,
+    custom_top_elev,
+    sys_top_elev,
+    ymax,
+    custom_ymax,
+    sys_ymax,
+    elev,
+    custom_elev,
+    sys_elev,
+    node_type,
+    sys_type,
+    matcat_id,
+    nodecat_id,
+    epa_type,
+    state,
+    state_type,
+    arc_id,
+    parent_id,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    omunit_id,
+    minsector_id,
+    pavcat_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    annotation,
+    observ,
+    comment,
+    descript,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    enddate,
+    ownercat_id,
+    conserv_state,
+    access_type,
+    placement_type,
+    brand_id,
+    model_id,
+    serial_number,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    xyz_date,
+    uncertain,
+    datasource,
+    unconnected,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    rotation,
+    label_quadrant,
+    hemisphere,
+    svg,
+    inventory,
+    publish,
+    is_operative,
+    is_scadamap,
+    inp_type,
+    result_id,
+    max_depth,
+    max_height,
+    flooding_rate,
+    flooding_vol,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    xcoord,
+    ycoord,
+    lat,
+    long,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM node_base;
+
+CREATE OR REPLACE VIEW ve_connec
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), link_planned AS (
+         SELECT l.link_id,
+            l.feature_id,
+            l.feature_type,
+            l.exit_id,
+            l.exit_type,
+            l.expl_id,
+            exploitation.macroexpl_id,
+            l.sector_id,
+            sector_table.sector_type,
+            sector_table.macrosector_id,
+            l.omzone_id,
+            omzone_table.macroomzone_id,
+            omzone_table.omzone_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            l.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            l.dma_id,
+            l.fluid_type
+           FROM link l
+             JOIN exploitation USING (expl_id)
+             JOIN sector_table ON l.sector_id = sector_table.sector_id
+             LEFT JOIN omzone_table ON l.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON l.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON l.dwfzone_id = dwfzone_table.dwfzone_id
+          WHERE l.state = 2
+        ), connec_psector AS (
+         SELECT DISTINCT ON (pp.connec_id, pp.state) pp.connec_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.arc_id,
+            pp.link_id
+           FROM plan_psector_x_connec pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.connec_id, pp.state, pp.link_id DESC NULLS LAST
+        ), connec_selector AS (
+         SELECT connec.connec_id,
+            connec.arc_id,
+            NULL::integer AS link_id
+           FROM connec
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND connec.state = s.state_id
+             LEFT JOIN ( SELECT connec_psector.connec_id
+                   FROM connec_psector
+                  WHERE connec_psector.p_state = 0) a USING (connec_id)
+          WHERE a.connec_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(connec.expl_visibility::integer[], connec.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = connec.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = connec.muni_id))
+        UNION ALL
+         SELECT connec_psector.connec_id,
+            connec_psector.arc_id,
+            connec_psector.link_id
+           FROM connec_psector
+          WHERE connec_psector.p_state = 1
+        ), connec_selected AS (
+         SELECT connec.connec_id,
+            connec.code,
+            connec.sys_code,
+            connec.top_elev,
+            connec.y1,
+            connec.y2,
+            cat_feature.feature_class AS sys_type,
+            connec.connec_type::text AS connec_type,
+            connec.matcat_id,
+            connec.conneccat_id,
+            connec.customer_code,
+            connec.connec_depth,
+            connec.connec_length,
+            connec.state,
+            connec.state_type,
+            connec_selector.arc_id,
+            connec.expl_id,
+            exploitation.macroexpl_id,
+            connec.muni_id,
+                CASE
+                    WHEN link_planned.sector_id IS NULL THEN connec.sector_id
+                    ELSE link_planned.sector_id
+                END AS sector_id,
+                CASE
+                    WHEN link_planned.macrosector_id IS NULL THEN sector_table.macrosector_id
+                    ELSE link_planned.macrosector_id
+                END AS macrosector_id,
+            sector_table.sector_type,
+                CASE
+                    WHEN link_planned.drainzone_id IS NULL THEN dwfzone_table.drainzone_id
+                    ELSE link_planned.drainzone_id
+                END AS drainzone_id,
+                CASE
+                    WHEN link_planned.drainzone_type IS NULL THEN drainzone_table.drainzone_type
+                    ELSE link_planned.drainzone_type
+                END AS drainzone_type,
+            connec.drainzone_outfall,
+                CASE
+                    WHEN link_planned.dwfzone_id IS NULL THEN connec.dwfzone_id
+                    ELSE link_planned.dwfzone_id
+                END AS dwfzone_id,
+                CASE
+                    WHEN link_planned.dwfzone_type IS NULL THEN dwfzone_table.dwfzone_type
+                    ELSE link_planned.dwfzone_type
+                END AS dwfzone_type,
+            connec.dwfzone_outfall,
+                CASE
+                    WHEN link_planned.omzone_id IS NULL THEN connec.omzone_id
+                    ELSE link_planned.omzone_id
+                END AS omzone_id,
+                CASE
+                    WHEN link_planned.macroomzone_id IS NULL THEN omzone_table.macroomzone_id
+                    ELSE link_planned.macroomzone_id
+                END AS macroomzone_id,
+                CASE
+                    WHEN link_planned.omzone_type IS NULL THEN omzone_table.omzone_type
+                    ELSE link_planned.omzone_type
+                END AS omzone_type,
+                CASE
+                    WHEN link_planned.dma_id IS NULL THEN connec.dma_id
+                    ELSE link_planned.dma_id
+                END AS dma_id,
+            connec.omunit_id,
+            connec.minsector_id,
+            connec.soilcat_id,
+            connec.function_type,
+            connec.category_type,
+            connec.location_type,
+            connec.fluid_type,
+            connec.n_hydrometer,
+            connec.n_inhabitants,
+            connec.demand,
+            connec.descript,
+            connec.annotation,
+            connec.observ,
+            connec.comment,
+            connec.link::text AS link,
+            connec.num_value,
+            connec.district_id,
+            connec.postcode,
+            connec.streetaxis_id,
+            connec.postnumber,
+            connec.postcomplement,
+            connec.streetaxis2_id,
+            connec.postnumber2,
+            connec.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            connec.block_code,
+            connec.plot_code,
+            connec.workcat_id,
+            connec.workcat_id_end,
+            connec.workcat_id_plan,
+            connec.builtdate,
+            connec.enddate,
+            connec.ownercat_id,
+                CASE
+                    WHEN link_planned.exit_id IS NULL THEN connec.pjoint_id
+                    ELSE link_planned.exit_id
+                END AS pjoint_id,
+                CASE
+                    WHEN link_planned.exit_type IS NULL THEN connec.pjoint_type
+                    ELSE link_planned.exit_type
+                END AS pjoint_type,
+            connec.access_type,
+            connec.placement_type,
+            connec.accessibility,
+            connec.brand_id,
+            connec.model_id,
+            connec.asset_id,
+            connec.adate,
+            connec.adescript,
+            connec.verified,
+            connec.uncertain,
+            connec.datasource,
+            cat_connec.label,
+            connec.label_x,
+            connec.label_y,
+            connec.label_rotation,
+            connec.rotation,
+            connec.label_quadrant,
+            cat_connec.svg,
+            connec.inventory,
+            connec.publish,
+            vst.is_operative,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            connec.lock_level,
+            connec.expl_visibility,
+            ( SELECT st_x(connec.the_geom) AS st_x) AS xcoord,
+            ( SELECT st_y(connec.the_geom) AS st_y) AS ycoord,
+            ( SELECT st_y(st_transform(connec.the_geom, 4326)) AS st_y) AS lat,
+            ( SELECT st_x(st_transform(connec.the_geom, 4326)) AS st_x) AS long,
+            date_trunc('second'::text, connec.created_at) AS created_at,
+            connec.created_by,
+            date_trunc('second'::text, connec.updated_at) AS updated_at,
+            connec.updated_by,
+            connec.the_geom,
+            connec.diagonal
+           FROM connec_selector
+             JOIN connec USING (connec_id)
+             JOIN cat_connec ON cat_connec.id::text = connec.conneccat_id::text
+             JOIN cat_feature ON cat_feature.id::text = connec.connec_type::text
+             JOIN exploitation ON connec.expl_id = exploitation.expl_id
+             JOIN ext_municipality mu ON connec.muni_id = mu.muni_id
+             JOIN value_state_type vst ON vst.id = connec.state_type
+             JOIN sector_table ON sector_table.sector_id = connec.sector_id
+             LEFT JOIN omzone_table ON omzone_table.omzone_id = connec.omzone_id
+             LEFT JOIN drainzone_table ON connec.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON connec.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN link_planned USING (link_id)
+        )
+ SELECT connec_id,
+    code,
+    sys_code,
+    top_elev,
+    y1,
+    y2,
+    sys_type,
+    connec_type,
+    matcat_id,
+    conneccat_id,
+    customer_code,
+    connec_depth,
+    connec_length,
+    state,
+    state_type,
+    arc_id,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    omzone_type,
+    dma_id,
+    omunit_id,
+    minsector_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    n_hydrometer,
+    n_inhabitants,
+    demand,
+    descript,
+    annotation,
+    observ,
+    comment,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    block_code,
+    plot_code,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    enddate,
+    ownercat_id,
+    pjoint_id,
+    pjoint_type,
+    access_type,
+    placement_type,
+    accessibility,
+    brand_id,
+    model_id,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    uncertain,
+    datasource,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    rotation,
+    label_quadrant,
+    svg,
+    inventory,
+    publish,
+    is_operative,
+    sector_style,
+    drainzone_style,
+    dwfzone_style,
+    omzone_style,
+    lock_level,
+    expl_visibility,
+    xcoord,
+    ycoord,
+    lat,
+    long,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom,
+    diagonal
+   FROM connec_selected;
+
+CREATE OR REPLACE VIEW ve_link
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), inp_network_mode AS (
+         SELECT config_param_user.value
+           FROM config_param_user
+          WHERE config_param_user.parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER
+        ), link_psector AS (
+        ( SELECT DISTINCT ON (pp.connec_id, pp.state) 'CONNEC'::text AS feature_type,
+            pp.connec_id AS feature_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.link_id
+           FROM plan_psector_x_connec pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.connec_id, pp.state, pp.link_id DESC NULLS LAST)
+        UNION ALL
+        ( SELECT DISTINCT ON (pp.gully_id, pp.state) 'GULLY'::text AS feature_type,
+            pp.gully_id AS feature_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.link_id
+           FROM plan_psector_x_gully pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.gully_id, pp.state, pp.link_id DESC NULLS LAST)
+        ), link_selector AS (
+         SELECT l.link_id
+           FROM link l
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND l.state = s.state_id
+             LEFT JOIN ( SELECT link_psector.link_id
+                   FROM link_psector
+                  WHERE link_psector.p_state = 0) a ON a.link_id = l.link_id
+          WHERE a.link_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(l.expl_visibility::integer[], l.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = l.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = l.muni_id))
+        UNION ALL
+         SELECT link_psector.link_id
+           FROM link_psector
+          WHERE link_psector.p_state = 1
+        ), link_selected AS (
+         SELECT DISTINCT ON (l.link_id) l.link_id,
+            l.code,
+            l.sys_code,
+            l.top_elev1,
+            l.y1,
+                CASE
+                    WHEN l.top_elev1 IS NULL OR l.y1 IS NULL THEN NULL::double precision
+                    ELSE l.top_elev1 - l.y1::double precision
+                END AS elevation1,
+            l.exit_id,
+            l.exit_type,
+            l.top_elev2,
+            l.y2,
+                CASE
+                    WHEN l.top_elev2 IS NULL OR l.y2 IS NULL THEN NULL::double precision
+                    ELSE l.top_elev2 - l.y2::double precision
+                END AS elevation2,
+            l.feature_type,
+            l.feature_id,
+            l.link_type,
+            cat_feature.feature_class AS sys_type,
+            l.linkcat_id,
+            l.state,
+            l.state_type,
+            l.expl_id,
+            exploitation.macroexpl_id,
+            l.muni_id,
+            l.sector_id,
+            sector_table.macrosector_id,
+            sector_table.sector_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            l.drainzone_outfall,
+            l.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            l.dwfzone_outfall,
+            l.omzone_id,
+            omzone_table.macroomzone_id,
+            l.dma_id,
+            l.location_type,
+            l.fluid_type,
+            l.custom_length,
+            st_length2d(l.the_geom)::numeric(12,3) AS gis_length,
+            l.sys_slope,
+            l.annotation,
+            l.observ,
+            l.comment,
+            l.descript,
+            l.link,
+            l.num_value,
+            l.workcat_id,
+            l.workcat_id_end,
+            l.builtdate,
+            l.enddate,
+            l.brand_id,
+            l.model_id,
+            l.private_linkcat_id,
+            l.verified,
+            l.uncertain,
+            l.userdefined_geom,
+            l.datasource,
+            l.is_operative,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            l.lock_level,
+            l.expl_visibility,
+            l.created_at,
+            l.created_by,
+            date_trunc('second'::text, l.updated_at) AS updated_at,
+            l.updated_by,
+            l.the_geom
+           FROM link_selector
+             JOIN link l USING (link_id)
+             JOIN exploitation ON l.expl_id = exploitation.expl_id
+             JOIN ext_municipality mu ON l.muni_id = mu.muni_id
+             JOIN sector_table ON l.sector_id = sector_table.sector_id
+             JOIN cat_link ON cat_link.id::text = l.linkcat_id::text
+             JOIN cat_feature ON cat_feature.id::text = l.link_type::text
+             LEFT JOIN omzone_table ON l.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON l.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON l.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN inp_network_mode ON true
+        )
+ SELECT link_id,
+    code,
+    sys_code,
+    top_elev1,
+    y1,
+    elevation1,
+    exit_id,
+    exit_type,
+    top_elev2,
+    y2,
+    elevation2,
+    feature_type,
+    feature_id,
+    link_type,
+    sys_type,
+    linkcat_id,
+    state,
+    state_type,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    location_type,
+    fluid_type,
+    custom_length,
+    gis_length,
+    sys_slope,
+    annotation,
+    observ,
+    comment,
+    descript,
+    link,
+    num_value,
+    workcat_id,
+    workcat_id_end,
+    builtdate,
+    enddate,
+    brand_id,
+    model_id,
+    private_linkcat_id,
+    verified,
+    uncertain,
+    userdefined_geom,
+    datasource,
+    is_operative,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM link_selected;
+
+CREATE OR REPLACE VIEW ve_link_gully
+AS SELECT link_id,
+    code,
+    sys_code,
+    top_elev1,
+    y1,
+    elevation1,
+    exit_id,
+    exit_type,
+    top_elev2,
+    y2,
+    elevation2,
+    feature_type,
+    feature_id,
+    link_type,
+    sys_type,
+    linkcat_id,
+    state,
+    state_type,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    location_type,
+    fluid_type,
+    custom_length,
+    gis_length,
+    sys_slope,
+    annotation,
+    observ,
+    comment,
+    descript,
+    link,
+    num_value,
+    workcat_id,
+    workcat_id_end,
+    builtdate,
+    enddate,
+    brand_id,
+    model_id,
+    private_linkcat_id,
+    verified,
+    uncertain,
+    userdefined_geom,
+    datasource,
+    is_operative,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM ve_link
+  WHERE feature_type::text = 'GULLY'::text;
+
+
+CREATE OR REPLACE VIEW ve_link_connec
+AS SELECT link_id,
+    code,
+    sys_code,
+    top_elev1,
+    y1,
+    elevation1,
+    exit_id,
+    exit_type,
+    top_elev2,
+    y2,
+    elevation2,
+    feature_type,
+    feature_id,
+    link_type,
+    sys_type,
+    linkcat_id,
+    state,
+    state_type,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    location_type,
+    fluid_type,
+    custom_length,
+    gis_length,
+    sys_slope,
+    annotation,
+    observ,
+    comment,
+    descript,
+    link,
+    num_value,
+    workcat_id,
+    workcat_id_end,
+    builtdate,
+    enddate,
+    brand_id,
+    model_id,
+    private_linkcat_id,
+    verified,
+    uncertain,
+    userdefined_geom,
+    datasource,
+    is_operative,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM ve_link
+  WHERE feature_type::text = 'CONNEC'::text;
+
+CREATE OR REPLACE VIEW ve_gully
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), inp_network_mode AS (
+         SELECT config_param_user.value
+           FROM config_param_user
+          WHERE config_param_user.parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER
+        ), link_planned AS (
+         SELECT l.link_id,
+            l.feature_id,
+            l.feature_type,
+            l.exit_id,
+            l.exit_type,
+            l.expl_id,
+            exploitation.macroexpl_id,
+            l.sector_id,
+            sector_table.sector_type,
+            sector_table.macrosector_id,
+            l.omzone_id,
+            omzone_table.omzone_type,
+            omzone_table.macroomzone_id,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            l.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            l.fluid_type,
+            l.dma_id
+           FROM link l
+             JOIN exploitation USING (expl_id)
+             JOIN sector_table ON l.sector_id = sector_table.sector_id
+             LEFT JOIN omzone_table ON l.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON l.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON l.dwfzone_id = dwfzone_table.dwfzone_id
+          WHERE l.state = 2
+        ), gully_psector AS (
+         SELECT DISTINCT ON (pp.gully_id, pp.state) pp.gully_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.arc_id,
+            pp.link_id
+           FROM plan_psector_x_gully pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.gully_id, pp.state, pp.link_id DESC NULLS LAST
+        ), gully_selector AS (
+         SELECT gully.gully_id,
+            gully.arc_id,
+            NULL::integer AS link_id
+           FROM gully
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND gully.state = s.state_id
+             LEFT JOIN ( SELECT gully_psector.gully_id
+                   FROM gully_psector
+                  WHERE gully_psector.p_state = 0) a USING (gully_id)
+          WHERE a.gully_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(gully.expl_visibility::integer[], gully.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = gully.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = gully.muni_id))
+        UNION ALL
+         SELECT gully_psector.gully_id,
+            gully_psector.arc_id,
+            gully_psector.link_id
+           FROM gully_psector
+          WHERE gully_psector.p_state = 1
+        ), gully_selected AS (
+         SELECT gully.gully_id,
+            gully.code,
+            gully.sys_code,
+            gully.top_elev,
+                CASE
+                    WHEN gully.width IS NULL THEN cat_gully.width
+                    ELSE gully.width
+                END AS width,
+                CASE
+                    WHEN gully.length IS NULL THEN cat_gully.length
+                    ELSE gully.length
+                END AS length,
+                CASE
+                    WHEN gully.ymax IS NULL THEN cat_gully.ymax
+                    ELSE gully.ymax
+                END AS ymax,
+            gully.sandbox,
+            gully.matcat_id,
+            gully.gully_type,
+            cat_feature.feature_class AS sys_type,
+            gully.gullycat_id,
+            cat_gully.matcat_id AS cat_gully_matcat,
+            gully.units,
+            gully.units_placement,
+            gully.groove,
+            gully.groove_height,
+            gully.groove_length,
+            gully.siphon,
+            gully.siphon_type,
+            gully.odorflap,
+            gully._connec_arccat_id AS connec_arccat_id,
+            gully.connec_length,
+                CASE
+                    WHEN ((gully.top_elev - gully.ymax + gully.sandbox + gully.connec_y2) / 2::numeric) IS NOT NULL THEN ((gully.top_elev - gully.ymax + gully.sandbox + gully.connec_y2) / 2::numeric)::numeric(12,3)
+                    ELSE gully.connec_depth
+                END AS connec_depth,
+                CASE
+                    WHEN gully._connec_matcat_id IS NULL THEN cc.matcat_id::text
+                    ELSE gully._connec_matcat_id
+                END AS connec_matcat_id,
+            gully.top_elev - gully.ymax + gully.sandbox AS connec_y1,
+            gully.connec_y2,
+            gully.arc_id,
+            gully.epa_type,
+            gully.state,
+            gully.state_type,
+            gully.expl_id,
+            exploitation.macroexpl_id,
+            gully.muni_id,
+                CASE
+                    WHEN link_planned.sector_id IS NULL THEN sector_table.sector_id
+                    ELSE link_planned.sector_id
+                END AS sector_id,
+                CASE
+                    WHEN link_planned.macrosector_id IS NULL THEN sector_table.macrosector_id
+                    ELSE link_planned.macrosector_id
+                END AS macrosector_id,
+                CASE
+                    WHEN link_planned.sector_id IS NULL THEN sector_table.sector_type
+                    ELSE link_planned.sector_type
+                END AS sector_type,
+                CASE
+                    WHEN link_planned.drainzone_id IS NULL THEN dwfzone_table.drainzone_id
+                    ELSE link_planned.drainzone_id
+                END AS drainzone_id,
+                CASE
+                    WHEN link_planned.drainzone_type IS NULL THEN drainzone_table.drainzone_type
+                    ELSE link_planned.drainzone_type
+                END AS drainzone_type,
+            gully.drainzone_outfall,
+                CASE
+                    WHEN link_planned.dwfzone_id IS NULL THEN dwfzone_table.dwfzone_id
+                    ELSE link_planned.dwfzone_id
+                END AS dwfzone_id,
+                CASE
+                    WHEN link_planned.dwfzone_type IS NULL THEN dwfzone_table.dwfzone_type
+                    ELSE link_planned.dwfzone_type
+                END AS dwfzone_type,
+            gully.dwfzone_outfall,
+                CASE
+                    WHEN link_planned.omzone_id IS NULL THEN omzone_table.omzone_id
+                    ELSE link_planned.omzone_id
+                END AS omzone_id,
+                CASE
+                    WHEN link_planned.macroomzone_id IS NULL THEN omzone_table.macroomzone_id
+                    ELSE link_planned.macroomzone_id
+                END AS macroomzone_id,
+                CASE
+                    WHEN link_planned.omzone_type IS NULL THEN omzone_table.omzone_type
+                    ELSE link_planned.omzone_type
+                END AS omzone_type,
+                CASE
+                    WHEN link_planned.dma_id IS NULL THEN gully.dma_id
+                    ELSE link_planned.dma_id
+                END AS dma_id,
+            gully.omunit_id,
+            gully.minsector_id,
+            gully.soilcat_id,
+            gully.function_type,
+            gully.category_type,
+            gully.location_type,
+            gully.fluid_type,
+            gully.descript,
+            gully.annotation,
+            gully.observ,
+            gully.comment,
+            concat(cat_feature.link_path, gully.link) AS link,
+            gully.num_value,
+            gully.district_id,
+            gully.postcode,
+            gully.streetaxis_id,
+            gully.postnumber,
+            gully.postcomplement,
+            gully.streetaxis2_id,
+            gully.postnumber2,
+            gully.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            gully.workcat_id,
+            gully.workcat_id_end,
+            gully.workcat_id_plan,
+            gully.builtdate,
+            gully.enddate,
+            gully.ownercat_id,
+                CASE
+                    WHEN link_planned.exit_id IS NULL THEN gully.pjoint_id
+                    ELSE link_planned.exit_id
+                END AS pjoint_id,
+                CASE
+                    WHEN link_planned.exit_type IS NULL THEN gully.pjoint_type
+                    ELSE link_planned.exit_type
+                END AS pjoint_type,
+            gully.placement_type,
+            gully.access_type,
+            gully.brand_id,
+            gully.model_id,
+            gully.asset_id,
+            gully.adate,
+            gully.adescript,
+            gully.verified,
+            gully.uncertain,
+            gully.datasource,
+            cat_gully.label,
+            gully.label_x,
+            gully.label_y,
+            gully.label_rotation,
+            gully.rotation,
+            gully.label_quadrant,
+            cat_gully.svg,
+            gully.inventory,
+            gully.publish,
+            vst.is_operative,
+                CASE
+                    WHEN gully.sector_id > 0 AND vst.is_operative = true AND gully.epa_type::text = 'GULLY'::character varying(16)::text AND inp_network_mode.value = '2'::text THEN gully.epa_type
+                    ELSE NULL::character varying(16)
+                END AS inp_type,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            gully.lock_level,
+            gully.expl_visibility,
+            date_trunc('second'::text, gully.created_at) AS created_at,
+            gully.created_by,
+            date_trunc('second'::text, gully.updated_at) AS updated_at,
+            gully.updated_by,
+            gully.the_geom
+           FROM gully_selector
+             JOIN gully USING (gully_id)
+             JOIN cat_gully ON gully.gullycat_id::text = cat_gully.id::text
+             JOIN exploitation ON gully.expl_id = exploitation.expl_id
+             JOIN cat_feature ON gully.gully_type::text = cat_feature.id::text
+             LEFT JOIN cat_connec cc ON cc.id::text = gully._connec_arccat_id::text
+             JOIN value_state_type vst ON vst.id = gully.state_type
+             JOIN ext_municipality mu ON gully.muni_id = mu.muni_id
+             JOIN sector_table ON gully.sector_id = sector_table.sector_id
+             LEFT JOIN omzone_table ON gully.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON gully.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON gully.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN link_planned ON gully.gully_id = link_planned.feature_id
+             LEFT JOIN inp_network_mode ON true
+        )
+ SELECT gully_id,
+    code,
+    sys_code,
+    top_elev,
+    width,
+    length,
+    ymax,
+    sandbox,
+    matcat_id,
+    gully_type,
+    sys_type,
+    gullycat_id,
+    cat_gully_matcat,
+    units,
+    units_placement,
+    groove,
+    groove_height,
+    groove_length,
+    siphon,
+    siphon_type,
+    odorflap,
+    connec_arccat_id,
+    connec_length,
+    connec_depth,
+    connec_matcat_id,
+    connec_y1,
+    connec_y2,
+    arc_id,
+    epa_type,
+    state,
+    state_type,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    omzone_type,
+    omunit_id,
+    minsector_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    descript,
+    annotation,
+    observ,
+    comment,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    enddate,
+    ownercat_id,
+    pjoint_id,
+    pjoint_type,
+    placement_type,
+    access_type,
+    brand_id,
+    model_id,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    uncertain,
+    datasource,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    rotation,
+    label_quadrant,
+    svg,
+    inventory,
+    publish,
+    is_operative,
+    inp_type,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM gully_selected;
+
+-- old v_edit parent tables:
+CREATE OR REPLACE VIEW v_edit_arc
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), arc_psector AS (
+         SELECT pp.arc_id,
+            pp.state AS p_state
+           FROM plan_psector_x_arc pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+        ), arc_selector AS (
+         SELECT arc.arc_id
+           FROM arc
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND arc.state = s.state_id
+             LEFT JOIN ( SELECT arc_psector.arc_id
+                   FROM arc_psector
+                  WHERE arc_psector.p_state = 0) a USING (arc_id)
+          WHERE a.arc_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(arc.expl_visibility::integer[], arc.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = arc.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = arc.muni_id))
+        UNION ALL
+         SELECT arc_psector.arc_id
+           FROM arc_psector
+          WHERE arc_psector.p_state = 1
+        ), arc_selected AS (
+         SELECT arc.arc_id,
+            arc.code,
+            arc.sys_code,
+            arc.node_1,
+            arc.nodetype_1,
+            arc.elev1,
+            arc.custom_elev1,
+                CASE
+                    WHEN arc.sys_elev1 IS NULL THEN arc.node_sys_elev_1
+                    ELSE arc.sys_elev1
+                END AS sys_elev1,
+            arc.y1,
+            arc.custom_y1,
+                CASE
+                    WHEN
+                    CASE
+                        WHEN arc.custom_y1 IS NULL THEN arc.y1
+                        ELSE arc.custom_y1
+                    END IS NULL THEN arc.node_sys_top_elev_1 - arc.sys_elev1
+                    ELSE
+                    CASE
+                        WHEN arc.custom_y1 IS NULL THEN arc.y1
+                        ELSE arc.custom_y1
+                    END
+                END AS sys_y1,
+            arc.node_sys_top_elev_1 -
+                CASE
+                    WHEN arc.sys_elev1 IS NULL THEN arc.node_sys_elev_1
+                    ELSE arc.sys_elev1
+                END - cat_arc.geom1 AS r1,
+                CASE
+                    WHEN arc.sys_elev1 IS NULL THEN arc.node_sys_elev_1
+                    ELSE arc.sys_elev1
+                END - arc.node_sys_elev_1 AS z1,
+            arc.node_2,
+            arc.nodetype_2,
+            arc.elev2,
+            arc.custom_elev2,
+                CASE
+                    WHEN arc.sys_elev2 IS NULL THEN arc.node_sys_elev_2
+                    ELSE arc.sys_elev2
+                END AS sys_elev2,
+            arc.y2,
+            arc.custom_y2,
+                CASE
+                    WHEN
+                    CASE
+                        WHEN arc.custom_y2 IS NULL THEN arc.y2
+                        ELSE arc.custom_y2
+                    END IS NULL THEN arc.node_sys_top_elev_2 - arc.sys_elev2
+                    ELSE
+                    CASE
+                        WHEN arc.custom_y2 IS NULL THEN arc.y2
+                        ELSE arc.custom_y2
+                    END
+                END AS sys_y2,
+            arc.node_sys_top_elev_2 -
+                CASE
+                    WHEN arc.sys_elev2 IS NULL THEN arc.node_sys_elev_2
+                    ELSE arc.sys_elev2
+                END - cat_arc.geom1 AS r2,
+                CASE
+                    WHEN arc.sys_elev2 IS NULL THEN arc.node_sys_elev_2
+                    ELSE arc.sys_elev2
+                END - arc.node_sys_elev_2 AS z2,
+            cat_feature.feature_class AS sys_type,
+            arc.arc_type::text AS arc_type,
+            arc.arccat_id,
+                CASE
+                    WHEN arc.matcat_id IS NULL THEN cat_arc.matcat_id
+                    ELSE arc.matcat_id
+                END AS matcat_id,
+            cat_arc.shape AS cat_shape,
+            cat_arc.geom1 AS cat_geom1,
+            cat_arc.geom2 AS cat_geom2,
+            cat_arc.width AS cat_width,
+            cat_arc.area AS cat_area,
+            arc.epa_type,
+            arc.state,
+            arc.state_type,
+            arc.parent_id,
+            arc.expl_id,
+            e.macroexpl_id,
+            arc.muni_id,
+            arc.sector_id,
+            sector_table.macrosector_id,
+            sector_table.sector_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            arc.drainzone_outfall,
+            arc.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            arc.dwfzone_outfall,
+            arc.omzone_id,
+            omzone_table.macroomzone_id,
+            omzone_table.omzone_type,
+            arc.dma_id,
+            arc.omunit_id,
+            arc.minsector_id,
+            arc.pavcat_id,
+            arc.soilcat_id,
+            arc.function_type,
+            arc.category_type,
+            arc.location_type,
+            arc.fluid_type,
+            arc.custom_length,
+            st_length(arc.the_geom)::numeric(12,2) AS gis_length,
+            arc.sys_slope AS slope,
+            arc.descript,
+            arc.annotation,
+            arc.observ,
+            arc.comment,
+            concat(cat_feature.link_path, arc.link) AS link,
+            arc.num_value,
+            arc.district_id,
+            arc.postcode,
+            arc.streetaxis_id,
+            arc.postnumber,
+            arc.postcomplement,
+            arc.streetaxis2_id,
+            arc.postnumber2,
+            arc.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            arc.workcat_id,
+            arc.workcat_id_end,
+            arc.workcat_id_plan,
+            arc.builtdate,
+            arc.registration_date,
+            arc.enddate,
+            arc.ownercat_id,
+            arc.last_visitdate,
+            arc.visitability,
+            arc.om_state,
+            arc.conserv_state,
+            arc.brand_id,
+            arc.model_id,
+            arc.serial_number,
+            arc.asset_id,
+            arc.adate,
+            arc.adescript,
+            arc.verified,
+            arc.uncertain,
+            arc.datasource,
+            cat_arc.label,
+            arc.label_x,
+            arc.label_y,
+            arc.label_rotation,
+            arc.label_quadrant,
+            arc.inventory,
+            arc.publish,
+            vst.is_operative,
+            arc.is_scadamap,
+                CASE
+                    WHEN arc.sector_id > 0 AND vst.is_operative = true AND arc.epa_type::text <> 'UNDEFINED'::character varying(16)::text THEN arc.epa_type
+                    ELSE NULL::character varying(16)
+                END AS inp_type,
+            arc_add.result_id,
+            arc_add.max_flow,
+            arc_add.max_veloc,
+            arc_add.mfull_flow,
+            arc_add.mfull_depth,
+            arc_add.manning_veloc,
+            arc_add.manning_flow,
+            arc_add.dwf_minflow,
+            arc_add.dwf_maxflow,
+            arc_add.dwf_minvel,
+            arc_add.dwf_maxvel,
+            arc_add.conduit_capacity,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            arc.lock_level,
+            arc.initoverflowpath,
+            arc.inverted_slope,
+            arc.negative_offset,
+            arc.expl_visibility,
+            date_trunc('second'::text, arc.created_at) AS created_at,
+            arc.created_by,
+            date_trunc('second'::text, arc.updated_at) AS updated_at,
+            arc.updated_by,
+            arc.the_geom,
+            arc.meandering
+           FROM arc_selector
+             JOIN arc USING (arc_id)
+             JOIN cat_arc ON arc.arccat_id::text = cat_arc.id::text
+             JOIN cat_feature ON arc.arc_type::text = cat_feature.id::text
+             JOIN exploitation e ON e.expl_id = arc.expl_id
+             JOIN ext_municipality mu ON arc.muni_id = mu.muni_id
+             JOIN value_state_type vst ON vst.id = arc.state_type
+             JOIN sector_table ON sector_table.sector_id = arc.sector_id
+             LEFT JOIN omzone_table ON omzone_table.omzone_id = arc.omzone_id
+             LEFT JOIN drainzone_table ON arc.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON arc.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN arc_add ON arc_add.arc_id = arc.arc_id
+        )
+ SELECT arc_id,
+    code,
+    sys_code,
+    node_1,
+    nodetype_1,
+    elev1,
+    custom_elev1,
+    sys_elev1,
+    y1,
+    custom_y1,
+    sys_y1,
+    r1,
+    z1,
+    node_2,
+    nodetype_2,
+    elev2,
+    custom_elev2,
+    sys_elev2,
+    y2,
+    custom_y2,
+    sys_y2,
+    r2,
+    z2,
+    sys_type,
+    arc_type,
+    arccat_id,
+    matcat_id,
+    cat_shape,
+    cat_geom1,
+    cat_geom2,
+    cat_width,
+    cat_area,
+    epa_type,
+    state,
+    state_type,
+    parent_id,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    omzone_type,
+    omunit_id,
+    minsector_id,
+    pavcat_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    custom_length,
+    gis_length,
+    slope,
+    descript,
+    annotation,
+    observ,
+    comment,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    registration_date,
+    enddate,
+    ownercat_id,
+    last_visitdate,
+    visitability,
+    om_state,
+    conserv_state,
+    brand_id,
+    model_id,
+    serial_number,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    uncertain,
+    datasource,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    label_quadrant,
+    inventory,
+    publish,
+    is_operative,
+    is_scadamap,
+    inp_type,
+    result_id,
+    max_flow,
+    max_veloc,
+    mfull_flow,
+    mfull_depth,
+    manning_veloc,
+    manning_flow,
+    dwf_minflow,
+    dwf_maxflow,
+    dwf_minvel,
+    dwf_maxvel,
+    conduit_capacity,
+    sector_style,
+    drainzone_style,
+    dwfzone_style,
+    omzone_style,
+    lock_level,
+    initoverflowpath,
+    inverted_slope,
+    negative_offset,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom,
+    meandering
+   FROM arc_selected;
+
+CREATE OR REPLACE VIEW v_edit_node
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), node_psector AS (
+         SELECT pp.node_id,
+            pp.state AS p_state
+           FROM plan_psector_x_node pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+        ), node_selector AS (
+         SELECT node.node_id
+           FROM node
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND node.state = s.state_id
+             LEFT JOIN ( SELECT node_psector.node_id
+                   FROM node_psector
+                  WHERE node_psector.p_state = 0) a USING (node_id)
+          WHERE a.node_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(node.expl_visibility::integer[], node.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = node.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = node.muni_id))
+        UNION ALL
+         SELECT node_psector.node_id
+           FROM node_psector
+          WHERE node_psector.p_state = 1
+        ), node_selected AS (
+         SELECT node.node_id,
+            node.code,
+            node.sys_code,
+            node.top_elev,
+            node.custom_top_elev,
+                CASE
+                    WHEN node.custom_top_elev IS NOT NULL THEN node.custom_top_elev
+                    ELSE node.top_elev
+                END AS sys_top_elev,
+            node.ymax,
+            node.custom_ymax,
+                CASE
+                    WHEN node.custom_ymax IS NOT NULL THEN node.custom_ymax
+                    ELSE node.ymax
+                END AS sys_ymax,
+            node.elev,
+            node.custom_elev,
+                CASE
+                    WHEN node.elev IS NOT NULL AND node.custom_elev IS NULL THEN node.elev
+                    WHEN node.custom_elev IS NOT NULL THEN node.custom_elev
+                    ELSE NULL::numeric(12,3)
+                END AS sys_elev,
+            cat_feature.feature_class AS sys_type,
+            node.node_type::text AS node_type,
+                CASE
+                    WHEN node.matcat_id IS NULL THEN cat_node.matcat_id
+                    ELSE node.matcat_id
+                END AS matcat_id,
+            node.nodecat_id,
+            node.epa_type,
+            node.state,
+            node.state_type,
+            node.arc_id,
+            node.parent_id,
+            node.expl_id,
+            exploitation.macroexpl_id,
+            node.muni_id,
+            node.sector_id,
+            sector_table.macrosector_id,
+            sector_table.sector_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            node.drainzone_outfall,
+            node.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            node.dwfzone_outfall,
+            node.omzone_id,
+            omzone_table.macroomzone_id,
+            node.dma_id,
+            node.omunit_id,
+            node.minsector_id,
+            node.pavcat_id,
+            node.soilcat_id,
+            node.function_type,
+            node.category_type,
+            node.location_type,
+            node.fluid_type,
+            node.annotation,
+            node.observ,
+            node.comment,
+            node.descript,
+            concat(cat_feature.link_path, node.link) AS link,
+            node.num_value,
+            node.district_id,
+            node.postcode,
+            node.streetaxis_id,
+            node.postnumber,
+            node.postcomplement,
+            node.streetaxis2_id,
+            node.postnumber2,
+            node.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            node.workcat_id,
+            node.workcat_id_end,
+            node.workcat_id_plan,
+            node.builtdate,
+            node.enddate,
+            node.ownercat_id,
+            node.conserv_state,
+            node.access_type,
+            node.placement_type,
+            node.brand_id,
+            node.model_id,
+            node.serial_number,
+            node.asset_id,
+            node.adate,
+            node.adescript,
+            node.verified,
+            node.xyz_date,
+            node.uncertain,
+            node.datasource,
+            node.unconnected,
+            cat_node.label,
+            node.label_x,
+            node.label_y,
+            node.label_rotation,
+            node.rotation,
+            node.label_quadrant,
+            node.hemisphere,
+            cat_node.svg,
+            node.inventory,
+            node.publish,
+            vst.is_operative,
+            node.is_scadamap,
+                CASE
+                    WHEN node.sector_id > 0 AND vst.is_operative = true AND node.epa_type::text <> 'UNDEFINED'::character varying(16)::text THEN node.epa_type
+                    ELSE NULL::character varying(16)
+                END AS inp_type,
+            node_add.result_id,
+            node_add.max_depth,
+            node_add.max_height,
+            node_add.flooding_rate,
+            node_add.flooding_vol,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            node.lock_level,
+            node.expl_visibility,
+            ( SELECT st_x(node.the_geom) AS st_x) AS xcoord,
+            ( SELECT st_y(node.the_geom) AS st_y) AS ycoord,
+            ( SELECT st_y(st_transform(node.the_geom, 4326)) AS st_y) AS lat,
+            ( SELECT st_x(st_transform(node.the_geom, 4326)) AS st_x) AS long,
+            date_trunc('second'::text, node.created_at) AS created_at,
+            node.created_by,
+            date_trunc('second'::text, node.updated_at) AS updated_at,
+            node.updated_by,
+            node.the_geom
+           FROM node_selector
+             JOIN node USING (node_id)
+             JOIN cat_node ON node.nodecat_id::text = cat_node.id::text
+             JOIN cat_feature ON cat_feature.id::text = node.node_type::text
+             JOIN exploitation ON node.expl_id = exploitation.expl_id
+             JOIN ext_municipality mu ON node.muni_id = mu.muni_id
+             JOIN value_state_type vst ON vst.id = node.state_type
+             JOIN sector_table ON sector_table.sector_id = node.sector_id
+             LEFT JOIN omzone_table ON omzone_table.omzone_id = node.omzone_id
+             LEFT JOIN drainzone_table ON node.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON node.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN node_add ON node_add.node_id = node.node_id
+        ), node_base AS (
+         SELECT node_selected.node_id,
+            node_selected.code,
+            node_selected.sys_code,
+            node_selected.top_elev,
+            node_selected.custom_top_elev,
+            node_selected.sys_top_elev,
+            node_selected.ymax,
+            node_selected.custom_ymax,
+                CASE
+                    WHEN node_selected.sys_ymax IS NOT NULL THEN node_selected.sys_ymax
+                    ELSE (node_selected.sys_top_elev - node_selected.sys_elev)::numeric(12,3)
+                END AS sys_ymax,
+            node_selected.elev,
+            node_selected.custom_elev,
+                CASE
+                    WHEN node_selected.elev IS NOT NULL AND node_selected.custom_elev IS NULL THEN node_selected.elev
+                    WHEN node_selected.custom_elev IS NOT NULL THEN node_selected.custom_elev
+                    ELSE (node_selected.sys_top_elev - node_selected.sys_ymax)::numeric(12,3)
+                END AS sys_elev,
+            node_selected.node_type,
+            node_selected.sys_type,
+            node_selected.matcat_id,
+            node_selected.nodecat_id,
+            node_selected.epa_type,
+            node_selected.state,
+            node_selected.state_type,
+            node_selected.arc_id,
+            node_selected.parent_id,
+            node_selected.expl_id,
+            node_selected.macroexpl_id,
+            node_selected.muni_id,
+            node_selected.sector_id,
+            node_selected.macrosector_id,
+            node_selected.sector_type,
+            node_selected.drainzone_id,
+            node_selected.drainzone_type,
+            node_selected.drainzone_outfall,
+            node_selected.dwfzone_id,
+            node_selected.dwfzone_type,
+            node_selected.dwfzone_outfall,
+            node_selected.omzone_id,
+            node_selected.macroomzone_id,
+            node_selected.dma_id,
+            node_selected.omunit_id,
+            node_selected.minsector_id,
+            node_selected.pavcat_id,
+            node_selected.soilcat_id,
+            node_selected.function_type,
+            node_selected.category_type,
+            node_selected.location_type,
+            node_selected.fluid_type,
+            node_selected.annotation,
+            node_selected.observ,
+            node_selected.comment,
+            node_selected.descript,
+            node_selected.link,
+            node_selected.num_value,
+            node_selected.district_id,
+            node_selected.postcode,
+            node_selected.streetaxis_id,
+            node_selected.postnumber,
+            node_selected.postcomplement,
+            node_selected.streetaxis2_id,
+            node_selected.postnumber2,
+            node_selected.postcomplement2,
+            node_selected.region_id,
+            node_selected.province_id,
+            node_selected.workcat_id,
+            node_selected.workcat_id_end,
+            node_selected.workcat_id_plan,
+            node_selected.builtdate,
+            node_selected.enddate,
+            node_selected.ownercat_id,
+            node_selected.conserv_state,
+            node_selected.access_type,
+            node_selected.placement_type,
+            node_selected.brand_id,
+            node_selected.model_id,
+            node_selected.serial_number,
+            node_selected.asset_id,
+            node_selected.adate,
+            node_selected.adescript,
+            node_selected.verified,
+            node_selected.xyz_date,
+            node_selected.uncertain,
+            node_selected.datasource,
+            node_selected.unconnected,
+            node_selected.label,
+            node_selected.label_x,
+            node_selected.label_y,
+            node_selected.label_rotation,
+            node_selected.rotation,
+            node_selected.label_quadrant,
+            node_selected.hemisphere,
+            node_selected.svg,
+            node_selected.inventory,
+            node_selected.publish,
+            node_selected.is_operative,
+            node_selected.is_scadamap,
+            node_selected.inp_type,
+            node_selected.result_id,
+            node_selected.max_depth,
+            node_selected.max_height,
+            node_selected.flooding_rate,
+            node_selected.flooding_vol,
+            node_selected.sector_style,
+            node_selected.omzone_style,
+            node_selected.drainzone_style,
+            node_selected.dwfzone_style,
+            node_selected.lock_level,
+            node_selected.expl_visibility,
+            node_selected.xcoord,
+            node_selected.ycoord,
+            node_selected.lat,
+            node_selected.long,
+            node_selected.created_at,
+            node_selected.created_by,
+            node_selected.updated_at,
+            node_selected.updated_by,
+            node_selected.the_geom
+           FROM node_selected
+        )
+ SELECT node_id,
+    code,
+    sys_code,
+    top_elev,
+    custom_top_elev,
+    sys_top_elev,
+    ymax,
+    custom_ymax,
+    sys_ymax,
+    elev,
+    custom_elev,
+    sys_elev,
+    node_type,
+    sys_type,
+    matcat_id,
+    nodecat_id,
+    epa_type,
+    state,
+    state_type,
+    arc_id,
+    parent_id,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    omunit_id,
+    minsector_id,
+    pavcat_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    annotation,
+    observ,
+    comment,
+    descript,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    enddate,
+    ownercat_id,
+    conserv_state,
+    access_type,
+    placement_type,
+    brand_id,
+    model_id,
+    serial_number,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    xyz_date,
+    uncertain,
+    datasource,
+    unconnected,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    rotation,
+    label_quadrant,
+    hemisphere,
+    svg,
+    inventory,
+    publish,
+    is_operative,
+    is_scadamap,
+    inp_type,
+    result_id,
+    max_depth,
+    max_height,
+    flooding_rate,
+    flooding_vol,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    xcoord,
+    ycoord,
+    lat,
+    long,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM node_base;
+
+CREATE OR REPLACE VIEW v_edit_connec
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), link_planned AS (
+         SELECT l.link_id,
+            l.feature_id,
+            l.feature_type,
+            l.exit_id,
+            l.exit_type,
+            l.expl_id,
+            exploitation.macroexpl_id,
+            l.sector_id,
+            sector_table.sector_type,
+            sector_table.macrosector_id,
+            l.omzone_id,
+            omzone_table.macroomzone_id,
+            omzone_table.omzone_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            l.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            l.dma_id,
+            l.fluid_type
+           FROM link l
+             JOIN exploitation USING (expl_id)
+             JOIN sector_table ON l.sector_id = sector_table.sector_id
+             LEFT JOIN omzone_table ON l.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON l.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON l.dwfzone_id = dwfzone_table.dwfzone_id
+          WHERE l.state = 2
+        ), connec_psector AS (
+         SELECT DISTINCT ON (pp.connec_id, pp.state) pp.connec_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.arc_id,
+            pp.link_id
+           FROM plan_psector_x_connec pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.connec_id, pp.state, pp.link_id DESC NULLS LAST
+        ), connec_selector AS (
+         SELECT connec.connec_id,
+            connec.arc_id,
+            NULL::integer AS link_id
+           FROM connec
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND connec.state = s.state_id
+             LEFT JOIN ( SELECT connec_psector.connec_id
+                   FROM connec_psector
+                  WHERE connec_psector.p_state = 0) a USING (connec_id)
+          WHERE a.connec_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(connec.expl_visibility::integer[], connec.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = connec.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = connec.muni_id))
+        UNION ALL
+         SELECT connec_psector.connec_id,
+            connec_psector.arc_id,
+            connec_psector.link_id
+           FROM connec_psector
+          WHERE connec_psector.p_state = 1
+        ), connec_selected AS (
+         SELECT connec.connec_id,
+            connec.code,
+            connec.sys_code,
+            connec.top_elev,
+            connec.y1,
+            connec.y2,
+            cat_feature.feature_class AS sys_type,
+            connec.connec_type::text AS connec_type,
+            connec.matcat_id,
+            connec.conneccat_id,
+            connec.customer_code,
+            connec.connec_depth,
+            connec.connec_length,
+            connec.state,
+            connec.state_type,
+            connec_selector.arc_id,
+            connec.expl_id,
+            exploitation.macroexpl_id,
+            connec.muni_id,
+                CASE
+                    WHEN link_planned.sector_id IS NULL THEN connec.sector_id
+                    ELSE link_planned.sector_id
+                END AS sector_id,
+                CASE
+                    WHEN link_planned.macrosector_id IS NULL THEN sector_table.macrosector_id
+                    ELSE link_planned.macrosector_id
+                END AS macrosector_id,
+            sector_table.sector_type,
+                CASE
+                    WHEN link_planned.drainzone_id IS NULL THEN dwfzone_table.drainzone_id
+                    ELSE link_planned.drainzone_id
+                END AS drainzone_id,
+                CASE
+                    WHEN link_planned.drainzone_type IS NULL THEN drainzone_table.drainzone_type
+                    ELSE link_planned.drainzone_type
+                END AS drainzone_type,
+            connec.drainzone_outfall,
+                CASE
+                    WHEN link_planned.dwfzone_id IS NULL THEN connec.dwfzone_id
+                    ELSE link_planned.dwfzone_id
+                END AS dwfzone_id,
+                CASE
+                    WHEN link_planned.dwfzone_type IS NULL THEN dwfzone_table.dwfzone_type
+                    ELSE link_planned.dwfzone_type
+                END AS dwfzone_type,
+            connec.dwfzone_outfall,
+                CASE
+                    WHEN link_planned.omzone_id IS NULL THEN connec.omzone_id
+                    ELSE link_planned.omzone_id
+                END AS omzone_id,
+                CASE
+                    WHEN link_planned.macroomzone_id IS NULL THEN omzone_table.macroomzone_id
+                    ELSE link_planned.macroomzone_id
+                END AS macroomzone_id,
+                CASE
+                    WHEN link_planned.omzone_type IS NULL THEN omzone_table.omzone_type
+                    ELSE link_planned.omzone_type
+                END AS omzone_type,
+                CASE
+                    WHEN link_planned.dma_id IS NULL THEN connec.dma_id
+                    ELSE link_planned.dma_id
+                END AS dma_id,
+            connec.omunit_id,
+            connec.minsector_id,
+            connec.soilcat_id,
+            connec.function_type,
+            connec.category_type,
+            connec.location_type,
+            connec.fluid_type,
+            connec.n_hydrometer,
+            connec.n_inhabitants,
+            connec.demand,
+            connec.descript,
+            connec.annotation,
+            connec.observ,
+            connec.comment,
+            connec.link::text AS link,
+            connec.num_value,
+            connec.district_id,
+            connec.postcode,
+            connec.streetaxis_id,
+            connec.postnumber,
+            connec.postcomplement,
+            connec.streetaxis2_id,
+            connec.postnumber2,
+            connec.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            connec.block_code,
+            connec.plot_code,
+            connec.workcat_id,
+            connec.workcat_id_end,
+            connec.workcat_id_plan,
+            connec.builtdate,
+            connec.enddate,
+            connec.ownercat_id,
+                CASE
+                    WHEN link_planned.exit_id IS NULL THEN connec.pjoint_id
+                    ELSE link_planned.exit_id
+                END AS pjoint_id,
+                CASE
+                    WHEN link_planned.exit_type IS NULL THEN connec.pjoint_type
+                    ELSE link_planned.exit_type
+                END AS pjoint_type,
+            connec.access_type,
+            connec.placement_type,
+            connec.accessibility,
+            connec.brand_id,
+            connec.model_id,
+            connec.asset_id,
+            connec.adate,
+            connec.adescript,
+            connec.verified,
+            connec.uncertain,
+            connec.datasource,
+            cat_connec.label,
+            connec.label_x,
+            connec.label_y,
+            connec.label_rotation,
+            connec.rotation,
+            connec.label_quadrant,
+            cat_connec.svg,
+            connec.inventory,
+            connec.publish,
+            vst.is_operative,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            connec.lock_level,
+            connec.expl_visibility,
+            ( SELECT st_x(connec.the_geom) AS st_x) AS xcoord,
+            ( SELECT st_y(connec.the_geom) AS st_y) AS ycoord,
+            ( SELECT st_y(st_transform(connec.the_geom, 4326)) AS st_y) AS lat,
+            ( SELECT st_x(st_transform(connec.the_geom, 4326)) AS st_x) AS long,
+            date_trunc('second'::text, connec.created_at) AS created_at,
+            connec.created_by,
+            date_trunc('second'::text, connec.updated_at) AS updated_at,
+            connec.updated_by,
+            connec.the_geom,
+            connec.diagonal
+           FROM connec_selector
+             JOIN connec USING (connec_id)
+             JOIN cat_connec ON cat_connec.id::text = connec.conneccat_id::text
+             JOIN cat_feature ON cat_feature.id::text = connec.connec_type::text
+             JOIN exploitation ON connec.expl_id = exploitation.expl_id
+             JOIN ext_municipality mu ON connec.muni_id = mu.muni_id
+             JOIN value_state_type vst ON vst.id = connec.state_type
+             JOIN sector_table ON sector_table.sector_id = connec.sector_id
+             LEFT JOIN omzone_table ON omzone_table.omzone_id = connec.omzone_id
+             LEFT JOIN drainzone_table ON connec.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON connec.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN link_planned USING (link_id)
+        )
+ SELECT connec_id,
+    code,
+    sys_code,
+    top_elev,
+    y1,
+    y2,
+    sys_type,
+    connec_type,
+    matcat_id,
+    conneccat_id,
+    customer_code,
+    connec_depth,
+    connec_length,
+    state,
+    state_type,
+    arc_id,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    omzone_type,
+    dma_id,
+    omunit_id,
+    minsector_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    n_hydrometer,
+    n_inhabitants,
+    demand,
+    descript,
+    annotation,
+    observ,
+    comment,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    block_code,
+    plot_code,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    enddate,
+    ownercat_id,
+    pjoint_id,
+    pjoint_type,
+    access_type,
+    placement_type,
+    accessibility,
+    brand_id,
+    model_id,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    uncertain,
+    datasource,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    rotation,
+    label_quadrant,
+    svg,
+    inventory,
+    publish,
+    is_operative,
+    sector_style,
+    drainzone_style,
+    dwfzone_style,
+    omzone_style,
+    lock_level,
+    expl_visibility,
+    xcoord,
+    ycoord,
+    lat,
+    long,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom,
+    diagonal
+   FROM connec_selected;
+
+CREATE OR REPLACE VIEW v_edit_link
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), inp_network_mode AS (
+         SELECT config_param_user.value
+           FROM config_param_user
+          WHERE config_param_user.parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER
+        ), link_psector AS (
+        ( SELECT DISTINCT ON (pp.connec_id, pp.state) 'CONNEC'::text AS feature_type,
+            pp.connec_id AS feature_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.link_id
+           FROM plan_psector_x_connec pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.connec_id, pp.state, pp.link_id DESC NULLS LAST)
+        UNION ALL
+        ( SELECT DISTINCT ON (pp.gully_id, pp.state) 'GULLY'::text AS feature_type,
+            pp.gully_id AS feature_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.link_id
+           FROM plan_psector_x_gully pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.gully_id, pp.state, pp.link_id DESC NULLS LAST)
+        ), link_selector AS (
+         SELECT l.link_id
+           FROM link l
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND l.state = s.state_id
+             LEFT JOIN ( SELECT link_psector.link_id
+                   FROM link_psector
+                  WHERE link_psector.p_state = 0) a ON a.link_id = l.link_id
+          WHERE a.link_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(l.expl_visibility::integer[], l.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = l.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = l.muni_id))
+        UNION ALL
+         SELECT link_psector.link_id
+           FROM link_psector
+          WHERE link_psector.p_state = 1
+        ), link_selected AS (
+         SELECT DISTINCT ON (l.link_id) l.link_id,
+            l.code,
+            l.sys_code,
+            l.top_elev1,
+            l.y1,
+                CASE
+                    WHEN l.top_elev1 IS NULL OR l.y1 IS NULL THEN NULL::double precision
+                    ELSE l.top_elev1 - l.y1::double precision
+                END AS elevation1,
+            l.exit_id,
+            l.exit_type,
+            l.top_elev2,
+            l.y2,
+                CASE
+                    WHEN l.top_elev2 IS NULL OR l.y2 IS NULL THEN NULL::double precision
+                    ELSE l.top_elev2 - l.y2::double precision
+                END AS elevation2,
+            l.feature_type,
+            l.feature_id,
+            l.link_type,
+            cat_feature.feature_class AS sys_type,
+            l.linkcat_id,
+            l.state,
+            l.state_type,
+            l.expl_id,
+            exploitation.macroexpl_id,
+            l.muni_id,
+            l.sector_id,
+            sector_table.macrosector_id,
+            sector_table.sector_type,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            l.drainzone_outfall,
+            l.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            l.dwfzone_outfall,
+            l.omzone_id,
+            omzone_table.macroomzone_id,
+            l.dma_id,
+            l.location_type,
+            l.fluid_type,
+            l.custom_length,
+            st_length2d(l.the_geom)::numeric(12,3) AS gis_length,
+            l.sys_slope,
+            l.annotation,
+            l.observ,
+            l.comment,
+            l.descript,
+            l.link,
+            l.num_value,
+            l.workcat_id,
+            l.workcat_id_end,
+            l.builtdate,
+            l.enddate,
+            l.brand_id,
+            l.model_id,
+            l.private_linkcat_id,
+            l.verified,
+            l.uncertain,
+            l.userdefined_geom,
+            l.datasource,
+            l.is_operative,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            l.lock_level,
+            l.expl_visibility,
+            l.created_at,
+            l.created_by,
+            date_trunc('second'::text, l.updated_at) AS updated_at,
+            l.updated_by,
+            l.the_geom
+           FROM link_selector
+             JOIN link l USING (link_id)
+             JOIN exploitation ON l.expl_id = exploitation.expl_id
+             JOIN ext_municipality mu ON l.muni_id = mu.muni_id
+             JOIN sector_table ON l.sector_id = sector_table.sector_id
+             JOIN cat_link ON cat_link.id::text = l.linkcat_id::text
+             JOIN cat_feature ON cat_feature.id::text = l.link_type::text
+             LEFT JOIN omzone_table ON l.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON l.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON l.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN inp_network_mode ON true
+        )
+ SELECT link_id,
+    code,
+    sys_code,
+    top_elev1,
+    y1,
+    elevation1,
+    exit_id,
+    exit_type,
+    top_elev2,
+    y2,
+    elevation2,
+    feature_type,
+    feature_id,
+    link_type,
+    sys_type,
+    linkcat_id,
+    state,
+    state_type,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    location_type,
+    fluid_type,
+    custom_length,
+    gis_length,
+    sys_slope,
+    annotation,
+    observ,
+    comment,
+    descript,
+    link,
+    num_value,
+    workcat_id,
+    workcat_id_end,
+    builtdate,
+    enddate,
+    brand_id,
+    model_id,
+    private_linkcat_id,
+    verified,
+    uncertain,
+    userdefined_geom,
+    datasource,
+    is_operative,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM link_selected;
+
+CREATE OR REPLACE VIEW v_edit_gully
+AS WITH typevalue AS (
+         SELECT edit_typevalue.typevalue,
+            edit_typevalue.id,
+            edit_typevalue.idval
+           FROM edit_typevalue
+          WHERE edit_typevalue.typevalue::text = ANY (ARRAY['sector_type'::character varying::text, 'drainzone_type'::character varying::text, 'omzone_type'::character varying::text, 'dwfzone_type'::character varying::text])
+        ), sector_table AS (
+         SELECT sector.sector_id,
+            sector.macrosector_id,
+            sector.stylesheet,
+            t.id::character varying(16) AS sector_type
+           FROM sector
+             LEFT JOIN typevalue t ON t.id::text = sector.sector_type::text AND t.typevalue::text = 'sector_type'::text
+        ), omzone_table AS (
+         SELECT omzone.omzone_id,
+            omzone.macroomzone_id,
+            omzone.stylesheet,
+            t.id::character varying(16) AS omzone_type
+           FROM omzone
+             LEFT JOIN typevalue t ON t.id::text = omzone.omzone_type::text AND t.typevalue::text = 'omzone_type'::text
+        ), drainzone_table AS (
+         SELECT drainzone.drainzone_id,
+            drainzone.stylesheet,
+            t.id::character varying(16) AS drainzone_type
+           FROM drainzone
+             LEFT JOIN typevalue t ON t.id::text = drainzone.drainzone_type::text AND t.typevalue::text = 'drainzone_type'::text
+        ), dwfzone_table AS (
+         SELECT dwfzone.dwfzone_id,
+            dwfzone.stylesheet,
+            t.id::character varying(16) AS dwfzone_type,
+            dwfzone.drainzone_id
+           FROM dwfzone
+             LEFT JOIN typevalue t ON t.id::text = dwfzone.dwfzone_type::text AND t.typevalue::text = 'dwfzone_type'::text
+        ), inp_network_mode AS (
+         SELECT config_param_user.value
+           FROM config_param_user
+          WHERE config_param_user.parameter::text = 'inp_options_networkmode'::text AND config_param_user.cur_user::text = CURRENT_USER
+        ), link_planned AS (
+         SELECT l.link_id,
+            l.feature_id,
+            l.feature_type,
+            l.exit_id,
+            l.exit_type,
+            l.expl_id,
+            exploitation.macroexpl_id,
+            l.sector_id,
+            sector_table.sector_type,
+            sector_table.macrosector_id,
+            l.omzone_id,
+            omzone_table.omzone_type,
+            omzone_table.macroomzone_id,
+            dwfzone_table.drainzone_id,
+            drainzone_table.drainzone_type,
+            l.dwfzone_id,
+            dwfzone_table.dwfzone_type,
+            l.fluid_type,
+            l.dma_id
+           FROM link l
+             JOIN exploitation USING (expl_id)
+             JOIN sector_table ON l.sector_id = sector_table.sector_id
+             LEFT JOIN omzone_table ON l.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON l.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON l.dwfzone_id = dwfzone_table.dwfzone_id
+          WHERE l.state = 2
+        ), gully_psector AS (
+         SELECT DISTINCT ON (pp.gully_id, pp.state) pp.gully_id,
+            pp.state AS p_state,
+            pp.psector_id,
+            pp.arc_id,
+            pp.link_id
+           FROM plan_psector_x_gully pp
+             JOIN selector_psector sp ON sp.cur_user = CURRENT_USER AND sp.psector_id = pp.psector_id
+          ORDER BY pp.gully_id, pp.state, pp.link_id DESC NULLS LAST
+        ), gully_selector AS (
+         SELECT gully.gully_id,
+            gully.arc_id,
+            NULL::integer AS link_id
+           FROM gully
+             JOIN selector_state s ON s.cur_user = CURRENT_USER AND gully.state = s.state_id
+             LEFT JOIN ( SELECT gully_psector.gully_id
+                   FROM gully_psector
+                  WHERE gully_psector.p_state = 0) a USING (gully_id)
+          WHERE a.gully_id IS NULL AND (EXISTS ( SELECT 1
+                   FROM selector_expl se
+                  WHERE s.cur_user = CURRENT_USER AND (se.expl_id = ANY (array_append(gully.expl_visibility::integer[], gully.expl_id))))) AND (EXISTS ( SELECT 1
+                   FROM selector_sector sc
+                  WHERE sc.cur_user = CURRENT_USER AND sc.sector_id = gully.sector_id)) AND (EXISTS ( SELECT 1
+                   FROM selector_municipality sm
+                  WHERE sm.cur_user = CURRENT_USER AND sm.muni_id = gully.muni_id))
+        UNION ALL
+         SELECT gully_psector.gully_id,
+            gully_psector.arc_id,
+            gully_psector.link_id
+           FROM gully_psector
+          WHERE gully_psector.p_state = 1
+        ), gully_selected AS (
+         SELECT gully.gully_id,
+            gully.code,
+            gully.sys_code,
+            gully.top_elev,
+                CASE
+                    WHEN gully.width IS NULL THEN cat_gully.width
+                    ELSE gully.width
+                END AS width,
+                CASE
+                    WHEN gully.length IS NULL THEN cat_gully.length
+                    ELSE gully.length
+                END AS length,
+                CASE
+                    WHEN gully.ymax IS NULL THEN cat_gully.ymax
+                    ELSE gully.ymax
+                END AS ymax,
+            gully.sandbox,
+            gully.matcat_id,
+            gully.gully_type,
+            cat_feature.feature_class AS sys_type,
+            gully.gullycat_id,
+            cat_gully.matcat_id AS cat_gully_matcat,
+            gully.units,
+            gully.units_placement,
+            gully.groove,
+            gully.groove_height,
+            gully.groove_length,
+            gully.siphon,
+            gully.siphon_type,
+            gully.odorflap,
+            gully._connec_arccat_id AS connec_arccat_id,
+            gully.connec_length,
+                CASE
+                    WHEN ((gully.top_elev - gully.ymax + gully.sandbox + gully.connec_y2) / 2::numeric) IS NOT NULL THEN ((gully.top_elev - gully.ymax + gully.sandbox + gully.connec_y2) / 2::numeric)::numeric(12,3)
+                    ELSE gully.connec_depth
+                END AS connec_depth,
+                CASE
+                    WHEN gully._connec_matcat_id IS NULL THEN cc.matcat_id::text
+                    ELSE gully._connec_matcat_id
+                END AS connec_matcat_id,
+            gully.top_elev - gully.ymax + gully.sandbox AS connec_y1,
+            gully.connec_y2,
+            gully.arc_id,
+            gully.epa_type,
+            gully.state,
+            gully.state_type,
+            gully.expl_id,
+            exploitation.macroexpl_id,
+            gully.muni_id,
+                CASE
+                    WHEN link_planned.sector_id IS NULL THEN sector_table.sector_id
+                    ELSE link_planned.sector_id
+                END AS sector_id,
+                CASE
+                    WHEN link_planned.macrosector_id IS NULL THEN sector_table.macrosector_id
+                    ELSE link_planned.macrosector_id
+                END AS macrosector_id,
+                CASE
+                    WHEN link_planned.sector_id IS NULL THEN sector_table.sector_type
+                    ELSE link_planned.sector_type
+                END AS sector_type,
+                CASE
+                    WHEN link_planned.drainzone_id IS NULL THEN dwfzone_table.drainzone_id
+                    ELSE link_planned.drainzone_id
+                END AS drainzone_id,
+                CASE
+                    WHEN link_planned.drainzone_type IS NULL THEN drainzone_table.drainzone_type
+                    ELSE link_planned.drainzone_type
+                END AS drainzone_type,
+            gully.drainzone_outfall,
+                CASE
+                    WHEN link_planned.dwfzone_id IS NULL THEN dwfzone_table.dwfzone_id
+                    ELSE link_planned.dwfzone_id
+                END AS dwfzone_id,
+                CASE
+                    WHEN link_planned.dwfzone_type IS NULL THEN dwfzone_table.dwfzone_type
+                    ELSE link_planned.dwfzone_type
+                END AS dwfzone_type,
+            gully.dwfzone_outfall,
+                CASE
+                    WHEN link_planned.omzone_id IS NULL THEN omzone_table.omzone_id
+                    ELSE link_planned.omzone_id
+                END AS omzone_id,
+                CASE
+                    WHEN link_planned.macroomzone_id IS NULL THEN omzone_table.macroomzone_id
+                    ELSE link_planned.macroomzone_id
+                END AS macroomzone_id,
+                CASE
+                    WHEN link_planned.omzone_type IS NULL THEN omzone_table.omzone_type
+                    ELSE link_planned.omzone_type
+                END AS omzone_type,
+                CASE
+                    WHEN link_planned.dma_id IS NULL THEN gully.dma_id
+                    ELSE link_planned.dma_id
+                END AS dma_id,
+            gully.omunit_id,
+            gully.minsector_id,
+            gully.soilcat_id,
+            gully.function_type,
+            gully.category_type,
+            gully.location_type,
+            gully.fluid_type,
+            gully.descript,
+            gully.annotation,
+            gully.observ,
+            gully.comment,
+            concat(cat_feature.link_path, gully.link) AS link,
+            gully.num_value,
+            gully.district_id,
+            gully.postcode,
+            gully.streetaxis_id,
+            gully.postnumber,
+            gully.postcomplement,
+            gully.streetaxis2_id,
+            gully.postnumber2,
+            gully.postcomplement2,
+            mu.region_id,
+            mu.province_id,
+            gully.workcat_id,
+            gully.workcat_id_end,
+            gully.workcat_id_plan,
+            gully.builtdate,
+            gully.enddate,
+            gully.ownercat_id,
+                CASE
+                    WHEN link_planned.exit_id IS NULL THEN gully.pjoint_id
+                    ELSE link_planned.exit_id
+                END AS pjoint_id,
+                CASE
+                    WHEN link_planned.exit_type IS NULL THEN gully.pjoint_type
+                    ELSE link_planned.exit_type
+                END AS pjoint_type,
+            gully.placement_type,
+            gully.access_type,
+            gully.brand_id,
+            gully.model_id,
+            gully.asset_id,
+            gully.adate,
+            gully.adescript,
+            gully.verified,
+            gully.uncertain,
+            gully.datasource,
+            cat_gully.label,
+            gully.label_x,
+            gully.label_y,
+            gully.label_rotation,
+            gully.rotation,
+            gully.label_quadrant,
+            cat_gully.svg,
+            gully.inventory,
+            gully.publish,
+            vst.is_operative,
+                CASE
+                    WHEN gully.sector_id > 0 AND vst.is_operative = true AND gully.epa_type::text = 'GULLY'::character varying(16)::text AND inp_network_mode.value = '2'::text THEN gully.epa_type
+                    ELSE NULL::character varying(16)
+                END AS inp_type,
+            sector_table.stylesheet ->> 'featureColor'::text AS sector_style,
+            omzone_table.stylesheet ->> 'featureColor'::text AS omzone_style,
+            drainzone_table.stylesheet ->> 'featureColor'::text AS drainzone_style,
+            dwfzone_table.stylesheet ->> 'featureColor'::text AS dwfzone_style,
+            gully.lock_level,
+            gully.expl_visibility,
+            date_trunc('second'::text, gully.created_at) AS created_at,
+            gully.created_by,
+            date_trunc('second'::text, gully.updated_at) AS updated_at,
+            gully.updated_by,
+            gully.the_geom
+           FROM gully_selector
+             JOIN gully USING (gully_id)
+             JOIN cat_gully ON gully.gullycat_id::text = cat_gully.id::text
+             JOIN exploitation ON gully.expl_id = exploitation.expl_id
+             JOIN cat_feature ON gully.gully_type::text = cat_feature.id::text
+             LEFT JOIN cat_connec cc ON cc.id::text = gully._connec_arccat_id::text
+             JOIN value_state_type vst ON vst.id = gully.state_type
+             JOIN ext_municipality mu ON gully.muni_id = mu.muni_id
+             JOIN sector_table ON gully.sector_id = sector_table.sector_id
+             LEFT JOIN omzone_table ON gully.omzone_id = omzone_table.omzone_id
+             LEFT JOIN drainzone_table ON gully.omzone_id = drainzone_table.drainzone_id
+             LEFT JOIN dwfzone_table ON gully.dwfzone_id = dwfzone_table.dwfzone_id
+             LEFT JOIN link_planned ON gully.gully_id = link_planned.feature_id
+             LEFT JOIN inp_network_mode ON true
+        )
+ SELECT gully_id,
+    code,
+    sys_code,
+    top_elev,
+    width,
+    length,
+    ymax,
+    sandbox,
+    matcat_id,
+    gully_type,
+    sys_type,
+    gullycat_id,
+    cat_gully_matcat,
+    units,
+    units_placement,
+    groove,
+    groove_height,
+    groove_length,
+    siphon,
+    siphon_type,
+    odorflap,
+    connec_arccat_id,
+    connec_length,
+    connec_depth,
+    connec_matcat_id,
+    connec_y1,
+    connec_y2,
+    arc_id,
+    epa_type,
+    state,
+    state_type,
+    expl_id,
+    macroexpl_id,
+    muni_id,
+    sector_id,
+    macrosector_id,
+    sector_type,
+    drainzone_id,
+    drainzone_type,
+    drainzone_outfall,
+    dwfzone_id,
+    dwfzone_type,
+    dwfzone_outfall,
+    omzone_id,
+    macroomzone_id,
+    dma_id,
+    omzone_type,
+    omunit_id,
+    minsector_id,
+    soilcat_id,
+    function_type,
+    category_type,
+    location_type,
+    fluid_type,
+    descript,
+    annotation,
+    observ,
+    comment,
+    link,
+    num_value,
+    district_id,
+    postcode,
+    streetaxis_id,
+    postnumber,
+    postcomplement,
+    streetaxis2_id,
+    postnumber2,
+    postcomplement2,
+    region_id,
+    province_id,
+    workcat_id,
+    workcat_id_end,
+    workcat_id_plan,
+    builtdate,
+    enddate,
+    ownercat_id,
+    pjoint_id,
+    pjoint_type,
+    placement_type,
+    access_type,
+    brand_id,
+    model_id,
+    asset_id,
+    adate,
+    adescript,
+    verified,
+    uncertain,
+    datasource,
+    label,
+    label_x,
+    label_y,
+    label_rotation,
+    rotation,
+    label_quadrant,
+    svg,
+    inventory,
+    publish,
+    is_operative,
+    inp_type,
+    sector_style,
+    omzone_style,
+    drainzone_style,
+    dwfzone_style,
+    lock_level,
+    expl_visibility,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by,
+    the_geom
+   FROM gully_selected;
+-- ===============================
+
+
+ALTER VIEW v_edit_cad_auxcircle RENAME TO ve_cad_auxcircle;
+ALTER VIEW v_edit_cad_auxline RENAME TO ve_cad_auxline;
+ALTER VIEW v_edit_cad_auxpoint RENAME TO ve_cad_auxpoint;
+ALTER VIEW v_edit_cat_dscenario RENAME TO ve_cat_dscenario;
+ALTER VIEW v_edit_cat_dwf RENAME TO ve_cat_dwf;
+ALTER VIEW v_edit_cat_feature_arc RENAME TO ve_cat_feature_arc;
+ALTER VIEW v_edit_cat_feature_connec RENAME TO ve_cat_feature_connec;
+ALTER VIEW v_edit_cat_feature_element RENAME TO ve_cat_feature_element;
+ALTER VIEW v_edit_cat_feature_gully RENAME TO ve_cat_feature_gully;
+ALTER VIEW v_edit_cat_feature_link RENAME TO ve_cat_feature_link;
+ALTER VIEW v_edit_cat_feature_node RENAME TO ve_cat_feature_node;
+ALTER VIEW v_edit_cat_hydrology RENAME TO ve_cat_hydrology;
+ALTER VIEW v_edit_dimensions RENAME TO ve_dimensions;
+ALTER VIEW v_edit_dma RENAME TO ve_dma;
+ALTER VIEW v_edit_drainzone RENAME TO ve_drainzone;
+ALTER VIEW v_edit_dwfzone RENAME TO ve_dwfzone;
+ALTER VIEW v_edit_exploitation RENAME TO ve_exploitation;
+ALTER VIEW v_edit_inp_conduit RENAME TO ve_inp_conduit;
+ALTER VIEW v_edit_inp_controls RENAME TO ve_inp_controls;
+ALTER VIEW v_edit_inp_coverage RENAME TO ve_inp_coverage;
+ALTER VIEW v_edit_inp_curve RENAME TO ve_inp_curve;
+ALTER VIEW v_edit_inp_curve_value RENAME TO ve_inp_curve_value;
+ALTER VIEW v_edit_inp_divider RENAME TO ve_inp_divider;
+ALTER VIEW v_edit_inp_dscenario_conduit RENAME TO ve_inp_dscenario_conduit;
+ALTER VIEW v_edit_inp_dscenario_controls RENAME TO ve_inp_dscenario_controls;
+ALTER VIEW v_edit_inp_dscenario_inflows RENAME TO ve_inp_dscenario_inflows;
+ALTER VIEW v_edit_inp_dscenario_inflows_poll RENAME TO ve_inp_dscenario_inflows_poll;
+ALTER VIEW v_edit_inp_dscenario_inlet RENAME TO ve_inp_dscenario_inlet;
+ALTER VIEW v_edit_inp_dscenario_junction RENAME TO ve_inp_dscenario_junction;
+ALTER VIEW v_edit_inp_dscenario_lids RENAME TO ve_inp_dscenario_lids;
+ALTER VIEW v_edit_inp_dscenario_outfall RENAME TO ve_inp_dscenario_outfall;
+ALTER VIEW v_edit_inp_dscenario_raingage RENAME TO ve_inp_dscenario_raingage;
+ALTER VIEW v_edit_inp_dscenario_storage RENAME TO ve_inp_dscenario_storage;
+ALTER VIEW v_edit_inp_dscenario_treatment RENAME TO ve_inp_dscenario_treatment;
+ALTER VIEW v_edit_inp_dwf RENAME TO ve_inp_dwf;
+ALTER VIEW v_edit_inp_gully RENAME TO ve_inp_gully;
+ALTER VIEW v_edit_inp_inflows RENAME TO ve_inp_inflows;
+ALTER VIEW v_edit_inp_inflows_poll RENAME TO ve_inp_inflows_poll;
+ALTER VIEW v_edit_inp_inlet RENAME TO ve_inp_inlet;
+ALTER VIEW v_edit_inp_junction RENAME TO ve_inp_junction;
+ALTER VIEW v_edit_inp_netgully RENAME TO ve_inp_netgully;
+ALTER VIEW v_edit_inp_orifice RENAME TO ve_inp_orifice;
+ALTER VIEW v_edit_inp_outfall RENAME TO ve_inp_outfall;
+ALTER VIEW v_edit_inp_outlet RENAME TO ve_inp_outlet;
+ALTER VIEW v_edit_inp_pattern RENAME TO ve_inp_pattern;
+ALTER VIEW v_edit_inp_pattern_value RENAME TO ve_inp_pattern_value;
+ALTER VIEW v_edit_inp_pump RENAME TO ve_inp_pump;
+ALTER VIEW v_edit_inp_storage RENAME TO ve_inp_storage;
+ALTER VIEW v_edit_inp_subc2outlet RENAME TO ve_inp_subc2outlet;
+ALTER VIEW v_edit_inp_subcatchment RENAME TO ve_inp_subcatchment;
+ALTER VIEW v_edit_inp_timeseries RENAME TO ve_inp_timeseries;
+ALTER VIEW v_edit_inp_timeseries_value RENAME TO ve_inp_timeseries_value;
+ALTER VIEW v_edit_inp_transects RENAME TO ve_inp_transects;
+ALTER VIEW v_edit_inp_treatment RENAME TO ve_inp_treatment;
+ALTER VIEW v_edit_inp_virtual RENAME TO ve_inp_virtual;
+ALTER VIEW v_edit_inp_weir RENAME TO ve_inp_weir;
+ALTER VIEW v_edit_macroomzone RENAME TO ve_macroomzone;
+ALTER VIEW v_edit_macrosector RENAME TO ve_macrosector;
+ALTER VIEW v_edit_om_visit RENAME TO ve_om_visit;
+ALTER VIEW v_edit_omzone RENAME TO ve_omzone;
+ALTER VIEW v_edit_plan_psector_x_gully RENAME TO ve_plan_psector_x_gully;
+ALTER VIEW v_edit_plan_psector_x_other RENAME TO ve_plan_psector_x_other;
+ALTER VIEW v_edit_review_arc RENAME TO ve_review_arc;
+ALTER VIEW v_edit_review_audit_arc RENAME TO ve_review_audit_arc;
+ALTER VIEW v_edit_review_audit_connec RENAME TO ve_review_audit_connec;
+ALTER VIEW v_edit_review_audit_gully RENAME TO ve_review_audit_gully;
+ALTER VIEW v_edit_review_audit_node RENAME TO ve_review_audit_node;
+ALTER VIEW v_edit_review_connec RENAME TO ve_review_connec;
+ALTER VIEW v_edit_review_gully RENAME TO ve_review_gully;
+ALTER VIEW v_edit_review_node RENAME TO ve_review_node;
+ALTER VIEW v_edit_rtc_hydro_data_x_connec RENAME TO ve_rtc_hydro_data_x_connec;
+ALTER VIEW v_edit_samplepoint RENAME TO ve_samplepoint;
+ALTER VIEW v_edit_sector RENAME TO ve_sector;
+
+CREATE OR REPLACE VIEW ve_inp_dscenario_raingage
+AS SELECT p.dscenario_id,
+    p.rg_id,
+    p.form_type,
+    p.intvl,
+    p.scf,
+    p.rgage_type,
+    p.timser_id,
+    p.fname,
+    p.sta,
+    p.units,
+    ve_raingage.the_geom
+   FROM selector_inp_dscenario,
+    ve_raingage
+     JOIN inp_dscenario_raingage p USING (rg_id)
+     JOIN cat_dscenario d USING (dscenario_id)
+  WHERE p.dscenario_id = selector_inp_dscenario.dscenario_id AND selector_inp_dscenario.cur_user = "current_user"()::text;
+
+
+DROP VIEW IF EXISTS v_edit_raingage;
+
+CREATE OR REPLACE VIEW ve_raingage
+AS SELECT raingage.rg_id,
+    raingage.form_type,
+    raingage.intvl,
+    raingage.scf,
+    raingage.rgage_type,
+    raingage.timser_id,
+    raingage.fname,
+    raingage.sta,
+    raingage.units,
+    raingage.the_geom,
+    raingage.expl_id,
+    raingage.muni_id
+   FROM selector_expl,
+    raingage
+     LEFT JOIN selector_municipality m USING (muni_id)
+  WHERE raingage.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::text AND (m.cur_user = CURRENT_USER OR raingage.muni_id IS NULL);
+
+CREATE OR REPLACE VIEW ve_inp_pgully
+AS SELECT g.gully_id,
+    g.code,
+    g.top_elev,
+    g.gully_type,
+    g.gullycat_id,
+    (g.width / 100::numeric)::numeric(12,2) AS grate_width,
+    (g.length / 100::numeric)::numeric(12,2) AS grate_length,
+    g.arc_id,
+    g.sector_id,
+    g.expl_id,
+    g.state,
+    g.state_type,
+    polygon.the_geom,
+    g.units,
+    g.units_placement,
+    g.groove,
+    g.groove_height,
+    g.groove_length,
+    g.pjoint_id,
+    g.pjoint_type,
+        CASE
+            WHEN g.units_placement::text = 'LENGTH-SIDE'::text THEN (COALESCE(g.units::integer, 1)::numeric * g.width / 100::numeric)::numeric(12,3)
+            WHEN g.units_placement::text = 'WIDTH-SIDE'::text THEN (COALESCE(g.units::integer, 1)::numeric * g.length / 100::numeric)::numeric(12,3)
+            ELSE (cat_gully.width / 100::numeric)::numeric(12,3)
+        END AS total_width,
+        CASE
+            WHEN g.units_placement::text = 'LENGTH-SIDE'::text THEN (COALESCE(g.units::integer, 1)::numeric * g.width / 100::numeric)::numeric(12,3)
+            WHEN g.units_placement::text = 'WIDTH-SIDE'::text THEN (COALESCE(g.units::integer, 1)::numeric * g.length / 100::numeric)::numeric(12,3)
+            ELSE (cat_gully.length / 100::numeric)::numeric(12,3)
+        END AS total_length,
+    g.ymax - COALESCE(g.sandbox, 0::numeric) AS depth,
+    g.annotation,
+    i.outlet_type,
+    i.custom_top_elev,
+    i.custom_width,
+    i.custom_length,
+    i.custom_depth,
+    i.gully_method,
+    i.weir_cd,
+    i.orifice_cd,
+    i.custom_a_param,
+    i.custom_b_param,
+    i.efficiency
+   FROM ve_gully g
+     JOIN inp_gully i ON i.gully_id = g.gully_id
+     JOIN cat_gully ON g.gullycat_id::text = cat_gully.id::text
+     JOIN polygon ON polygon.feature_id = g.gully_id
+  WHERE g.is_operative IS TRUE AND g.epa_type = 'PGULLY';
+
+CREATE OR REPLACE VIEW ve_epa_pgully
+AS SELECT gully_id,
+    outlet_type,
+    custom_top_elev,
+    custom_width,
+    custom_length,
+    custom_depth,
+    gully_method,
+    weir_cd,
+    orifice_cd,
+    custom_a_param,
+    custom_b_param,
+    efficiency
+   FROM inp_gully;
+
+-- 05/08/2025
+-- PSECTOR
+DROP VIEW IF EXISTS v_plan_psector_gully;
+CREATE OR REPLACE VIEW v_plan_psector_gully
+AS WITH sel_psector AS (
+    SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
+)
+SELECT row_number() OVER () AS rid,
+    gully.gully_id,
+    plan_psector_x_gully.psector_id,
+    gully.code,
+    gully.gullycat_id,
+    gully.gully_type,
+    cat_feature.feature_class,
+    gully.state AS original_state,
+    gully.state_type AS original_state_type,
+    plan_psector_x_gully.state AS plan_state,
+    plan_psector_x_gully.doable,
+    plan_psector.priority AS psector_priority,
+    gully.the_geom
+FROM gully
+JOIN plan_psector_x_gully USING (gully_id)
+JOIN plan_psector USING (psector_id)
+JOIN cat_gully ON cat_gully.id::text = gully.gullycat_id::text
+JOIN cat_feature ON cat_feature.id::text = gully.gully_type::text
+WHERE EXISTS (SELECT 1 FROM sel_psector WHERE sel_psector.psector_id = plan_psector_x_gully.psector_id);
+
+CREATE OR REPLACE VIEW ve_dimensions
+AS
+WITH v_state_dimensions AS (SELECT dimensions.id
+   FROM selector_state,
+    dimensions
+  WHERE dimensions.state = selector_state.state_id AND selector_state.cur_user = CURRENT_USER)
+SELECT dimensions.id,
+    dimensions.distance,
+    dimensions.depth,
+    dimensions.the_geom,
+    dimensions.x_label,
+    dimensions.y_label,
+    dimensions.rotation_label,
+    dimensions.offset_label,
+    dimensions.direction_arrow,
+    dimensions.x_symbol,
+    dimensions.y_symbol,
+    dimensions.feature_id,
+    dimensions.feature_type,
+    dimensions.state,
+    dimensions.expl_id,
+    dimensions.observ,
+    dimensions.comment,
+    dimensions.sector_id,
+    dimensions.muni_id
+   FROM selector_expl,
+    dimensions
+     JOIN v_state_dimensions ON dimensions.id = v_state_dimensions.id
+     LEFT JOIN selector_municipality m USING (muni_id)
+     JOIN selector_sector s USING (sector_id)
+  WHERE (m.cur_user = CURRENT_USER::text OR dimensions.muni_id IS NULL) AND s.cur_user = CURRENT_USER::text AND dimensions.expl_id = selector_expl.expl_id AND selector_expl.cur_user = "current_user"()::text;
+
+DROP VIEW IF EXISTS v_state_dimensions;
+DROP VIEW IF EXISTS v_state_gully;
+
+CREATE OR REPLACE VIEW ve_plan_psector_x_connec
+AS SELECT plan_psector_x_connec.id,
+    plan_psector_x_connec.connec_id,
+    plan_psector_x_connec.arc_id,
+    plan_psector_x_connec.psector_id,
+    plan_psector_x_connec.state,
+    plan_psector_x_connec.doable,
+    plan_psector_x_connec.descript,
+    plan_psector_x_connec.link_id,
+    plan_psector_x_connec.insert_tstamp,
+    plan_psector_x_connec.insert_user,
+    link.exit_type
+   FROM plan_psector_x_connec
+     LEFT JOIN link USING (link_id);
+
+
+DROP VIEW IF EXISTS ve_plan_psector_x_gully;
+CREATE OR REPLACE VIEW ve_plan_psector_x_gully
+AS SELECT plan_psector_x_gully.id,
+    plan_psector_x_gully.gully_id,
+    plan_psector_x_gully.arc_id,
+    plan_psector_x_gully.psector_id,
+    plan_psector_x_gully.state,
+    plan_psector_x_gully.doable,
+    plan_psector_x_gully.descript,
+    plan_psector_x_gully.link_id,
+    plan_psector_x_gully.insert_tstamp,
+    plan_psector_x_gully.insert_user,
+    link.exit_type
+   FROM plan_psector_x_gully
+     LEFT JOIN link USING (link_id);
+
+-- remove order_id and nodarc_id from flowregulators
+CREATE OR REPLACE VIEW ve_man_frelem AS
+  SELECT ve_element.element_id,
+    ve_element.code,
+    ve_element.sys_code,
+    ve_element.top_elev,
+    ve_element.element_type,
+    ve_element.elementcat_id,
+    ve_element.num_elements,
+    ve_element.epa_type,
+    ve_element.state,
+    ve_element.state_type,
+    ve_element.expl_id,
+    ve_element.muni_id,
+    ve_element.sector_id,
+    ve_element.omzone_id,
+    ve_element.function_type,
+    ve_element.category_type,
+    ve_element.location_type,
+    ve_element.observ,
+    ve_element.comment,
+    ve_element.link,
+    ve_element.workcat_id,
+    ve_element.workcat_id_end,
+    ve_element.builtdate,
+    ve_element.enddate,
+    ve_element.ownercat_id,
+    ve_element.brand_id,
+    ve_element.model_id,
+    ve_element.serial_number,
+    ve_element.asset_id,
+    ve_element.verified,
+    ve_element.datasource,
+    ve_element.label_x,
+    ve_element.label_y,
+    ve_element.label_rotation,
+    ve_element.rotation,
+    ve_element.inventory,
+    ve_element.publish,
+    ve_element.trace_featuregeom,
+    ve_element.lock_level,
+    ve_element.expl_visibility,
+    man_frelem.node_id,
+    man_frelem.to_arc,
+    man_frelem.flwreg_length,
+    ve_element.created_at,
+    ve_element.created_by,
+    ve_element.updated_at,
+    ve_element.updated_by,
+        CASE
+            WHEN man_frelem.node_id = a.node_1 THEN st_setsrid(st_makeline(node.the_geom, st_lineinterpolatepoint(a.the_geom, man_frelem.flwreg_length::double precision / st_length(a.the_geom))), 25831)::geometry(LineString,25831)
+            WHEN man_frelem.node_id = a.node_2 THEN st_setsrid(st_makeline(node.the_geom, st_lineinterpolatepoint(a.the_geom, 1::double precision - man_frelem.flwreg_length::double precision / st_length(a.the_geom))), 25831)::geometry(LineString,25831)
+            ELSE NULL::geometry(LineString,25831)
+        END AS the_geom
+   FROM ve_element
+     JOIN man_frelem ON ve_element.element_id = man_frelem.element_id
+     JOIN arc a ON a.arc_id = man_frelem.to_arc
+     JOIN node USING (node_id);
+
+CREATE OR REPLACE VIEW ve_epa_frpump
+AS SELECT inp_frpump.element_id,
+	man_frelem.node_id,
+    inp_frpump.curve_id,
+    inp_frpump.status,
+    inp_frpump.startup,
+    inp_frpump.shutoff,
+    v_rpt_pumping_sum.percent,
+    v_rpt_pumping_sum.num_startup,
+    v_rpt_pumping_sum.min_flow,
+    v_rpt_pumping_sum.avg_flow,
+    v_rpt_pumping_sum.max_flow,
+    v_rpt_pumping_sum.vol_ltr,
+    v_rpt_pumping_sum.powus_kwh,
+    v_rpt_pumping_sum.timoff_min,
+    v_rpt_pumping_sum.timoff_max
+   FROM inp_frpump
+     LEFT JOIN man_frelem USING (element_id)
+     LEFT JOIN v_rpt_pumping_sum ON v_rpt_pumping_sum.arc_id::text = man_frelem.element_id::text;
+
+CREATE OR REPLACE VIEW ve_epa_frweir
+AS SELECT inp_frweir.element_id,
+	man_frelem.node_id,
+    inp_frweir.weir_type,
+    inp_frweir.offsetval,
+    inp_frweir.cd,
+    inp_frweir.ec,
+    inp_frweir.cd2,
+    inp_frweir.flap,
+    inp_frweir.geom1,
+    inp_frweir.geom2,
+    inp_frweir.geom3,
+    inp_frweir.geom4,
+    inp_frweir.surcharge,
+    inp_frweir.road_width,
+    inp_frweir.road_surf,
+    inp_frweir.coef_curve,
+    rpt_arcflow_sum.max_flow,
+    rpt_arcflow_sum.time_days,
+    rpt_arcflow_sum.time_hour,
+    rpt_arcflow_sum.max_veloc,
+    rpt_arcflow_sum.mfull_flow,
+    rpt_arcflow_sum.mfull_depth AS mfull_dept,
+    rpt_arcflow_sum.max_shear,
+    rpt_arcflow_sum.max_hr,
+    rpt_arcflow_sum.max_slope,
+    rpt_arcflow_sum.day_max,
+    rpt_arcflow_sum.time_max,
+    rpt_arcflow_sum.min_shear,
+    rpt_arcflow_sum.day_min,
+    rpt_arcflow_sum.time_min
+   FROM inp_frweir
+     LEFT JOIN man_frelem USING (element_id)
+     LEFT JOIN rpt_arcflow_sum ON rpt_arcflow_sum.arc_id::text = man_frelem.element_id::text;
+
+CREATE OR REPLACE VIEW ve_epa_frorifice
+AS SELECT inp_frorifice.element_id,
+	man_frelem.node_id,
+    inp_frorifice.orifice_type,
+    inp_frorifice.offsetval,
+    inp_frorifice.cd,
+    inp_frorifice.orate,
+    inp_frorifice.flap,
+    inp_frorifice.shape,
+    inp_frorifice.geom1,
+    inp_frorifice.geom2,
+    inp_frorifice.geom3,
+    inp_frorifice.geom4,
+    rpt_arcflow_sum.max_flow,
+    rpt_arcflow_sum.time_days,
+    rpt_arcflow_sum.time_hour,
+    rpt_arcflow_sum.max_veloc,
+    rpt_arcflow_sum.mfull_flow,
+    rpt_arcflow_sum.mfull_depth,
+    rpt_arcflow_sum.max_shear,
+    rpt_arcflow_sum.max_hr,
+    rpt_arcflow_sum.max_slope,
+    rpt_arcflow_sum.day_max,
+    rpt_arcflow_sum.time_max,
+    rpt_arcflow_sum.min_shear,
+    rpt_arcflow_sum.day_min,
+    rpt_arcflow_sum.time_min
+   FROM inp_frorifice
+     LEFT JOIN man_frelem USING (element_id)
+     LEFT JOIN rpt_arcflow_sum ON rpt_arcflow_sum.arc_id::text = man_frelem.element_id::text;
+
+CREATE OR REPLACE VIEW ve_epa_froutlet
+AS SELECT inp_froutlet.element_id,
+	man_frelem.node_id,
+    inp_froutlet.outlet_type,
+	inp_froutlet.offsetval,
+    inp_froutlet.curve_id,
+    inp_froutlet.cd1,
+    inp_froutlet.cd2,
+    inp_froutlet.flap,
+    rpt_arcflow_sum.max_flow,
+    rpt_arcflow_sum.time_days,
+    rpt_arcflow_sum.time_hour,
+    rpt_arcflow_sum.max_veloc,
+    rpt_arcflow_sum.mfull_flow,
+    rpt_arcflow_sum.mfull_depth AS mfull_dept,
+    rpt_arcflow_sum.max_shear,
+    rpt_arcflow_sum.max_hr,
+    rpt_arcflow_sum.max_slope,
+    rpt_arcflow_sum.day_max,
+    rpt_arcflow_sum.time_max,
+    rpt_arcflow_sum.min_shear,
+    rpt_arcflow_sum.day_min,
+    rpt_arcflow_sum.time_min
+   FROM inp_froutlet
+     LEFT JOIN man_frelem USING (element_id)
+     LEFT JOIN rpt_arcflow_sum ON rpt_arcflow_sum.arc_id::text = man_frelem.element_id::text;
+
+CREATE OR REPLACE VIEW ve_inp_froutlet
+AS SELECT
+    f.element_id,
+    f.node_id,
+    f.to_arc,
+    f.flwreg_length,
+    ou.outlet_type,
+    ou.offsetval,
+    ou.curve_id,
+    ou.cd1,
+    ou.cd2,
+    ou.flap,
+    f.the_geom
+    FROM ve_man_frelem f
+    JOIN inp_froutlet ou USING (element_id);
+
+CREATE OR REPLACE VIEW ve_inp_frweir
+AS SELECT
+    f.element_id,
+    f.node_id,
+    f.to_arc,
+    f.flwreg_length,
+    w.weir_type,
+    w.offsetval,
+    w.cd,
+    w.ec,
+    w.cd2,
+    w.flap,
+    w.geom1,
+    w.geom2,
+    w.geom3,
+    w.geom4,
+    w.surcharge,
+    w.road_width,
+    w.road_surf,
+    w.coef_curve,
+    f.the_geom
+    FROM ve_man_frelem f
+    JOIN inp_frweir w USING (element_id);
+
+
+CREATE OR REPLACE VIEW ve_inp_frpump
+AS SELECT
+    f.element_id,
+    f.node_id,
+    f.to_arc,
+    f.flwreg_length,
+    p.curve_id,
+    p.status,
+    p.startup,
+    p.shutoff,
+    f.the_geom
+    FROM ve_man_frelem f
+    JOIN inp_frpump p USING (element_id);
+
+CREATE OR REPLACE VIEW ve_inp_frorifice
+AS SELECT
+    f.element_id,
+    f.node_id,
+    f.to_arc,
+    f.flwreg_length,
+    ori.orifice_type,
+    ori.offsetval,
+    ori.cd,
+    ori.orate,
+    ori.flap,
+    ori.shape,
+    ori.geom1,
+    ori.geom2,
+    ori.geom3,
+    ori.geom4,
+    f.the_geom
+    FROM ve_man_frelem f
+    JOIN inp_frorifice ori USING (element_id);
+
+CREATE OR REPLACE VIEW ve_inp_dscenario_frpump
+AS SELECT s.dscenario_id,
+    f.element_id,
+    f.curve_id,
+    f.status,
+    f.startup,
+    f.shutoff,
+    n.the_geom
+    FROM selector_inp_dscenario s, inp_dscenario_frpump f
+    JOIN ve_inp_frpump n USING (element_id)
+    WHERE s.dscenario_id = f.dscenario_id AND s.cur_user = CURRENT_USER::text;
+
+CREATE OR REPLACE VIEW ve_inp_dscenario_froutlet
+AS SELECT
+    s.dscenario_id,
+    f.element_id,
+    n.node_id,
+    f.outlet_type,
+    f.offsetval,
+    f.curve_id,
+    f.cd1,
+    f.cd2,
+    f.flap,
+    n.the_geom
+    FROM selector_inp_dscenario s, inp_dscenario_froutlet f
+    JOIN ve_inp_froutlet n USING (element_id)
+	WHERE s.dscenario_id = f.dscenario_id AND s.cur_user = CURRENT_USER::text;
+
+CREATE OR REPLACE VIEW ve_inp_dscenario_frweir
+AS SELECT
+    s.dscenario_id,
+    f.element_id,
+    n.node_id,
+    f.weir_type,
+    f.offsetval,
+    f.cd,
+    f.ec,
+    f.cd2,
+    f.flap,
+    f.geom1,
+    f.geom2,
+    f.geom3,
+    f.geom4,
+    f.surcharge,
+    f.road_width,
+    f.road_surf,
+    f.coef_curve,
+    n.the_geom
+    FROM selector_inp_dscenario s, inp_dscenario_frweir f
+    JOIN ve_inp_frweir n USING (element_id)
+	WHERE s.dscenario_id = f.dscenario_id AND s.cur_user = CURRENT_USER::text;
+
+CREATE OR REPLACE VIEW ve_inp_dscenario_frorifice
+AS SELECT
+    s.dscenario_id,
+    f.element_id,
+    n.node_id,
+    f.orifice_type,
+    f.offsetval,
+    f.cd,
+    f.orate,
+    f.flap,
+    f.shape,
+    f.geom1,
+    f.geom2,
+    f.geom3,
+    f.geom4,
+    n.the_geom
+    FROM selector_inp_dscenario s, inp_dscenario_frorifice f
+    JOIN ve_inp_frorifice n USING (element_id)
+    WHERE s.dscenario_id = f.dscenario_id AND s.cur_user = CURRENT_USER::text;

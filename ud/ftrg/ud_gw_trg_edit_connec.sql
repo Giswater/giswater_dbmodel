@@ -20,6 +20,7 @@ v_count integer;
 v_addfields record;
 v_new_value_param text;
 v_old_value_param text;
+v_man_table varchar;
 v_customfeature text;
 v_featurecat text;
 v_psector_vdefault integer;
@@ -42,17 +43,19 @@ v_code_prefix text;
 v_connec_id text;
 v_childtable_name text;
 v_schemaname text;
+v_featureclass text;
 
 BEGIN
 
 	EXECUTE 'SET search_path TO '||quote_literal(TG_TABLE_SCHEMA)||', public';
 
 	--set custom feature custom view inserts
-	v_customfeature = TG_ARGV[0];
+	v_man_table:= TG_ARGV[0];
     v_schemaname:= TG_TABLE_SCHEMA;
 
-	IF v_customfeature='parent' THEN
-		v_customfeature:=NULL;
+	IF v_man_table IN (SELECT id FROM cat_feature WHERE feature_type = 'CONNEC') THEN
+		v_customfeature:=v_man_table;
+		v_man_table:=(SELECT man_table FROM cat_feature_connec c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id WHERE c.id=v_man_table);
 	END IF;
 
 	--get system and user variables
@@ -153,8 +156,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.expl_id =(SELECT expl_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -186,8 +189,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) AND active IS TRUE  LIMIT 1);
 				ELSE
-					NEW.sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.sector_id =(SELECT sector_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -218,8 +221,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.omzone_id = (SELECT omzone_id FROM omzone WHERE ST_DWithin(NEW.the_geom, omzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.omzone_id =(SELECT omzone_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.omzone_id =(SELECT omzone_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -245,8 +248,8 @@ BEGIN
 					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001)
 					AND active IS TRUE  LIMIT 1);
 				ELSE
-					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.muni_id =(SELECT muni_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -260,8 +263,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.district_id = (SELECT district_id FROM ext_district WHERE ST_DWithin(NEW.the_geom, ext_district.the_geom,0.001) LIMIT 1);
 				ELSIF v_count > 1 THEN
-					NEW.district_id =(SELECT district_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.district_id =(SELECT district_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -354,7 +357,7 @@ BEGIN
 		END IF;
 
 		-- Code
-		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix' INTO v_code_autofill_bool, v_featurecat, v_code_prefix
+		SELECT code_autofill, cat_feature.id, addparam::json->>'code_prefix', feature_class INTO v_code_autofill_bool, v_featurecat, v_code_prefix, v_featureclass
 		FROM cat_feature WHERE id=NEW.connec_type;
 
 		IF v_featurecat IS NOT NULL THEN
@@ -467,14 +470,14 @@ BEGIN
 			"observ","comment",  omzone_id, soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, workcat_id_plan,
 			builtdate, enddate, ownercat_id, muni_id, postcode, district_id,
 			streetaxis2_id, streetaxis_id, postnumber, postnumber2, postcomplement, postcomplement2, descript, rotation, link, verified, the_geom,  label_x, label_y,
-			label_rotation, accessibility,diagonal, expl_id, publish, inventory, uncertain, num_value,
+			label_rotation, accessibility,diagonal, expl_id, publish, inventory, uncertain, num_value, brand_id, model_id,
 			updated_at, updated_by, asset_id, expl_visibility, adate, adescript, plot_code, placement_type, label_quadrant, access_type, lock_level, block_code, n_inhabitants, n_hydrometer, omunit_id, drainzone_outfall, dwfzone_outfall, dma_id)
 			VALUES (NEW.connec_id, NEW.code, NEW.sys_code, NEW.customer_code, NEW.top_elev, NEW.y1, NEW.y2, NEW.conneccat_id, NEW.connec_type, NEW.sector_id, NEW.demand,NEW."state", NEW.state_type, NEW.connec_depth,
 			NEW.connec_length, NEW.arc_id, NEW.annotation, NEW."observ", NEW."comment", NEW.omzone_id, NEW.soilcat_id, NEW.function_type, NEW.category_type, NEW.fluid_type, NEW.location_type,
 			NEW.workcat_id, NEW.workcat_id_end, NEW.workcat_id_plan, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id,
 			NEW.streetaxis2_id, NEW.streetaxis_id, NEW.postnumber, NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 			NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.label_x, NEW.label_y, NEW.label_rotation,
-			NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value,
+			NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.brand_id, NEW.model_id,
 			NEW.updated_at, NEW.updated_by, NEW.asset_id,  NEW.expl_visibility, NEW.adate, NEW.adescript, NEW.plot_code, NEW.placement_type,
 			NEW.label_quadrant, NEW.access_type, NEW.lock_level, NEW.block_code, NEW.n_inhabitants, NEW.n_hydrometer, NEW.omunit_id, NEW.drainzone_outfall, NEW.dwfzone_outfall, NEW.dma_id);
 		ELSE
@@ -482,14 +485,14 @@ BEGIN
 			"observ","comment",  omzone_id, soilcat_id, function_type, category_type, fluid_type, location_type, workcat_id, workcat_id_end, workcat_id_plan,
 			builtdate, enddate, ownercat_id, muni_id,postcode,district_id,
 			streetaxis2_id, streetaxis_id, postnumber, postnumber2, postcomplement, postcomplement2, descript, rotation, link, verified, the_geom, label_x, label_y,
-			label_rotation, accessibility,diagonal, expl_id, publish, inventory, uncertain, num_value, matcat_id,
+			label_rotation, accessibility,diagonal, expl_id, publish, inventory, uncertain, num_value, matcat_id, brand_id, model_id,
 			updated_at, updated_by, asset_id, expl_visibility, adate, adescript, plot_code, placement_type, label_quadrant, access_type, lock_level, block_code, n_inhabitants, n_hydrometer, omunit_id, drainzone_outfall, dwfzone_outfall, dma_id)
 			VALUES (NEW.connec_id, NEW.code, NEW.sys_code, NEW.customer_code, NEW.top_elev, NEW.y1, NEW.y2, NEW.conneccat_id, NEW.connec_type, NEW.sector_id, NEW.demand,NEW."state", NEW.state_type, NEW.connec_depth,
 			NEW.connec_length, NEW.arc_id, NEW.annotation, NEW."observ", NEW."comment", NEW.omzone_id, NEW.soilcat_id, NEW.function_type, NEW.category_type, NEW.fluid_type, NEW.location_type,
 			NEW.workcat_id, NEW.workcat_id_end, NEW.workcat_id_plan, NEW.builtdate, NEW.enddate, NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id,
 			NEW.streetaxis2_id, NEW.streetaxis_id, NEW.postnumber, NEW.postnumber2, NEW.postcomplement, NEW.postcomplement2,
 			NEW.descript, NEW.rotation, NEW.link, NEW.verified, NEW.the_geom, NEW.label_x, NEW.label_y, NEW.label_rotation,
-			NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.matcat_id,
+			NEW.accessibility, NEW.diagonal, NEW.expl_id, NEW.publish, NEW.inventory, NEW.uncertain, NEW.num_value, NEW.matcat_id, NEW.brand_id, NEW.model_id,
 			NEW.updated_at, NEW.updated_by, NEW.asset_id,  NEW.expl_visibility, NEW.adate, NEW.adescript, NEW.plot_code, NEW.placement_type,
 			NEW.label_quadrant, NEW.access_type, NEW.lock_level, NEW.block_code, NEW.n_inhabitants, NEW.n_hydrometer, NEW.omunit_id, NEW.drainzone_outfall, NEW.dwfzone_outfall, NEW.dma_id);
 		END IF;
@@ -502,14 +505,33 @@ BEGIN
 		-- set and get id for polygon
 		IF (v_doublegeometry IS TRUE) THEN
 			INSERT INTO polygon(sys_type, the_geom, featurecat_id,feature_id )
-			VALUES ('CONNEC', (SELECT ST_Multi(ST_Envelope(ST_Buffer(connec.the_geom,v_doublegeom_buffer)))
+			VALUES (v_featureclass, (SELECT ST_Multi(ST_Envelope(ST_Buffer(connec.the_geom,v_doublegeom_buffer)))
 			from connec where connec_id=NEW.connec_id), NEW.connec_type, NEW.connec_id);
 		END IF;
 
+		IF v_man_table = 'man_cjoin' THEN
+			INSERT INTO man_cjoin (connec_id) VALUES (NEW.connec_id);
+		ELSIF v_man_table = 'man_vconnec' THEN
+			INSERT INTO man_vconnec (connec_id) VALUES (NEW.connec_id);
+		ELSIF v_man_table = 'parent' THEN
+			v_man_table:= (SELECT man_table FROM cat_feature_connec c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id JOIN cat_connec ON cat_connec.id=NEW.conneccat_id
+		    	WHERE c.id = cat_connec.connec_type LIMIT 1)::text;
+
+			IF v_man_table IS NOT NULL THEN
+			    v_sql:= 'INSERT INTO '||v_man_table||' (connec_id) VALUES ('||quote_literal(NEW.connec_id)||')';
+			    EXECUTE v_sql;
+			END IF;
+		END IF;
+
+
+
 		-- insertint on psector table
 		IF NEW.state=2 THEN
+
 			INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, doable, arc_id)
-			VALUES (NEW.connec_id, v_psector_vdefault, 1, true, NEW.arc_id);
+			VALUES (NEW.connec_id, v_psector_vdefault, 1, true, NEW.arc_id)
+			ON CONFLICT (connec_id, psector_id, state) DO NOTHING;
+
 		END IF;
 
 		-- manage connect2network
@@ -555,6 +577,7 @@ BEGIN
     ELSIF TG_OP = 'UPDATE' THEN
 
 		-- UPDATE geom
+		UPDATE connec SET connec_length = NEW.connec_length WHERE connec_id = OLD.connec_id;
 		IF st_equals( NEW.the_geom, OLD.the_geom) IS FALSE THEN
 			UPDATE connec SET the_geom=NEW.the_geom WHERE connec_id = OLD.connec_id;
 
@@ -572,7 +595,7 @@ BEGIN
 
 			-- if trace_featuregeom is false, do nothing
 			IF v_trace_featuregeom IS TRUE THEN
-				UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001)
+				UPDATE ve_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001)
 				AND element_id IN (SELECT element_id FROM element_x_connec WHERE connec_id=NEW.connec_id);
 			END IF;
 
@@ -676,7 +699,7 @@ BEGIN
 		-- Looking for state control and insert planified connecs to default psector
 		IF (NEW.state != OLD.state) THEN
 
-			PERFORM gw_fct_state_control(json_build_object('feature_type_aux', 'CONNEC', 'feature_id_aux', NEW.connec_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP));
+			PERFORM gw_fct_state_control(json_build_object('parameters', json_build_object('feature_type_aux', 'CONNEC', 'feature_id_aux', NEW.connec_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP)));
 
 			IF NEW.state = 2 AND OLD.state=1 THEN
 
@@ -740,11 +763,11 @@ BEGIN
 		IF v_matfromcat THEN
 			UPDATE connec
 			SET code=NEW.code, sys_code=NEW.sys_code, top_elev=NEW.top_elev, y1=NEW.y1, y2=NEW.y2, conneccat_id=NEW.conneccat_id, connec_type=NEW.connec_type, sector_id=NEW.sector_id, demand=NEW.demand,
-			connec_depth=NEW.connec_depth, connec_length=NEW.connec_length, annotation=NEW.annotation, "observ"=NEW."observ",
+			connec_depth=NEW.connec_depth, annotation=NEW.annotation, "observ"=NEW."observ",
 			"comment"=NEW."comment", omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type,
 			location_type=NEW.location_type, workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate,
 			ownercat_id=NEW.ownercat_id, muni_id=NEW.muni_id, postcode=NEW.postcode, district_id =NEW.district_id, streetaxis2_id=NEW.streetaxis2_id, streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber, postnumber2=NEW.postnumber2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, descript=NEW.descript,
-			rotation=NEW.rotation, link=NEW.link, verified=NEW.verified,
+			rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, brand_id=NEW.brand_id, model_id=NEW.model_id,
 			label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, accessibility=NEW.accessibility, diagonal=NEW.diagonal, publish=NEW.publish, pjoint_id=NEW.pjoint_id, pjoint_type = NEW.pjoint_type,
 			inventory=NEW.inventory, uncertain=NEW.uncertain, expl_id=NEW.expl_id,num_value=NEW.num_value, updated_at=now(), updated_by=current_user, asset_id=NEW.asset_id, expl_visibility=NEW.expl_visibility, adate=NEW.adate, adescript=NEW.adescript,
 			plot_code=NEW.plot_code, placement_type=NEW.placement_type, label_quadrant=NEW.label_quadrant, access_type=NEW.access_type, lock_level=NEW.lock_level, block_code=NEW.block_code, n_inhabitants=NEW.n_inhabitants, n_hydrometer=NEW.n_hydrometer, omunit_id=NEW.omunit_id, drainzone_outfall=NEW.drainzone_outfall, dwfzone_outfall=NEW.dwfzone_outfall, dma_id=NEW.dma_id
@@ -752,11 +775,11 @@ BEGIN
 		ELSE
 			UPDATE connec
 			SET code=NEW.code, sys_code=NEW.sys_code, top_elev=NEW.top_elev, y1=NEW.y1, y2=NEW.y2, conneccat_id=NEW.conneccat_id, connec_type=NEW.connec_type, sector_id=NEW.sector_id, demand=NEW.demand,
-			connec_depth=NEW.connec_depth, connec_length=NEW.connec_length, annotation=NEW.annotation, "observ"=NEW."observ",
+			connec_depth=NEW.connec_depth, annotation=NEW.annotation, "observ"=NEW."observ",
 			"comment"=NEW."comment", omzone_id=NEW.omzone_id, soilcat_id=NEW.soilcat_id, function_type=NEW.function_type, category_type=NEW.category_type, fluid_type=NEW.fluid_type,
 			location_type=NEW.location_type, workcat_id=NEW.workcat_id, workcat_id_end=NEW.workcat_id_end, workcat_id_plan=NEW.workcat_id_plan, builtdate=NEW.builtdate, enddate=NEW.enddate,
 			ownercat_id=NEW.ownercat_id, muni_id=NEW.muni_id, postcode=NEW.postcode, district_id=NEW.district_id, streetaxis2_id=NEW.streetaxis2_id, streetaxis_id=NEW.streetaxis_id, postnumber=NEW.postnumber, postnumber2=NEW.postnumber2, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2, descript=NEW.descript,
-			rotation=NEW.rotation, link=NEW.link, verified=NEW.verified,
+			rotation=NEW.rotation, link=NEW.link, verified=NEW.verified, brand_id=NEW.brand_id, model_id=NEW.model_id,
 			label_x=NEW.label_x, label_y=NEW.label_y, label_rotation=NEW.label_rotation, accessibility=NEW.accessibility, diagonal=NEW.diagonal, publish=NEW.publish, pjoint_id=NEW.pjoint_id, pjoint_type = NEW.pjoint_type,
 			inventory=NEW.inventory, uncertain=NEW.uncertain, expl_id=NEW.expl_id,num_value=NEW.num_value, updated_at=now(),
 			updated_by=current_user, matcat_id = NEW.matcat_id, asset_id=NEW.asset_id, expl_visibility=NEW.expl_visibility, adate=NEW.adate, adescript=NEW.adescript,

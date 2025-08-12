@@ -9,6 +9,7 @@ or (at your option) any later version.
 --FUNCTION CODE: 3404
 
 DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_grafanalytics_mapzones(json);
+DROP FUNCTION IF EXISTS SCHEMA_NAME.gw_fct_graphanalytics_mapzones(json);
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_graphanalytics_mapzones(p_data json)
 RETURNS json AS
 $BODY$
@@ -184,7 +185,7 @@ BEGIN
 		v_table  = 'presszone';
 		v_field = 'presszone_id';
 		v_fieldmp = 'presszone_id';
-		v_visible_layer ='"v_edit_presszone"';
+		v_visible_layer ='"ve_presszone"';
 		IF v_netscenario is not null then
 			v_mapzonename = 'presszone_name';
 		else
@@ -196,7 +197,7 @@ BEGIN
 		v_table = 'dma';
 		v_field = 'dma_id';
 		v_fieldmp = 'dma_id';
-		v_visible_layer ='"v_edit_dma"';
+		v_visible_layer ='"ve_dma"';
 		IF v_netscenario is not null then
 			v_mapzonename = 'dma_name';
 		else
@@ -208,7 +209,7 @@ BEGIN
 		v_table = 'dqa';
 		v_field = 'dqa_id';
 		v_fieldmp = 'dqa_id';
-		v_visible_layer ='"v_edit_dqa"';
+		v_visible_layer ='"ve_dqa"';
 		v_mapzonename = 'name';
 
 	ELSIF v_class = 'SECTOR' THEN
@@ -216,7 +217,7 @@ BEGIN
 		v_table = 'sector';
 		v_field = 'sector_id';
 		v_fieldmp = 'sector_id';
-		v_visible_layer ='"v_edit_sector"';
+		v_visible_layer ='"ve_sector"';
 		v_mapzonename = 'name';
 
 	-- ELSIF v_class = 'DRAINZONE' THEN
@@ -224,7 +225,7 @@ BEGIN
 	--	v_table = 'drainzone';
 	--	v_field = 'drainzone_id';
 	--	v_fieldmp = 'drainzone_id';
-	--	v_visible_layer ='"v_edit_drainzone"';
+	--	v_visible_layer ='"ve_drainzone"';
 	--	v_mapzonename = 'name';
 	ELSE
 		RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Process done sucessfully"}, "version":"'||v_version||'", 
@@ -390,12 +391,12 @@ BEGIN
 
 		-- fill temporal tables
 		IF v_usepsector IS  TRUE THEN
-			v_query_arc = 'SELECT a.* FROM arc a JOIN v_edit_arc USING (arc_id) WHERE a.expl_id IN ('||v_expl_id||')';
-			v_query_node = 'SELECT n.* FROM node n JOIN v_edit_node USING (node_id) WHERE n.expl_id IN ('||v_expl_id||')';
-			v_query_connec = 'SELECT c.* FROM connec c JOIN v_edit_connec USING (connec_id) WHERE c.expl_id IN ('||v_expl_id||')';
-			v_query_link = 'SELECT l.* FROM link l JOIN v_edit_link USING (link_id) WHERE l.feature_type = ''CONNEC'' AND l.expl_id IN ('||v_expl_id||')';
+			v_query_arc = 'SELECT a.* FROM arc a JOIN ve_arc USING (arc_id) WHERE a.expl_id IN ('||v_expl_id||')';
+			v_query_node = 'SELECT n.* FROM node n JOIN ve_node USING (node_id) WHERE n.expl_id IN ('||v_expl_id||')';
+			v_query_connec = 'SELECT c.* FROM connec c JOIN ve_connec USING (connec_id) WHERE c.expl_id IN ('||v_expl_id||')';
+			v_query_link = 'SELECT l.* FROM link l JOIN ve_link USING (link_id) WHERE l.feature_type = ''CONNEC'' AND l.expl_id IN ('||v_expl_id||')';
 			IF v_project_type='UD' THEN
-				v_query_gully = 'SELECT g.* FROM gully g JOIN v_edit_gully USING (gully_id) WHERE g.expl_id IN ('||v_expl_id||')';
+				v_query_gully = 'SELECT g.* FROM gully g JOIN ve_gully USING (gully_id) WHERE g.expl_id IN ('||v_expl_id||')';
 				v_query_link_gully = 'SELECT l.* FROM link l JOIN gully g ON g.gully_id = l.feature_id WHERE l.feature_type = ''GULLY'' AND l.expl_id IN ('||v_expl_id||')';
 			END IF;
 		ELSE
@@ -420,7 +421,7 @@ BEGIN
 		END IF;
 
 		-- update temp_t_connec in order to get correct arc_id (for planified features, arc_id from parent layer is NULL)
-		UPDATE temp_t_connec t SET arc_id=c.arc_id FROM v_edit_connec c WHERE t.connec_id=c.connec_id;
+		UPDATE temp_t_connec t SET arc_id=c.arc_id FROM ve_connec c WHERE t.connec_id=c.connec_id;
 
 		IF v_class = 'SECTOR' THEN
 			EXECUTE 'INSERT INTO temp_'||v_table||' SELECT * FROM '||v_table||' WHERE active is true AND sector_id IN (SELECT distinct '||v_field||' FROM temp_t_arc)';
@@ -785,7 +786,7 @@ BEGIN
 
 		RAISE NOTICE ' Update temporal tables of connects and links';
 
-		-- used connec using v_edit_arc because the exploitation filter (same before)
+		-- used connec using ve_arc because the exploitation filter (same before)
 		v_querytext = 'UPDATE temp_t_connec SET '||quote_ident(v_field)||' = a.'||quote_ident(v_field)||' FROM temp_t_arc a WHERE a.arc_id=temp_t_connec.arc_id';
 		EXECUTE v_querytext;
 
@@ -1139,15 +1140,15 @@ BEGIN
 			/*
 			UPDATE dma set the_geom = geom FROM(
 			SELECT dma_id, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
-			(SELECT dma_id, st_buffer(st_collect(the_geom), 10) as geom from v_edit_arc
+			(SELECT dma_id, st_buffer(st_collect(the_geom), 10) as geom from ve_arc
 			JOIN temp_t_anlgraph USING (arc_id)
 			where dma_id::integer > 0 group by dma_id
 			UNION
-			SELECT dma_id, st_collect(ext_plot.the_geom) as geom FROM v_edit_connec, ext_plot
+			SELECT dma_id, st_collect(ext_plot.the_geom) as geom FROM ve_connec, ext_plot
 			WHERE dma_id::integer > 0
-			AND v_edit_connec.dma_id IN
-			(SELECT DISTINCT dma_id FROM v_edit_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
-			AND st_dwithin(v_edit_connec.the_geom, ext_plot.the_geom, 0.001)
+			AND ve_connec.dma_id IN
+			(SELECT DISTINCT dma_id FROM ve_arc JOIN anl_arc USING (arc_id) WHERE fid = 145 and cur_user = current_user)
+			AND st_dwithin(ve_connec.the_geom, ext_plot.the_geom, 0.001)
 			group by dma_id
 			)a group by dma_id
 			)b WHERE b.dma_id=dma.dma_id;
@@ -1190,7 +1191,7 @@ BEGIN
 			where dma_id::integer > 0  group by dma_id
 			UNION
 			SELECT c.dma_id, (st_buffer(st_collect(link.the_geom),5/2, ,'endcap=flat join=round'))
-			as geom FROM v_edit_link link, connec c
+			as geom FROM ve_link link, connec c
 			WHERE c.dma_id:::integer > 0
 			AND link.feature_id = connec_id and link.feature_type = 'CONNEC'
 			group by c.dma_id
@@ -1209,14 +1210,14 @@ BEGIN
 		UPDATE v_table set the_geom = geom FROM
 		(SELECT v_field, st_multi(st_buffer(st_collect(geom),0.01)) as geom FROM
 		(SELECT v_field, st_buffer(st_collect(the_geom), v_geomparamupdate) as geom
-		FROM v_edit_arc arc
+		FROM ve_arc arc
 		JOIN temp_t_anlgraph USING (arc_id)
 		where arc.state = 1 AND water = 1 AND v_field::INTEGER> 0 group by v_field
 		UNION
 		SELECT v_field, st_collect(z.geom) as geom FROM v_crm_zone z
-		join v_edit_node using (node_id)
+		join ve_node using (node_id)
 		JOIN temp_t_anlgraph ON  node_id = node_1
-		WHERE v_edit_node.state = 1 AND water = 1 AND v_field::INTEGER> 0
+		WHERE ve_node.state = 1 AND water = 1 AND v_field::INTEGER> 0
 		group by v_field
 		)a group by v_field)b
 		WHERE b.v_field=v_table.v_fieldmp
@@ -1414,7 +1415,7 @@ BEGIN
 			JOIN value_state_type sa ON sa.state =a.state AND sa.id=a.state_type
 			WHERE sn.is_operative =true AND sa.is_operative =true AND 
 			n.node_id IN
-			(SELECT json_array_elements(graphconfig->''use'')->>''nodeParent'' as nodeparent
+			(SELECT (json_array_elements(graphconfig->''use'')->>''nodeParent'')::integer as nodeparent
 			FROM '||quote_ident(v_table)||' WHERE active=true)
 			AND a.'||quote_ident(v_field)||' IN
 			(SELECT '||quote_ident(v_field)||'
@@ -1512,11 +1513,11 @@ BEGIN
 
 
 		IF v_class = 'PRESSZONE' THEN
-			v_visible_layer ='"v_edit_plan_netscenario_presszone"';
+			v_visible_layer ='"ve_plan_netscenario_presszone"';
 			UPDATE plan_netscenario_node SET staticpressure = t.staticpressure FROM temp_t_node t WHERE plan_netscenario_node.node_id=t.node_id;
 			UPDATE plan_netscenario_connec SET staticpressure = t.staticpressure FROM temp_t_connec t WHERE plan_netscenario_connec.connec_id=t.connec_id;
 		ELSIF v_class = 'DMA' THEN
-			v_visible_layer ='"v_edit_plan_netscenario_dma"';
+			v_visible_layer ='"ve_plan_netscenario_dma"';
 			UPDATE plan_netscenario_node SET pattern_id = t.pattern_id FROM temp_dma t WHERE plan_netscenario_node.dma_id=t.dma_id;
 			UPDATE plan_netscenario_connec SET pattern_id = t.pattern_id FROM temp_dma t WHERE plan_netscenario_connec.dma_id=t.dma_id;
 		END IF;
@@ -1524,7 +1525,7 @@ BEGIN
 		DELETE FROM selector_inp_dscenario WHERE cur_user = current_user;
 
 		IF v_dscenario_valve IS NOT NULL THEN
-			v_visible_layer = concat(v_visible_layer, ', ', '"v_edit_inp_dscenario_shortpipe"');
+			v_visible_layer = concat(v_visible_layer, ', ', '"ve_inp_dscenario_shortpipe"');
 
 			INSERT INTO selector_inp_dscenario (dscenario_id) VALUES (v_dscenario_valve::integer);
 		END IF;

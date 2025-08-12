@@ -107,7 +107,7 @@ BEGIN
 		END IF;
 
 		-- setting pjoint_id, pjoint_type and arc_id and removing link in case of connec is over arc
-		v_arc_id = (SELECT arc_id FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01) AND state > 0 LIMIT 1);
+		v_arc_id = (SELECT arc_id FROM ve_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01) AND state > 0 LIMIT 1);
 		IF v_arc_id IS NOT NULL THEN
 			NEW.arc_id = v_arc_id;
 			NEW.pjoint_id = NEW.arc_id;
@@ -173,8 +173,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.expl_id =(SELECT expl_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -205,8 +205,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) AND active IS TRUE  LIMIT 1);
 				ELSE
-					NEW.sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.sector_id =(SELECT sector_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -236,8 +236,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.dma_id = (SELECT dma_id FROM dma WHERE ST_DWithin(NEW.the_geom, dma.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.dma_id =(SELECT dma_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.dma_id =(SELECT dma_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -267,8 +267,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.presszone_id = (SELECT presszone_id FROM presszone WHERE ST_DWithin(NEW.the_geom, presszone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.presszone_id =(SELECT presszone_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.presszone_id =(SELECT presszone_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -293,8 +293,8 @@ BEGIN
 					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001)
 					AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.muni_id =(SELECT muni_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -308,8 +308,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.district_id = (SELECT district_id FROM ext_district WHERE ST_DWithin(NEW.the_geom, ext_district.the_geom,0.001) LIMIT 1);
 				ELSIF v_count > 1 THEN
-					NEW.district_id =(SELECT district_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.district_id =(SELECT district_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -583,8 +583,11 @@ BEGIN
 
 	 	-- insertint on psector table
 		IF NEW.state=2 THEN
+		
 			INSERT INTO plan_psector_x_connec (connec_id, psector_id, state, doable, arc_id)
-			VALUES (NEW.connec_id, v_psector_vdefault, 1, true, NEW.arc_id);
+			VALUES (NEW.connec_id, v_psector_vdefault, 1, true, NEW.arc_id)
+			ON CONFLICT (connec_id, psector_id, state) DO NOTHING;
+			
 		END IF;
 
 		-- manage connect2network
@@ -657,6 +660,7 @@ BEGIN
 		END IF;
 
 		-- UPDATE geom
+		UPDATE connec SET connec_length = NEW.connec_length WHERE connec_id = OLD.connec_id;
 		IF st_equals(NEW.the_geom, OLD.the_geom) IS FALSE AND geometrytype(NEW.the_geom)='POINT'  THEN
 			UPDATE connec SET the_geom=NEW.the_geom WHERE connec_id = OLD.connec_id;
 
@@ -678,7 +682,7 @@ BEGIN
 			END IF;
 
 			-- setting pjoint_id, pjoint_type and arc_id and removing link in case of connec is over arc
-			v_arc_id = (SELECT arc_id FROM v_edit_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01) AND state > 0 LIMIT 1);
+			v_arc_id = (SELECT arc_id FROM ve_arc WHERE st_dwithin(the_geom, NEW.the_geom, 0.01) AND state > 0 LIMIT 1);
 			IF v_arc_id IS NULL AND OLD.pjoint_type = 'CONNEC' THEN
 				NEW.arc_id = NULL;
 				NEW.pjoint_id = NULL;
@@ -750,7 +754,7 @@ BEGIN
 		-- Looking for state control and insert planned connecs to default psector
 		IF (NEW.state != OLD.state) THEN
 
-			PERFORM gw_fct_state_control(json_build_object('feature_type_aux', 'CONNEC', 'feature_id_aux', NEW.connec_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP));
+			PERFORM gw_fct_state_control(json_build_object('parameters', json_build_object('feature_type_aux', 'CONNEC', 'feature_id_aux', NEW.connec_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP)));
 
 			IF NEW.state = 2 AND OLD.state=1 THEN
 
@@ -868,7 +872,7 @@ BEGIN
 			postnumber=NEW.postnumber, postnumber2=NEW.postnumber2, muni_id=NEW.muni_id, streetaxis_id=NEW.streetaxis_id, postcode=NEW.postcode,
 			district_id =NEW.district_id, descript=NEW.descript, verified=NEW.verified, postcomplement=NEW.postcomplement, postcomplement2=NEW.postcomplement2,
 			label_x=NEW.label_x,label_y=NEW.label_y, label_rotation=NEW.label_rotation,publish=NEW.publish,
-			inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, connec_length=NEW.connec_length, link=NEW.link, updated_at=now(), updated_by=current_user,
+			inventory=NEW.inventory, expl_id=NEW.expl_id, num_value=NEW.num_value, link=NEW.link, updated_at=now(), updated_by=current_user,
 			dqa_id=NEW.dqa_id, minsector_id=NEW.minsector_id, pjoint_id=NEW.pjoint_id, pjoint_type = NEW.pjoint_type,
 			adate=NEW.adate, adescript=NEW.adescript, accessibility =  NEW.accessibility, asset_id=NEW.asset_id, epa_type = NEW.epa_type,
 			om_state = NEW.om_state, conserv_state = NEW.conserv_state, priority = NEW.priority, access_type = NEW.access_type, placement_type = NEW.placement_type,

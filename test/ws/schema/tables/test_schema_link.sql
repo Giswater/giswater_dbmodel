@@ -22,11 +22,11 @@ SELECT columns_are(
     ARRAY[
         'link_id', 'code', 'sys_code', 'feature_id', 'feature_type', 'linkcat_id', 'top_elev1', 'depth1', 'exit_id', 'exit_type',
         'top_elev2', 'depth2', 'userdefined_geom', 'state', 'expl_id', 'sector_id', 'dma_id',
-        'fluid_type', 'presszone_id', 'dqa_id', 'minsector_id', 'expl_visibility', 'epa_type', 'is_operative',
+        'fluid_type', 'presszone_id', 'dqa_id', 'minsector_id', 'expl_visibility', 'is_operative',
         'staticpressure1', 'staticpressure2', 'workcat_id', 'workcat_id_end', 'builtdate', 'enddate',
         'uncertain', 'muni_id', 'verified', 'supplyzone_id', 'custom_length', 'datasource',
         'omzone_id', 'lock_level', 'annotation', 'comment', 'descript', 'link', 'location_type', 'num_value', 'observ',
-        'the_geom', 'created_at', 'created_by', 'updated_at', 'updated_by', 'state_type'
+        'the_geom', 'created_at', 'created_by', 'updated_at', 'updated_by', 'state_type', 'brand_id', 'model_id'
     ],
     'Table link should have the correct columns'
 );
@@ -67,6 +67,8 @@ SELECT col_type_is('link', 'num_value', 'numeric(12,3)', 'Column num_value shoul
 SELECT col_type_is('link', 'state_type', 'smallint', 'Column state_type should be smallint');
 SELECT col_type_is('link', 'staticpressure1', 'numeric(12,3)', 'Column staticpressure1 should be numeric(12,3)');
 SELECT col_type_is('link', 'staticpressure2', 'numeric(12,3)', 'Column staticpressure2 should be numeric(12,3)');
+SELECT col_type_is('link', 'brand_id', 'varchar(50)', 'Column brand_id should be varchar(50)');
+SELECT col_type_is('link', 'model_id', 'varchar(50)', 'Column model_id should be varchar(50)');
 
 -- Check not null constraints
 SELECT col_not_null('link', 'linkcat_id', 'Column linkcat_id should be NOT NULL');

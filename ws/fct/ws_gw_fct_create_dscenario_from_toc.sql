@@ -14,7 +14,7 @@ $BODY$
 /*EXAMPLE
 
 -- fid: 403
-SELECT SCHEMA_NAME.gw_fct_create_dscenario_from_toc($${"client":{}, "form":{}, "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]},
+SELECT SCHEMA_NAME.gw_fct_create_dscenario_from_toc($${"client":{}, "form":{}, "feature":{"tableName":"ve_arc", "featureType":"ARC", "id":[]},
 "data":{"selectionMode":"wholeSelection","parameters":{"name":"test", "descript":null, "type":"DEMAND"}}}$$);
 
 */
@@ -71,7 +71,7 @@ BEGIN
 	v_tablename :=  ((p_data ->>'feature')::json->>'tableName')::text;
 	v_featuretype :=  ((p_data ->>'feature')::json->>'featureType')::text;
 
-	v_table = replace(v_tablename,'v_edit_inp','inp_dscenario');
+	v_table = replace(v_tablename,'ve_inp','inp_dscenario');
 	IF v_selectionmode = 'wholeSelection' THEN v_id= replace(replace(replace(v_id,'[','('),']',')'),'"','');END IF;
 
 	IF v_id IS NULL THEN v_id = '()';END IF;

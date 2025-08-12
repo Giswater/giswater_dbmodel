@@ -18,7 +18,7 @@ $BODY$
 SELECT SCHEMA_NAME.gw_fct_setfields($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "form":{},
-"feature":{"featureType":"node", "tableName":"v_edit_man_junction", "id":"1251521"},
+"feature":{"featureType":"node", "tableName":"ve_man_junction", "id":"1251521"},
 "data":{"fields":{"macrosector_id": "1", "sector_id": "2",
 "inventory": "False", "epa_type": "PUMP", "state": "1", "arc_id": "113854", "publish": "False", "verified": "TO REVIEW",
 "expl_id": "1", "builtdate": "2018/11/29", "muni_id": "2", "workcat_id": "22", "buildercat_id": "builder1", "enddate": "2018/11/29",
@@ -71,6 +71,8 @@ v_id_array text[];
 column_type_id_array text[];
 idname text;
 v_pkeyfield text;
+v_keys_fields text;
+v_exists boolean;
 
 BEGIN
 
@@ -105,7 +107,7 @@ BEGIN
 	select array_agg(row_to_json(a)) into v_text from json_each(v_fields)a;
 
 	-- Get if view has composite primary key
-	IF v_idname ISNULL THEN
+	IF v_idname IS NULL THEN
 
 		-- Manage primary key
 		EXECUTE 'SELECT addparam FROM sys_table WHERE id = $1' INTO v_addparam USING v_tablename;
@@ -174,10 +176,61 @@ BEGIN
             USING v_schemaname, v_tablename, v_idname
             INTO column_type_id;
 
-	IF v_text is not NULL THEN
+	v_querytext = 'SELECT EXISTS(SELECT 1 FROM ' || quote_ident(v_tablename) ||'';
+	IF cardinality(v_idname_array) > 1 AND cardinality(v_id_array) > 1 THEN
 		i = 1;
-		-- query text, step1
-		v_querytext := 'UPDATE ' || quote_ident(v_tablename) ||' SET ';
+		v_querytext := v_querytext || ' WHERE ';
+		FOREACH idname IN ARRAY v_idname_array LOOP
+			v_querytext := v_querytext || quote_ident(idname) || ' = CAST(' || quote_literal(v_id_array[i]) || ' AS ' || column_type_id_array[i] || ') AND ';
+			i=i+1;
+		END LOOP;
+		v_querytext = substring(v_querytext, 0, length(v_querytext)-4);
+	ELSIF cardinality(v_idname_array) > 1 THEN
+		i = 1;
+		v_querytext := v_querytext || ' WHERE ';
+		FOREACH idname IN ARRAY v_idname_array LOOP
+			v_querytext := v_querytext || quote_ident(idname) || ' = CAST(' || quote_literal(v_fields->>idname) || ' AS ' || column_type_id_array[i] || ') AND ';
+			i=i+1;
+		END LOOP;
+
+		v_querytext = substring(v_querytext, 0, length(v_querytext)-4);
+	ELSE
+		v_querytext := v_querytext || ' WHERE ' || quote_ident(v_idname) || ' = CAST(' || quote_literal(v_id) || ' AS ' || column_type_id || ')';
+	END IF;
+	EXECUTE v_querytext||');' INTO v_exists;
+
+
+	-- Remove from v_text any keys that are in v_idname_array
+	IF v_text IS NOT NULL AND v_idname_array IS NOT NULL THEN
+		v_text := ARRAY(
+			SELECT elem
+			FROM unnest(v_text) AS elem
+			WHERE NOT ((elem::json)->>'key') = ANY(v_idname_array)
+		);
+	END IF;
+
+	IF v_text IS NOT NULL THEN
+		i = 1;
+
+		IF v_exists THEN
+			-- query text for UPDATE, step1
+			v_querytext := 'UPDATE ' || quote_ident(v_tablename) ||' SET ';
+		ELSE
+			-- query text for INSERT, step1
+			v_querytext := 'INSERT INTO ' || quote_ident(v_tablename) ||' (' || v_idname;
+			-- Build column list
+			FOREACH text IN ARRAY v_text LOOP
+				SELECT v_text[i] INTO v_jsonfield;
+				v_field := (SELECT (v_jsonfield ->> 'key'));
+				v_querytext := concat(v_querytext, ', ', quote_ident(v_field));
+				i := i + 1;
+			END LOOP;
+			v_querytext := v_querytext || ') VALUES (' || v_id || ', ';
+			i := 1;
+		END IF;
+
+		raise notice 'v_querytext: %', v_querytext;
+		raise notice 'v_idname: %', v_idname;
 
 		-- query text, step2
 		FOREACH text IN ARRAY v_text
@@ -205,24 +258,42 @@ BEGIN
 			IF v_field ='the_geom' OR v_field ='geom' THEN
 				v_columntype='geometry';
 			END IF;
-			--IF v_value !='null' OR v_value !='NULL' THEN
 
-				IF v_field='state' THEN
-					PERFORM gw_fct_state_control(json_build_object('feature_type_aux', v_featuretype, 'feature_id_aux', v_id, 'state_aux', v_value::integer, 'tg_op_aux', 'UPDATE'));
+			IF v_field='state' THEN
+				PERFORM gw_fct_state_control(json_build_object('parameters', json_build_object('feature_type_aux', v_featuretype, 'feature_id_aux', v_id, 'state_aux', v_value::integer, 'tg_op_aux', 'UPDATE')));
+			END IF;
+
+			IF v_field in ('geom', 'the_geom') THEN
+				v_value := (SELECT ST_SetSRID((v_value)::geometry, SRID_VALUE));
+			END IF;
+
+			-- Handle array types - format value with curly braces if it's an array
+			IF v_columntype LIKE '%[]' AND v_value IS NOT NULL AND v_value != '' THEN
+				-- Replace [ with { and ] with } for array input
+				IF v_value LIKE '[%' THEN
+					v_value := replace(replace(v_value, '[', '{'), ']', '}');
+				ELSIF v_value NOT LIKE '{%}' THEN
+					v_value := '{' || v_value || '}';
 				END IF;
+			END IF;
 
-				IF v_field in ('geom', 'the_geom') THEN
-					v_value := (SELECT ST_SetSRID((v_value)::geometry, SRID_VALUE));
-				END IF;
-
-				--building the query text
+			--building the query text
+			IF v_exists THEN
+				-- For UPDATE
 				IF n=1 THEN
 					v_querytext := concat (v_querytext, quote_ident(v_field) , ' = CAST(' , quote_nullable(v_value) , ' AS ' , v_columntype , ')');
 				ELSIF i>1 THEN
 					v_querytext := concat (v_querytext, ' , ',  quote_ident(v_field) , ' = CAST(' , quote_nullable(v_value) , ' AS ' , v_columntype , ')');
 				END IF;
-				n=n+1;
-			--END IF;
+			ELSE
+				-- For INSERT
+				IF i=1 THEN
+					v_querytext := concat(v_querytext, 'CAST(', quote_nullable(v_value), ' AS ', v_columntype, ')');
+				ELSE
+					v_querytext := concat(v_querytext, ', CAST(', quote_nullable(v_value), ' AS ', v_columntype, ')');
+				END IF;
+			END IF;
+			n=n+1;
 			i=i+1;
 
 		END LOOP;
@@ -233,34 +304,41 @@ BEGIN
 			v_id_array := string_to_array(v_id, ', ');
 		end if;
 
-        IF cardinality(v_idname_array) > 1 AND cardinality(v_id_array) > 1 then
-            i = 1;
-			v_querytext := v_querytext || ' WHERE ';
-			FOREACH idname IN ARRAY v_idname_array loop
-				v_querytext := v_querytext || quote_ident(idname) || ' = CAST(' || quote_literal(v_id_array[i]) || ' AS ' || column_type_id_array[i] || ') AND ';
-				i=i+1;
-			END LOOP;
-			v_querytext = substring(v_querytext, 0, length(v_querytext)-4);
-		ELSIF cardinality(v_idname_array) > 1 THEN
-			i = 1;
-			v_querytext := v_querytext || ' WHERE ';
-			FOREACH idname IN ARRAY v_idname_array loop
-				v_querytext := v_querytext || quote_ident(idname) || ' = CAST(' || quote_literal(v_fields->>idname) || ' AS ' || column_type_id_array[i] || ') AND ';
-				i=i+1;
-			END LOOP;
+		IF v_exists THEN
+			IF cardinality(v_idname_array) > 1 AND cardinality(v_id_array) > 1 then
+				i = 1;
+				v_querytext := v_querytext || ' WHERE ';
+				FOREACH idname IN ARRAY v_idname_array loop
+					v_querytext := v_querytext || quote_ident(idname) || ' = CAST(' || quote_literal(v_id_array[i]) || ' AS ' || column_type_id_array[i] || ') AND ';
+					i=i+1;
+				END LOOP;
+				v_querytext = substring(v_querytext, 0, length(v_querytext)-4);
+			ELSIF cardinality(v_idname_array) > 1 THEN
+				i = 1;
+				v_querytext := v_querytext || ' WHERE ';
+				FOREACH idname IN ARRAY v_idname_array loop
+					v_querytext := v_querytext || quote_ident(idname) || ' = CAST(' || quote_literal(v_fields->>idname) || ' AS ' || column_type_id_array[i] || ') AND ';
+					i=i+1;
+				END LOOP;
 
-			v_querytext = substring(v_querytext, 0, length(v_querytext)-4);
+				v_querytext = substring(v_querytext, 0, length(v_querytext)-4);
+			ELSE
+				v_querytext := v_querytext || ' WHERE ' || quote_ident(v_idname) || ' = CAST(' || quote_literal(v_id) || ' AS ' || column_type_id || ')';
+			END IF;
 		ELSE
-			v_querytext := v_querytext || ' WHERE ' || quote_ident(v_idname) || ' = CAST(' || quote_literal(v_id) || ' AS ' || column_type_id || ')';
+			v_querytext := v_querytext || ')';
 		END IF;
 
 		-- execute query text
 		EXECUTE v_querytext;
 		IF v_fieldsreload IS NOT NULL THEN
+			SELECT array_agg(key) INTO v_keys_fields
+  				FROM json_object_keys(v_fields::json) AS key;
+
 			EXECUTE 'SELECT gw_fct_getcolumnsfromid($${
 				"client":{"device":4, "infoType":1, "lang":"ES"},
 				"form":{},
-				"feature":{"tableName":"'|| v_tablename ||'", "id":"'|| v_id ||'", "fieldsReload":"'|| v_fieldsreload ||'", "parentField":"'||json_object_keys(v_fields)||'"},
+				"feature":{"tableName":"'|| v_tablename ||'", "id":"'|| v_id ||'", "fieldsReload":"'|| v_fieldsreload ||'", "parentField":"'||v_keys_fields||'"},
 				"data":{}}$$)' INTO v_columnfromid;
 		END IF;
 	END IF;
@@ -270,7 +348,6 @@ BEGIN
 	-- Control NULL's
 	v_version := COALESCE(v_version, '[]');
 	v_columnfromid := COALESCE(v_columnfromid, '{}');
-
 	-- Return
 	RETURN ('{"status":"Accepted", "message":'||v_message||', "version":' || v_version ||
 	      ',"body":{"data":{"fields":' || v_columnfromid || '}'||
@@ -278,7 +355,7 @@ BEGIN
 
 	-- Exception handling
 	EXCEPTION WHEN OTHERS THEN
-	RETURN json_build_object('status', 'Failed', 'message', json_build_object('level', right(SQLSTATE, 1), 'text', SQLERRM),  'version', v_version, 'SQLSTATE', SQLSTATE)::json;
+	RETURN json_build_object('status', 'Failed', 'message', json_build_object('level', 2, 'text', SQLERRM),  'version', v_version, 'SQLSTATE', SQLSTATE)::json;
 
 END;
 $BODY$

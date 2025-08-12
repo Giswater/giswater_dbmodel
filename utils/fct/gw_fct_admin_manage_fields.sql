@@ -33,6 +33,7 @@ DECLARE
 	v_datatype text;
 	v_defaultvalue text;
 	v_isutils boolean;
+	v_iscrm boolean;
 	v_newname text;
 	v_querytext text;
 	v_layers record;
@@ -52,6 +53,7 @@ BEGIN
 	v_datatype = (p_data->>'data')::json->>'dataType';
 	v_defaultvalue = (p_data->>'data')::json->>'defaultValue';
 	v_isutils = (p_data->>'data')::json->>'isUtils';
+	v_iscrm = (p_data->>'data')::json->>'isCrm';
 	v_newname = (p_data->>'data')::json->>'newName';
 
 
@@ -59,6 +61,9 @@ BEGIN
 	-- Determine the target schema and table
 	IF v_isutils IS TRUE AND (SELECT value::boolean FROM config_param_system WHERE parameter='admin_utils_schema') IS TRUE THEN
 		v_target_schemaname := 'utils';
+		v_target_table := replace(v_table, 'ext_', '');
+	ELSIF v_iscrm IS TRUE AND (SELECT value::boolean FROM config_param_system WHERE parameter='admin_crm_schema') IS TRUE THEN
+		v_target_schemaname := 'crm';
 		v_target_table := replace(v_table, 'ext_', '');
 	ELSE
 		v_target_schemaname := v_schemaname;
@@ -100,7 +105,7 @@ BEGIN
 
 			FOR v_layers IN SELECT parent_layer, child_layer FROM cat_feature WHERE feature_type = UPPER(v_table)
 			LOOP
-				-- v_edit_feature
+				-- ve_feature
 				SELECT max(layoutorder)+1 into v_max_layoutorder from config_form_fields
 				where formname = v_layers.parent_layer
 				and formtype = 'form_feature' and tabname = 'tab_data' and layoutname = 'lyt_data_1' and layoutorder < 900;
@@ -133,7 +138,7 @@ BEGIN
 			FOR v_layers IN SELECT DISTINCT parent_layer, child_layer FROM cat_feature WHERE feature_type = upper(v_table)
 			LOOP
 
-				-- edit all rows that have the old columname with the correct one, ve_*, v_edit_* ...
+				-- edit all rows that have the old columname with the correct one, ve_*, ve_* ...
 				EXECUTE '
 				UPDATE config_form_fields 
 				SET	columnname = '||quote_literal(v_newname)||', tooltip = '||quote_literal(v_newname)||', label = '||quote_literal(concat(upper(left(v_newname, 1)), substring(v_newname, 2)))||' 

@@ -66,12 +66,15 @@ jobs:
 
       - name: Create & start PG cluster
         run: |
-          # Choose a port based on matrix.pg_version
+          # Choose a port based on matrix.pg_version and workflow type (WS)
           if [ "${{ matrix.pg_version }}" = "16" ]; then
             PORT=55432
           else
             PORT=55433
           fi
+
+          # Ensure any existing cluster is stopped before creating new one
+          sudo pg_dropcluster --stop ${{ matrix.pg_version }} main || true
 
           sudo pg_createcluster ${{ matrix.pg_version }} main --port=$PORT
           sudo pg_ctlcluster ${{ matrix.pg_version }} main start

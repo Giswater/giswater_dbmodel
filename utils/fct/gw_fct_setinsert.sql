@@ -31,7 +31,7 @@ feature:
 SELECT "SCHEMA_NAME".gw_fct_setinsert($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "form":{},
-"feature":{"featureType":"node", "tableName":"v_edit_node", "id":"1251521", "idName": "node_id"},
+"feature":{"featureType":"node", "tableName":"ve_node", "id":"1251521", "idName": "node_id"},
 	"data":{"fields":{"macrosector_id": "1", "sector_id": "2", "nodecat_id":"JUNCTION DN63", "dma_id":"2", "inventory": "False",
 		"epa_type": "JUNCTION", "state": "1", "arc_id": "113854", "publish": "False", "verified": "TO REVIEW",
 		"expl_id": "1", "builtdate": "2018/11/29", "muni_id": "2", "workcat_id": null, "buildercat_id": "builder1", "enddate": "2018/11/29",
@@ -230,6 +230,16 @@ BEGIN
 		-- control geometry fields
 		IF v_field ='the_geom' OR v_field ='geom' THEN
 			v_columntype='geometry';
+		END IF;
+
+		-- Handle array types - format value with curly braces if it's an array
+		IF v_columntype LIKE '%[]' AND v_value IS NOT NULL AND v_value != '' THEN
+			-- Replace [ with { and ] with } for array input
+			IF v_value LIKE '[%' THEN
+				v_value := replace(replace(v_value, '[', '{'), ']', '}');
+			ELSIF v_value NOT LIKE '{%}' THEN
+				v_value := '{' || v_value || '}';
+			END IF;
 		END IF;
 
 		IF v_value !='null' OR v_value !='NULL' THEN

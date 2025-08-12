@@ -28,14 +28,19 @@ BEGIN
 	FOR table_record IN SELECT * FROM sys_table
 	LOOP
 
-		EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_audit'||table_record.id||' ON '||table_record.id;
+		EXECUTE 'DROP TRIGGER IF EXISTS gw_trg_audit_'||table_record.id||' ON '||v_schemaname||'.'||table_record.id;
 
 		IF table_record.isaudit IS TRUE THEN
 
 			prefix := CASE WHEN table_record.id SIMILAR TO 've_%|v_e%' THEN 'INSTEAD OF' ELSE 'AFTER' END;
 
-			EXECUTE 'CREATE TRIGGER gw_trg_audit'||table_record.id||' '||prefix||' INSERT OR UPDATE OR DELETE ON 
-			'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
+            IF table_record.id = ANY('{node, arc, connec, link, gully}'::text[]) THEN
+				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' AFTER UPDATE OF the_geom ON 
+				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
+			ELSE
+				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' '||prefix||' INSERT OR UPDATE OR DELETE ON 
+				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
+			END IF;
 
 		END IF;
 	END LOOP;

@@ -34,77 +34,77 @@ GRANT role_basic to basic_user;
 SET role basic_user;
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Failed',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_arc returns status "Failed" for basic user'
+    'Check if gw_fct_arc_repair_data with tableName > ve_arc returns status "Failed" for basic user'
 );
 
 SET role om_user;
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Failed',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_arc returns status "Failed" for om user'
+    'Check if gw_fct_arc_repair_data with tableName > ve_arc returns status "Failed" for om user'
 );
 
 SET role edit_user;
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_arc returns status "Accepted" for edit user'
+    'Check if gw_fct_arc_repair_data with tableName > ve_arc returns status "Accepted" for edit user'
 );
 
 SET role epa_user;
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_arc returns status "Accepted" for epa user'
+    'Check if gw_fct_arc_repair_data with tableName > ve_arc returns status "Accepted" for epa user'
 );
 
 SET role plan_user;
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_arc", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_arc returns status "Accepted" for plan user'
+    'Check if gw_fct_arc_repair_data with tableName > ve_arc returns status "Accepted" for plan user'
 );
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_inp_conduit", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_inp_conduit", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_inp_conduit returns status "Accepted"'
+    'Check if gw_fct_arc_repair_data with tableName > ve_inp_conduit returns status "Accepted"'
 );
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_inp_orifice", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_inp_orifice", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_inp_orifice returns status "Accepted"'
+    'Check if gw_fct_arc_repair_data with tableName > ve_inp_orifice returns status "Accepted"'
 );
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_inp_outlet", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_inp_outlet", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_inp_outlet returns status "Accepted"'
+    'Check if gw_fct_arc_repair_data with tableName > ve_inp_outlet returns status "Accepted"'
 );
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_inp_pump", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_inp_pump", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_inp_pump returns status "Accepted"'
+    'Check if gw_fct_arc_repair_data with tableName > ve_inp_pump returns status "Accepted"'
 );
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_inp_virtual", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_inp_virtual", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_inp_virtual returns status "Accepted"'
+    'Check if gw_fct_arc_repair_data with tableName > ve_inp_virtual returns status "Accepted"'
 );
 
 SELECT is(
-    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"v_edit_inp_weir", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
+    (gw_fct_arc_repair($${"client":{"device":4, "lang":"nl_NL", "infoType":1, "epsg":25831}, "form":{}, "feature":{"tableName":"ve_inp_weir", "featureType":"ARC", "id":[]}, "data":{"filterFields":{}, "pageInfo":{}, "selectionMode":"wholeSelection","parameters":{}, "aux_params":null}}$$)::JSON)->>'status',
     'Accepted',
-    'Check if gw_fct_arc_repair_data with tableName > v_edit_inp_weir returns status "Accepted"'
+    'Check if gw_fct_arc_repair_data with tableName > ve_inp_weir returns status "Accepted"'
 );
 
 -- Finish the test

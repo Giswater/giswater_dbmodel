@@ -160,20 +160,20 @@ BEGIN
 		END IF;
 
 		-- arc as end point
-		SELECT * INTO v_arc FROM v_edit_arc WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), v_edit_arc.the_geom, v_link_searchbuffer) AND state>0
-		ORDER by st_distance(ST_EndPoint(NEW.the_geom), v_edit_arc.the_geom) LIMIT 1;
+		SELECT * INTO v_arc FROM ve_arc WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), ve_arc.the_geom, v_link_searchbuffer) AND state>0
+		ORDER by st_distance(ST_EndPoint(NEW.the_geom), ve_arc.the_geom) LIMIT 1;
 
 		-- check if arc diameter is bigger than configured
         IF v_projectype = 'WS' THEN
-            IF (SELECT cat_dnom::integer FROM v_edit_arc WHERE arc_id=v_arc.arc_id) >= v_check_arcdnom AND v_check_arcdnom_status IS TRUE THEN
+            IF (SELECT cat_dnom::integer FROM ve_arc WHERE arc_id=v_arc.arc_id) >= v_check_arcdnom AND v_check_arcdnom_status IS TRUE THEN
                 EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
                 "data":{"message":"3232", "function":"1116","parameters":{"diameter":"'||v_check_arcdnom||'"}}}$$);';
             END IF;
         END IF;
 
 		-- node as end point
-		SELECT * INTO v_node FROM v_edit_node WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), v_edit_node.the_geom, v_link_searchbuffer) AND state>0
-		ORDER by st_distance(ST_EndPoint(NEW.the_geom), v_edit_node.the_geom) LIMIT 1;
+		SELECT * INTO v_node FROM ve_node WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), ve_node.the_geom, v_link_searchbuffer) AND state>0
+		ORDER by st_distance(ST_EndPoint(NEW.the_geom), ve_node.the_geom) LIMIT 1;
 
 
 		-- for ws projects control of link related to nodarc
@@ -190,22 +190,22 @@ BEGIN
 		END IF;
 
 		-- connec as init point
-		SELECT * INTO v_connec1 FROM v_edit_connec WHERE ST_DWithin(ST_StartPoint(NEW.the_geom), v_edit_connec.the_geom,v_link_searchbuffer) AND state>0
-		ORDER by st_distance(ST_StartPoint(NEW.the_geom), v_edit_connec.the_geom) LIMIT 1;
+		SELECT * INTO v_connec1 FROM ve_connec WHERE ST_DWithin(ST_StartPoint(NEW.the_geom), ve_connec.the_geom,v_link_searchbuffer) AND state>0
+		ORDER by st_distance(ST_StartPoint(NEW.the_geom), ve_connec.the_geom) LIMIT 1;
 
 		-- connec as end point
-		SELECT * INTO v_connec2 FROM v_edit_connec WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), v_edit_connec.the_geom,v_link_searchbuffer) AND state>0
-		ORDER by st_distance(ST_EndPoint(NEW.the_geom), v_edit_connec.the_geom) LIMIT 1;
+		SELECT * INTO v_connec2 FROM ve_connec WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), ve_connec.the_geom,v_link_searchbuffer) AND state>0
+		ORDER by st_distance(ST_EndPoint(NEW.the_geom), ve_connec.the_geom) LIMIT 1;
 
 		IF v_projectype='UD' then
 
 			--gully as init point
-			SELECT * INTO v_gully1 FROM v_edit_gully WHERE ST_DWithin(ST_StartPoint(NEW.the_geom), v_edit_gully.the_geom,v_link_searchbuffer)
-			AND state>0 ORDER by st_distance(ST_StartPoint(NEW.the_geom), v_edit_gully.the_geom) LIMIT 1;
+			SELECT * INTO v_gully1 FROM ve_gully WHERE ST_DWithin(ST_StartPoint(NEW.the_geom), ve_gully.the_geom,v_link_searchbuffer)
+			AND state>0 ORDER by st_distance(ST_StartPoint(NEW.the_geom), ve_gully.the_geom) LIMIT 1;
 
 			--gully as end point
-			SELECT * INTO v_gully2 FROM v_edit_gully WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), v_edit_gully.the_geom, v_link_searchbuffer)
-			AND state > 0 ORDER by st_distance(ST_EndPoint(NEW.the_geom), v_edit_gully.the_geom) LIMIT 1;
+			SELECT * INTO v_gully2 FROM ve_gully WHERE ST_DWithin(ST_EndPoint(NEW.the_geom), ve_gully.the_geom, v_link_searchbuffer)
+			AND state > 0 ORDER by st_distance(ST_EndPoint(NEW.the_geom), ve_gully.the_geom) LIMIT 1;
 
 			IF v_gully1.gully_id IS NOT NULL THEN
 				NEW.feature_id=v_gully1.gully_id;
@@ -228,8 +228,8 @@ BEGIN
 			ORDER by st_distance(ST_StartPoint(NEW.the_geom), connec.the_geom) LIMIT 1;
 
 			IF v_projectype='UD' then
-				SELECT * INTO v_gully1 FROM v_edit_gully WHERE ST_DWithin(ST_StartPoint(NEW.the_geom), v_edit_gully.the_geom,v_link_searchbuffer)
-				AND state=0 ORDER by st_distance(ST_StartPoint(NEW.the_geom), v_edit_gully.the_geom) LIMIT 1;
+				SELECT * INTO v_gully1 FROM ve_gully WHERE ST_DWithin(ST_StartPoint(NEW.the_geom), ve_gully.the_geom,v_link_searchbuffer)
+				AND state=0 ORDER by st_distance(ST_StartPoint(NEW.the_geom), ve_gully.the_geom) LIMIT 1;
 				IF v_gully1.gully_id IS NOT NULL THEN
 					NEW.feature_id=v_gully1.gully_id;
 					NEW.feature_type='GULLY';
@@ -682,11 +682,11 @@ BEGIN
 			INSERT INTO link (link_id, code, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom, sector_id,
 			fluid_type, omzone_id, dqa_id, presszone_id, minsector_id, linkcat_id, workcat_id, workcat_id_end, builtdate, enddate,
 			uncertain, muni_id, verified, datasource, top_elev1, depth1, top_elev2, depth2, location_type, custom_length, annotation,
-			observ, comment, descript, link, num_value, dma_id, state_type)
+			observ, comment, descript, link, num_value, dma_id, state_type, brand_id, model_id)
 			VALUES (NEW.link_id, NEW.code, NEW.feature_type, NEW.feature_id, v_expl, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom, v_sector,
 			v_fluidtype, v_omzone, v_dqa, v_presszone, v_minsector, NEW.linkcat_id, NEW.workcat_id, NEW.workcat_id_end, NEW.builtdate, NEW.enddate,
 			NEW.uncertain, NEW.muni_id, NEW.verified, NEW.datasource, NEW.top_elev1, NEW.depth1, NEW.top_elev2, NEW.depth2, NEW.location_type,
-			NEW.custom_length, NEW.annotation, NEW.observ, NEW.comment, NEW.descript, NEW.link, NEW.num_value, v_dma, NEW.state_type);
+			NEW.custom_length, NEW.annotation, NEW.observ, NEW.comment, NEW.descript, NEW.link, NEW.num_value, v_dma, NEW.state_type, NEW.brand_id, NEW.model_id);
 
 		ELSIF  v_projectype = 'UD' THEN
 			IF NEW.linkcat_id IS NULL THEN
@@ -714,12 +714,12 @@ BEGIN
 			END IF;
 
 			INSERT INTO link (link_id, code, sys_code, feature_type, feature_id, expl_id, exit_id, exit_type, userdefined_geom, state, the_geom, sector_id, fluid_type, omzone_id,
-			linkcat_id, workcat_id, workcat_id_end, builtdate, enddate, uncertain, muni_id, verified, custom_length, datasource, top_elev1, y1, top_elev2, y2, link_type, location_type, epa_type,
-			annotation, observ, comment, descript, link, num_value, drainzone_outfall, dwfzone_outfall)
+			linkcat_id, workcat_id, workcat_id_end, builtdate, enddate, uncertain, muni_id, verified, custom_length, datasource, top_elev1, y1, top_elev2, y2, link_type, location_type,
+			annotation, observ, comment, descript, link, num_value, drainzone_outfall, dwfzone_outfall, brand_id, model_id)
 			VALUES (NEW.link_id, NEW.code, NEW.sys_code, NEW.feature_type, NEW.feature_id, v_expl, NEW.exit_id, NEW.exit_type, TRUE, NEW.state, NEW.the_geom, v_sector, v_fluidtype::integer, v_omzone,
 			NEW.linkcat_id, NEW.workcat_id, NEW.workcat_id_end, NEW.builtdate, NEW.enddate, NEW.uncertain, NEW.muni_id, NEW.verified, NEW.custom_length, NEW.datasource,
-			NEW.top_elev1, NEW.y1, NEW.top_elev2, NEW.y2, NEW.link_type, NEW.location_type, NEW.epa_type,
-			NEW.annotation, NEW.observ, NEW.comment, NEW.descript, NEW.link, NEW.num_value, NEW.drainzone_outfall, NEW.dwfzone_outfall);
+			NEW.top_elev1, NEW.y1, NEW.top_elev2, NEW.y2, NEW.link_type, NEW.location_type,
+			NEW.annotation, NEW.observ, NEW.comment, NEW.descript, NEW.link, NEW.num_value, NEW.drainzone_outfall, NEW.dwfzone_outfall, NEW.brand_id, NEW.model_id);
 		END IF;
 
 		IF v_man_table = 'VLINK' THEN
@@ -852,7 +852,7 @@ BEGIN
 				UPDATE connec SET arc_id = v_arc_id, dma_id = v_dma, pjoint_type = NEW.exit_type, pjoint_id = NEW.exit_id,
 				omzone_id = v_omzone WHERE connec_id = NEW.feature_id;
 
-				UPDATE link SET linkcat_id = c.conneccat_id FROM connec c WHERE connec_id = NEW.feature_id AND link.state > 0;
+				UPDATE link SET linkcat_id = c.conneccat_id FROM connec c WHERE feature_id = NEW.feature_id AND link.state > 0;
 
 			ELSIF NEW.feature_type = 'GULLY' THEN
 				UPDATE gully SET arc_id = v_arc_id, pjoint_type = NEW.exit_type, pjoint_id = NEW.exit_id,
@@ -869,7 +869,7 @@ BEGIN
 			-- update values on plan_psector tables
 			IF NEW.feature_type='CONNEC' THEN
 				UPDATE plan_psector_x_connec SET arc_id = v_arc_id WHERE plan_psector_x_connec.link_id=NEW.link_id;
-				UPDATE link SET linkcat_id = c.conneccat_id FROM connec c WHERE connec_id = NEW.feature_id AND link.state > 0;
+				UPDATE link SET linkcat_id = c.conneccat_id FROM connec c WHERE feature_id = NEW.feature_id AND link.state > 0;
 
 			ELSIF NEW.feature_type='GULLY' THEN
 				UPDATE plan_psector_x_gully SET arc_id = v_arc_id WHERE plan_psector_x_gully.link_id=NEW.link_id;
@@ -901,7 +901,7 @@ BEGIN
 		END IF;
 		UPDATE link SET code = NEW.code, state = NEW.state, the_geom = NEW.the_geom, workcat_id = NEW.workcat_id, workcat_id_end = NEW.workcat_id_end, builtdate = NEW.builtdate,
 		enddate = NEW.enddate, uncertain = NEW.uncertain, muni_id = NEW.muni_id, sector_id=v_sector, verified = NEW.verified, custom_length = NEW.custom_length,
-		datasource = NEW.datasource, location_type=NEW.location_type, epa_type=NEW.epa_type, annotation=NEW.annotation, observ=NEW.observ, comment=NEW.comment,
+		datasource = NEW.datasource, location_type=NEW.location_type, annotation=NEW.annotation, observ=NEW.observ, comment=NEW.comment,
 		descript=NEW.descript, link=NEW.link, num_value=NEW.num_value, state_type=NEW.state_type
 		WHERE link_id=NEW.link_id;
 

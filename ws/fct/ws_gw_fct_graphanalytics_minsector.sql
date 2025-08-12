@@ -84,10 +84,8 @@ BEGIN
 	v_commitchanges = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'commitChanges')::BOOLEAN;
 	v_updatemapzgeom = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'updateMapZone');
 	v_geomparamupdate = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'geomParamUpdate');
-    v_ignore_broken_valves = TRUE;
-	v_ignore_check_valves = TRUE;
-	--v_ignore_broken_valves = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'ignoreBrokenOnlyMassiveMincut');
-	--v_ignore_check_valves = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'ignoreCheckValvesMincut')::BOOLEAN;
+    v_ignore_broken_valves = (SELECT value::boolean FROM config_param_system WHERE parameter = 'ignoreBrokenOnlyMassiveMincut');
+    v_ignore_check_valves = (SELECT value::boolean FROM config_param_system WHERE parameter = 'ignoreCheckValvesMincut');
     v_execute_massive_mincut = (SELECT ((p_data::json->>'data')::json->>'parameters')::json->>'executeMassiveMincut')::BOOLEAN;
 
     -- it's not allowed to commit changes when psectors are used
@@ -437,7 +435,7 @@ BEGIN
             FROM (
                 SELECT 
                     minsector_id, dma_id, dqa_id, presszone_id, expl_id, sector_id, muni_id, supplyzone_id, 
-                    num_border, num_connec, num_hydro, length, the_geom, ''v_edit_minsector'' AS layer 
+                    num_border, num_connec, num_hydro, length, the_geom, ''ve_minsector'' AS layer 
                 FROM temp_pgr_minsector
             ) row
             UNION
@@ -449,7 +447,7 @@ BEGIN
             FROM (
                 SELECT 
                     minsector_id, dma_id, dqa_id, presszone_id, expl_id, sector_id, muni_id, supplyzone_id, 
-                    num_border, num_connec, num_hydro, length, the_geom, ''v_edit_minsector_mincut'' AS layer 
+                    num_border, num_connec, num_hydro, length, the_geom, ''ve_minsector_mincut'' AS layer 
                 FROM v_temp_minsector_mincut
             ) row
         ) features' INTO v_result;
@@ -588,7 +586,7 @@ BEGIN
         ';
         EXECUTE v_query_text;
 
-        v_visible_layer ='"v_edit_minsector", "v_edit_minsector_mincut"';
+        v_visible_layer ='"ve_minsector", "ve_minsector_mincut"';
 
         -- Message
         EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4022", "function":"2706", "fid":"'||v_fid||'", "prefix_id": "1001",	 "is_process":true}}$$)';
@@ -665,13 +663,26 @@ BEGIN
             RAISE NOTICE 'v_data: %', v_data;
             v_response := gw_fct_mincut_core(v_data);
 
+            IF v_response->>'status' <> 'Accepted' THEN
+                RETURN v_response;
+            END IF;
+
+            -- insert the mincut_minsector_id
             INSERT INTO temp_pgr_minsector_mincut (minsector_id, mincut_minsector_id)
             SELECT v_record_minsector.minsector_id, n.pgr_node_id
             FROM temp_pgr_node n
             WHERE n.graph_delimiter = 'MINSECTOR'
             AND n.mapzone_id <> 0;
-            RAISE NOTICE 'v_response: %', v_response;
         END LOOP;
+
+        IF v_commitchanges THEN
+            DELETE FROM minsector_mincut;
+
+            INSERT INTO minsector_mincut (minsector_id, mincut_minsector_id)
+            SELECT minsector_id, mincut_minsector_id
+            FROM temp_pgr_minsector_mincut;
+        END IF;
+
     END IF;
 
     -- Info

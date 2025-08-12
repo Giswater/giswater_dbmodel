@@ -48,6 +48,7 @@ v_result_info text;
 v_result text;
 v_version text;
 v_error_context text;
+v_element_id integer;
 
 BEGIN
 
@@ -68,17 +69,25 @@ BEGIN
 	FROM cat_feature_node
 	JOIN cat_feature ON cat_feature.id = cat_feature_node.id
 	WHERE cat_feature_node.id = v_feature_type;
+
+	IF v_feature_class IS NULL THEN
+		SELECT upper(feature_class) INTO v_feature_class
+		FROM cat_feature WHERE cat_feature.id = v_feature_type;
+	END IF;
+
 	SELECT upper(epa_type) INTO v_epatype FROM node WHERE node_id = v_feature_id;
 
 	DELETE FROM audit_check_data WHERE fid=359 AND cur_user=current_user;
+	
 
-	--If to_arc is not defined take arc to which node is connected
-	IF v_arc_id IS NULL THEN
-		SELECT arc_id INTO v_arc_id FROM arc WHERE node_1 =  v_feature_id;
+	-- get feature id if the objet is a frelement  
+	IF v_feature_class ='FRELEM' THEN
+		v_element_id = v_feature_id;
+		v_feature_id = (SELECT node_id FROM man_frelem WHERE element_id = v_element_id);
 	END IF;
 
 	-- check if to_arc is connected with node
-	IF v_arc_id NOT IN (SELECT arc_id FROM arc WHERE node_1 = v_feature_id AND state > 0 UNION SELECT arc_id FROM arc WHERE node_2 = v_feature_id AND state > 0) THEN
+	IF v_element_id IS NULL AND v_arc_id NOT IN (SELECT arc_id FROM arc WHERE node_1 = v_feature_id AND state > 0 UNION SELECT arc_id FROM arc WHERE node_2 = v_feature_id AND state > 0) THEN
 		EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
                     "data":{"message":"3272", "function":"3006","parameters":null}}$$);';
 	END IF;
@@ -100,11 +109,16 @@ BEGIN
 
 	ELSIF v_feature_class = 'METER' THEN
 
-		-- nothing to do;
+		UPDATE man_meter SET to_arc = v_arc_id::int4 WHERE node_id = v_feature_id;
+
+	ELSIF v_feature_class = 'FRELEM' THEN
+
+		UPDATE man_frelem SET to_arc = v_arc_id::int4 WHERE element_id = v_element_id;
+
 	END IF;
 
 	-- graphconfig for mapzones
-	IF v_graphdelim && ARRAY['SECTOR','PRESSZONE','DMA','DQA'] THEN
+	IF v_graphdelim && ARRAY['SECTOR','PRESSZONE','DMA','DQA', 'DWFZONE', 'DRAINZONE'] THEN
 
 		--define list of mapzones to be set
 		SELECT array_agg(lower(unnest)) INTO v_mapzone_array FROM unnest(v_graphdelim);

@@ -282,8 +282,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.expl_id = (SELECT expl_id FROM exploitation WHERE ST_DWithin(NEW.the_geom, exploitation.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.expl_id =(SELECT expl_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.expl_id =(SELECT expl_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -314,8 +314,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.sector_id = (SELECT sector_id FROM sector WHERE ST_DWithin(NEW.the_geom, sector.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.sector_id =(SELECT sector_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.sector_id =(SELECT sector_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -345,8 +345,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.omzone_id = (SELECT omzone_id FROM omzone WHERE ST_DWithin(NEW.the_geom, omzone.the_geom,0.001) AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.omzone_id =(SELECT omzone_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.omzone_id =(SELECT omzone_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 
@@ -371,8 +371,8 @@ BEGIN
 					NEW.muni_id = (SELECT muni_id FROM ext_municipality WHERE ST_DWithin(NEW.the_geom, ext_municipality.the_geom,0.001)
 					AND active IS TRUE LIMIT 1);
 				ELSE
-					NEW.muni_id =(SELECT muni_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.muni_id =(SELECT muni_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -386,8 +386,8 @@ BEGIN
 				IF v_count = 1 THEN
 					NEW.district_id = (SELECT district_id FROM ext_district WHERE ST_DWithin(NEW.the_geom, ext_district.the_geom,0.001) LIMIT 1);
 				ELSIF v_count > 1 THEN
-					NEW.district_id =(SELECT district_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, v_edit_arc.the_geom, v_proximity_buffer)
-					order by ST_Distance (NEW.the_geom, v_edit_arc.the_geom) LIMIT 1);
+					NEW.district_id =(SELECT district_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, ve_arc.the_geom, v_proximity_buffer)
+					order by ST_Distance (NEW.the_geom, ve_arc.the_geom) LIMIT 1);
 				END IF;
 			END IF;
 		END IF;
@@ -522,7 +522,7 @@ BEGIN
 
 		--arc_id
 		IF NEW.arc_id IS NULL AND (SELECT isarcdivide FROM cat_feature_node WHERE id=v_featurecat) IS FALSE THEN
-			NEW.arc_id = (SELECT arc_id FROM v_edit_arc WHERE ST_DWithin(NEW.the_geom, the_geom, 0.1) LIMIT 1);
+			NEW.arc_id = (SELECT arc_id FROM ve_arc WHERE ST_DWithin(NEW.the_geom, the_geom, 0.1) LIMIT 1);
 		END IF;
 
 		--Location type
@@ -629,11 +629,11 @@ BEGIN
 
 		ELSIF v_man_table='man_outfall' THEN
 
-			INSERT INTO man_outfall (node_id, name, discharge_medium) VALUES (NEW.node_id,NEW.name, NEW.discharge_medium);
+			INSERT INTO man_outfall (node_id, name, outfall_medium) VALUES (NEW.node_id,NEW.name, NEW.outfall_medium);
 
 		ELSIF v_man_table='man_valve' THEN
 
-			INSERT INTO man_valve (node_id, name) VALUES (NEW.node_id,NEW.name);
+			INSERT INTO man_valve (node_id, name, flowsetting) VALUES (NEW.node_id,NEW.name, NEW.flowsetting);
 
 		ELSIF v_man_table='man_storage' THEN
 
@@ -660,8 +660,8 @@ BEGIN
 
 		ELSIF v_man_table='man_netinit' THEN
 
-			INSERT INTO man_netinit (node_id,length, width, inlet, bottom_channel, accessibility, name)
-			VALUES (NEW.node_id, NEW.length,NEW.width,NEW.inlet, NEW.bottom_channel, NEW.accessibility, NEW.name);
+			INSERT INTO man_netinit (node_id,length, width, inlet, bottom_channel, accessibility, name, inlet_medium)
+			VALUES (NEW.node_id, NEW.length,NEW.width,NEW.inlet, NEW.bottom_channel, NEW.accessibility, NEW.name, NEW.inlet_medium);
 
 		ELSIF v_man_table='man_wjump' THEN
 
@@ -830,8 +830,13 @@ BEGIN
 		END IF;
 
 		-- rotation
-		IF NEW.rotation != OLD.rotation THEN
+		IF NEW.rotation IS DISTINCT FROM OLD.rotation THEN
 			UPDATE node SET rotation=NEW.rotation WHERE node_id = OLD.node_id;
+		END IF;
+
+		-- hemisphere
+		IF NEW.hemisphere IS DISTINCT FROM OLD.hemisphere THEN
+			UPDATE node SET hemisphere=NEW.hemisphere WHERE node_id = OLD.node_id;
 		END IF;
 
 		-- The geom
@@ -851,7 +856,7 @@ BEGIN
                 WHERE node_id=NEW.node_id AND the_geom IS NOT NULL LIMIT 1);
 			-- if trace_featuregeom is false, do nothing
 			IF v_trace_featuregeom IS TRUE THEN
-			UPDATE v_edit_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001)
+			UPDATE ve_element SET the_geom = NEW.the_geom WHERE St_dwithin(OLD.the_geom, the_geom, 0.001)
 				AND element_id IN (SELECT element_id FROM element_x_node WHERE node_id = NEW.node_id);
 			END IF;
 
@@ -895,7 +900,7 @@ BEGIN
 			asset_id=NEW.asset_id, parent_id=NEW.parent_id, arc_id = NEW.arc_id, expl_visibility=NEW.expl_visibility, adate=NEW.adate, adescript=NEW.adescript,
 			placement_type=NEW.placement_type, label_quadrant=NEW.label_quadrant,
 			access_type=NEW.access_type, brand_id=NEW.brand_id, model_id=NEW.model_id, serial_number=NEW.serial_number, lock_level=NEW.lock_level, is_scadamap=NEW.is_scadamap,
-			pavcat_id=NEW.pavcat_id, hemisphere=NEW.hemisphere, drainzone_outfall=NEW.drainzone_outfall, dwfzone_outfall=NEW.dwfzone_outfall, dma_id=NEW.dma_id, omunit_id=NEW.omunit_id
+			pavcat_id=NEW.pavcat_id, drainzone_outfall=NEW.drainzone_outfall, dwfzone_outfall=NEW.dwfzone_outfall, dma_id=NEW.dma_id, omunit_id=NEW.omunit_id
 			WHERE node_id = OLD.node_id;
 		ELSE
 			UPDATE node
@@ -909,7 +914,7 @@ BEGIN
 			xyz_date=NEW.xyz_date, unconnected=NEW.unconnected, expl_id=NEW.expl_id, num_value=NEW.num_value, updated_at=now(), updated_by=current_user, matcat_id = NEW.matcat_id,
 			asset_id=NEW.asset_id, parent_id=NEW.parent_id, arc_id = NEW.arc_id, expl_visibility=NEW.expl_visibility, adate=NEW.adate, adescript=NEW.adescript,
 			placement_type=NEW.placement_type, label_quadrant=NEW.label_quadrant, access_type=NEW.access_type, brand_id=NEW.brand_id, model_id=NEW.model_id, serial_number=NEW.serial_number,
-			lock_level=NEW.lock_level, is_scadamap=NEW.is_scadamap, pavcat_id=NEW.pavcat_id, hemisphere=NEW.hemisphere, drainzone_outfall=NEW.drainzone_outfall, dwfzone_outfall=NEW.dwfzone_outfall, dma_id=NEW.dma_id, omunit_id=NEW.omunit_id
+			lock_level=NEW.lock_level, is_scadamap=NEW.is_scadamap, pavcat_id=NEW.pavcat_id, drainzone_outfall=NEW.drainzone_outfall, dwfzone_outfall=NEW.dwfzone_outfall, dma_id=NEW.dma_id, omunit_id=NEW.omunit_id
 			WHERE node_id = OLD.node_id;
 		END IF;
 
@@ -933,7 +938,7 @@ BEGIN
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table='man_outfall' THEN
-			UPDATE man_outfall SET name=NEW.name, discharge_medium=NEW.discharge_medium
+			UPDATE man_outfall SET name=NEW.name, outfall_medium=NEW.outfall_medium
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table='man_storage' THEN
@@ -943,7 +948,7 @@ BEGIN
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table='man_valve' THEN
-			UPDATE man_valve SET name=NEW.name
+			UPDATE man_valve SET name=NEW.name, flowsetting=NEW.flowsetting
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table='man_chamber' THEN
@@ -959,7 +964,8 @@ BEGIN
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table='man_netinit' THEN
-			UPDATE man_netinit SET length=NEW.length, width=NEW.width, inlet=NEW.inlet, bottom_channel=NEW.bottom_channel, accessibility=NEW.accessibility, name=NEW.name
+			UPDATE man_netinit SET length=NEW.length, width=NEW.width, inlet=NEW.inlet, bottom_channel=NEW.bottom_channel, accessibility=NEW.accessibility, name=NEW.name,
+			inlet_medium=NEW.inlet_medium
 			WHERE node_id=OLD.node_id;
 
 		ELSIF v_man_table='man_wjump' THEN
@@ -1081,7 +1087,6 @@ BEGIN
 			-- prev calc: diagonal distance between node and label position (Pitagoras)
 			v_label_dist = sqrt(v_dist_xlab^2 + v_dist_ylab^2);
 
-
 			-- prev calc: current angle between node and label position
 			v_sql = '
 			with mec as (
@@ -1097,7 +1102,6 @@ BEGIN
 
 			execute v_sql into v_cur_rotation using v_label_point, new.node_id;
 
-
 			-- prev calc: current label_quadrant according to cat_feature
 			if v_dist_xlab > 0 and v_dist_ylab > 0 then -- top right
 				v_cur_quadrant = 'TR';
@@ -1109,143 +1113,134 @@ BEGIN
 				v_cur_quadrant = 'BL';
 			end if;
 
+			-- set label_x and label_y according to cat_feature
+			update node set label_x = st_x(v_label_point) where node_id = new.node_id;
+			update node set label_y = st_y(v_label_point) where node_id = new.node_id;
 
+			update node set label_quadrant = v_cur_quadrant where node_id = new.node_id;
+			update node set label_rotation =  new.rotation where node_id = new.node_id;
 
+			-- CASE: if label_quadrant changes
+			if new.label_quadrant != old.label_quadrant then
+				--v_label_dist = sqrt(v_dist_xlab^2 + v_dist_ylab^2);
 
-		-- set label_x and label_y according to cat_feature
-		update node set label_x = st_x(v_label_point) where node_id = new.node_id;
-		update node set label_y = st_y(v_label_point) where node_id = new.node_id;
-
-		update node set label_quadrant = v_cur_quadrant where node_id = new.node_id;
-		update node set label_rotation =  new.rotation where node_id = new.node_id;
-
-		-- CASE: if label_quadrant changes
-		if new.label_quadrant != old.label_quadrant then
-			--v_label_dist = sqrt(v_dist_xlab^2 + v_dist_ylab^2);
-
-			if new.label_quadrant ilike 'B%' then
-				v_dist_ylab = v_dist_ylab * (-1);
-			end if;
-
-			if new.label_quadrant ilike '%L' then
-				v_dist_xlab = v_dist_xlab * (-1);
-			end if;
-
-			if new.label_quadrant ilike 'B%' then
-				if new.label_quadrant ilike '%L' then
-					v_rot1 = -90;
-				elsif new.label_quadrant ilike '%R' then
-					v_rot1 = 90;
+				if new.label_quadrant ilike 'B%' then
+					v_dist_ylab = v_dist_ylab * (-1);
 				end if;
-			end if;
 
-			if new.label_quadrant ilike 'T%' then
 				if new.label_quadrant ilike '%L' then
-					v_rot1 = 90;
-				elsif new.label_quadrant ilike '%R' then
-					v_rot1 = -90;
+					v_dist_xlab = v_dist_xlab * (-1);
 				end if;
+
+				if new.label_quadrant ilike 'B%' then
+					if new.label_quadrant ilike '%L' then
+						v_rot1 = -90;
+					elsif new.label_quadrant ilike '%R' then
+						v_rot1 = 90;
+					end if;
+				end if;
+
+				if new.label_quadrant ilike 'T%' then
+					if new.label_quadrant ilike '%L' then
+						v_rot1 = 90;
+					elsif new.label_quadrant ilike '%R' then
+						v_rot1 = -90;
+					end if;
+				end if;
+
+				if (v_dist_xlab > 0 and v_dist_ylab > 0) -- top right
+				or (v_dist_xlab < 0 and v_dist_ylab < 0) -- bottom left
+				then
+					v_rot1 = 90+new.rotation;
+					v_rot2 = 0+new.rotation;
+
+				elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
+				or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
+				then
+					v_rot1 = -90+new.rotation;
+					v_rot2 = -180+new.rotation;
+
+					v_dist_xlab = v_dist_xlab * (-1);
+					v_dist_ylab = v_dist_ylab * (-1);
+				end if;
+
+				v_rot1=coalesce(v_rot1, 0);
+				v_rot2=coalesce(v_rot2, 0);
+
+				v_sql = '
+				with mec as (
+				select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_xlab||', radians('||v_rot1||')) as eee
+				FROM node WHERE node_id = '||QUOTE_LITERAL(new.node_id)||'), lab_point as (
+				SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_ylab||', radians('||v_rot2||')) as fff
+				from mec)
+				select st_transform(fff::geometry, '||v_srid||') as label_p from lab_point';
+
+				execute v_sql into v_new_lab_position;
+
+				-- update label position
+				update node set label_x = st_x(v_new_lab_position) where node_id = new.node_id;
+				update node set label_y = st_y(v_new_lab_position) where node_id = new.node_id;
+
+				update node set label_quadrant = new.label_quadrant where node_id = new.node_id;
+				update node set label_rotation = new.rotation where node_id = new.node_id;
+
 			end if;
 
-			if (v_dist_xlab > 0 and v_dist_ylab > 0) -- top right
-			or (v_dist_xlab < 0 and v_dist_ylab < 0) -- bottom left
-			then
-				v_rot1 = 90+new.rotation;
-				v_rot2 = 0+new.rotation;
+			-- CASE: if rotation of the node changes
+			if new.rotation::text != old.rotation::text OR (OLD.rotation IS NULL AND NEW.rotation IS NOT NULL) then
+				-- prev calc: current label position
+				select st_setsrid(st_makepoint(label_x::numeric, label_y::numeric), v_srid) into v_label_point from node where node_id = new.node_id;
 
-			elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
-			or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
-			then
-				v_rot1 = -90+new.rotation;
-				v_rot2 = -180+new.rotation;
+				-- prev calc: geom of the node
+				execute 'select the_geom from node where node_id = '||quote_literal(new.node_id)||''  into v_geom;
 
-				v_dist_xlab = v_dist_xlab * (-1);
-				v_dist_ylab = v_dist_ylab * (-1);
+				-- prev calc: current angle between node and its label
+				v_sql = '
+				with mec as (
+					SELECT 
+					n.the_geom as vertex_point,
+					n.rotation as rotation_node,
+					$1 as point1,
+					ST_LineInterpolatePoint(a.the_geom, ST_LineLocatePoint(a.the_geom, n.the_geom)) as point2
+					from node n, arc a  where n.node_id = $2 and st_dwithin (a.the_geom, n.the_geom, 0.001) limit 1
+				)
+				select degrees(ST_Azimuth(vertex_point, point1))
+				from mec';
 
+				execute v_sql into v_cur_rotation using v_label_point, new.node_id;
 
+				-- prev calc: intermediate rotations according to dist_x and dist_y
+				if (v_dist_xlab > 0 and v_dist_ylab > 0) -- top right
+				or (v_dist_xlab < 0 and v_dist_ylab < 0) -- bottom left
+				then
+					v_rot1 = 90+new.rotation;
+					v_rot2 = 0+new.rotation;
+
+				elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
+				or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
+				then
+					v_rot1 = -90+new.rotation;
+					v_rot2 = -180+new.rotation;
+
+					v_dist_xlab = v_dist_xlab * (-1);
+					v_dist_ylab = v_dist_ylab * (-1);
+				end if;
+
+				-- label position
+				v_sql = '
+				with mec as (
+				select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_xlab||', radians('||v_rot1||')) as eee
+				FROM node WHERE node_id = '||QUOTE_LITERAL(new.node_id)||'), lab_point as (
+				SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_ylab||', radians('||v_rot2||')) as fff
+				from mec)
+				select st_transform(fff::geometry, '||v_srid||') as label_p from lab_point';
+				execute v_sql into v_label_point;
+
+				update node set label_rotation = new.rotation where node_id = new.node_id;
+				update node set label_x = st_x(v_label_point) where node_id = new.node_id;
+				update node set label_y = st_y(v_label_point) where node_id = new.node_id;
 			end if;
-
-			v_rot1=coalesce(v_rot1, 0);
-			v_rot2=coalesce(v_rot2, 0);
-
-			v_sql = '
-			with mec as (
-			select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_xlab||', radians('||v_rot1||')) as eee
-			FROM node WHERE node_id = '||QUOTE_LITERAL(new.node_id)||'), lab_point as (
-			SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_ylab||', radians('||v_rot2||')) as fff
-			from mec)
-			select st_transform(fff::geometry, '||v_srid||') as label_p from lab_point';
-
-			execute v_sql into v_new_lab_position;
-
-			-- update label position
-			update node set label_x = st_x(v_new_lab_position) where node_id = new.node_id;
-			update node set label_y = st_y(v_new_lab_position) where node_id = new.node_id;
-
-			update node set label_quadrant = new.label_quadrant where node_id = new.node_id;
-			update node set label_rotation = new.rotation where node_id = new.node_id;
-
 		end if;
-	end if;
-
-	-- CASE: if rotation of the node changes
-	if new.rotation != old.rotation then
-
-		-- prev calc: current label position
-		select st_setsrid(st_makepoint(label_x::numeric, label_y::numeric), v_srid) into v_label_point from node where node_id = new.node_id;
-
-		-- prev calc: geom of the node
-		execute 'select the_geom from node where node_id = '||quote_literal(new.node_id)||''  into v_geom;
-
-		-- prev calc: current angle between node and its label
-		v_sql = '
-		with mec as (
-			SELECT 
-			n.the_geom as vertex_point,
-			n.rotation as rotation_node,
-			$1 as point1,
-			ST_LineInterpolatePoint(a.the_geom, ST_LineLocatePoint(a.the_geom, n.the_geom)) as point2
-			from node n, arc a  where n.node_id = $2 and st_dwithin (a.the_geom, n.the_geom, 0.001) limit 1
-		)
-		select degrees(ST_Azimuth(vertex_point, point1))
-		from mec';
-
-		execute v_sql into v_cur_rotation using v_label_point, new.node_id;
-
-		-- prev calc: intermediate rotations according to dist_x and dist_y
-	   	if (v_dist_xlab > 0 and v_dist_ylab > 0) -- top right
-		or (v_dist_xlab < 0 and v_dist_ylab < 0) -- bottom left
-		then
-			v_rot1 = 90+new.rotation;
-			v_rot2 = 0+new.rotation;
-
-		elsif (v_dist_xlab > 0 and v_dist_ylab < 0) -- bottom right
-		or 	  (v_dist_xlab < 0 and v_dist_ylab > 0) -- top left
-		then
-			v_rot1 = -90+new.rotation;
-			v_rot2 = -180+new.rotation;
-
-			v_dist_xlab = v_dist_xlab * (-1);
-			v_dist_ylab = v_dist_ylab * (-1);
-
-
-		end if;
-
-		-- label position
-		v_sql = '
-		with mec as (
-		select the_geom, ST_Project(ST_Transform(the_geom, 4326)::geography, '||v_dist_xlab||', radians('||v_rot1||')) as eee
-		FROM node WHERE node_id = '||QUOTE_LITERAL(new.node_id)||'), lab_point as (
-		SELECT ST_Project(ST_Transform(eee::geometry, 4326)::geography, '||v_dist_ylab||', radians('||v_rot2||')) as fff
-		from mec)
-		select st_transform(fff::geometry, '||v_srid||') as label_p from lab_point';
-		execute v_sql into v_label_point;
-
-		update node set label_rotation = new.rotation where node_id = new.node_id;
-		update node set label_x = st_x(v_label_point) where node_id = new.node_id;
-		update node set label_y = st_y(v_label_point) where node_id = new.node_id;
-
-	end if;
 
 		-- man2inp_values
 		PERFORM gw_fct_man2inp_values(v_input);

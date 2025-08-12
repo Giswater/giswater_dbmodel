@@ -19,14 +19,14 @@ feature:
 SELECT SCHEMA_NAME.gw_fct_setcatalog($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "form":{"formName":"new_workcat", "tabName":"data", "editable":"TRUE"},
-"feature":{"tableName":"v_edit_node", "idName":"node_id", "id":"2001", "feature_type":"JUNCTION"},
+"feature":{"tableName":"ve_node", "idName":"node_id", "id":"2001", "feature_type":"JUNCTION"},
 "data":{"fields":{"builtdate": "2020-05-05", "id": "21XY1111", "descript":"test 54", "link":null,"workid_key1": "132", "workid_key2": "vdf"}}}$$);
 
 
 SELECT SCHEMA_NAME.gw_fct_setcatalog($${
 "client":{"device":4, "infoType":1, "lang":"ES"},
 "form":{"formName":"new_workcat"},
-"feature":{"tableName":"v_edit_node"},
+"feature":{"tableName":"ve_node"},
 "data":{"fields":{"builtdate": "2020-05-05", "id": "21XY1111", "descript":"test 54", "link":null,"workid_key1": "132", "workid_key2": "vdf"}}}$$);
 
 
@@ -177,7 +177,7 @@ BEGIN
 			END IF;
 		END IF;
 		-- Get column type
-		EXECUTE 'SELECT data_type FROM information_schema.columns  WHERE table_schema = $1 AND table_name = ' || quote_literal(v_catname) || ' AND column_name = $2'
+		EXECUTE 'SELECT udt_name::regtype as data_type  FROM information_schema.columns  WHERE table_schema = $1 AND table_name = ' || quote_literal(v_catname) || ' AND column_name = $2'
 			USING v_schemaname, v_field
 			INTO v_columntype;
 
@@ -186,6 +186,15 @@ BEGIN
 			v_columntype='text';
 		END IF;
 
+		-- Handle array types - format value with curly braces if it's an array
+		IF v_columntype LIKE '%[]' AND v_value IS NOT NULL AND v_value != '' THEN
+			-- Replace [ with { and ] with } for array input
+			IF v_value LIKE '[%' THEN
+				v_value := replace(replace(v_value, '[', '{'), ']', '}');
+			ELSIF v_value NOT LIKE '{%}' THEN
+				v_value := '{' || v_value || '}';
+			END IF;
+		END IF;
 
 		IF v_value !='null' OR v_value !='NULL' THEN
 

@@ -66,8 +66,8 @@ BEGIN
 			SELECT macrosector_id INTO v_mapzone_id FROM macrosector WHERE name = NEW.macrosector;
 		END IF;
 
-		INSERT INTO sector (sector_id, name, descript, macrosector_id, sector_type, graphconfig, stylesheet, parent_id, pattern_id, avg_press, link, muni_id, expl_id, lock_level)
-		VALUES (NEW.sector_id, NEW.name, NEW.descript, v_mapzone_id, NEW.sector_type,
+		INSERT INTO sector (sector_id, code, name, descript, macrosector_id, sector_type, graphconfig, stylesheet, parent_id, pattern_id, avg_press, link, muni_id, expl_id, lock_level)
+		VALUES (NEW.sector_id, NEW.sector_id, NEW.name, NEW.descript, v_mapzone_id, NEW.sector_type,
 		NEW.graphconfig::json, NEW.stylesheet::json, NEW.parent_id, NEW.pattern_id, NEW.avg_press, NEW.link, NEW.muni_id, NEW.expl_id, NEW.lock_level);
 
 		IF v_view_name = 'UI' THEN
@@ -85,6 +85,10 @@ BEGIN
 		IF v_view_name = 'EDIT' THEN
 			v_mapzone_id = NEW.macrosector_id;
 		ELSIF v_view_name = 'UI' THEN
+			IF NEW.active IS FALSE AND OLD.active IS TRUE THEN
+				PERFORM gw_fct_check_linked_mapzones(json_build_object('parameters', json_build_object('mapzoneName', 'sector', 'mapzoneId', OLD.sector_id)));
+			END IF;
+
 			SELECT macrosector_id INTO v_mapzone_id FROM macrosector WHERE name = NEW.macrosector;
 		END IF;
 

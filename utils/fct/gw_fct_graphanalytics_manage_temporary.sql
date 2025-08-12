@@ -67,6 +67,7 @@ BEGIN
             fluid_type INTEGER DEFAULT 0,
             modif BOOL DEFAULT FALSE,  -- True if nodes have to be disconnected - closed valves, starts of mapzones
             graph_delimiter VARCHAR(30) DEFAULT 'NONE',
+            to_arc _int4,
             CONSTRAINT temp_pgr_node_pkey PRIMARY KEY (pgr_node_id)
         );
         CREATE INDEX IF NOT EXISTS temp_pgr_node_node_id_idx ON temp_pgr_node USING btree (node_id);
@@ -89,6 +90,7 @@ BEGIN
             modif2 BOOL DEFAULT FALSE,  -- True if arcs have to be disconnected on node_2
             cost INT DEFAULT 1,
             reverse_cost INT DEFAULT 1,
+            to_arc _int4,
             CONSTRAINT temp_pgr_arc_pkey PRIMARY KEY (pgr_arc_id)
         );
         CREATE INDEX IF NOT EXISTS temp_pgr_arc_arc_id_idx ON temp_pgr_arc USING btree (arc_id);
@@ -128,11 +130,9 @@ BEGIN
         IF v_project_type = 'WS' THEN
             ALTER TABLE temp_pgr_node ADD COLUMN closed BOOL;
             ALTER TABLE temp_pgr_node ADD COLUMN broken BOOL;
-            ALTER TABLE temp_pgr_node ADD COLUMN to_arc _int4;
 
             ALTER TABLE temp_pgr_arc ADD COLUMN closed BOOL;
             ALTER TABLE temp_pgr_arc ADD COLUMN broken BOOL;
-            ALTER TABLE temp_pgr_arc ADD COLUMN to_arc _int4;
 
             -- for specific functions
             IF v_fct_name = 'MINCUT' OR v_fct_name = 'MINSECTOR' THEN
@@ -146,6 +146,7 @@ BEGIN
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_graph (LIKE SCHEMA_NAME.minsector_graph INCLUDING ALL);
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector (LIKE SCHEMA_NAME.minsector INCLUDING ALL);
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_mincut (LIKE SCHEMA_NAME.minsector_mincut INCLUDING ALL);
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_mincut_valve (LIKE SCHEMA_NAME.minsector_mincut_valve INCLUDING ALL);
 
                 -- used for MASSIVE MINCUT
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_node_minsector (LIKE temp_pgr_node INCLUDING ALL);
@@ -357,9 +358,7 @@ BEGIN
             ELSIF v_project_type = 'UD' THEN
 
                 CREATE OR REPLACE TEMPORARY VIEW v_temp_arc AS
-                WITH sel_expl AS (
-                    SELECT selector_expl.expl_id FROM selector_expl WHERE selector_expl.cur_user = CURRENT_USER
-                ), sel_ps AS (
+                WITH sel_ps AS (
                     SELECT selector_psector.psector_id FROM selector_psector WHERE selector_psector.cur_user = CURRENT_USER
                 ), arc_psector AS (
                     SELECT
@@ -388,7 +387,6 @@ BEGIN
                         a.initoverflowpath,
                         a.expl_id,
                         a.sector_id,
-                        a.drainzone_id,
                         a.dwfzone_id,
                         a.omzone_id,
                         a.fluid_type,
@@ -429,7 +427,6 @@ BEGIN
                     cf.graph_delimiter,
                     node.expl_id,
                     node.sector_id,
-                    node.drainzone_id,
                     node.dwfzone_id,
                     node.omzone_id,
                     node.fluid_type,
@@ -478,7 +475,6 @@ BEGIN
                         connec.arc_id,
                         connec.expl_id,
                         connec.sector_id,
-                        connec.drainzone_id,
                         connec.dwfzone_id,
                         connec.omzone_id,
                         connec.fluid_type,
@@ -530,12 +526,13 @@ BEGIN
                         gully.arc_id,
                         gully.expl_id,
                         gully.sector_id,
-                        gully.drainzone_id,
                         gully.dwfzone_id,
                         gully.omzone_id,
                         gully.fluid_type,
                         gully.muni_id,
                         gully.minsector_id,
+                        gully.gullycat_id,
+                        gully.state,
                         gully.the_geom
                     FROM gully_selector
                     JOIN gully ON gully.gully_id::text = gully_selector.gully_id::text
@@ -583,12 +580,10 @@ BEGIN
                         l.feature_type,
                         l.expl_id,
                         l.sector_id,
-                        l.drainzone_id,
                         l.dwfzone_id,
                         l.omzone_id,
                         l.fluid_type,
                         l.muni_id,
-                        l.minsector_id,
                         l.the_geom
                     FROM link_selector
                     JOIN link l USING (link_id)
@@ -614,7 +609,7 @@ BEGIN
                 ), link_selector AS (
                     SELECT
                         l.link_id,
-                        c.arc_id
+                        g.arc_id
                     FROM link l
                     JOIN gully g ON l.feature_id = g.gully_id
                     WHERE NOT EXISTS (
@@ -637,12 +632,10 @@ BEGIN
                         l.feature_type,
                         l.expl_id,
                         l.sector_id,
-                        l.drainzone_id,
                         l.dwfzone_id,
                         l.omzone_id,
                         l.fluid_type,
                         l.muni_id,
-                        l.minsector_id,
                         l.the_geom
                     FROM link_selector
                     JOIN link l USING (link_id)
@@ -750,7 +743,6 @@ BEGIN
                     a.initoverflowpath,
                     a.expl_id,
                     a.sector_id,
-                    a.drainzone_id,
                     a.dwfzone_id,
                     a.omzone_id,
                     a.fluid_type,
@@ -769,7 +761,6 @@ BEGIN
                     cf.graph_delimiter,
                     n.expl_id,
                     n.sector_id,
-                    n.drainzone_id,
                     n.dwfzone_id,
                     n.omzone_id,
                     n.fluid_type,
@@ -788,7 +779,6 @@ BEGIN
                     c.arc_id,
                     c.expl_id,
                     c.sector_id,
-                    c.drainzone_id,
                     c.dwfzone_id,
                     c.omzone_id,
                     c.fluid_type,
@@ -808,12 +798,13 @@ BEGIN
                     g.arc_id,
                     g.expl_id,
                     g.sector_id,
-                    g.drainzone_id,
                     g.dwfzone_id,
                     g.omzone_id,
                     g.fluid_type,
                     g.muni_id,
                     g.minsector_id,
+                    g.gullycat_id,
+                    g.state,
                     g.the_geom
                 FROM gully g
                 JOIN value_state_type vst ON vst.id = g.state_type
@@ -827,12 +818,10 @@ BEGIN
                     l.feature_type,
                     l.expl_id,
                     l.sector_id,
-                    l.drainzone_id,
                     l.dwfzone_id,
                     l.omzone_id,
                     l.fluid_type,
                     l.muni_id,
-                    l.minsector_id,
                     l.the_geom
                 FROM link l
                 JOIN connec c ON l.feature_id = c.connec_id
@@ -849,12 +838,10 @@ BEGIN
                     l.feature_type,
                     l.expl_id,
                     l.sector_id,
-                    l.drainzone_id,
                     l.dwfzone_id,
                     l.omzone_id,
                     l.fluid_type,
                     l.muni_id,
-                    l.minsector_id,
                     l.the_geom
                 FROM link l
                 JOIN gully g ON l.feature_id = g.gully_id

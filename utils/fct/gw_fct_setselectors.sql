@@ -54,7 +54,6 @@ v_querytext text;
 v_message text = '{"level":1, "text":"Process done successfully"}';
 v_count integer = 0;
 v_count_aux integer = 0;
-v_count_2 integer = 0;
 v_name text;
 v_disableparent boolean;
 v_fid integer = 397;
@@ -128,7 +127,7 @@ BEGIN
 	END IF;
 
 	-- control null tabname when layout of municipalities appear
-	IF v_tabname IS NULL AND v_selectortype = 'explfrommuni' THEN 
+	IF v_tabname IS NULL AND v_selectortype = 'explfrommuni' THEN
 		v_tabname = 'tab_municipality';
 	END IF;
 
@@ -152,6 +151,7 @@ BEGIN
 	DROP TABLE IF EXISTS temp_macrosector;
 	DROP TABLE IF EXISTS temp_municipality;
 	DROP TABLE IF EXISTS temp_t_mincut;
+	DROP TABLE IF EXISTS temp_network;
 
 	IF v_expl_x_user is false THEN
 		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e WHERE active and expl_id > 0 order by 1;
@@ -159,6 +159,8 @@ BEGIN
 		CREATE TEMP TABLE temp_sector as select e.* from sector e WHERE active and sector_id > 0 order by 1;
 		CREATE TEMP TABLE temp_macrosector as select e.* from macrosector e WHERE active and macrosector_id > 0 order by 1;
 		CREATE TEMP TABLE temp_municipality as select em.* from ext_municipality em WHERE active and muni_id > 0 order by 1;
+		CREATE TEMP TABLE temp_network AS SELECT id::integer as network_id, idval as name, true as active 
+		FROM om_typevalue WHERE typevalue = 'network_type' order by id;
 
 		IF v_project_type = 'WS' THEN
 			CREATE TEMP TABLE temp_t_mincut as select e.* from om_mincut e WHERE id > 0 order by 1;
@@ -166,6 +168,9 @@ BEGIN
 	ELSE
 		CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e
 		JOIN config_user_x_expl USING (expl_id)	WHERE e.active and expl_id > 0 and username = current_user order by 1;
+
+		CREATE TEMP TABLE temp_network AS SELECT id::integer as network_id, idval as name, true as active 
+		FROM om_typevalue WHERE typevalue = 'network_type' order by id;
 
 		CREATE TEMP TABLE temp_macroexploitation as select distinct on (m.macroexpl_id) m.* from macroexploitation m
 		JOIN temp_exploitation e USING (macroexpl_id)
@@ -318,6 +323,7 @@ BEGIN
 		IF v_tabname IN ('tab_exploitation', 'tab_macroexploitation') THEN
 
 			IF v_tabname = 'tab_exploitation' THEN
+				DELETE FROM selector_macroexpl WHERE cur_user = current_user;
 				INSERT INTO selector_macroexpl
 				SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user)
 				ON CONFLICT (macroexpl_id, cur_user) DO NOTHING;
@@ -471,7 +477,7 @@ BEGIN
 			  )
 			ON CONFLICT (sector_id, cur_user) DO NOTHING;
 
-			-- scenarios
+			-- dscenarios
 			IF (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, 'member') AND rolname = 'role_epa') IS NOT NULL THEN
 				DELETE FROM selector_inp_dscenario WHERE dscenario_id NOT IN
 				(SELECT dscenario_id FROM cat_dscenario WHERE active is true and expl_id IS NULL OR expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
@@ -481,14 +487,26 @@ BEGIN
 			DELETE FROM selector_psector WHERE psector_id NOT IN
 			(SELECT psector_id FROM cat_dscenario WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
 
+			-- manage add schema for muni
+			IF v_addschema IS NOT NULL THEN
+				EXECUTE 'SET search_path = '||v_addschema||', public';
+	
+				EXECUTE' DELETE FROM selector_municipality WHERE cur_user = current_user';
+				EXECUTE' INSERT INTO selector_municipality 
+				SELECT muni_id, current_user FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
+
+				EXECUTE 'SET search_path = '||v_schemaname||', public';
+
+			END IF;
+
 		END IF;
 	END IF;
 
 	-- manage addschema
 	IF v_addschema IS NOT NULL AND v_tabname IN ('tab_exploitation', 'tab_macroexploitation') THEN
-	
+
 		EXECUTE 'SET search_path = '||v_addschema||', public';
-	
+
 		EXECUTE' DELETE FROM selector_municipality WHERE cur_user = current_user';
 		EXECUTE' INSERT INTO selector_municipality 
 		SELECT muni_id, current_user FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
@@ -538,9 +556,9 @@ BEGIN
 	END IF;
 
 	IF v_addschema IS NOT NULL AND v_tabname IN ('tab_exploitation_add', 'tab_macroexploitation_add') THEN
-	
+
 		EXECUTE 'SET search_path = '||v_addschema||', public';
-	
+
 		-- manage cross-reference tables
 		select count(*) into v_count from node;
 		IF v_count > 0 THEN
@@ -603,21 +621,21 @@ BEGIN
 			DELETE FROM selector_municipality WHERE cur_user = current_user;
 			INSERT INTO selector_municipality
 			SELECT DISTINCT muni_id, current_user FROM node WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user);
-				
+
 			EXECUTE' DELETE FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
 			EXECUTE' INSERT INTO '||v_schemaname||'.selector_municipality 
 			SELECT muni_id, current_user FROM selector_municipality WHERE cur_user = current_user';
-		
+
 			SELECT row_to_json (a)
 			INTO v_geometry
-			FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, 
+			FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1,
 			st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
-			FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM v_edit_arc) b) a;
-		
+			FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM ve_arc) b) a;
+
 		END IF;
-	
+
 		EXECUTE 'SET search_path = '||v_schemaname||', public';
-								
+
 		-- macroexpl
 		DELETE FROM selector_macroexpl WHERE cur_user = current_user;
 		INSERT INTO selector_macroexpl
@@ -657,50 +675,110 @@ BEGIN
 
 		-- psector
 		DELETE FROM selector_psector WHERE psector_id NOT IN
-		(SELECT psector_id FROM cat_dscenario WHERE active is true and expl_id IN 
+		(SELECT psector_id FROM cat_dscenario WHERE active is true and expl_id IN
 	    (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
 
 	END IF;
 
+	-- cross reference schema for state 
+	IF v_addschema IS NOT NULL THEN 
+		EXECUTE 'DELETE FROM '||v_addschema||'.selector_state WHERE cur_user = current_user';
+		EXECUTE 'INSERT INTO '||v_addschema||'.selector_state SELECT state_id, current_user FROM selector_state WHERE cur_user = current_user';
+	END IF;
+	
 	-- get envelope
-	SELECT count(the_geom) INTO v_count_2 FROM v_edit_node LIMIT 1;
-
 	IF v_tabname IN ('tab_sector', 'tab_macrosector') THEN
 		SELECT row_to_json (a)
 		INTO v_geometry
 		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1,
 		st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
-		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM v_edit_arc where sector_id IN
+		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM ve_arc where sector_id IN
 		(SELECT sector_id FROM selector_sector WHERE cur_user=current_user)) b) a;
-			
-	ELSIF (v_count_2 > 0 or (v_checkall IS False and v_id is null)) AND v_tabname NOT IN ('tab_exploitation_add', 'tab_macroexploitation_add')  THEN
+
+	ELSIF v_tabname IN ('tab_hydro_state', 'tab_network_state', 'tab_dscenario') THEN
+		v_geometry = NULL;
+
+	ELSIF v_tabname IN ('tab_psector') THEN
 		SELECT row_to_json (a)
 		INTO v_geometry
-		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
-		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM v_edit_arc) b) a;
-
-	ELSIF v_tabname IN ('tab_hydro_state', 'tab_psector', 'tab_network_state', 'tab_dscenario') THEN
-		v_geometry = NULL;
+		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1,
+		st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
+		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM plan_psector where psector_id IN
+		(SELECT psector_id FROM selector_psector WHERE cur_user=current_user)) b) a;		
 
 	ELSIF v_tabname IN ('tab_exploitation') THEN
 		SELECT row_to_json (a)
 		INTO v_geometry
 		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
-		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM v_edit_arc where expl_id IN
+		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM ve_arc where expl_id IN
 		(SELECT expl_id FROM selector_expl WHERE cur_user=current_user)) b) a;
 
 	ELSIF v_tabname='tab_municipality' THEN
 		SELECT row_to_json (a)
 		INTO v_geometry
 		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
-		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM v_edit_arc where muni_id IN
+		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM ve_arc where muni_id IN
 		(SELECT muni_id FROM selector_municipality WHERE cur_user=current_user)) b) a;
 
 	END IF;
 
-	-- force 0 
+	-- force 0
 	INSERT INTO selector_sector values (0, current_user) ON CONFLICT (sector_id, cur_user) do nothing;
 	INSERT INTO selector_municipality values (0, current_user) ON CONFLICT (muni_id, cur_user) do nothing;
+
+ 	-- exit psector mode if current psector is outside the selected expl
+	
+	IF EXISTS (
+	    SELECT 1
+	    FROM config_param_user a
+	    LEFT JOIN plan_psector b ON a.value::integer = b.psector_id
+	    JOIN selector_expl c ON b.expl_id = c.expl_id
+	    WHERE a."parameter" = 'plan_psector_current'
+	    AND c.cur_user = current_user
+		) THEN
+	
+		UPDATE config_param_user SET value = NULL WHERE "parameter" = 'plan_psector_current' AND cur_user = current_user;
+	
+	END IF;
+
+	-- warn the user that in the selected psectors, there is a connec connected to different arcs
+	WITH mec AS ( 
+		SELECT connec_id,
+		row_number() over(PARTITION BY connec_id ORDER BY connec_id) AS rowid_connec,
+		row_number() over(PARTITION BY arc_id ORDER BY arc_id) AS rowid_arc,
+		row_number() over(PARTITION BY psector_id ORDER BY psector_id) AS rowid_psector
+		FROM plan_psector_x_connec 
+		JOIN selector_psector USING (psector_id) WHERE cur_user = current_user
+	)
+	SELECT count(*) INTO v_count FROM mec WHERE rowid_connec>1 AND rowid_arc > 0 AND rowid_psector > 0;
+
+	IF v_count>0 then
+	
+		SELECT concat('{"level":',log_level, ', "text":"', error_message, '"}') INTO v_message FROM sys_message WHERE id = 4340;
+
+	END IF;
+
+	IF v_project_type = 'UD' THEN
+
+		WITH mec AS ( 
+			SELECT gully_id,
+			row_number() over(PARTITION BY gully_id ORDER BY gully_id) AS rowid_gully,
+			row_number() over(PARTITION BY arc_id ORDER BY arc_id) AS rowid_arc,
+			row_number() over(PARTITION BY psector_id ORDER BY psector_id) AS rowid_psector
+			FROM plan_psector_x_gully
+			JOIN selector_psector USING (psector_id) WHERE cur_user = current_user
+		)
+		SELECT count(*) INTO v_count FROM mec WHERE rowid_gully>1 AND rowid_arc > 0 AND rowid_psector > 0;
+
+		IF v_count>0 then
+	
+			SELECT concat('{"level":',log_level, ', "text":"', error_message, '"}') INTO v_message FROM sys_message WHERE id = 4340;
+
+		END IF;
+
+	END IF;
+
+
 
 	-- get uservalues
 	PERFORM gw_fct_workspacemanager($${"client":{"device":4, "infoType":1, "lang":"ES"}, "form":{}, "feature":{},"data":{"filterFields":{}, "pageInfo":{}, "action":"CHECK"}}$$);
@@ -712,6 +790,8 @@ BEGIN
 	v_geometry := COALESCE(v_geometry, '{}');
 	v_uservalues := COALESCE(v_uservalues, '{}');
 	v_action := COALESCE(v_action, 'null');
+	v_message := COALESCE(v_message, '{}');
+
 
 	EXECUTE 'SET ROLE "'||v_prev_cur_user||'"';
 

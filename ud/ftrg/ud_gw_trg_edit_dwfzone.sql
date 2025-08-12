@@ -42,8 +42,8 @@ BEGIN
 			END IF;
 		END IF;
 
-		INSERT INTO dwfzone (dwfzone_id, "name", expl_id, sector_id, muni_id, descript, link, graphconfig, stylesheet, dwfzone_type, lock_level, drainzone_id)
-		VALUES (NEW.dwfzone_id, NEW.name, NEW.expl_id, NEW.sector_id, NEW.muni_id, NEW.descript,
+		INSERT INTO dwfzone (dwfzone_id, code, name, expl_id, sector_id, muni_id, descript, link, graphconfig, stylesheet, dwfzone_type, lock_level, drainzone_id)
+		VALUES (NEW.dwfzone_id, NEW.dwfzone_id, NEW.name, NEW.expl_id, NEW.sector_id, NEW.muni_id, NEW.descript,
 		NEW.link, NEW.graphconfig::json, NEW.stylesheet::json, NEW.dwfzone_type, NEW.lock_level, NEW.drainzone_id);
 
 		IF view_name = 'UI' THEN
@@ -58,8 +58,12 @@ BEGIN
 
 	ELSIF TG_OP = 'UPDATE' THEN
 
+		IF NEW.active IS FALSE AND OLD.active IS TRUE THEN
+			PERFORM gw_fct_check_linked_mapzones(json_build_object('parameters', json_build_object('mapzoneName', 'dwfzone', 'mapzoneId', OLD.dwfzone_id)));
+		END IF;
+
 		UPDATE dwfzone
-		SET dwfzone_id=NEW.dwfzone_id, name=NEW.name, expl_id=NEW.expl_id, 
+		SET dwfzone_id=NEW.dwfzone_id, name=NEW.name, expl_id=NEW.expl_id,
 		sector_id=NEW.sector_id, muni_id=NEW.muni_id, descript=NEW.descript,
 		link=NEW.link, graphconfig=NEW.graphconfig::json, stylesheet=NEW.stylesheet::json, updated_at=now(),
 		updated_by = current_user, dwfzone_type=NEW.dwfzone_type, lock_level=NEW.lock_level, drainzone_id=NEW.drainzone_id

@@ -41,12 +41,12 @@ v_node_proximity_control boolean;
 v_node_proximity double precision;
 v_arc_searchnodes_control boolean;
 v_arc_searchnodes double precision;
-v_user_dis_statetopocontrol boolean;
 v_node2 text;
 v_nodecat text;
 v_keepdepthvalues boolean;
 v_message text;
-v_edit_disable_arctopocontrol boolean;
+v_user_disable_statetopocontrol boolean;
+v_user_disable_arctopocontrol boolean;
 
 BEGIN
 
@@ -62,10 +62,10 @@ BEGIN
 	SELECT ((value::json)->>'value') INTO v_arc_searchnodes FROM config_param_system WHERE parameter='edit_arc_searchnodes';
 
 	-- Get user variables
-	SELECT value::boolean INTO v_user_dis_statetopocontrol FROM config_param_user WHERE parameter='edit_disable_statetopocontrol' AND cur_user = current_user;
+	SELECT value::boolean INTO v_user_disable_statetopocontrol FROM config_param_user WHERE parameter='edit_disable_statetopocontrol' AND cur_user = current_user;
 	SELECT value::boolean INTO v_nodeinsert_arcendpoint FROM config_param_user WHERE parameter='edit_arc_insert_automatic_endpoint' AND cur_user = current_user;
 	SELECT value::boolean INTO v_keepdepthvalues FROM config_param_user WHERE parameter='edit_arc_keepdepthval_when_reverse_geom' AND cur_user = current_user;
-	SELECT value::boolean INTO v_edit_disable_arctopocontrol FROM config_param_user WHERE parameter='edit_disable_arctopocontrol' AND cur_user = current_user;
+	SELECT value::boolean INTO v_user_disable_arctopocontrol FROM config_param_user WHERE parameter='edit_disable_arctopocontrol' AND cur_user = current_user;
 
 	--Check if user has migration mode enabled
 	IF (SELECT value::boolean FROM config_param_user WHERE parameter='edit_disable_topocontrol' AND cur_user=current_user) IS TRUE THEN
@@ -74,11 +74,11 @@ BEGIN
   	END IF;
 
 	-- disable trigger
-	IF v_edit_disable_arctopocontrol THEN
+	IF v_user_disable_arctopocontrol THEN
 		RETURN NEW;
 	END IF;
 
-	IF v_sys_statetopocontrol IS NOT TRUE OR v_user_dis_statetopocontrol IS TRUE THEN
+	IF v_sys_statetopocontrol IS NOT TRUE OR v_user_disable_statetopocontrol IS TRUE THEN
 
 		SELECT * INTO nodeRecord1 FROM node
 		JOIN cat_feature_node ON cat_feature_node.id = node_type
@@ -96,7 +96,7 @@ BEGIN
 	ELSIF v_sys_statetopocontrol IS TRUE THEN
 
 		-- Looking for state control
-		PERFORM gw_fct_state_control(json_build_object('feature_type_aux', 'ARC', 'feature_id_aux', NEW.arc_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP));
+		PERFORM gw_fct_state_control(json_build_object('parameters', json_build_object('feature_type_aux', 'ARC', 'feature_id_aux', NEW.arc_id, 'state_aux', NEW.state, 'tg_op_aux', TG_OP)));
 
 		-- Lookig for state=0
 		IF NEW.state=0 THEN
@@ -198,7 +198,7 @@ BEGIN
 	END IF;
 
     -- only if user variable is not disabled
-    IF v_user_dis_statetopocontrol IS FALSE THEN
+    IF v_user_disable_statetopocontrol IS FALSE THEN
 
         --  Control of start/end node and depth variables
         IF (nodeRecord1.node_id IS NOT NULL) AND (nodeRecord2.node_id IS NOT NULL) THEN
@@ -220,11 +220,11 @@ BEGIN
             ELSE
 
                 -- node_1
-                SELECT * INTO nodeRecord1 FROM v_edit_node WHERE node_id = nodeRecord1.node_id;
+                SELECT * INTO nodeRecord1 FROM ve_node WHERE node_id = nodeRecord1.node_id;
                 NEW.node_1 := nodeRecord1.node_id;
 
                 -- node_2
-                SELECT * INTO nodeRecord2 FROM v_edit_node WHERE node_id = nodeRecord2.node_id;
+                SELECT * INTO nodeRecord2 FROM ve_node WHERE node_id = nodeRecord2.node_id;
                 NEW.node_2 := nodeRecord2.node_id;
 
                 -- the_geom
@@ -407,7 +407,7 @@ BEGIN
                 END IF;
 
                 -- Inserting new node
-                INSERT INTO v_edit_node (node_id, sector_id, state, state_type, omzone_id, soilcat_id, workcat_id, builtdate, nodecat_id, ownercat_id, muni_id,
+                INSERT INTO ve_node (node_id, sector_id, state, state_type, omzone_id, soilcat_id, workcat_id, builtdate, nodecat_id, ownercat_id, muni_id,
                 postcode, district_id, expl_id, the_geom)
                 VALUES ((SELECT nextval('urn_id_seq')), NEW.sector_id, NEW.state, NEW.state_type, NEW.omzone_id, NEW.soilcat_id, NEW.workcat_id, NEW.builtdate, v_nodecat,
                 NEW.ownercat_id, NEW.muni_id, NEW.postcode, NEW.district_id, NEW.expl_id, st_endpoint(NEW.the_geom))

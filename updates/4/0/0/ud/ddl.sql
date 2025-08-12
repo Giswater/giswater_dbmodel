@@ -1321,6 +1321,8 @@ CREATE TABLE connec (
 	builtdate date NULL,
 	enddate date NULL,
 	ownercat_id varchar(30) NULL,
+	brand_id varchar(50) NULL,
+	model_id varchar(50) NULL,
 	pjoint_id integer NULL,
 	pjoint_type varchar(16) NULL,
 	access_type text NULL,
@@ -1510,6 +1512,8 @@ CREATE TABLE gully (
 	builtdate date NULL,
 	enddate date NULL,
 	ownercat_id varchar(30) NULL,
+	brand_id varchar(50) NULL,
+	model_id varchar(50) NULL,
 	pjoint_id integer NULL,
 	pjoint_type varchar(16) NULL,
 	placement_type varchar(50) NULL,
@@ -1756,6 +1760,8 @@ CREATE TABLE link (
 	workcat_id_end varchar(255) NULL,
 	builtdate date NULL,
 	enddate date NULL,
+	brand_id varchar(50) NULL,
+	model_id varchar(50) NULL,
 	private_linkcat_id varchar(30) NULL,
 	verified int2 NULL,
 	uncertain bool NULL,
@@ -2065,7 +2071,7 @@ CREATE TABLE sector (
 	"name" varchar(50) NOT NULL,
 	descript text NULL,
 	sector_type varchar(50) NULL,
-	expl_id int4[] NULL, 
+	expl_id int4[] NULL,
 	muni_id int4[] NULL,
 	macrosector_id int4 DEFAULT 0 NULL,
 	parent_id int4 NULL,
@@ -2113,6 +2119,7 @@ BEGIN
 
 		ALTER TABLE utils.municipality RENAME CONSTRAINT municipality_pkey TO _municipality_pkey;
 		ALTER TABLE utils.municipality RENAME CONSTRAINT municipality_region_id_fkey TO _municipality_region_id_fkey;
+		ALTER TABLE utils.municipality RENAME CONSTRAINT municipality_province_region_fk TO _municipality_province_region_fk;
 		ALTER TABLE utils.municipality RENAME CONSTRAINT municipality_province_id_fkey TO _municipality_province_id_fkey;
 		ALTER TABLE utils.municipality RENAME TO _municipality;
 
@@ -2148,6 +2155,7 @@ BEGIN
 		-- DROP TABLE ext_municipality;
 		ALTER TABLE ext_municipality RENAME CONSTRAINT ext_municipality_pkey TO _ext_municipality_pkey;
 		ALTER TABLE ext_municipality RENAME CONSTRAINT ext_municipality_region_id_fkey TO _ext_municipality_region_id_fkey;
+		ALTER TABLE ext_municipality RENAME CONSTRAINT ext_municipality_province_region_fk TO _ext_municipality_province_region_fk;
 		ALTER TABLE ext_municipality RENAME CONSTRAINT ext_municipality_province_id_fkey TO _ext_municipality_province_id_fkey;
 		ALTER TABLE ext_municipality RENAME TO _ext_municipality;
 

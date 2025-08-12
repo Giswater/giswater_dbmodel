@@ -36,7 +36,7 @@ SELECT SCHEMA_NAME.gw_fct_infofromid($${
 SELECT SCHEMA_NAME.gw_fct_infofromid($${
 		"client":{"device":4, "infoType":1, "lang":"ES", "cur_user":"test_user"},
 		"form":{"editable":"True"},
-		"feature":{"tableName":"v_edit_arc","id":"2001"},
+		"feature":{"tableName":"ve_arc","id":"2001"},
 		"data":{}}$$)
 
 SELECT SCHEMA_NAME.gw_fct_infofromid($${
@@ -90,6 +90,7 @@ tableparent_id_arg text;
 parent_child_relation boolean = false;
 v_idname text;
 v_featuretype text;
+v_featureclass text;
 column_type text;
 v_schemaname text;
 v_version json;
@@ -144,6 +145,7 @@ v_record record;
 v_cur_user text;
 v_prev_cur_user text;
 v_table_child text;
+v_table_class varchar;
 v_table_epa text;
 v_epatype text;
 v_tablename_aux text;
@@ -188,6 +190,7 @@ BEGIN
 
 	-- control of nulls
 	IF v_addschema = 'NULL' THEN v_addschema = null; END IF;
+	IF v_tablename = 've_man_frelem' THEN v_tablename := 've_element'; END IF;
 
 	v_prev_cur_user = current_user;
 	IF v_cur_user IS NOT NULL THEN
@@ -206,12 +209,12 @@ BEGIN
 	END IF;
 
 	-- special case of polygon
-	IF (v_tablename = 'v_polygon' or v_tablename = 've_pol_node' or v_tablename = 've_pol_connec' or v_tablename = 've_pol_gully') AND v_id IS NOT NULL THEN
+	IF (v_tablename = 've_pol_node' or v_tablename = 've_pol_connec' or v_tablename = 've_pol_gully') AND v_id IS NOT NULL THEN
 
 		EXECUTE 'SELECT feature_id, featurecat_id  FROM '||v_tablename||' WHERE pol_id = '||quote_literal(v_id)||''
 		INTO v_id, v_tablename;
-		v_tablename = (SELECT concat('v_edit_',lower(feature_type)) FROM cat_feature WHERE id = v_tablename LIMIT 1);
-		IF v_tablename IS NULL THEN v_tablename = 'v_edit_element'; END IF;
+		v_tablename = (SELECT concat('ve_',lower(feature_type)) FROM cat_feature WHERE id = v_tablename LIMIT 1);
+		IF v_tablename IS NULL THEN v_tablename = 've_element'; END IF;
 		v_editable = true;
 	END IF;
 
@@ -313,7 +316,7 @@ BEGIN
 
 
 		--check if is delimiter
-		IF upper(v_project_type) = 'WS' AND v_table_parent='v_edit_node' THEN
+		IF upper(v_project_type) = 'WS' AND v_table_parent='ve_node' THEN
 			IF (SELECT ARRAY(SELECT upper(unnest(graph_delimiter))) FROM cat_feature_node JOIN cat_feature USING (id)
 				WHERE child_layer=v_tablename) && ARRAY['DMA','PRESSZONE'] THEN
 				v_isgraphdelimiter = TRUE;
@@ -331,13 +334,13 @@ BEGIN
 
 		if v_tablename = 've_epa_junction' then
 			v_table_epa = v_tablename;
-			v_table_parent = 'v_edit_node';
+			v_table_parent = 've_node';
 		elsif v_tablename = 've_epa_connec' then
 			v_table_epa = v_tablename;
-			v_table_parent = 'v_edit_connec';
+			v_table_parent = 've_connec';
 		else
 			v_table_epa = concat('ve_epa_', lower(v_epatype));
-			v_querystring = concat('SELECT concat(''v_edit_'', lower(feature_type)) FROM sys_feature_epa_type WHERE id =''', v_epatype,'''');
+			v_querystring = concat('SELECT concat(''ve_'', lower(feature_type)) FROM sys_feature_epa_type WHERE id =''', v_epatype,'''');
 			execute v_querystring into v_table_parent;
 		end if;
 
@@ -347,7 +350,7 @@ BEGIN
 
 		IF v_id IS NOT NULL THEN
 
-			IF v_table_parent='v_edit_node' THEN
+			IF v_table_parent='ve_node' THEN
 
 				v_querystring = concat('SELECT node_type FROM ',v_table_parent,' WHERE node_id = ',v_id::integer,';');
 
@@ -421,9 +424,9 @@ BEGIN
 
 
 	-- Get feature type
-	v_querystring = concat('SELECT lower(feature_type), lower(parent_layer) FROM cat_feature WHERE  (parent_layer = ',quote_nullable(v_tablename),' OR child_layer = ',quote_nullable(v_tablename),') LIMIT 1');
+	v_querystring = concat('SELECT lower(feature_type), lower(parent_layer), lower(feature_class) FROM cat_feature WHERE  (parent_layer = ',quote_nullable(v_tablename),' OR child_layer = ',quote_nullable(v_tablename),') LIMIT 1');
 
-	EXECUTE v_querystring INTO v_featuretype, v_parent_layer;
+	EXECUTE v_querystring INTO v_featuretype, v_parent_layer, v_featureclass;
 	v_featuretype := LOWER(v_featuretype);
 	v_featuretype := COALESCE(v_featuretype, '');
 
@@ -443,9 +446,8 @@ BEGIN
 	v_vdefault_array := COALESCE(v_vdefault_array, '[]');
 
 	-- getting source table in order to enhance performance
-	IF v_tablename LIKE 'v_edit_cad%' THEN v_sourcetable = v_tablename;
-    ELSIF v_tablename LIKE 'v_edit_flwreg_%' THEN v_sourcetable = replace(v_tablename, 'v_edit_', 'inp_');
-	ELSIF v_tablename LIKE 'v_edit_%' AND v_tablename != 'v_edit_flwreg' THEN v_sourcetable = replace (v_tablename, 'v_edit_', '');
+	IF v_tablename LIKE 've_cad%' THEN v_sourcetable = v_tablename;
+    ELSIF v_tablename LIKE 've_flwreg_%' THEN v_sourcetable = replace(v_tablename, 've_', 'inp_');
 	ELSIF v_tablename LIKE 've_node_%' THEN v_sourcetable = 'node';
 	ELSIF v_tablename LIKE 've_link_%' THEN v_sourcetable = 'link';
 	ELSIF v_tablename LIKE 've_arc_%' THEN v_sourcetable = 'arc';
@@ -453,6 +455,7 @@ BEGIN
 	ELSIF v_tablename LIKE 've_gully_%' THEN v_sourcetable = 'gully';
 	ELSIF v_tablename LIKE '%hydrometer%' THEN v_sourcetable = 'v_rtc_hydrometer';
 	ELSIF v_tablename LIKE '%elem%' THEN v_sourcetable = 'element';
+	ELSIF v_tablename LIKE 've_%' AND v_tablename != 've_flwreg' THEN v_sourcetable = replace (v_tablename, 've_', '');
 	ELSE v_sourcetable = v_tablename;
 	END IF;
 
@@ -601,9 +604,10 @@ BEGIN
 		EXECUTE v_querystring INTO v_featuretype;
 	end if;
 
+	v_table_class = 've_man_' || lower(v_featureclass);
 	v_querystring = concat(
 	'SELECT array_agg(row_to_json(a)) FROM(
-	SELECT formname, "tabName", "tabLabel", "tooltip", tabactions, orderby, device
+	SELECT '||quote_nullable(v_table_parent)||' as formname, "tabName", "tabLabel", "tooltip", tabactions, orderby, device
 	FROM (
     SELECT formname, tabname as "tabName", label as "tabLabel", tooltip as "tooltip", tabactions, orderby, device,
            ROW_NUMBER() OVER (
@@ -612,12 +616,13 @@ BEGIN
                    CASE
                        WHEN formname = '||quote_nullable(v_tablename) ||' THEN 0
                        WHEN formname = '||quote_nullable(v_table_child)||' THEN 1
-                       WHEN formname = '||quote_nullable(v_table_parent)||' THEN 2
-                       ELSE 2
+                       WHEN formname = '||quote_nullable(v_table_class)||' THEN 2
+                       WHEN formname = '||quote_nullable(v_table_parent)||' THEN 3
+                       ELSE 3
                    END
            ) as rn
     FROM config_form_tabs
-    WHERE (formname ='||quote_nullable(v_table_parent)||' OR formname ='||quote_nullable(v_table_child)||' OR formname ='||quote_nullable(v_tablename)||' OR formname IS NULL)
+    WHERE (formname ='||quote_nullable(v_table_parent)||' OR formname ='||quote_nullable(v_table_class)||' OR formname ='||quote_nullable(v_table_child)||' OR formname ='||quote_nullable(v_tablename)||' OR formname IS NULL)
           AND 4 = ANY(device)
 	) AS subquery
 	WHERE rn = 1
@@ -766,10 +771,10 @@ BEGIN
             ELSIF v_id IS NULL AND v_featuretype = 'flwreg' THEN
                 -- WARNING: this code is also in gw_fct_getfeatureupsert. If it needs to be changed here, it will most likely have to be changed there too.
                 -- Get node id from initial clicked point
-                SELECT * INTO v_noderecord1 FROM v_edit_node WHERE ST_DWithin(ST_startpoint(v_inputgeometry), v_edit_node.the_geom, v_arc_searchnodes)
-                ORDER BY ST_Distance(v_edit_node.the_geom, ST_startpoint(v_inputgeometry)) LIMIT 1;
+                SELECT * INTO v_noderecord1 FROM ve_node WHERE ST_DWithin(ST_startpoint(v_inputgeometry), ve_node.the_geom, v_arc_searchnodes)
+                ORDER BY ST_Distance(ve_node.the_geom, ST_startpoint(v_inputgeometry)) LIMIT 1;
                 -- Get order_id
-                SELECT COALESCE(MAX(order_id), 0) + 1 INTO v_order_id FROM ve_frelem WHERE node_id = v_noderecord1.node_id ::text; -- afegir flwreg_type
+                SELECT COALESCE(MAX(order_id), 0) + 1 INTO v_order_id FROM man_frelem WHERE node_id = v_noderecord1.node_id ::text; -- afegir flwreg_type
                 -- Get flowreg_type
                 v_querystring = concat('SELECT feature_class FROM cat_feature WHERE child_layer = ' , quote_nullable(v_tablename) ,' LIMIT 1');
                 EXECUTE v_querystring INTO v_flwreg_type;
@@ -840,7 +845,6 @@ BEGIN
 		v_formheader_field = (SELECT (value::json->>'hydrometer')::json->>'column' FROM config_param_system WHERE parameter='admin_formheader_field');
 		v_querystring ='SELECT '||quote_ident(v_formheader_field)||' FROM '||quote_ident(v_sourcetable)||' WHERE hydrometer_id ='||quote_literal(v_id);
 	ELSIF v_sourcetable ='element' THEN
-		v_childtype = (SELECT (value::json->>'element')::json->>'childType' FROM config_param_system WHERE parameter='admin_formheader_field');
 		v_formheader_field = (SELECT (value::json->>'element')::json->>'column' FROM config_param_system WHERE parameter='admin_formheader_field');
 		v_querystring ='SELECT '||quote_ident(v_formheader_field)||' FROM '||quote_ident(v_sourcetable)||' WHERE element_id ='||v_id::integer;
 	ELSE

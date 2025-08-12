@@ -37,12 +37,12 @@ BEGIN
 	v_delete_previous := (((p_data ->>'data')::json->>'parameters')::json->>'deletePrevious')::boolean;
 
 
-	EXECUTE 'select distinct string_agg('||v_clip||'_id::text, '','') from v_edit_node'
+	EXECUTE 'select distinct string_agg('||v_clip||'_id::text, '','') from ve_node'
 	INTO v_mapzone_id;
 
 	IF v_delete_previous IS TRUE THEN
 
-		DELETE FROM inp_subcatchment WHERE sector_id IN (SELECT distinct sector_id FROM v_edit_sector);
+		DELETE FROM inp_subcatchment WHERE sector_id IN (SELECT distinct sector_id FROM ve_sector);
 
 	END IF;
 
