@@ -30,84 +30,54 @@ v_boundary geometry;
 v_geojson json;
 v_lastseed text;
 v_table text;
-v_updatetables text;
-v_extra text;
+v_updatetables json;
+v_extra json;
 v_key text;
 v_val text;
 v_epsg text;
+v_where text;
 
 BEGIN
 
 	-- Set search path to local schema
 	SET search_path = "SCHEMA_NAME", public;
 
-	v_type = ((p_data ->>'data')::json->>'type');
+	v_type = p_data->'data'->>'type';
 
-	IF v_type = 'time_updated' THEN
+	IF v_type = 'time' THEN
+		v_lastseed = p_data->'data'->>'lastSeed';
+	    v_updatetables = p_data->'feature'->'update_tables';
+	    v_extra = p_data->'data'->'extra';
+		v_epsg = p_data->'client'->'epsg';
 
-	    v_lastseed = ((p_data ->>'data')::json->>'lastSeed');
-	    v_updatetables = ((p_data ->>'feature')::json->>'update_tables');
-	    v_extra = ((p_data ->>'data')::json->>'extra');
-	    v_querytext = '';
+		v_where = format('tstamp > %L AND table_name = any(%L::text[])', v_lastseed::timestamp, ARRAY(SELECT json_array_elements_text(v_updatetables)));
+		--v_where = 'true';
+		IF v_extra IS NOT NULL AND json_typeof(v_extra) = 'object' THEN
+		    FOR v_key, v_val IN SELECT * FROM json_each_text(v_extra) LOOP
+		        v_where := concat(
+		            v_where,
+		            ' AND %1$I->>''', quote_ident(v_key), ''' = ', quote_literal(v_val)
+		        );
+		    END LOOP;
+		END IF;
 
-	    FOR v_table IN SELECT json_array_elements_text(v_updatetables::json) LOOP
-	        v_querytext = concat(
-	            v_querytext,
-	            ' SELECT the_geom FROM ', v_table,
-	            ' WHERE lastupdate > ''', v_lastseed, '''::timestamp'
-	        );
-
-		    IF v_extra IS NOT NULL AND jsonb_typeof(v_extra::jsonb) = 'object' THEN
-		        FOR v_key, v_val IN SELECT * FROM json_each_text(v_extra::json) LOOP
-		            v_querytext := concat(
-		                v_querytext,
-		                ' AND ', quote_ident(v_key), ' = ', quote_literal(v_val)
-		            );
-		        END LOOP;
-		    END IF;
-
-			v_querytext := concat(v_querytext, ' UNION');
-
-	    END LOOP;
-
-		v_querytext = left(v_querytext, length(v_querytext) - 6);
-		v_querytext = CONCAT('SELECT ST_AsGeoJSON(COALESCE(ST_Collect(ST_Buffer(the_geom, 2)), ST_GeomFromText(''POINT EMPTY'')))
-		FROM (', v_querytext, ') AS combined_geometries');
-
-	ELSIF v_type = 'time_deleted' THEN
-
-	    v_lastseed = ((p_data ->>'data')::json->>'lastSeed');
-	    v_updatetables = ((p_data ->>'feature')::json->>'update_tables');
-	    v_extra = ((p_data ->>'data')::json->>'extra');
-		v_epsg =	((p_data ->>'client')::json->>'epsg');
-	    v_querytext = '';
-
-	    FOR v_table IN SELECT json_array_elements_text(v_updatetables::json) LOOP
-
-			v_querytext := concat(
-		        v_querytext,
-		        ' SELECT ST_SetSRID(ST_GeomFromText(olddata->>''the_geom''), ',v_epsg,') AS the_geom FROM audit.log ',
-		        ' WHERE action = ''D''',
-		        ' AND table_name = ', quote_literal(v_table),
-		        ' AND schema = current_schema()',
-		        ' AND tstamp > ''', v_lastseed, '''::timestamp'
-		    );
-		    IF v_extra IS NOT NULL AND jsonb_typeof(v_extra::jsonb) = 'object' THEN
-		        FOR v_key, v_val IN SELECT * FROM json_each_text(v_extra::json) LOOP
-		            v_querytext := concat(
-		                v_querytext,
-		                ' AND olddata->>', quote_literal(v_key), ' = ', quote_literal(v_val)
-		            );
-		        END LOOP;
-		    END IF;
-
-		    v_querytext := concat(v_querytext, ' UNION');
-
-	    END LOOP;
-
-		v_querytext = left(v_querytext, length(v_querytext) - 6);
-		v_querytext = CONCAT('SELECT ST_AsGeoJSON(COALESCE(ST_Collect(ST_Buffer(the_geom, 2)), ST_GeomFromText(''POINT EMPTY'')))
-		FROM (', v_querytext, ') AS combined_geometries');
+		v_querytext = format(
+			'select ST_AsGeoJSON(coalesce( '
+				'ST_Union(ST_Buffer( '
+					'ST_SetSRID(ST_GeomFromText(data->>''the_geom''), %1$s), 2 '
+				')), '
+				'ST_GeomFromText(''POINT EMPTY'') '
+			')) from ( '
+				'select newdata as data from audit.log where action = ''I'' and %2$s union all '
+				'select olddata as data from audit.log where action = ''D'' and %3$s union all '
+				'select newdata as data from audit.log where action = ''U'' and %2$s union all '
+				'select olddata as data from audit.log where action = ''U'' and %3$s '
+			')',
+			v_epsg::integer,
+			format(v_where, 'newdata'),
+			format(v_where, 'olddata')
+		);
+		raise notice 'query: %', v_querytext;
 
 	ELSIF v_type = 'feature' THEN
 		v_array =  COALESCE(replace(replace(((p_data ->>'feature')::json->>'node'),'[','('),']',')'),'()') ;

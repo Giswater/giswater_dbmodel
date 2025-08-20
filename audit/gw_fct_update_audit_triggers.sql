@@ -34,10 +34,10 @@ BEGIN
 
 			prefix := CASE WHEN table_record.id SIMILAR TO 've_%|v_e%' THEN 'INSTEAD OF' ELSE 'AFTER' END;
 
-			IF table_record.id = ANY('{node, arc, connec, link}'::text[]) THEN
+			IF table_record.id = ANY('{node, arc, connec, link, gully}'::text[]) THEN
 				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' AFTER UPDATE OF the_geom ON 
 				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
-			ELSIF table_record.id = ANY('{v_edit_node, v_edit_arc, v_edit_connec, v_edit_link}'::text[]) THEN
+			ELSIF table_record.id = ANY('{v_edit_node, v_edit_arc, v_edit_connec, v_edit_link, v_edit_gully}'::text[]) THEN
 				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' '||prefix||' DELETE ON 
 				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
 			ELSE
