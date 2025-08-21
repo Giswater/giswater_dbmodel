@@ -51,7 +51,7 @@ BEGIN
     END IF;
 
     -- Get feature types
-    SELECT ARRAY(SELECT lower(id) FROM sys_feature_type) INTO v_feature_types;
+    SELECT ARRAY(SELECT lower(id) FROM sys_feature_type WHERE id <> 'LINK') INTO v_feature_types;
 
     -- Set v_child_table variable
     v_child_table := TG_TABLE_NAME::TEXT;
@@ -62,10 +62,17 @@ BEGIN
         IF (TG_OP = 'UPDATE') AND (NEW.the_geom IS DISTINCT FROM OLD.the_geom) THEN
 
             -- Update v_child_table if TG_TABLE_NAME is a parent layer (getting the child layer)
-            EXECUTE ('SELECT cf.child_layer FROM '|| TG_TABLE_NAME::TEXT ||' n
-            JOIN cat_'|| TG_TABLE_NAME::TEXT ||' cn ON n.'|| TG_TABLE_NAME::TEXT ||'cat_id = cn.id
-            JOIN cat_feature cf ON cn.'|| TG_TABLE_NAME::TEXT ||'type_id = cf.id
-            WHERE '|| v_feature_idname ||' = '''|| v_feature_id ||'''') INTO v_child_table;
+            IF v_child_table = 'connec' THEN
+                EXECUTE ('SELECT cf.child_layer FROM '|| TG_TABLE_NAME::TEXT ||' n
+                JOIN cat_'|| TG_TABLE_NAME::TEXT ||' cn ON n.'|| TG_TABLE_NAME::TEXT ||'at_id = cn.id
+                JOIN cat_feature cf ON cn.'|| TG_TABLE_NAME::TEXT ||'type_id = cf.id
+                WHERE '|| v_feature_idname ||' = '''|| v_feature_id ||'''') INTO v_child_table;
+            ELSE
+                EXECUTE ('SELECT cf.child_layer FROM '|| TG_TABLE_NAME::TEXT ||' n
+                JOIN cat_'|| TG_TABLE_NAME::TEXT ||' cn ON n.'|| TG_TABLE_NAME::TEXT ||'cat_id = cn.id
+                JOIN cat_feature cf ON cn.'|| TG_TABLE_NAME::TEXT ||'type_id = cf.id
+                WHERE '|| v_feature_idname ||' = '''|| v_feature_id ||'''') INTO v_child_table;
+            END IF;
 
         ELSE
             IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN

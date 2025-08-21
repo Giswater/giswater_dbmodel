@@ -48,7 +48,7 @@ BEGIN
 		v_lastseed = p_data->'data'->>'lastSeed';
 	    v_updatetables = p_data->'feature'->'update_tables';
 	    v_extra = p_data->'data'->'extra';
-		v_epsg = p_data->'client'->'epsg';
+		v_epsg = p_data->'client'->>'epsg';
 
 		v_where = format('tstamp > %L', v_lastseed::timestamp);
         IF v_updatetables IS NOT NULL AND json_typeof(v_updatetables) = 'array' THEN
@@ -75,7 +75,7 @@ BEGIN
 				'select olddata as data from audit.log where action = ''D'' and %3$s union all '
 				'select newdata as data from audit.log where action = ''U'' and %2$s union all '
 				'select olddata as data from audit.log where action = ''U'' and %3$s '
-			')',
+			') a',
 			v_epsg::integer,
 			format(v_where, 'newdata'),
 			format(v_where, 'olddata')
