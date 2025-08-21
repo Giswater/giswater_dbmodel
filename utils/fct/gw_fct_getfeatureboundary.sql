@@ -50,8 +50,11 @@ BEGIN
 	    v_extra = p_data->'data'->'extra';
 		v_epsg = p_data->'client'->'epsg';
 
-		v_where = format('tstamp > %L AND table_name = any(%L::text[])', v_lastseed::timestamp, ARRAY(SELECT json_array_elements_text(v_updatetables)));
-		--v_where = 'true';
+		v_where = format('tstamp > %L', v_lastseed::timestamp);
+        IF v_updatetables IS NOT NULL AND json_typeof(v_updatetables) = 'array' THEN
+            v_where := concat(v_where, format(' AND table_name = any(%L::text[])', ARRAY(SELECT json_array_elements_text(v_updatetables))));
+        END IF;
+
 		IF v_extra IS NOT NULL AND json_typeof(v_extra) = 'object' THEN
 		    FOR v_key, v_val IN SELECT * FROM json_each_text(v_extra) LOOP
 		        v_where := concat(
