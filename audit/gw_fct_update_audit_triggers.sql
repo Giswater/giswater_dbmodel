@@ -38,10 +38,10 @@ BEGIN
 				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' AFTER UPDATE OF the_geom ON 
 				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
 			ELSIF table_record.id = ANY('{v_edit_node, v_edit_arc, v_edit_connec, v_edit_link, v_edit_gully}'::text[]) THEN
-				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' '||prefix||' DELETE ON 
+				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' '||prefix||' INSERT OR DELETE ON 
 				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
 			ELSE
-				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' '||prefix||' INSERT OR UPDATE ON 
+				EXECUTE 'CREATE TRIGGER gw_trg_audit_'||table_record.id||' '||prefix||' UPDATE ON 
 				'||v_schemaname||'.'||table_record.id||' FOR EACH ROW EXECUTE PROCEDURE '||v_schemaname||'.gw_trg_audit()';
 			END IF;
 		END IF;
