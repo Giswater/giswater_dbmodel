@@ -142,7 +142,7 @@ BEGIN
 	v_tableid = v_parameter_selector->>'table_id';
 	v_sectorisexplismuni = (SELECT value::boolean FROM config_param_system WHERE parameter = 'basic_selector_sectorisexplismuni');
 
-	IF v_sectorisexplismuni IS NULL THEN v_sectorisexplismuni = TRUE; ELSE v_sectorisexplismuni = FALSE; END IF;
+	IF v_sectorisexplismuni IS NULL THEN v_sectorisexplismuni = FALSE; END IF;
 	
 	-- setting schema add
 	IF v_tabname like '%add%' AND v_addschema IS NOT NULL THEN
@@ -477,11 +477,8 @@ BEGIN
 				SELECT muni_id, current_user FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
 
 				EXECUTE 'SET search_path = '||v_schemaname||', public';
-
 			END IF;
-
 		END IF;
-
 	END IF;
 
 	-- manage addschema
@@ -534,6 +531,13 @@ BEGIN
 		DELETE FROM selector_psector WHERE psector_id NOT IN
 		(SELECT psector_id FROM cat_dscenario WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
 
+		-- manage explfrommuni
+		IF v_sectorisexplismuni THEN
+			DELETE FROM selector_expl WHERE cur_user = current_user;
+			INSERT INTO selector_expl SELECT expl_id, current_user FROM SCHEMA_NAME.selector_expl WHERE cur_user = current_user AND expl_id 
+			IN (SELECT expl_id FROM exploitation WHERE active);
+		END IF;		
+	
 		EXECUTE 'SET search_path = '||v_schemaname||', public';
 	END IF;
 
@@ -702,21 +706,6 @@ BEGIN
 		FROM (SELECT st_expand(the_geom, v_expand) as the_geom FROM v_edit_arc where muni_id IN
 		(SELECT muni_id FROM selector_municipality WHERE cur_user=current_user)) b) a;
 
-	END IF;
-
-	-- manage explfrommuni
-	IF v_selectortype ='explfrommuni' THEN
-	
-		DELETE FROM selector_municipality WHERE cur_user = current_user;
-		DELETE FROM selector_sector WHERE cur_user = current_user;
-		DELETE FROM selector_expl WHERE cur_user = current_user;
-		DELETE FROM selector_macroexpl WHERE cur_user = current_user;
-		DELETE FROM selector_macrosector WHERE cur_user = current_user;
-
-		INSERT INTO selector_municipality VALUES (v_id::integer, current_user);
-		INSERT INTO selector_sector VALUES (v_id::integer, current_user);
-		INSERT INTO selector_expl VALUES (v_id::integer, current_user);
-		
 	END IF;
 
 	-- force 0 
