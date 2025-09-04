@@ -34,6 +34,7 @@ v_message text;
 v_return json;
 v_addschema text;
 v_expl_x_user boolean;
+v_sectorisexplismuni boolean;
 
 BEGIN
 
@@ -44,6 +45,7 @@ BEGIN
 	-- get system parameters
 	SELECT project_type, giswater, epsg INTO v_project_type, v_version, v_epsg FROM sys_version order by id desc limit 1;
 	v_expl_x_user = (SELECT value FROM config_param_system WHERE parameter = 'admin_exploitation_x_user');
+	v_sectorisexplismuni = (SELECT value::boolean FROM config_param_system WHERE parameter = 'basic_selector_sectorisexplismuni');
 
 
 	-- Get input parameters
@@ -66,7 +68,7 @@ BEGIN
 	-- get user parameters
 	SELECT value INTO v_qgis_init_guide_map FROM config_param_user where parameter='qgis_init_guide_map' AND cur_user=current_user;
 
--- profilactic null control
+	-- profilactic null control
 	IF v_qgis_init_guide_map IS NULL THEN v_qgis_init_guide_map = FALSE; END IF;
 
 	-- set mandatory values of config_param_user in case of not exists (for new users or for updates)
@@ -85,11 +87,13 @@ BEGIN
 	-- delete on config_param_user fron updated values on sys_param_user
 	DELETE FROM config_param_user WHERE parameter NOT IN (SELECT id FROM sys_param_user) AND cur_user = current_user;
 
-	-- Force exploitation selector in case of null values
-	IF v_qgis_init_guide_map AND (v_isaudit IS NULL OR v_isaudit = 'false') THEN
+	-- Force exploitation selector
+	IF v_qgis_init_guide_map AND (v_isaudit IS NULL OR v_isaudit = 'false') OR v_sectorisexplismuni THEN -- v_sectorisexplismuni IS used ALSO here NOT ONLY IN selectors
 		DELETE FROM selector_expl WHERE cur_user = current_user;
 		DELETE FROM selector_sector WHERE cur_user = current_user;
 		DELETE FROM selector_muni WHERE cur_user = current_user;
+		DELETE FROM selector_macroexpl WHERE cur_user = current_user;
+		DELETE FROM selector_macrosector WHERE cur_user = current_user;
 
 		-- looking for additional schema
 		IF v_addschema IS NOT NULL AND v_addschema != v_schemaname THEN
@@ -97,6 +101,8 @@ BEGIN
 			DELETE FROM selector_expl WHERE cur_user = current_user;
 			DELETE FROM selector_sector WHERE cur_user = current_user;
 			DELETE FROM selector_muni WHERE cur_user = current_user;
+			DELETE FROM selector_macroexpl WHERE cur_user = current_user;
+			DELETE FROM selector_macrosector WHERE cur_user = current_user;
 
 			SET search_path = 'SCHEMA_NAME', public;
 		END IF;
