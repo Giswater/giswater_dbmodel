@@ -376,8 +376,7 @@ BEGIN
                     SELECT t.mapzone_id AS minsector_id, ST_Collect(ext_plot.the_geom) AS geom 
                     FROM temp_pgr_arc t 
                     JOIN v_temp_connec vc USING (arc_id)
-                    LEFT JOIN ext_plot ON vc.plot_code = ext_plot.plot_code
-					LEFT JOIN ext_plot ON ST_DWithin(vc.the_geom, ext_plot.the_geom, 0.001)
+                    LEFT JOIN ext_plot ON vc.plot_code = ext_plot.plot_code AND ST_DWithin(vc.the_geom, ext_plot.the_geom, 0.001)
                     WHERE mapzone_id::integer > 0 
                     GROUP BY t.mapzone_id
                 ) c 
@@ -583,50 +582,54 @@ BEGIN
         -- PREPARE tables for Massive Mincut
 
         --ARCS - keep only the new arcs
-        DELETE FROM temp_pgr_arc WHERE graph_delimiter = 'NONE';
+        
+        -- arcs that connect nodes with graph_delimiter = 'SECTOR'
+        INSERT INTO temp_pgr_arc_mincut 
+        SELECT * FROM temp_pgr_arc
+        WHERE graph_delimiter = 'SECTOR';
 
-        -- ARCS-VALVE (MINSECTOR)
-        -- delete the valves that are not minsector borders
-        DELETE FROM temp_pgr_arc a
-        WHERE
-        a.graph_delimiter = 'MINSECTOR'
-        AND NOT EXISTS (
-            SELECT 1 FROM temp_pgr_minsector_graph g
-            WHERE g.node_id = COALESCE (a.node_1 , a.node_2)
-        );
-
-        -- change pgr_node_1 and pgr_node_2 for their minsector value
-        UPDATE temp_pgr_arc a
-        SET pgr_node_1 = g.minsector_1, pgr_node_2 = g.minsector_2
-        FROM temp_pgr_minsector_graph g
-        WHERE g.node_id = COALESCE (a.node_1 , a.node_2);
-
-        -- ARCS-SECTOR
-        UPDATE temp_pgr_arc a
+        -- change pgr_node_1 and pgr_node_2 for their minsector value and if not exists (nodes SECTORS) for their original node_id
+        UPDATE temp_pgr_arc_mincut a
         SET pgr_node_1 = COALESCE( NULLIF(n.mapzone_id,0), n.node_id)
         FROM temp_pgr_node n
         WHERE a.graph_delimiter = 'SECTOR'
         AND n.graph_delimiter = 'SECTOR'
         AND n.pgr_node_id = a.pgr_node_1;
 
-        UPDATE temp_pgr_arc a
+        UPDATE temp_pgr_arc_mincut a
         SET pgr_node_2 =COALESCE( NULLIF(n.mapzone_id,0), n.node_id)
         FROM temp_pgr_node n
         WHERE a.graph_delimiter = 'SECTOR'
         AND n.graph_delimiter = 'SECTOR'
         AND n.pgr_node_id = a.pgr_node_2;
 
-        -- NODES - keep only the nodes-SECTOR that have mapzone_id = 0 (node_id is not NULL); they don't exist in the table temp_pgr_minsector
-        DELETE FROM temp_pgr_node tpn
-        WHERE graph_delimiter <> 'SECTOR' OR mapzone_id > 0;
+        -- ARCS-VALVE (MINSECTOR)
+        -- only the valves that are minsector borders
+        INSERT INTO temp_pgr_arc_mincut 
+        SELECT * FROM temp_pgr_arc a
+        WHERE graph_delimiter = 'MINSECTOR'
+        AND EXISTS (
+            SELECT 1 FROM temp_pgr_minsector_graph g
+            WHERE g.node_id = COALESCE (a.node_1 , a.node_2)
+        );
 
-        -- update mapzone_id with the node_id
-        UPDATE temp_pgr_node SET pgr_node_id = node_id;
+        -- change pgr_node_1 and pgr_node_2 for their minsector value
+        UPDATE temp_pgr_arc_mincut a
+        SET pgr_node_1 = g.minsector_1, pgr_node_2 = g.minsector_2
+        FROM temp_pgr_minsector_graph g
+        WHERE g.node_id = COALESCE (a.node_1 , a.node_2);
 
+        -- NODES
         -- insert the MINSECTORS as nodes
-        INSERT INTO temp_pgr_node (pgr_node_id, mapzone_id, graph_delimiter)
+        INSERT INTO temp_pgr_node_mincut (pgr_node_id, mapzone_id, graph_delimiter)
         SELECT minsector_id, 0, 'MINSECTOR'
         FROM temp_pgr_minsector m;
+    
+        -- insert the SECTORS nodes that have mapzone_id = 0 (node_id is not NULL); they don't exist in the table temp_pgr_minsector
+        INSERT INTO temp_pgr_node_mincut (pgr_node_id, mapzone_id, graph_delimiter)
+        SELECT n.node_id, 0, 'SECTOR'
+        FROM temp_pgr_node n
+        WHERE n.graph_delimiter = 'SECTOR' AND n.node_id is not NULL;
 
         -- FINISH preparing
 
@@ -635,16 +638,18 @@ BEGIN
             SELECT minsector_id FROM temp_pgr_minsector
         ';
 
-        SELECT count(*) INTO v_pgr_distance FROM temp_pgr_arc;
+        SELECT count(*) INTO v_pgr_distance FROM temp_pgr_arc_mincut;
 
         FOR v_record_minsector IN EXECUTE v_query_text LOOP
             v_pgr_root_vids := ARRAY[v_record_minsector.minsector_id];
 
-            UPDATE temp_pgr_arc SET mapzone_id = 0 WHERE mapzone_id <> 0;
-            UPDATE temp_pgr_node SET mapzone_id = 0 WHERE mapzone_id <> 0;
-            UPDATE temp_pgr_arc SET proposed = FALSE WHERE proposed;
+            UPDATE temp_pgr_arc_mincut SET mapzone_id = 0 WHERE mapzone_id <> 0;
+            UPDATE temp_pgr_node_mincut SET mapzone_id = 0 WHERE mapzone_id <> 0;
+            UPDATE temp_pgr_arc_mincut SET proposed = FALSE WHERE proposed;
 
-            v_data := '{"data":{"pgrDistance":'||v_pgr_distance||', "pgrRootVids":['||array_to_string(v_pgr_root_vids, ',')||'], "ignoreCheckValvesMincut":'||v_ignore_check_valves||'}}';
+            v_data := format('{"data":{"pgrDistance":%s, "pgrRootVids":["%s"], "ignoreCheckValvesMincut":"%s", "mode":"MASSIVE"}}',
+            v_pgr_distance, array_to_string(v_pgr_root_vids, ','), v_ignore_check_valves);
+
             RAISE NOTICE 'v_data: %', v_data;
             v_response := gw_fct_mincut_core(v_data);
 
@@ -655,7 +660,7 @@ BEGIN
             -- insert the mincut_minsector_id
             INSERT INTO temp_pgr_minsector_mincut (minsector_id, mincut_minsector_id)
             SELECT v_record_minsector.minsector_id, n.pgr_node_id
-            FROM temp_pgr_node n
+            FROM temp_pgr_node_mincut n
             WHERE n.graph_delimiter = 'MINSECTOR'
             AND n.mapzone_id <> 0;
         END LOOP;
@@ -669,6 +674,8 @@ BEGIN
         END IF;
 
     END IF;
+
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4354", "function":"2706", "fid":"'||v_fid||'", "is_process":true, "tempTable":"temp_"}}$$)';
 
     -- Info
     SELECT array_to_json(array_agg(row_to_json(row))) INTO v_result
@@ -688,6 +695,8 @@ BEGIN
 
 	-- Restore original disable lock level
     UPDATE config_param_user SET value = v_original_disable_locklevel WHERE parameter = 'edit_disable_locklevel' AND cur_user = current_user;
+
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4354", "function":"2706", "fid":"'||v_fid||'", "is_process":true, "tempTable":"temp_"}}$$)';
 
     -- Return
     RETURN gw_fct_json_create_return(

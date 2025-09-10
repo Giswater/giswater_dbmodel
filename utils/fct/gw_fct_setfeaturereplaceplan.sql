@@ -24,6 +24,7 @@ v_feature text;
 v_id integer;
 v_catalog text;
 v_arc integer;
+v_description text;
 
 rec record;
 
@@ -55,6 +56,7 @@ BEGIN
 	v_feature = (p_data->>'feature')::json->>'featureType';
 	v_feature_text = (p_data->>'feature')::json->>'ids';
 	v_catalog = (p_data->>'data')::json->>'catalog';
+	v_description = (p_data->>'data')::json->>'description';
 
 	-- select config values
 	SELECT giswater, upper(project_type) INTO v_version, v_project_type FROM sys_version ORDER BY id DESC LIMIT 1;
@@ -96,8 +98,8 @@ BEGIN
 				-- downgrade existing arc on this psector
 				UPDATE config_param_user SET value='false' WHERE parameter='edit_plan_order_control' AND cur_user=current_user;
 
-				INSERT INTO plan_psector_x_arc (arc_id, state, psector_id)
-				VALUES (rec.arc_id, 0, v_currentpsector);
+				INSERT INTO plan_psector_x_arc (arc_id, state, psector_id, descript)
+				VALUES (rec.arc_id, 0, v_currentpsector, v_description);
 
 				UPDATE config_param_user SET value='true' WHERE parameter='edit_plan_order_control' AND cur_user=current_user;
 
@@ -176,13 +178,13 @@ BEGIN
 
 					IF v_project_type = 'WS' THEN
 
-						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, state, expl_id, the_geom, sector_id, presszone_id, 
-						linkcat_id, state_type, dma_id, dqa_id, minsector_id, fluid_type) 
-						SELECT feature_id, feature_type, v_arc, 'ARC', 2, expl_id, the_geom, sector_id,	presszone_id, 
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, state, expl_id, the_geom, sector_id, presszone_id,
+						linkcat_id, state_type, dma_id, dqa_id, minsector_id, fluid_type)
+						SELECT feature_id, feature_type, v_arc, 'ARC', 2, expl_id, the_geom, sector_id,	presszone_id,
 						linkcat_id, state_type, dma_id, dqa_id, minsector_id, fluid_type FROM link WHERE link_id = v_link.link_id RETURNING link_id INTO v_link_id;
 					ELSE
-						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, state, expl_id, the_geom, sector_id, dma_id, linkcat_id, fluid_type, state_type)
-						SELECT feature_id, feature_type, v_arc, 'ARC', 2, expl_id, the_geom, sector_id, dma_id, linkcat_id, fluid_type, state_type
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, state, expl_id, the_geom, sector_id, dma_id, linkcat_id, fluid_type, state_type, link_type)
+						SELECT feature_id, feature_type, v_arc, 'ARC', 2, expl_id, the_geom, sector_id, dma_id, linkcat_id, fluid_type, state_type, link_type
 						FROM link WHERE link_id = v_link.link_id RETURNING link_id INTO v_link_id;
 					END IF;
 
@@ -221,8 +223,8 @@ BEGIN
 						VALUES (v_currentpsector, v_link.feature_id, rec.arc_id, 0, false, v_link.link_id)
 						ON CONFLICT (gully_id, psector_id, state) DO NOTHING;
 
-						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, state, expl_id, the_geom, sector_id, dma_id, fluid_type)
-						SELECT feature_id, feature_type, v_arc, 'ARC', 2, expl_id, the_geom, sector_id, dma_id,fluid_type
+						INSERT INTO link (feature_id, feature_type, exit_id, exit_type, state, expl_id, the_geom, sector_id, dma_id, fluid_type, link_type, linkcat_id)
+						SELECT feature_id, feature_type, v_arc, 'ARC', 2, expl_id, the_geom, sector_id, dma_id, fluid_type, link_type, linkcat_id
 						FROM link WHERE link_id = v_link.link_id RETURNING link_id INTO v_link_id;
 
 						INSERT INTO plan_psector_x_gully (psector_id, gully_id, arc_id, state, doable, link_id)

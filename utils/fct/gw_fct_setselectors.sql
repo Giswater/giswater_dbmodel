@@ -331,9 +331,6 @@ BEGIN
 
 			IF v_tabname = 'tab_exploitation' THEN
 				DELETE FROM selector_macroexpl WHERE cur_user = current_user;
-				INSERT INTO selector_macroexpl
-				SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user) AND macroexpl_id is not null
-				ON CONFLICT (macroexpl_id, cur_user) DO NOTHING;
 
 			ELSIF v_tabname = 'tab_macroexploitation' THEN
 				DELETE FROM selector_expl WHERE cur_user = current_user;
@@ -344,13 +341,10 @@ BEGIN
 
 			-- macrosector
 			DELETE FROM selector_macrosector WHERE cur_user = current_user;
-			INSERT INTO selector_macrosector
-			SELECT DISTINCT macrosector_id, current_user FROM sector WHERE active is true and sector_id IN (SELECT DISTINCT (sector_id) FROM node
-			JOIN selector_expl using (expl_id) where cur_user = current_user) AND macrosector_id is not null
-			ON CONFLICT (macrosector_id, cur_user) DO NOTHING;
 
 			-- sector
 			DELETE FROM selector_sector WHERE cur_user = current_user;
+
 			INSERT INTO selector_sector
 			SELECT DISTINCT sector_id, current_user FROM node WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user)
 			ON CONFLICT (sector_id, cur_user) DO NOTHING;
@@ -384,13 +378,7 @@ BEGIN
 
 		ELSIF v_tabname IN ('tab_sector', 'tab_macrosector') THEN
 
-			IF v_tabname = 'tab_sector' THEN
-				INSERT INTO selector_macrosector
-				SELECT DISTINCT macrosector_id, current_user FROM sector WHERE sector_id IN (SELECT sector_id FROM selector_sector WHERE cur_user = current_user)
-				AND macrosector_id IS NOT NULL
-				ON CONFLICT (macrosector_id, cur_user) DO NOTHING;
-
-			ELSIF v_tabname = 'tab_macrosector' THEN
+			IF  v_tabname = 'tab_macrosector' THEN
 				DELETE FROM selector_sector WHERE cur_user = current_user;
 				INSERT INTO selector_sector
 				SELECT DISTINCT sector_id, current_user FROM sector WHERE macrosector_id IN (SELECT macrosector_id FROM selector_macrosector WHERE cur_user = current_user)
@@ -415,9 +403,6 @@ BEGIN
 
 			-- macroexpl
 			DELETE FROM selector_macroexpl WHERE cur_user = current_user;
-			INSERT INTO selector_macroexpl
-			SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE expl_id IN (SELECT DISTINCT expl_id FROM node
-			JOIN selector_municipality using (muni_id) WHERE cur_user = current_user);
 
 			-- expl
 			DELETE FROM selector_expl WHERE cur_user = current_user;
@@ -427,9 +412,6 @@ BEGIN
 
 			-- macrosector
 			DELETE FROM selector_macrosector WHERE cur_user = current_user;
-			INSERT INTO selector_macrosector
-			SELECT DISTINCT macrosector_id, current_user FROM sector WHERE active is true and sector_id IN (SELECT DISTINCT sector_id FROM node
-			JOIN selector_municipality using (muni_id) WHERE cur_user = current_user);
 
 			-- sector
 			DELETE FROM selector_sector WHERE cur_user = current_user AND sector_id > 0;
@@ -490,26 +472,32 @@ BEGIN
 
 		-- macroexpl
 		DELETE FROM selector_macroexpl WHERE cur_user = current_user;
-		INSERT INTO selector_macroexpl
-		SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE expl_id IN (SELECT DISTINCT expl_id FROM node
-		JOIN selector_municipality using (muni_id) WHERE cur_user = current_user);
 
 		-- expl
 		DELETE FROM selector_expl WHERE cur_user = current_user;
 		INSERT INTO selector_expl
 		SELECT DISTINCT expl_id, current_user FROM node WHERE muni_id IN (SELECT muni_id FROM selector_municipality WHERE cur_user = current_user)
 		ON CONFLICT (expl_id, cur_user) DO NOTHING;
-
+		
 		-- macrosector
 		DELETE FROM selector_macrosector WHERE cur_user = current_user;
-		INSERT INTO selector_macrosector
-		SELECT DISTINCT macrosector_id, current_user FROM sector WHERE active is true and sector_id IN (SELECT DISTINCT sector_id FROM node
-		JOIN selector_municipality using (muni_id) WHERE cur_user = current_user);
 
 		-- sector
 		DELETE FROM selector_sector WHERE cur_user = current_user AND sector_id > 0;
+		IF v_sectorisexplismuni THEN			
+			INSERT INTO selector_sector SELECT expl_id, current_user FROM ud.selector_expl WHERE cur_user = current_user AND expl_id 
+			IN (SELECT sector_id FROM sector WHERE active);
+		ELSE 
+			INSERT INTO selector_sector
+			SELECT DISTINCT sector_id, current_user FROM node WHERE muni_id IN (SELECT muni_id FROM selector_municipality WHERE cur_user = current_user)
+			ON CONFLICT (sector_id, cur_user) DO NOTHING;
+		END IF;
+		
+		-- sector for those objects wich has expl_id2 and expl_id2 is not selected but yes one
 		INSERT INTO selector_sector
-		SELECT DISTINCT sector_id, current_user FROM node WHERE muni_id IN (SELECT muni_id FROM selector_municipality WHERE cur_user = current_user)
+		SELECT DISTINCT sector_id,current_user FROM arc WHERE expl_id2 IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user) AND sector_id > 0
+		UNION
+		SELECT DISTINCT sector_id,current_user FROM node WHERE expl_id2 IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user) AND sector_id > 0
 		ON CONFLICT (sector_id, cur_user) DO NOTHING;
 
 		-- scenarios
@@ -521,15 +509,6 @@ BEGIN
 		-- psector
 		DELETE FROM selector_psector WHERE psector_id NOT IN
 		(SELECT psector_id FROM cat_dscenario WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
-
-		-- manage explfrommuni
-		IF v_sectorisexplismuni AND v_tabname !='tab_macroexploitation' THEN			
-			DELETE FROM selector_expl WHERE cur_user = current_user;
-			INSERT INTO selector_expl SELECT expl_id, current_user FROM SCHEMA_NAME.selector_expl WHERE cur_user = current_user AND expl_id 
-			IN (SELECT expl_id FROM exploitation WHERE active);
-
-		END IF;		
-		
 	
 		EXECUTE 'SET search_path = '||v_schemaname||', public';
 	END IF;
@@ -557,20 +536,15 @@ BEGIN
 				END IF;
 
 				-- manage value
-				IF v_value then
-					EXECUTE 'INSERT INTO ' || v_tablename || ' ('|| v_columnname ||', cur_user) VALUES('|| v_id ||', '''|| current_user ||''')ON CONFLICT DO NOTHING';
+				IF v_value THEN
+					EXECUTE 'INSERT INTO ' || v_tablename || ' ('|| v_columnname ||', cur_user) VALUES('|| v_id ||', '''|| current_user ||''')ON CONFLICT ('|| v_columnname ||', cur_user) DO NOTHING';
 				ELSE
 					EXECUTE 'DELETE FROM ' || v_tablename || ' WHERE ' || v_columnname || '::text = '''|| v_id ||''' AND cur_user = current_user';
 				END IF;
 
 			END IF;
-
-			IF v_tabname = 'tab_exploitation_add' THEN
-				INSERT INTO selector_macroexpl
-				SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE active is true and expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user)
-				ON CONFLICT (macroexpl_id, cur_user) DO NOTHING;
-
-			ELSIF v_tabname = 'tab_macroexploitation_add' THEN
+		
+			IF  v_tabname = 'tab_macroexploitation_add' THEN
 				DELETE FROM selector_expl WHERE cur_user = current_user;
 				INSERT INTO selector_expl
 				SELECT DISTINCT expl_id, current_user FROM exploitation WHERE active is true and macroexpl_id IN (SELECT macroexpl_id FROM selector_macroexpl WHERE cur_user = current_user)
@@ -579,9 +553,6 @@ BEGIN
 
 			-- macrosector
 			DELETE FROM selector_macrosector WHERE cur_user = current_user;
-			INSERT INTO selector_macrosector
-			SELECT DISTINCT macrosector_id, current_user FROM sector WHERE active is true and sector_id IN (SELECT DISTINCT (sector_id) FROM node
-			JOIN selector_expl using (expl_id) where cur_user = current_user);
 
 			-- sector
 			DELETE FROM selector_sector WHERE cur_user = current_user AND sector_id > 0;
@@ -616,12 +587,15 @@ BEGIN
 			SELECT DISTINCT muni_id, current_user FROM link WHERE EXISTS (SELECT 1 FROM selector_expl se WHERE se.cur_user = current_user AND se.expl_id = ANY(link.expl_visibility))
 			ON CONFLICT (muni_id, cur_user) DO NOTHING;
 
-			EXECUTE' DELETE FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
-			EXECUTE' INSERT INTO '||v_schemaname||'.selector_municipality 
-			SELECT muni_id, current_user FROM selector_municipality WHERE cur_user = current_user';
-
-			SELECT row_to_json (a) INTO v_geometry
-			FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1,
+			IF v_sectorisexplismuni IS FALSE THEN
+				EXECUTE' DELETE FROM '||v_schemaname||'.selector_municipality WHERE cur_user = current_user';
+				EXECUTE' INSERT INTO '||v_schemaname||'.selector_municipality 
+				SELECT muni_id, current_user FROM selector_municipality WHERE cur_user = current_user';
+			END IF;
+			
+			SELECT row_to_json (a)
+			INTO v_geometry
+			FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, 
 			st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
 			FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM ve_arc) b) a;
 
@@ -629,13 +603,10 @@ BEGIN
 
 		EXECUTE 'SET search_path = '||v_schemaname||', public';
 								
-		IF v_sectorisexplismuni IS FALSE THEN
+		IF v_sectorisexplismuni IS NOT TRUE THEN
 
 			-- macroexpl
 			DELETE FROM selector_macroexpl WHERE cur_user = current_user;
-			INSERT INTO selector_macroexpl
-			SELECT DISTINCT macroexpl_id, current_user FROM exploitation WHERE expl_id IN (SELECT DISTINCT expl_id FROM node
-			JOIN selector_municipality using (muni_id) WHERE cur_user = current_user);
 	
 			-- expl
 			DELETE FROM selector_expl WHERE cur_user = current_user;
@@ -645,9 +616,6 @@ BEGIN
 	
 			-- macrosector
 			DELETE FROM selector_macrosector WHERE cur_user = current_user;
-			INSERT INTO selector_macrosector
-			SELECT DISTINCT macrosector_id, current_user FROM sector WHERE active is true and sector_id IN (SELECT DISTINCT sector_id FROM node
-			JOIN selector_municipality using (muni_id) WHERE cur_user = current_user);
 	
 			-- sector
 			DELETE FROM selector_sector WHERE cur_user = current_user AND sector_id > 0;
@@ -668,6 +636,15 @@ BEGIN
 		END IF;
 	END IF;
 
+	-- change current psector if selector_expl changes
+	v_expl = (SELECT expl_id FROM plan_psector JOIN
+            (SELECT value FROM config_param_user where parameter ='plan_psector_current' and cur_user = current_user) a ON value::integer = psector_id
+            WHERE expl_id IN (SELECT expl_id FROM selector_expl WHERE cur_user = current_user));
+
+	IF v_expl IS NULL THEN
+		UPDATE config_param_user SET value = NULL WHERE parameter = 'plan_psector_current' AND cur_user = CURRENT_USER;
+	END IF;
+
 	-- cross reference schema for state 
     IF v_addschema IS NOT NULL THEN 
         EXECUTE 'DELETE FROM '||v_addschema||'.selector_state WHERE cur_user = current_user';
@@ -684,14 +661,20 @@ BEGIN
 		st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
 		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM ve_arc) b) a;
 				
+	ELSIF v_tabname IN ('tab_psector') THEN
+		SELECT row_to_json (a)
+		INTO v_geometry
+		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
+		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM plan_psector WHERE psector_id IN (select psector_id FROM selector_psector WHERE cur_user = current_user))b) a;
+	
+	ELSIF v_tabname IN ('tab_hydro_state', 'tab_network_state', 'tab_dscenario') THEN
+		v_geometry = NULL;
+
 	ELSIF (v_count > 0 or (v_checkall IS False and v_id is null)) AND v_tabname NOT IN ('tab_exploitation_add', 'tab_macroexploitation_add')  THEN
 		SELECT row_to_json (a)
 		INTO v_geometry
 		FROM (SELECT st_xmin(the_geom)::numeric(12,2) as x1, st_ymin(the_geom)::numeric(12,2) as y1, st_xmax(the_geom)::numeric(12,2) as x2, st_ymax(the_geom)::numeric(12,2) as y2
 		FROM (SELECT st_expand(st_collect(the_geom), v_expand) as the_geom FROM ve_arc) b) a;
-		
-	ELSIF v_tabname IN ('tab_hydro_state', 'tab_network_state', 'tab_dscenario') THEN
-		v_geometry = NULL;
 
 	END IF;
 
