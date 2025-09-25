@@ -108,10 +108,17 @@ BEGIN
 			vel_max = EXCLUDED.vel_max, vel_min = EXCLUDED.vel_min, vel_avg = EXCLUDED.vel_avg, result_id=EXCLUDED.result_id;
 
 			INSERT INTO connec_add (connec_id, press_max, press_min, press_avg, quality_max, quality_min, quality_avg, result_id)
-			SELECT node_id, press_max::numeric(12,2), press_min::numeric(12,2), press_avg::numeric(12,2),
+			SELECT
+			CASE 
+				WHEN node_id ILIKE 'VN%' THEN connec.connec_id
+				ELSE node_id
+			END AS node_id,
+			press_max::numeric(12,2), press_min::numeric(12,2), press_avg::numeric(12,2),
 			quality_max::numeric(12,4), quality_min::numeric(12,4), quality_avg::numeric(12,4), result_id
-			FROM v_rpt_node a
-			JOIN connec ON node_id = connec_id
+			FROM connec
+			LEFT JOIN v_edit_link ON v_edit_link.feature_id = connec.connec_id
+			LEFT JOIN v_rpt_node ON connec.connec_id::text = v_rpt_node.node_id::text or v_rpt_node.node_id = concat('VN', v_edit_link.link_id)
+			WHERE v_rpt_node.node_id IS NOT NULL
 			ON CONFLICT (connec_id) DO UPDATE SET
 			press_max = EXCLUDED.press_max, press_min = EXCLUDED.press_min, press_avg = EXCLUDED.press_avg,
 			quality_max = EXCLUDED.quality_max, quality_min = EXCLUDED.quality_min, quality_avg=EXCLUDED.quality_avg, result_id=EXCLUDED.result_id;
