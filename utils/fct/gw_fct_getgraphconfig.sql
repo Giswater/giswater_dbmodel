@@ -62,7 +62,7 @@ BEGIN
 	END IF;
 
 	-- POINTS:
-		IF lower(v_project_type) = 'ws' THEN
+	IF lower(v_project_type) = 'ws' THEN
 
 		v_querytext = concat ('WITH mapzone_query as (select * from ',v_mapzone,' WHERE active)
 				SELECT n.node_id::text AS feature_id, ''nodeParent''::text AS graph_type, a.',v_mapzone_id,'::integer, a.name, NULL::float  AS rotation, n.the_geom
@@ -123,7 +123,6 @@ BEGIN
 				FROM (', v_querytext, ') row) features');
 
 		EXECUTE v_querytext INTO v_result;
-
 	ELSE
 		-- TODO: for ud
 
@@ -137,6 +136,7 @@ BEGIN
 		v_result_point = concat ('{"layerName": "Graphconfig", "geometryType":"Point", "features":',v_result, '}');
 	END IF;
 
+	v_result = null;
 	-- LINES:
 	IF lower(v_project_type) = 'ws' THEN
 
@@ -144,20 +144,20 @@ BEGIN
 		-- TODO: for ud
 	END IF;
 
-		-- profilactic nulls;
-	v_result := COALESCE(v_result, '{}');
-	IF v_result = '{}' THEN
-		v_result_line = '{"layerName": "Graphconfig", "geometryType":"", "features":[]}';
-	ELSE
-		v_result_line = concat ('{"layerName": "Graphconfig", "geometryType":"LineString", "features":',v_result, '}');
-	END IF;
+	-- profilactic nulls;
+	-- v_result := COALESCE(v_result, '{}');
+	-- IF v_result = '{}' THEN
+	-- 	v_result_line = '{"layerName": "Graphconfig", "geometryType":"", "features":[]}';
+	-- ELSE
+	-- 	v_result_line = concat ('{"layerName": "Graphconfig", "geometryType":"LineString", "features":',v_result, '}');
+	-- END IF;
 
 	-- Return
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Data quality analysis done succesfully"}, "version":"'||v_version||'"'||
 	     ',"body":{"form":{}'||
 		     ',"data":{ "info":{},'||
 				'"point":'||v_result_point||','||
-				'"line":'||v_result_line||','||
+				'"line":{},'||
 				'"polygon":{}}'||
 	    '}}')::json, 3302, null, null, null);
 

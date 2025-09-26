@@ -34,9 +34,10 @@ DECLARE
     v_reverse_cost integer=0;
     v_query_text TEXT;
     v_pgr_root_vids INT[];
-    v_pgr_distance INTEGER = 1000000;
+    v_pgr_distance INTEGER;
     v_source TEXT;
     v_target TEXT;
+    v_count INTEGER;
 
 BEGIN
 
@@ -126,6 +127,31 @@ BEGIN
             modif2= s.modif2
         FROM arcs_modif s
         WHERE t.pgr_arc_id= s.pgr_arc_id;
+
+        -- ARCS watersource (SECTOR WHEN v_graph_delimiter <> 'SECTOR'), only the inletArcs
+        WITH arcs_selected AS (
+		SELECT
+			a.pgr_arc_id,
+			n.pgr_node_id,
+			a.pgr_node_1,
+			a.pgr_node_2
+		FROM  temp_pgr_node n
+		JOIN temp_pgr_arc a on n.pgr_node_id in (a.pgr_node_1, a.pgr_node_2)
+		WHERE n.modif = TRUE AND n.graph_delimiter = 'SECTOR' AND n.graph_delimiter <> v_graph_delimiter
+        AND n.to_arc IS NOT NULL AND a.arc_id <> ALL(n.to_arc)
+        ), arcs_modif AS (
+            SELECT
+                pgr_arc_id,
+                bool_or(pgr_node_id = pgr_node_1) AS modif1,
+                bool_or( pgr_node_id = pgr_node_2) AS modif2
+            FROM arcs_selected
+            GROUP BY pgr_arc_id
+        )
+        UPDATE temp_pgr_arc t
+        SET modif1= s.modif1,
+            modif2= s.modif2
+        FROM arcs_modif s
+        WHERE t.pgr_arc_id= s.pgr_arc_id;
     END IF;
 
     -- for the nodes with v_graph_delimiter - all the arcs
@@ -183,55 +209,43 @@ BEGIN
 	    JOIN temp_pgr_arc a ON n.pgr_node_id = a.pgr_node_1
 	    WHERE n.modif AND a.modif1
     LOOP
-	    INSERT INTO temp_pgr_node (old_node_id, modif, graph_delimiter) VALUES (v_record.node_id, FALSE, v_record.n_graph_delimiter);
+	    INSERT INTO temp_pgr_node (old_node_id, modif, graph_delimiter, to_arc) VALUES (v_record.node_id, FALSE, v_record.n_graph_delimiter, v_record.to_arc);
         SELECT LAST_VALUE INTO v_pgr_node_id FROM temp_pgr_node_pgr_node_id_seq;
 	    UPDATE temp_pgr_arc SET pgr_node_1 = v_pgr_node_id, node_1 = NULL
 	    WHERE pgr_arc_id = v_record.pgr_arc_id;
 	    INSERT INTO temp_pgr_arc (old_arc_id, pgr_node_1, pgr_node_2, node_1, graph_delimiter, cost, reverse_cost, to_arc)
 	    VALUES (v_record.arc_id, v_record.pgr_node_1, v_pgr_node_id, v_record.node_1,
-        CASE WHEN v_record.a_graph_delimiter = 'NONE' THEN v_record.n_graph_delimiter ELSE v_record.a_graph_delimiter END, v_cost, v_reverse_cost, v_record.to_arc);
+        v_record.n_graph_delimiter, v_cost, v_reverse_cost, v_record.to_arc);
     END LOOP;
 
     -- Disconnect arcs with modif = TRUE at nodes with modif2 = TRUE; a new arc N_new->N_original is created with the v_cost and v_reverse_cost
     FOR v_record IN
-	    SELECT n.graph_delimiter AS n_graph_delimiter, n.node_id, a.graph_delimiter AS a_graph_delimiter, a.pgr_arc_id, a.arc_id, a.pgr_node_2, a.node_2
+	    SELECT n.graph_delimiter AS n_graph_delimiter, n.node_id, a.graph_delimiter AS a_graph_delimiter, a.pgr_arc_id, a.arc_id, a.pgr_node_2, a.node_2, n.to_arc
 	    FROM temp_pgr_node n
 	    JOIN temp_pgr_arc a ON n.pgr_node_id = a.pgr_node_2
 	    WHERE n.modif AND a.modif2
     LOOP
-	    INSERT INTO temp_pgr_node (old_node_id, modif, graph_delimiter) VALUES (v_record.node_id, FALSE, v_record.n_graph_delimiter);
+	    INSERT INTO temp_pgr_node (old_node_id, modif, graph_delimiter, to_arc) VALUES (v_record.node_id, FALSE, v_record.n_graph_delimiter, v_record.to_arc);
         SELECT LAST_VALUE INTO v_pgr_node_id FROM temp_pgr_node_pgr_node_id_seq;
 	    UPDATE temp_pgr_arc SET pgr_node_2 = v_pgr_node_id, node_2 = NULL
 	    WHERE pgr_arc_id = v_record.pgr_arc_id;
-	    INSERT INTO temp_pgr_arc(old_arc_id, pgr_node_1, pgr_node_2, node_2, graph_delimiter, cost, reverse_cost)
+	    INSERT INTO temp_pgr_arc(old_arc_id, pgr_node_1, pgr_node_2, node_2, graph_delimiter, cost, reverse_cost, to_arc)
 	    VALUES (v_record.arc_id, v_pgr_node_id, v_record.pgr_node_2, v_record.node_2,
-        CASE WHEN v_record.a_graph_delimiter = 'NONE' THEN v_record.n_graph_delimiter ELSE v_record.a_graph_delimiter END, v_cost, v_reverse_cost);
+        v_record.n_graph_delimiter, v_cost, v_reverse_cost, v_record.to_arc);
     END LOOP;
 
     IF v_project_type = 'WS' THEN
         UPDATE temp_pgr_arc t
-        SET closed = n.closed, broken = n.broken, to_arc = n.to_arc
+        SET closed = n.closed, broken = n.broken
         FROM temp_pgr_node n
         WHERE COALESCE(t.node_1, t.node_2) = n.node_id
         AND t.graph_delimiter = 'MINSECTOR';
 
         UPDATE temp_pgr_node t
-        SET closed = n.closed, broken = n.broken, to_arc = n.to_arc
+        SET closed = n.closed, broken = n.broken
         FROM temp_pgr_node n
         WHERE t.old_node_id = n.node_id
         AND t.graph_delimiter = 'MINSECTOR';
-
-        UPDATE temp_pgr_arc t
-        SET to_arc = n.to_arc
-        FROM temp_pgr_node n
-        WHERE COALESCE(t.node_1, t.node_2) = n.node_id
-        AND t.graph_delimiter = v_graph_delimiter;
-
-        UPDATE temp_pgr_node t
-        SET to_arc = n.to_arc
-        FROM temp_pgr_node n
-        WHERE t.old_node_id = n.node_id
-        AND t.graph_delimiter = v_graph_delimiter;
 
         -- closed valves
         UPDATE temp_pgr_arc a
@@ -247,129 +261,93 @@ BEGIN
         AND a.to_arc IS NOT NULL
         AND a.closed = FALSE;
 
-        -- for mapzone graph_delimiter - the inlet arcs behave like checkvalves
+        -- for mapzone graph_delimiter and the watersources (SECTOR) - the inlet arcs behave like checkvalves
         UPDATE temp_pgr_arc a
         SET cost = CASE WHEN a.node_1 IS NOT NULL THEN -1 ELSE a.cost END,
             reverse_cost = CASE WHEN a.node_2 IS NOT NULL THEN -1 ELSE a.reverse_cost END
-        WHERE a.graph_delimiter = v_graph_delimiter
+        WHERE a.graph_delimiter IN (v_graph_delimiter, 'SECTOR')
         AND a.old_arc_id <> ALL (a.to_arc);
     END IF;
 
-    -- nodes FORCECLOSED
+    -- FORCECLOSED
     UPDATE temp_pgr_arc a
     SET cost = -1, reverse_cost = -1
     WHERE a.graph_delimiter  = 'FORCECLOSED';
 
-
-
-    IF v_project_type = 'WS' THEN
-        v_source := 'pgr_node_1';
-        v_target := 'pgr_node_2';
-    ELSE
-        v_source := 'pgr_node_2';
-        v_target := 'pgr_node_1';
-    END IF;
     -- calculate to_arc of node parents in from zero mode
-    IF v_from_zero THEN
-        IF v_project_type = 'UD' AND v_mapzone_name = 'DWFZONE' THEN
-            v_query_text := 'SELECT pgr_arc_id AS id, ' || v_source || ' AS source, ' || v_target || ' AS target, cost, reverse_cost 
-                FROM temp_pgr_arc
-                WHERE graph_delimiter <> ''INITOVERFLOWPATH'' AND reverse_cost < 0'; -- if pgr_node_1 or pgr_node_2 have graph_delimiter = IGNORE, the arcs will not be filtered
-        ELSIF v_project_type = 'UD' THEN
-            v_query_text := 'SELECT pgr_arc_id AS id, ' || v_source || ' AS source, ' || v_target || ' AS target, cost, reverse_cost 
-                FROM temp_pgr_arc';
-        ELSE
-            v_query_text := 'SELECT pgr_arc_id AS id, ' || v_source || ' AS source, ' || v_target || ' AS target, cost, reverse_cost 
+    IF v_from_zero AND v_project_type = 'WS' AND v_graph_delimiter <> 'SECTOR' THEN
+        EXECUTE 'SELECT COUNT(*)::INT FROM temp_pgr_arc 
+                WHERE to_arc IS NULL AND graph_delimiter = ''' || v_graph_delimiter || ''''
+        INTO v_count;
+
+        IF v_count > 0 THEN 
+            v_query_text := 'SELECT pgr_arc_id AS id, pgr_node_1 AS source, pgr_node_2 AS target, cost, reverse_cost 
                 FROM temp_pgr_arc';
 
             EXECUTE 'SELECT array_agg(pgr_node_id)::INT[] 
                     FROM temp_pgr_node 
-                    JOIN man_tank ON man_tank.node_id = temp_pgr_node.node_id'
+                    JOIN v_temp_node v ON v.node_id = temp_pgr_node.node_id
+                    WHERE ''SECTOR'' = ANY(v.graph_delimiter)'
             INTO v_pgr_root_vids;
-        END IF;
 
-        INSERT INTO temp_pgr_drivingdistance(seq, "depth", start_vid, pred, node, edge, "cost", agg_cost)
-        (
-            SELECT seq, "depth", start_vid, pred, node, edge, "cost", agg_cost
-            FROM pgr_drivingdistance(v_query_text, v_pgr_root_vids, v_pgr_distance)
-        );
-        -- update to_arc of nodes in from zero mode
-        v_query_text = '
-        WITH node_parents AS (
-            SELECT pgr_node_id, node_id
-            FROM temp_pgr_node
-            WHERE graph_delimiter = ''' || v_mapzone_name || '''
-            AND to_arc IS NULL
-            AND node_id IS NOT NULL
-        ), nodes_to_update AS (
-            SELECT node 
-            FROM temp_pgr_drivingdistance tpd
-            JOIN node_parents n ON tpd.pred = n.pgr_node_id
-        ), correct_to_arc AS (
-            SELECT *
-            FROM temp_pgr_arc tpa
-            JOIN nodes_to_update nu ON (tpa.pgr_node_1 = nu.node OR tpa.pgr_node_2 = nu.node)
-            JOIN node_parents np ON (tpa.node_1 = np.node_id OR tpa.node_2 = np.node_id)
-        )
-        UPDATE temp_pgr_node t
-        SET to_arc = a.to_arc
-        FROM (
-            SELECT pgr_node_id, array_agg(old_arc_id) AS to_arc
-            FROM correct_to_arc
-            GROUP BY pgr_node_id
-        ) a
-        WHERE t.pgr_node_id = a.pgr_node_id;';
+            EXECUTE 'SELECT COUNT(*)::INT FROM temp_pgr_arc'
+            INTO v_pgr_distance;
 
-        EXECUTE v_query_text;
+            INSERT INTO temp_pgr_drivingdistance(seq, "depth", start_vid, pred, node, edge, "cost", agg_cost)
+            (
+                SELECT seq, "depth", start_vid, pred, node, edge, "cost", agg_cost
+                FROM pgr_drivingdistance(v_query_text, v_pgr_root_vids, v_pgr_distance)
+            );
+            -- update to_arc of nodes in from zero mode
+            v_query_text = '
+            WITH node_parents AS (
+                SELECT pgr_node_id, node_id
+                FROM temp_pgr_node
+                WHERE graph_delimiter = ''' || v_graph_delimiter || '''
+                AND to_arc IS NULL
+                AND node_id IS NOT NULL
+            ), 
+            arc_parents AS (
+                SELECT pgr_arc_id, old_arc_id
+                FROM temp_pgr_arc
+                WHERE graph_delimiter = ''' || v_graph_delimiter || '''
+            ),
+            nodes_to_update AS (
+                SELECT DISTINCT ON (d.pred) d.pred, a.old_arc_id 
+                FROM temp_pgr_drivingdistance d
+                JOIN node_parents n ON d.pred = n.pgr_node_id
+                JOIN arc_parents a ON d.edge = a.pgr_arc_id
+            )
+            UPDATE temp_pgr_node t
+            SET to_arc = array[n.old_arc_id]
+            FROM nodes_to_update n
+            WHERE t.pgr_node_id = n.pred';
 
-    END IF;
+            EXECUTE v_query_text;
 
-    -- NOTE: This is the same code, because we need to update the to_arc of the nodes in the mapzone graph_delimiter
-    IF v_project_type = 'WS' THEN
-        UPDATE temp_pgr_arc t
-        SET closed = n.closed, broken = n.broken, to_arc = n.to_arc
-        FROM temp_pgr_node n
-        WHERE COALESCE(t.node_1, t.node_2) = n.node_id
-        AND t.graph_delimiter = 'MINSECTOR';
+            UPDATE temp_pgr_node t
+            SET to_arc = n.to_arc
+            FROM temp_pgr_node n
+            WHERE t.old_node_id = n.node_id
+            AND t.graph_delimiter = v_graph_delimiter
+            AND t.to_arc IS NULL;
 
-        UPDATE temp_pgr_node t
-        SET closed = n.closed, broken = n.broken, to_arc = n.to_arc
-        FROM temp_pgr_node n
-        WHERE t.old_node_id = n.node_id
-        AND t.graph_delimiter = 'MINSECTOR';
+            UPDATE temp_pgr_arc t
+            SET to_arc = n.to_arc
+            FROM temp_pgr_node n
+            WHERE COALESCE(t.node_1, t.node_2) = n.node_id
+            AND t.graph_delimiter = v_graph_delimiter
+            AND n.graph_delimiter = v_graph_delimiter
+            AND t.to_arc IS NULL
+            AND n.to_arc IS NOT NULL;
 
-        UPDATE temp_pgr_arc t
-        SET to_arc = n.to_arc
-        FROM temp_pgr_node n
-        WHERE COALESCE(t.node_1, t.node_2) = n.node_id
-        AND t.graph_delimiter = v_graph_delimiter;
-
-        UPDATE temp_pgr_node t
-        SET to_arc = n.to_arc
-        FROM temp_pgr_node n
-        WHERE t.old_node_id = n.node_id
-        AND t.graph_delimiter = v_graph_delimiter;
-
-        -- closed valves
-        UPDATE temp_pgr_arc a
-        SET cost = -1, reverse_cost = -1
-        WHERE a.graph_delimiter  = 'MINSECTOR'
-        AND a.closed = TRUE;
-
-        -- checkvalves
-        UPDATE temp_pgr_arc a
-        SET cost = CASE WHEN a.node_1 IS NOT NULL THEN -1 ELSE a.cost END,
-            reverse_cost = CASE WHEN a.node_2 IS NOT NULL THEN -1 ELSE a.reverse_cost END
-        WHERE a.graph_delimiter  = 'MINSECTOR'
-        AND a.to_arc IS NOT NULL
-        AND a.closed = FALSE;
-
-        -- for mapzone graph_delimiter - the inlet arcs behave like checkvalves
-        UPDATE temp_pgr_arc a
-        SET cost = CASE WHEN a.node_1 IS NOT NULL THEN -1 ELSE a.cost END,
-            reverse_cost = CASE WHEN a.node_2 IS NOT NULL THEN -1 ELSE a.reverse_cost END
-        WHERE a.graph_delimiter = v_graph_delimiter
-        AND a.old_arc_id <> ALL (a.to_arc);
+            -- for mapzone graph_delimiter - the inlet arcs behave like checkvalves
+            UPDATE temp_pgr_arc a
+            SET cost = CASE WHEN a.node_1 IS NOT NULL THEN -1 ELSE a.cost END,
+                reverse_cost = CASE WHEN a.node_2 IS NOT NULL THEN -1 ELSE a.reverse_cost END
+            WHERE a.graph_delimiter = v_graph_delimiter
+            AND a.old_arc_id <> ALL (a.to_arc);
+        END IF; 
     END IF;
 
     RETURN jsonb_build_object(

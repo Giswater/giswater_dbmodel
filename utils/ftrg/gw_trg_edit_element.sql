@@ -68,6 +68,13 @@ v_feature_type TEXT;
 v_length_arc numeric;
 v_inp_table TEXT;
 
+--
+v_new_data jsonb;
+v_feature_id_name TEXT;
+v_uuid_column TEXT;
+v_uuid_value uuid;
+v_feature_id TEXT;
+
 BEGIN
 
 	v_tg_table_name = TG_TABLE_NAME;
@@ -86,6 +93,10 @@ BEGIN
         EXECUTE '
         SELECT lower(feature_type) FROM cat_feature WHERE child_layer = '||quote_literal(v_tg_table_name)||' OR parent_layer = '||quote_literal(v_tg_table_name)||' LIMIT 1'
         INTO v_feature_type;
+
+		IF v_feature_type IS NULL THEN
+			v_feature_type := 'element';
+		END IF;
 
 
         EXECUTE '
@@ -322,9 +333,25 @@ BEGIN
 		END IF;
 
 		-- insert into element_x_feature table
-		IF v_tablefeature IS NOT NULL AND v_feature IS NOT NULL THEN
-			EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_tablefeature||'_id, element_id) VALUES ('||v_feature||','||NEW.element_id||') ON CONFLICT 
-			('||v_tablefeature||'_id, element_id) DO NOTHING';
+		IF v_tablefeature IS NOT NULL THEN
+
+			v_new_data := to_jsonb(NEW);
+			v_feature_id_name := v_tablefeature||'_id';
+			v_uuid_column := v_tablefeature||'_uuid';
+			v_uuid_value := (v_new_data->>v_uuid_column)::uuid;
+
+			IF v_uuid_value IS NOT NULL THEN
+				EXECUTE 'SELECT '||v_feature_id_name||' FROM '||v_tablefeature||' WHERE uuid = '||v_uuid_value||' LIMIT 1'
+				INTO v_feature_id;
+			END IF;
+
+			IF v_feature_id IS NOT NULL THEN
+				EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_feature_id_name||', element_id, '||v_uuid_column||') VALUES ('||v_feature_id||','||NEW.element_id||','||v_uuid_value||') ON CONFLICT 
+				('||v_tablefeature||'_id, element_id) DO NOTHING';
+			ELSE 
+				EXECUTE 'INSERT INTO element_x_'||v_tablefeature||' ('||v_feature_id_name||', element_id) VALUES ('||v_feature||','||NEW.element_id||') ON CONFLICT 
+				('||v_tablefeature||'_id, element_id) DO NOTHING';
+			END IF;
 		END IF;
 
 		--elevation from raster
