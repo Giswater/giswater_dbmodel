@@ -52,7 +52,6 @@ DECLARE
     v_result_node json;
     v_result_connec json;
     v_result_arc json;
-    v_tiled boolean=false;
     v_point_geom public.geometry;
     v_bbox json;
     address_array text[];
@@ -70,7 +69,6 @@ BEGIN
 
     -- Get input data
     v_device := p_data -> 'client' ->> 'device';
-    v_tiled := p_data ->'client' ->> 'tiled';
     v_mincutid := ((p_data ->>'data')::json->>'mincutId')::integer;
 
     -- Get api version
@@ -233,7 +231,7 @@ BEGIN
         v_fieldsjson := to_json(v_fields_array);
 
         -- build geojson
-        IF v_device = 5 AND v_tiled IS TRUE THEN 
+        IF v_device = 5 THEN
             --v_om_mincut
             SELECT jsonb_agg(features.feature) INTO v_result
                 FROM (
@@ -379,7 +377,6 @@ BEGIN
               ',"mincutNode":',v_result_node::text,
               ',"mincutConnec":',v_result_connec::text,
               ',"mincutArc":',v_result_arc::text,
-              ',"tiled":',v_tiled::text,
               ',"geometry":',COALESCE(v_bbox::text, 'null'),
             '}}}');
 
