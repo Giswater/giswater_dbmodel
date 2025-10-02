@@ -138,7 +138,6 @@ v_querystring text;
 v_debug_vars json;
 v_debug json;
 v_msgerr json;
-v_epa text;
 v_elevation numeric(12,4);
 v_staticpressure numeric(12,3);
 label_value text;
@@ -534,24 +533,7 @@ BEGIN
 		END IF;
 
 	ELSIF p_tg_op ='UPDATE' OR p_tg_op ='SELECT' then
-
-		-- getting values from feature
-		IF p_idname = 'connec_id' THEN
-			v_epa = 'connec';
-		ELSIF p_idname IN ('arc_id', 'node_id', 'gully_id') then
-
-			EXECUTE ('SELECT epa_type FROM ' || substring(p_idname, 0, length(p_idname)-2) || ' WHERE ' || p_idname || ' = ''' || p_id || '''') INTO v_epa;
-
-		END IF;
-
-		IF (SELECT EXISTS ( SELECT 1 FROM   information_schema.tables WHERE  table_schema = 'SCHEMA_NAME' AND table_name = concat('ve_epa_',lower(v_epa)))) IS TRUE then
-
-			v_querystring = concat('SELECT (row_to_json(a)) FROM
-				(SELECT * FROM ',p_table_id,' a LEFT JOIN ve_epa_',lower(v_epa),' b ON a.',quote_ident(p_idname),'=b.',quote_ident(p_idname),' WHERE a.',quote_ident(p_idname),' = CAST(',quote_literal(p_id),' AS ',(p_columntype),'))a');
-			v_debug_vars := json_build_object('p_table_id', p_table_id, 'p_idname', p_idname, 'p_id', p_id, 'p_columntype', p_columntype);
-			v_debug := json_build_object('querystring', v_querystring, 'vars', v_debug_vars, 'funcname', 'gw_fct_getfeatureupsert', 'flag', 20);
-			SELECT gw_fct_debugsql(v_debug) INTO v_msgerr;
-		elsif v_idname_array is not null then
+		if v_idname_array is not null then
 
 			v_querystring = 'SELECT (row_to_json(a)) FROM (SELECT * FROM '|| p_table_id || ' ';
 
