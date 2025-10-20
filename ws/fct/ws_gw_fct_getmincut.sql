@@ -5,7 +5,7 @@ General Public License as published by the Free Software Foundation, either vers
 or (at your option) any later version.
 */
 
---FUNCTION CODE: 3010
+--FUNCTION CODE: 2988
 
 CREATE OR REPLACE FUNCTION SCHEMA_NAME.gw_fct_getmincut(p_data json)
 RETURNS json AS
@@ -53,7 +53,6 @@ DECLARE
     v_result_node json;
     v_result_connec json;
     v_result_arc json;
-    v_tiled boolean=false;
     v_point_geom public.geometry;
     v_bbox json;
     address_array text[];
@@ -71,7 +70,6 @@ BEGIN
 
     -- Get input data
     v_device := p_data -> 'client' ->> 'device';
-    v_tiled := p_data ->'client' ->> 'tiled';
     v_mincutid := ((p_data ->>'data')::json->>'mincutId')::integer;
 
     -- Get api version
@@ -232,7 +230,7 @@ BEGIN
         v_fieldsjson := to_json(v_fields_array);
 
         -- build geojson
-        IF v_device = 5 AND v_tiled IS TRUE THEN
+        IF v_device = 5 THEN
             --v_om_mincut
             SELECT jsonb_agg(features.feature) INTO v_result
                 FROM (
@@ -340,15 +338,18 @@ BEGIN
         -- mincut details
         SELECT * INTO v_mincutrec FROM om_mincut WHERE id::text = v_mincutid::text;
         DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=216;
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, '');
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'Mincut stats');
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, '-----------------');
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of arcs: ', (v_mincutrec.output->>'arcs')::json->>'number'));
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length', ' mts'));
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume', ' m3'));
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of connecs affected: ', (v_mincutrec.output->>'connecs')::json->>'number'));
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total of hydrometers affected: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'total'));
-        INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Hydrometers classification: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'classified'));
+        
+        -- mincut details
+		EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4362", "function":"2244", "fid":"216", "criticity":"3", "is_process":true, "cur_user":"current_user"}}$$)';
+	    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"separator_id": "2030", "function":"2244", "fid":"216", "criticity":"3", "is_process":true, "cur_user":"current_user"}}$$)';
+		
+        -- Stats
+        EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4364", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"number":"'||COALESCE((v_mincutrec.output->'arcs'->>'number'), '0')||'"}, "cur_user":"current_user"}}$$)';
+        EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4366", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"length":"'||COALESCE((v_mincutrec.output->'arcs'->>'length'), '0')||'"}, "cur_user":"current_user"}}$$)';
+        EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4368", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"volume":"'||COALESCE((v_mincutrec.output->'arcs'->>'volume'), '0')||'"}, "cur_user":"current_user"}}$$)';
+        EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4370", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"number":"'||COALESCE((v_mincutrec.output->'connecs'->>'number'), '0')||'"}, "cur_user":"current_user"}}$$)';
+        EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4372", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"total":"'||COALESCE((v_mincutrec.output->'connecs'->'hydrometers'->>'total'), '0')||'"}, "cur_user":"current_user"}}$$)';
+        EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4374", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"classified":"'||COALESCE(replace((v_mincutrec.output->'connecs'->'hydrometers'->>'classified'), '"', '\"'), '[]')||'"}, "cur_user":"current_user"}}$$)';
 
         -- info
         v_result = null;
@@ -377,7 +378,6 @@ BEGIN
               ',"mincutNode":',v_result_node::text,
               ',"mincutConnec":',v_result_connec::text,
               ',"mincutArc":',v_result_arc::text,
-              ',"tiled":',v_tiled::text,
               ',"geometry":',COALESCE(v_bbox::text, 'null'),
             '}}}'
         );
@@ -388,15 +388,18 @@ BEGIN
     -- mincut details
     SELECT * INTO v_mincutrec FROM om_mincut WHERE id::text = v_mincutid::text;
     DELETE FROM audit_check_data WHERE cur_user="current_user"() AND fid=216;
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, '');
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, 'Mincut stats');
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, '-----------------');
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of arcs: ', (v_mincutrec.output->>'arcs')::json->>'number'));
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Length of affected network: ', (v_mincutrec.output->>'arcs')::json->>'length', ' mts'));
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total water volume: ', (v_mincutrec.output->>'arcs')::json->>'volume', ' m3'));
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Number of connecs affected: ', (v_mincutrec.output->>'connecs')::json->>'number'));
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Total of hydrometers affected: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'total'));
-    INSERT INTO audit_check_data (fid, error_message) VALUES (216, concat('Hydrometers classification: ', ((v_mincutrec.output->>'connecs')::json->>'hydrometers')::json->>'classified'));
+    
+    -- mincut details
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4362", "function":"2988", "fid":"216", "criticity":"4", "is_process":true, "cur_user":"current_user"}}$$)';
+	EXECUTE 'SELECT gw_fct_getmessage($${"data":{"separator_id": "2030", "function":"2244", "fid":"216", "criticity":"3", "is_process":true, "cur_user":"current_user"}}$$)';
+    
+    -- Stats
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4364", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"number":"'||COALESCE((v_mincutrec.output->'arcs'->>'number'), '0')||'"}, "cur_user":"current_user"}}$$)';
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4366", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"length":"'||COALESCE((v_mincutrec.output->'arcs'->>'length'), '0')||'"}, "cur_user":"current_user"}}$$)';
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4368", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"volume":"'||COALESCE((v_mincutrec.output->'arcs'->>'volume'), '0')||'"}, "cur_user":"current_user"}}$$)';
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4370", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"number":"'||COALESCE((v_mincutrec.output->'connecs'->>'number'), '0')||'"}, "cur_user":"current_user"}}$$)';
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4372", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"total":"'||COALESCE((v_mincutrec.output->'connecs'->'hydrometers'->>'total'), '0')||'"}, "cur_user":"current_user"}}$$)';
+    EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4374", "function":"2988", "fid":"216", "criticity":"1", "is_process":true, "parameters":{"classified":"'||COALESCE(replace((v_mincutrec.output->'connecs'->'hydrometers'->>'classified'), '"', '\"'), '[]')||'"}, "cur_user":"current_user"}}$$)';
 
     -- info
     v_result = null;

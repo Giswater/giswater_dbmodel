@@ -61,12 +61,11 @@ BEGIN
 
 
         CREATE TEMP TABLE IF NOT EXISTS temp_pgr_node (
-            pgr_node_id SERIAL NOT NULL,
+            pgr_node_id INT GENERATED ALWAYS AS IDENTITY,
             node_id int4,
             old_node_id int4,
             mapzone_id INTEGER DEFAULT 0,
             old_mapzone_id INTEGER DEFAULT 0,
-            fluid_type INTEGER DEFAULT 0,
             modif BOOL DEFAULT FALSE,  -- True if nodes have to be disconnected - closed valves, starts of mapzones
             graph_delimiter VARCHAR(30) DEFAULT 'NONE',
             to_arc _int4,
@@ -77,7 +76,7 @@ BEGIN
 
 
         CREATE TEMP TABLE IF NOT EXISTS temp_pgr_arc (
-            pgr_arc_id SERIAL NOT NULL,
+            pgr_arc_id INT GENERATED ALWAYS AS IDENTITY,
             arc_id int4,
             old_arc_id int4,
             pgr_node_1 INT,
@@ -86,7 +85,6 @@ BEGIN
             node_2 int4,
             mapzone_id INTEGER DEFAULT 0,
             old_mapzone_id INTEGER DEFAULT 0,
-            fluid_type INTEGER DEFAULT 0,
             graph_delimiter VARCHAR(30) DEFAULT 'NONE',
             modif1 BOOL DEFAULT FALSE,  -- True if arcs have to be disconnected on node_1
             modif2 BOOL DEFAULT FALSE,  -- True if arcs have to be disconnected on node_2
@@ -130,38 +128,37 @@ BEGIN
         CREATE INDEX IF NOT EXISTS temp_pgr_connectedcomponents_node_idx ON temp_pgr_connectedcomponents USING btree (node);
         -- Create temporary tables depending on the project type
         IF v_project_type = 'WS' THEN
-            ALTER TABLE temp_pgr_node ADD COLUMN closed BOOL;
-            ALTER TABLE temp_pgr_node ADD COLUMN broken BOOL;
+            ALTER TABLE temp_pgr_node ADD COLUMN IF NOT EXISTS closed BOOL;
+            ALTER TABLE temp_pgr_node ADD COLUMN IF NOT EXISTS broken BOOL;
 
-            ALTER TABLE temp_pgr_arc ADD COLUMN closed BOOL;
-            ALTER TABLE temp_pgr_arc ADD COLUMN broken BOOL;
+            ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS closed BOOL;
+            ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS broken BOOL;
 
             -- for specific functions
-            IF v_fct_name = 'MINCUT' OR v_fct_name = 'MINSECTOR' THEN
-                ALTER TABLE temp_pgr_arc ADD COLUMN unaccess BOOL DEFAULT FALSE; -- if TRUE, it means the valve is not accessible
-                ALTER TABLE temp_pgr_arc ADD COLUMN proposed BOOL DEFAULT FALSE;
-                ALTER TABLE temp_pgr_arc ADD COLUMN cost_mincut INT DEFAULT 1;
-                ALTER TABLE temp_pgr_arc ADD COLUMN reverse_cost_mincut INT DEFAULT 1;
+            IF v_fct_name IN ('MINCUT', 'MINSECTOR') THEN
+                ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS unaccess BOOL DEFAULT FALSE; -- if TRUE, it means the valve is not accessible
+                ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS proposed BOOL DEFAULT FALSE;
+                ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS changestatus BOOL DEFAULT FALSE;
+                ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS cost_mincut INT DEFAULT 1;
+                ALTER TABLE temp_pgr_arc ADD COLUMN IF NOT EXISTS reverse_cost_mincut INT DEFAULT 1;
+
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_node_minsector (LIKE temp_pgr_node INCLUDING ALL);
+                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_arc_minsector (LIKE temp_pgr_arc INCLUDING ALL);
             END IF;
             IF v_fct_name = 'MINSECTOR' THEN
-
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_graph (LIKE SCHEMA_NAME.minsector_graph INCLUDING ALL);
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector (LIKE SCHEMA_NAME.minsector INCLUDING ALL);
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_mincut (LIKE SCHEMA_NAME.minsector_mincut INCLUDING ALL);
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_minsector_mincut_valve (LIKE SCHEMA_NAME.minsector_mincut_valve INCLUDING ALL);
-
-                -- used for MASSIVE MINCUT
-                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_node_mincut (LIKE temp_pgr_node INCLUDING ALL);
-                CREATE TEMP TABLE IF NOT EXISTS temp_pgr_arc_mincut (LIKE temp_pgr_arc INCLUDING ALL);
             END IF;
             IF v_fct_name = 'DMA' AND v_netscenario IS NOT NULL THEN
-                ALTER TABLE temp_pgr_mapzone ADD COLUMN pattern_id varchar(16);
+                ALTER TABLE temp_pgr_mapzone ADD COLUMN IF NOT EXISTS pattern_id varchar(16);
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_om_waterbalance_dma_graph (LIKE SCHEMA_NAME.om_waterbalance_dma_graph INCLUDING ALL);
             END IF;
         ELSE 
             IF v_fct_name = 'DWFZONE' THEN
-                ALTER TABLE temp_pgr_mapzone ADD COLUMN  min_node int4;
-                ALTER TABLE temp_pgr_mapzone ADD COLUMN  drainzone_id INTEGER DEFAULT 0;
+                ALTER TABLE temp_pgr_mapzone ADD COLUMN  IF NOT EXISTS min_node int4;
+                ALTER TABLE temp_pgr_mapzone ADD COLUMN  IF NOT EXISTS drainzone_id INTEGER DEFAULT 0;
                 CREATE TEMP TABLE IF NOT EXISTS temp_pgr_drivingdistance_initoverflowpath (
                     seq INT8 NOT NULL,
                     "depth" INT8 NULL,
@@ -183,7 +180,7 @@ BEGIN
         -- Create temporary views
         CREATE OR REPLACE TEMPORARY VIEW v_temp_pgr_mapzone_old AS
         SELECT DISTINCT t.old_mapzone_id
-        FROM temp_pgr_node t
+        FROM temp_pgr_arc t
         WHERE t.old_mapzone_id > 0;
         IF v_use_psector = 'true' THEN
             -- with psectors
@@ -265,6 +262,7 @@ BEGIN
                     node.supplyzone_id,
                     node.muni_id,
                     node.minsector_id,
+                    cn.node_type,
                     node.the_geom
                     FROM node_selector
                     JOIN node ON node.node_id::text = node_selector.node_id::text
@@ -308,6 +306,7 @@ BEGIN
                 ), connec_selected AS (
                     SELECT DISTINCT ON (connec_id) connec.connec_id,
                         connec.arc_id,
+                        connec.customer_code,
                         connec.expl_id,
                         connec.sector_id,
                         connec.presszone_id,
@@ -457,6 +456,7 @@ BEGIN
                     node.fluid_type,
                     node.muni_id,
                     node.minsector_id,
+                    node.node_type,
                     node.the_geom
                     FROM node_selector
                     JOIN node ON node.node_id::text = node_selector.node_id::text
@@ -498,6 +498,7 @@ BEGIN
                 ), connec_selected AS (
                     SELECT DISTINCT ON (connec_id) connec.connec_id,
                         connec.arc_id,
+                        connec.customer_code,
                         connec.expl_id,
                         connec.sector_id,
                         connec.dwfzone_id,
@@ -709,6 +710,7 @@ BEGIN
                     n.supplyzone_id,
                     n.muni_id,
                     n.minsector_id,
+                    cn.node_type,
                     n.the_geom
                 FROM node n
                 JOIN value_state_type vst ON vst.id = n.state_type
@@ -720,6 +722,7 @@ BEGIN
                 SELECT
                     c.connec_id,
                     c.arc_id,
+                    c.customer_code,
                     c.expl_id,
                     c.sector_id,
                     c.presszone_id,
@@ -791,6 +794,7 @@ BEGIN
                     n.fluid_type,
                     n.muni_id,
                     n.minsector_id,
+                    n.node_type,
                     n.the_geom
                 FROM node n
                 JOIN value_state_type vst ON vst.id = n.state_type
@@ -802,6 +806,7 @@ BEGIN
                 SELECT
                     c.connec_id,
                     c.arc_id,
+                    c.customer_code,
                     c.expl_id,
                     c.sector_id,
                     c.dwfzone_id,
@@ -957,17 +962,18 @@ BEGIN
 
         -- Drop temporary tables
         DROP TABLE IF EXISTS temp_pgr_mapzone;
-        DROP TABLE IF EXISTS temp_pgr_node_mincut;
-        DROP TABLE IF EXISTS temp_pgr_arc_mincut;
+        DROP TABLE IF EXISTS temp_pgr_node_minsector;
+        DROP TABLE IF EXISTS temp_pgr_arc_minsector;
         DROP TABLE IF EXISTS temp_pgr_node;
         DROP TABLE IF EXISTS temp_pgr_arc;
         DROP TABLE IF EXISTS temp_audit_check_data;
         DROP TABLE IF EXISTS temp_pgr_connectedcomponents;
         DROP TABLE IF EXISTS temp_pgr_minsector_graph;
         DROP TABLE IF EXISTS temp_pgr_minsector;
+        DROP TABLE IF EXISTS temp_pgr_minsector_mincut;
+        DROP TABLE IF EXISTS temp_pgr_minsector_mincut_valve;
         DROP TABLE IF EXISTS temp_pgr_drivingdistance;
         DROP TABLE IF EXISTS temp_pgr_drivingdistance_initoverflowpath;
-        DROP TABLE IF EXISTS temp_pgr_minsector_mincut;
 
         DROP TABLE IF EXISTS temp_pgr_om_waterbalance_dma_graph;
 

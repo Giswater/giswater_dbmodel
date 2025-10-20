@@ -78,6 +78,7 @@ v_epa_table text;
 v_state_type integer;
 v_action_mode integer;
 v_plan_mode boolean;
+v_asset_id text;
 
 rec_addfields record;
 v_sql text;
@@ -115,6 +116,7 @@ BEGIN
 	v_arccat_id = ((p_data ->>'data')::json->>'arccat_id')::text;
 	v_arc_type = ((p_data ->>'data')::json->>'arc_type')::text;
 	v_plan_mode = ((p_data ->>'data')::json->>'plan_mode')::boolean;
+	v_asset_id = ((p_data ->>'data')::json->>'asset_id')::text;
 
 	-- Get state_type from default value if this isn't on input json
 	IF v_state_type IS NULL THEN
@@ -152,8 +154,25 @@ BEGIN
 		IF v_count = 2 THEN
 
 			-- Get both arc features
-			SELECT * INTO v_record1 FROM ve_arc WHERE (node_1 = v_node_id OR node_2 = v_node_id) AND state > 0 ORDER BY arc_id DESC LIMIT 1;
-			SELECT * INTO v_record2 FROM ve_arc WHERE (node_1 = v_node_id OR node_2 = v_node_id) AND state > 0 ORDER BY arc_id ASC LIMIT 1;
+			IF v_project_type = 'UD' THEN
+				-- node to fusion must be node_2 upstream and node_1 downstream
+				SELECT * INTO v_record1 FROM ve_arc WHERE (node_2 = v_node_id) AND state > 0 ORDER BY arc_id DESC LIMIT 1;
+				SELECT * INTO v_record2 FROM ve_arc where (node_1 = v_node_id) AND state > 0 ORDER BY arc_id ASC LIMIT 1;
+
+				IF (v_record1 is null) or (v_record2 is null) then
+					EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"4362", "function":"2112", "is_process":true}}$$)';
+				END IF;
+				
+			ELSIF v_project_type = 'WS' THEN
+				-- any combination of node_1/node_2 is accepted
+				WITH arcs AS (SELECT * FROM ve_arc WHERE (node_1 = v_node_id OR node_2 = v_node_id) 
+				AND state > 0 ORDER BY arc_id)
+				SELECT * INTO v_record1 FROM arcs LIMIT 1;
+				
+				WITH arcs AS (SELECT * FROM ve_arc WHERE (node_1 = v_node_id OR node_2 = v_node_id) 
+				AND state > 0 ORDER BY arc_id)
+				SELECT * INTO v_record2 FROM arcs OFFSET 1 LIMIT 1;
+			END IF;
 
 			-- Check psector compatibility based on mode
 			IF v_plan_mode = true THEN
@@ -237,6 +256,7 @@ BEGIN
 				v_new_record.node_1 := (SELECT node_id FROM ve_node WHERE ST_DWithin(ST_StartPoint(v_arc_geom), ve_node.the_geom, 0.01) LIMIT 1);
 				v_new_record.node_2 := (SELECT node_id FROM ve_node WHERE ST_DWithin(ST_EndPoint(v_arc_geom), ve_node.the_geom, 0.01) LIMIT 1);
 				v_new_record.arc_id := (SELECT nextval('urn_id_seq'));
+				v_new_record.asset_id = v_asset_id;
 
 				EXECUTE 'SELECT gw_fct_getmessage($${"data":{"message":"3376", "function":"2112", "parameters":{"arc_id":"'||v_new_record.arc_id||'"}, "fid":"214", "criticity":"1", "is_process":true}}$$)';
 

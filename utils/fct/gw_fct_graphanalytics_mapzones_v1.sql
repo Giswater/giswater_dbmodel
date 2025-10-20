@@ -828,10 +828,10 @@ BEGIN
 					JOIN v_temp_arc USING (arc_id)
 					GROUP BY mapzone_id
 					UNION
-					SELECT mapzone_id, ST_Collect(ext_plot.the_geom) AS geom FROM temp_pgr_arc ta
+					SELECT mapzone_id, ST_Collect(ep.the_geom) AS geom FROM temp_pgr_arc ta
 					JOIN v_temp_connec vc USING (arc_id)
-					LEFT JOIN ext_plot ON vc.plot_code = ext_plot.plot_code
-					LEFT JOIN ext_plot ON ST_DWithin(vc.the_geom, ext_plot.the_geom, 0.001)
+					LEFT JOIN ext_plot ep ON vc.plot_code = ep.plot_code 
+						AND ST_DWithin(vc.the_geom, ep.the_geom, 0.001)
 					GROUP BY mapzone_id
 				) a
 				GROUP BY mapzone_id
@@ -1140,14 +1140,15 @@ BEGIN
 				v_query_text = '
 					UPDATE plan_netscenario_node n SET staticpressure = t.staticpressure
 					FROM (
-						SELECT n.node_id,
+						SELECT pn.node_id,
 						CASE
-							WHEN n.'||v_mapzone_field||' > 0 THEN
+							WHEN pn.'||v_mapzone_field||' > 0 THEN
 								(p.head - COALESCE (n.custom_top_elev, n.top_elev) + COALESCE (n.depth, 0))::numeric(12,3)
 							ELSE NULL
 						END AS staticpressure
-						FROM node n
-						JOIN '||v_table_name||' p USING ('||v_mapzone_field||')
+						FROM plan_netscenario_node pn 
+						JOIN node n ON pn.node_id = n.node_id
+						JOIN '||v_table_name||' p ON pn.'||v_mapzone_field||' = p.'||v_mapzone_field||'
 						WHERE EXISTS (SELECT 1 FROM temp_pgr_node t WHERE t.node_id= n.node_id)
 					) t
 					WHERE n.node_id = t.node_id
@@ -1159,14 +1160,15 @@ BEGIN
 				v_query_text := '
 					UPDATE plan_netscenario_connec c SET staticpressure = t.staticpressure
 					FROM (
-						SELECT c.connec_id,
+						SELECT pc.connec_id,
 							CASE
-								WHEN c.' || v_mapzone_field || ' > 0 THEN
+								WHEN pc.' || v_mapzone_field || ' > 0 THEN
 									(p.head - c.top_elev + COALESCE(c.depth, 0))::numeric(12,3)
 								ELSE NULL
 							END AS staticpressure
-						FROM connec c
-						JOIN ' || v_table_name || ' p USING (' || v_mapzone_field || ')
+						FROM plan_netscenario_connec pc
+						JOIN connec c ON pc.connec_id = c.connec_id
+						JOIN ' || v_table_name || ' p ON pc.' || v_mapzone_field || ' = p.' || v_mapzone_field || '
 						WHERE EXISTS (
 							SELECT 1 FROM temp_pgr_arc t WHERE t.arc_id = c.arc_id
 						)
@@ -1830,7 +1832,7 @@ BEGIN
 						WHERE d.drainzone_id >0
 					),
 					geom AS (
-						SELECT drainzone_id, st_union(the_geom) AS the_geom
+						SELECT drainzone_id, ST_Multi(ST_CollectionExtract(ST_Collect(the_geom), 3)) AS the_geom
 						FROM temp_dwfzone
 						GROUP BY drainzone_id
 					),

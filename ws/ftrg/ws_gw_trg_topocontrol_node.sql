@@ -27,8 +27,7 @@ xvar double precision;
 yvar double precision;
 pol_id_var varchar;
 v_arc record;
-v_arcrecord record;
-v_arcrecordtb record;
+v_arcrecordtb SCHEMA_NAME.arc;
 v_plan_statetype_ficticius int2;
 v_node_proximity_control boolean;
 v_node_proximity double precision;
@@ -181,7 +180,7 @@ BEGIN
 						UPDATE config_param_user SET value=FALSE WHERE parameter = 'edit_disable_statetopocontrol' AND cur_user=current_user;
 
 						-- getting table child information (man_table)
-						v_mantable = (SELECT man_table FROM cat_feature_arc c JOIN cat_feature cf ON cf.id = n.id JOIN sys_feature_class s ON cf.feature_class = s.id JOIN ve_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
+						v_mantable = (SELECT man_table FROM cat_feature_arc c JOIN cat_feature cf ON cf.id = c.id JOIN sys_feature_class s ON cf.feature_class = s.id JOIN ve_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
 						v_epatable = (SELECT epa_table FROM cat_feature_arc c JOIN sys_feature_epa_type s ON epa_default = s.id JOIN ve_arc ON c.id=arc_type WHERE arc_id=v_arc.arc_id);
 
 						-- building querytext for man_table
@@ -249,15 +248,16 @@ BEGIN
 						FOR v_connec_id IN
 						SELECT connec_id FROM connec WHERE arc_id=v_arc.arc_id AND connec.state = 1
 						LOOP
-							INSERT INTO plan_psector_x_connec (connec_id, arc_id, psector_id, state, doable)
-							SELECT connec_id, v_arcrecordtb.arc_id, v_psector_id, 1, false
-							FROM link l JOIN connec c ON connec_id = l.feature_id WHERE l.feature_type  ='CONNEC' AND connec_id = v_connec_id
-                            ON CONFLICT (connec_id, psector_id, state) DO NOTHING;
 
 							INSERT INTO plan_psector_x_connec (connec_id, arc_id, psector_id, state, doable, link_id)
 							SELECT connec_id, v_arc.arc_id, v_psector_id, 0, false, l.link_id
 							FROM link l JOIN connec c ON connec_id = l.feature_id WHERE l.feature_type  ='CONNEC' AND connec_id = v_connec_id AND l.state=1
 							ON CONFLICT (connec_id, psector_id, state) DO NOTHING;
+							
+							INSERT INTO plan_psector_x_connec (connec_id, arc_id, psector_id, state, doable)
+							SELECT connec_id, v_arcrecordtb.arc_id, v_psector_id, 1, false
+							FROM link l JOIN connec c ON connec_id = l.feature_id WHERE l.feature_type  ='CONNEC' AND connec_id = v_connec_id
+                            ON CONFLICT (connec_id, psector_id, state) DO NOTHING;
 						END LOOP;
 
 						-- connecs without link but with arc_id
