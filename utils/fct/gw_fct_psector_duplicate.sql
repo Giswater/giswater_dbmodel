@@ -117,8 +117,8 @@ BEGIN
 	INSERT INTO audit_check_data (fid, result_id, error_message)
 	VALUES (153, v_result_id, concat('Set source psector (',v_old_psector_id,') as current psector.' ));
 
-	-- set old psector in selector
-	INSERT INTO selector_psector (psector_id, cur_user) VALUES (v_old_psector_id, current_user) ON CONFLICT DO NOTHING;
+	-- delete all current selected psectors
+	DELETE FROM selector_psector WHERE cur_user=current_user;
 
 	--copy arcs with state 0 inside plan_psector tables
 	SELECT string_agg(arc_id::text,',') INTO v_list_features_obsolete FROM plan_psector_x_arc  WHERE psector_id=v_old_psector_id AND state=0;
@@ -242,6 +242,8 @@ BEGIN
 				UPDATE config_param_system SET value ='TRUE' WHERE parameter='edit_topocontrol_disable_error';
 			END IF;
 
+
+			
 			EXECUTE 'INSERT INTO ve_'||lower(rec_type.id)||' ('||v_insert_fields||',state) SELECT '||v_insert_fields||',2 FROM '||lower(rec_type.id)||'
 			WHERE '||lower(rec_type.id)||'_id='''||v_field_id||''';';
 

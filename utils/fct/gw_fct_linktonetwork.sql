@@ -494,13 +494,22 @@ BEGIN
 
 				-- creation of link
 				v_link.link_id = (SELECT nextval('urn_id_seq'));
-
 						SELECT link_type INTO v_link_type FROM cat_link WHERE id = v_linkcat_id LIMIT 1;
-						IF v_ispsector IS TRUE THEN
-							v_state_type = 3;
+
+						IF v_psector_current IS NOT NULL THEN
+							v_state_type = (SELECT value FROM config_param_user WHERE parameter = 'edit_statetype_2_vdefault' AND cur_user = current_user);
+							IF v_state_type IS NULL THEN
+								EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+								"data":{"message":"4432", "function":"3188","fid": 217, "parameters":{"parameter":"edit_statetype_2_vdefault"}, "is_process":true}}$$);';
+							END IF;
 						ELSE
-							v_state_type = 2;
+							v_state_type = (SELECT value FROM config_param_user WHERE parameter = 'edit_statetype_1_vdefault' AND cur_user = current_user);
+							IF v_state_type IS NULL THEN
+								EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+								"data":{"message":"4432", "function":"3188","fid": 217, "parameters":{"parameter":"edit_statetype_1_vdefault"}, "is_process":true}}$$);';
+							END IF;
 						END IF;
+					
 					IF v_projecttype = 'WS' THEN
 						INSERT INTO link (link_id, the_geom, feature_id, feature_type, exit_type, exit_id, state, expl_id, sector_id, dma_id, omzone_id,
 						presszone_id, dqa_id, minsector_id, fluid_type, muni_id, linkcat_id, state_type)

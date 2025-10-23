@@ -235,10 +235,8 @@ BEGIN
 
 		END IF;
 
-		-- set selector with selected psectors
-		FOREACH v_psector_id IN ARRAY v_psector_ids LOOP
-			INSERT INTO selector_psector (psector_id, cur_user) VALUES (v_psector_id, current_user) ON CONFLICT DO NOTHING;
-		END LOOP;
+		-- delete all current selected psectors
+		DELETE FROM selector_psector WHERE cur_user=current_user;
 
 		--insert copy of the planified feature in the corresponding ve_* view and insert it into plan_psector_x_* table
 		FOR rec_type IN (SELECT * FROM sys_feature_type WHERE classlevel=1 OR classlevel = 2 ORDER BY CASE
@@ -277,6 +275,9 @@ BEGIN
 					UPDATE config_param_system SET value ='TRUE' WHERE parameter='edit_topocontrol_disable_error';
 				END IF;
 
+				v_querytext = 'INSERT INTO ve_'||lower(rec_type.id)||' ('||v_insert_fields||',state) SELECT '||v_insert_fields||',2 FROM '||lower(rec_type.id)||'
+				WHERE '||lower(rec_type.id)||'_id='''||v_field_id||''';';
+				raise notice 'v_querytext: %', v_querytext;
 				EXECUTE 'INSERT INTO ve_'||lower(rec_type.id)||' ('||v_insert_fields||',state) SELECT '||v_insert_fields||',2 FROM '||lower(rec_type.id)||'
 				WHERE '||lower(rec_type.id)||'_id='''||v_field_id||''';';
 
