@@ -117,8 +117,8 @@ BEGIN
 				v_action = coalesce(v_action, 'PLANNED'); -- planned
 			END IF;
 
-		-- update psector status to EXECUTED (On Service)
-		IF (OLD.status != NEW.status) AND (NEW.status IN (3, 4)) THEN
+		-- update psector status to MADE OPERATIONAL (Archived)
+		IF (OLD.status != NEW.status) AND (NEW.status = 5) THEN
 
 		-- get workcat id
 		IF NEW.workcat_id IS NULL THEN
@@ -254,11 +254,6 @@ BEGIN
 
 			--reset topology control
 			UPDATE config_param_user SET value = 'false' WHERE parameter='edit_disable_statetopocontrol' AND cur_user=current_user;
-
-		-- update psector status to EXECUTED (Traceability) or CANCELED (Traceability)
-		ELSIF OLD.status != 4 AND NEW.status = 5 THEN
-			EXECUTE 'SELECT SCHEMA_NAME.gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-			"data":{"message":"5006", "function":"2446","parameters":null}}$$);';
 
 		ELSIF (OLD.status != NEW.status) AND (NEW.status IN (5,6,7)) THEN
 
