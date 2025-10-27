@@ -117,17 +117,18 @@ BEGIN
 				v_action = coalesce(v_action, 'PLANNED'); -- planned
 			END IF;
 
-		-- update psector status to EXECUTED (On Service)
-		IF (OLD.status != NEW.status) AND (NEW.status IN (3, 4)) THEN
+		-- update psector status to MADE OPERATIONAL (Archived)
+		IF (OLD.status != NEW.status) AND (NEW.status = 5) THEN
 
-			-- get workcat id
+		-- get workcat id
+		IF NEW.workcat_id IS NULL THEN
+			NEW.workcat_id = (SELECT value FROM config_param_user WHERE parameter= 'edit_workcat_vdefault' AND cur_user=current_user);
+
 			IF NEW.workcat_id IS NULL THEN
-				NEW.workcat_id = (SELECT value FROM config_param_user WHERE parameter= 'edit_workcat_vdefault' AND cur_user=current_user);
-
-				IF NEW.workcat_id IS NULL THEN
-					RAISE EXCEPTION 'YOU NEED TO SET SOME WORKCATID TO EXECUTE PSECTOR';
-				END IF;
+				EXECUTE 'SELECT SCHEMA_NAME.gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
+				"data":{"message":"5008", "function":"2446","parameters":null}}$$);';
 			END IF;
+		END IF;
 
 
 			-- get psector geometry
@@ -254,8 +255,7 @@ BEGIN
 			--reset topology control
 			UPDATE config_param_user SET value = 'false' WHERE parameter='edit_disable_statetopocontrol' AND cur_user=current_user;
 
-		-- update psector status to EXECUTED (Traceability) or CANCELED (Traceability)
-		ELSIF (OLD.status != NEW.status) AND (NEW.status = 5 OR NEW.status = 6 OR NEW.status = 7) THEN
+		ELSIF (OLD.status != NEW.status) AND (NEW.status IN (5,6,7)) THEN
 
 			-- get psector geometry
 			v_psector_geom = (SELECT the_geom FROM plan_psector WHERE psector_id=NEW.psector_id);
