@@ -1374,7 +1374,8 @@ BEGIN
 			) ON CONFLICT (node_id, dma_id) DO NOTHING';
 			EXECUTE v_querytext;
 
-			delete from om_waterbalance_dma_graph where dma_id in (select distinct dma_id from temp_om_waterbalance_dma_graph);
+			DELETE FROM om_waterbalance_dma_graph WHERE dma_id in (SELECT DISTINCT dma_id FROM temp_om_waterbalance_dma_graph);
+			DELETE FROM om_waterbalance_dma_graph WHERE node_id in (SELECT DISTINCT node_id FROM temp_om_waterbalance_dma_graph);
 			INSERT INTO om_waterbalance_dma_graph SELECT * FROM temp_om_waterbalance_dma_graph ON CONFLICT (dma_id, node_id) DO NOTHING;
 
 		ELSIF v_class = 'SECTOR' THEN
