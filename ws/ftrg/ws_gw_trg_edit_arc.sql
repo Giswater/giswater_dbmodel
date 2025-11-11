@@ -77,7 +77,7 @@ BEGIN
 
 			-- get vdefault values using config user values
 			IF v_customfeature IS NOT NULL THEN
-				NEW.arccat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat(v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
+				NEW.arccat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"=lower(concat('feat_',v_customfeature,'_vdefault')) AND "cur_user"="current_user"() LIMIT 1);
 			ELSE
 				NEW.arccat_id:= (SELECT "value" FROM config_param_user WHERE "parameter"='edit_arccat_vdefault' AND "cur_user"="current_user"() LIMIT 1);
 			END IF;
@@ -94,7 +94,7 @@ BEGIN
 		ELSE
 			IF (SELECT true from cat_arc where id=NEW.arccat_id) IS NULL THEN
 				EXECUTE 'SELECT gw_fct_getmessage($${"client":{"device":4, "infoType":1, "lang":"ES"},"feature":{},
-				"data":{"message":"3282", "function":"1302","parameters":{"catalog_value":"'||NEW.arccat_id||'"}}})$$);';
+				"data":{"message":"3282", "function":"1302","parameters":{"catalog_value":"'||NEW.arccat_id||'"}}}$$);';
 			END IF;
 		END IF;
 

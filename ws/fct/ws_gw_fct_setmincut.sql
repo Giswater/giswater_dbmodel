@@ -274,6 +274,29 @@ BEGIN
 			v_prepare_mincut := TRUE;
 		END IF;
 		v_core_mincut := TRUE;
+
+		IF v_action = 'mincutNetwork' AND v_device = 5 AND v_mincut_id IS NULL THEN
+			SELECT setval('om_mincut_seq', COALESCE((SELECT max(id::integer)+1 FROM om_mincut), 1), true) INTO v_mincut_id;
+			INSERT INTO om_mincut (id, mincut_state) VALUES (v_mincut_id, v_mincut_on_planning_state);
+
+			-- Set default values
+			FOR v_default_key, v_default_value IN SELECT * FROM jsonb_each_text(v_vdefault::jsonb) LOOP
+				EXECUTE 'UPDATE om_mincut SET '||v_default_key||' = '||v_default_value||' WHERE id = '||v_mincut_id||';';
+			END LOOP;
+			p_data = jsonb_set(p_data::jsonb, '{data,mincutId}', to_jsonb(v_mincut_id))::json;
+
+			v_query_text := format(
+				'UPDATE om_mincut SET mincut_class = %s, anl_the_geom = %L, anl_user = %L, anl_feature_type = %L, anl_feature_id = %s WHERE id = %s',
+				v_mincut_network_class,
+				ST_SetSRID(ST_Point(v_xcoord, v_ycoord), v_client_epsg),
+				v_cur_user,
+				'ARC',
+				v_arc_id,
+				v_mincut_id
+			);
+			EXECUTE v_query_text;
+		END IF;
+
 	ELSIF v_action = 'mincutValveUnaccess' THEN
 		UPDATE om_mincut_valve 
 		SET unaccess = 
@@ -423,12 +446,12 @@ BEGIN
 			IF v_action = 'mincutAccept' THEN
 				v_querytext = concat('SELECT gw_fct_setfields($$', p_data, '$$);');
 				EXECUTE v_querytext;
-				IF (select mincut_state from om_mincut where id = v_mincut) = v_mincut_on_planning_state THEN
-					UPDATE om_mincut SET mincut_state = v_mincut_plannified_state WHERE id = v_mincut;
+				IF (select mincut_state from om_mincut where id = v_mincut_id) = v_mincut_on_planning_state THEN
+					UPDATE om_mincut SET mincut_state = v_mincut_plannified_state WHERE id = v_mincut_id;
 				END IF;
 			ELSIF v_action = 'endMincut' THEN
-				IF (SELECT mincut_state FROM om_mincut WHERE id = v_mincut) = 1 THEN
-					UPDATE om_mincut SET mincut_state = v_mincut_finished_state WHERE id = v_mincut;
+				IF (SELECT mincut_state FROM om_mincut WHERE id = v_mincut_id) = v_mincut_in_progress_state THEN
+					UPDATE om_mincut SET mincut_state = v_mincut_finished_state WHERE id = v_mincut_id;
 				END IF;
 			END IF;
 		END IF;
@@ -459,11 +482,7 @@ BEGIN
 		ON CONFLICT (result_id, cur_user) DO NOTHING;
 
 		IF v_device = 5 THEN
-			SELECT gw_fct_getmincut(p_data) INTO v_response;
-
-			-- Set the info to the info from v_result body data info
-			v_response = jsonb_set(v_response::jsonb, '{body,data,info}', v_result::jsonb->'body'->'data'->'info');
-			RETURN v_response;
+			RETURN gw_fct_getmincut(p_data);
 		END IF;
 
 		SELECT * INTO v_mincut_record FROM om_mincut WHERE id = v_mincut_id;
@@ -1531,80 +1550,7 @@ BEGIN
 
 	-- build geojson
 	IF v_device = 5 THEN
-		--v_om_mincut
-		SELECT jsonb_agg(features.feature) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(anl_the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'anl_the_geom' - 'srid',
-	    'crs',concat('EPSG:',srid)
-	  	) AS feature
-	  	FROM (SELECT id, ST_AsText(anl_the_geom) as anl_the_geom, ST_SRID(anl_the_geom) as srid
-	  	FROM  v_om_mincut) row) features;
-
-		v_result := COALESCE(v_result, '{}');
-		v_result_init = concat('{"geometryType":"Point", "features":',v_result, '}');
-
-		--v_om_mincut_valve
-		SELECT jsonb_agg(features.feature) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom' - 'srid',
-	    'crs',concat('EPSG:',srid)
-	  	) AS feature
-	  	FROM (SELECT id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
-	  	FROM  v_om_mincut_valve) row) features;
-
-		v_result := COALESCE(v_result, '{}');
-		v_result_valve = concat('{"geometryType":"Point", "features":',v_result, '}');
-
-		--v_om_mincut_node
-		SELECT jsonb_agg(features.feature) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom' - 'srid',
-	    'crs',concat('EPSG:',srid)
-	  	) AS feature
-	  	FROM (SELECT id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
-	  	FROM  v_om_mincut_node) row) features;
-
-		v_result := COALESCE(v_result, '{}');
-		v_result_node = concat('{"geometryType":"Point", "features":',v_result, '}');
-
-		--v_om_mincut_connec
-		SELECT jsonb_agg(features.feature) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom' - 'srid',
-	    'crs',concat('EPSG:',srid)
-	  	) AS feature
-	  	FROM (SELECT id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
-	  	FROM  v_om_mincut_connec) row) features;
-
-		v_result := COALESCE(v_result, '{}');
-		v_result_connec = concat('{"geometryType":"Point", "features":',v_result, '}');
-
-		--v_om_mincut_arc
-		SELECT jsonb_agg(features.feature) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom' - 'srid',
-	    'crs',concat('EPSG:',srid)
-	  	) AS feature
-	  	FROM (SELECT id, arc_id, ST_AsText(the_geom) as the_geom, ST_SRID(the_geom) as srid
-	  	FROM  v_om_mincut_arc) row) features;
-
-		v_result := COALESCE(v_result, '{}');
-		v_result_arc = concat('{"geometryType":"LineString", "features":',v_result, '}');
+		RETURN gw_fct_getmincut(p_data);
 	END IF;
 
 	-- manage null values

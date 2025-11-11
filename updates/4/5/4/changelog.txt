@@ -1,0 +1,17 @@
+4.5.4
+*************
+- Fix `gw_trg_config_control`, add missing condition
+- Fix `gw_trg_connec_proximity`
+- Fix `gw_trg_connect_update`
+- Fix `config_form_fields` use correct dv_query_text on man_type_* columns.
+- Delete obsolete function `gw_trg_edit_plan_psector_x_connect`, and related views:
+    - ve_plan_psector_x_connec
+    - ve_plan_psector_x_gully
+- Fix deleting psectors with to_arc property
+- Fix getmessage call on some trgs
+- Fix `gw_fct_getchangefeaturetype`, correct syntax on some selects
+- Fix `gw_fct_pg2epa_vnodetrimarcs`, update links connected to node2arc
+- Fix `gw_fct_setfeaturereplace`, filter by schema_name
+- Fix 'gw_trg_topocontrol_arc`, capture node sys_values
+- Fix `gw_fct_setendfeature`, show error if downgrade arc connected to connecs
+- Fix `gw_fct_pg2epa_export_inp`, avoid exporting disconnected network demand
