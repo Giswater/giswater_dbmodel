@@ -124,7 +124,7 @@ BEGIN
 
 		for rec_tab in SELECT * FROM config_form_tabs WHERE formname='search' order by orderby
 		loop
-			for v_parameter, v_tab_params, v_label in select parameter, value, label from config_param_system where parameter ilike concat('basic_search_v2_', lower(rec_tab.tabname), '%')
+			for v_parameter, v_tab_params, v_label in select parameter, value, label from config_param_system where parameter ilike concat('basic_search_v2_', lower(rec_tab.tabname), '%')  and isenabled is true
 			loop
 				if v_parameter = 'basic_search_v2_tab_psector' and v_tiled is true then
 					continue;
