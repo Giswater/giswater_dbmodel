@@ -106,6 +106,7 @@ v_project_type text;
 v_tabnetworksignal integer = 0;
 v_custom_order_by_column text;
 v_isreturnsetselectors boolean;
+v_allFields json := '[]';
 
 BEGIN
 
@@ -166,7 +167,7 @@ BEGIN
 	v_formTabs := '[';
 
 	v_query = concat(
-	'SELECT formname, tabname, label, tooltip, tabfunction, tabactions, value
+	'SELECT formname, tabname, label, tooltip, orderby, tabfunction, tabactions, value
 	 FROM (SELECT formname, tabname, f.label, f.tooltip, tabfunction, tabactions, unnest(device) AS device, value, orderby FROM config_form_tabs f, config_param_system
 	 WHERE formname=',quote_literal(v_selector_type),' AND isenabled IS TRUE AND concat(''basic_selector_'', tabname) = parameter ',(v_querytab),
 	'AND orderby >=',v_tabnetworksignal,' AND sys_role IN (SELECT rolname FROM pg_roles WHERE pg_has_role(current_user, oid, ''member'')))a 
@@ -188,14 +189,14 @@ BEGIN
 		DROP TABLE IF EXISTS temp_municipality;
 		DROP TABLE IF EXISTS temp_t_mincut;
 		DROP TABLE IF EXISTS temp_network;
-	
+
 		-- create auxiliar table temp_aux_sector_muni
 		CREATE TEMP TABLE temp_muni_sector_expl AS
 		SELECT DISTINCT muni_id, sector_id, expl_id FROM node WHERE state > 0
 		UNION
 		SELECT * FROM (SELECT DISTINCT muni_id, sector_id, unnest(expl_visibility) AS expl_id FROM node WHERE state > 0)
 		WHERE expl_id is not null;
-	
+
 		IF v_expl_x_user is false then
 			CREATE TEMP TABLE temp_exploitation as select e.* from exploitation e WHERE active and expl_id > 0 order by 1;
 			CREATE TEMP TABLE temp_macroexploitation as select e.* from macroexploitation e WHERE active and macroexpl_id > 0 order by 1;
@@ -204,7 +205,7 @@ BEGIN
 			CREATE TEMP TABLE temp_municipality as select em.* from ext_municipality em WHERE active and muni_id > 0 order by 1;
 			CREATE TEMP TABLE temp_network AS SELECT id::integer as network_id, idval as name, true as active
 			FROM om_typevalue WHERE typevalue = 'network_type' order by id;
-	
+
 			IF v_project_type = 'WS' THEN
 				CREATE TEMP TABLE temp_t_mincut as select e.* from om_mincut e WHERE id > 0 order by 1;
 			END IF;
@@ -215,37 +216,37 @@ BEGIN
 			WHERE e.expl_id = ANY (cm.expl_id)
 			AND EXISTS (SELECT 1 FROM unnest(cm.rolename) r(role)
 			WHERE pg_has_role(current_user, r.role, 'member'))) ORDER BY 1;
-	
+
 			-- create table for temp_network
 			CREATE TEMP TABLE temp_network AS SELECT id::integer as network_id, idval as name, true as active
 			FROM om_typevalue WHERE typevalue = 'network_type' order by id;
-	
+
 			-- create table for temp_macroexploitation
 			CREATE TEMP TABLE temp_macroexploitation as select distinct on (m.macroexpl_id) m.* from macroexploitation m
 			JOIN temp_exploitation e USING (macroexpl_id)
 			WHERE m.active and m.macroexpl_id > 0 order by 1;
-	
+
 			-- create table for temp_sector
 			CREATE TEMP TABLE temp_sector as
-			SELECT s.sector_id, s.name, s.macrosector_id, s.descript, s.parent_id, s.active 
+			SELECT s.sector_id, s.name, s.macrosector_id, s.descript, s.parent_id, s.active
 			FROM temp_muni_sector_expl t
 			JOIN temp_exploitation e USING (expl_id)
 			JOIN sector s ON s.sector_id = t.sector_id
 			WHERE s.active AND s.sector_id > 0;
-	
+
 			-- create table for temp_macrosector
 			CREATE TEMP TABLE temp_macrosector as select distinct on (m.macrosector_id) m.* from macrosector m
 			JOIN temp_sector e USING (macrosector_id)
 			WHERE m.active and m.macrosector_id > 0;
-	
+
 			-- create table for temp_municipality
 			CREATE TEMP TABLE temp_municipality as
-			SELECT em.muni_id, em.name, em.observ, em.active 
+			SELECT em.muni_id, em.name, em.observ, em.active
 			FROM temp_muni_sector_expl t
 			JOIN temp_exploitation e USING (expl_id)
 			JOIN ext_municipality em ON em.muni_id = t.muni_id
 			WHERE em.active;
-	
+
 			IF v_project_type = 'WS' THEN
 				CREATE TEMP TABLE temp_t_mincut AS SELECT DISTINCT ON (m.id) m.* FROM om_mincut m
 				WHERE m.id > 0 AND EXISTS (SELECT 1 FROM cat_manager cm
@@ -359,18 +360,58 @@ BEGIN
 		IF v_selector = 'selector_mincut_result' THEN
 			v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(b))) FROM (
 					select *, row_number() OVER (',v_orderby_query,') as orderby from (
-					SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' ,
-					v_orderby, ' as orderby , ''', v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType",
-					EXISTS (SELECT ', v_selector_id, ' FROM ', v_selector, ' e WHERE e.', v_selector_id, ' = s.', v_table_id, ' and cur_user=current_user) as "value", null as active,
-					null as stylesheet
+					SELECT ',quote_ident(v_table_id),', 
+						concat(' , v_label , ') AS label, 
+						',v_name,' as name, 
+						', v_table_id , '::text as widgetname, 
+						', v_orderby, ' as orderby, 
+						''', v_selector_id , ''' as columnname, 
+						''check'' as widgettype, 
+						''boolean'' as "datatype",
+						EXISTS (SELECT ', v_selector_id, ' FROM ', v_selector, ' e WHERE e.', v_selector_id, ' = s.', v_table_id, ' and cur_user=current_user) as "value", 
+						null as active,
+						null as stylesheet,
+						false as "hidden",
+						true as "iseditable",
+						''', v_tab.tabname, ''' as "tabname",
+						false as "ismandatory",
+						NULL as "tooltip",
+						NULL as "layoutname",
+						NULL as "layoutorder",
+						NULL as "isparent",
+						NULL as "isautoupdate",
+						NULL as "isfilter",
+						NULL as "selectedId",
+						NULL as "comboIds",
+						NULL as "comboNames"
 					FROM ', v_table ,' s WHERE TRUE ', v_fullfilter, ' ) a)b');
 		ELSE
 			v_finalquery = concat('SELECT array_to_json(array_agg(row_to_json(b))) FROM (
 					select *, row_number() OVER (',v_orderby_query,') as orderby from (
-					SELECT ',quote_ident(v_table_id),', concat(' , v_label , ') AS label, ',v_name,' as name, ', v_table_id , '::text as widgetname, ' ,
-					v_orderby, ' as orderby , ''', v_selector_id , ''' as columnname, ''check'' as type, ''boolean'' as "dataType",
-					EXISTS (SELECT ', v_selector_id, ' FROM ', v_selector, ' e WHERE e.', v_selector_id, ' = s.', v_table_id, ' and cur_user=current_user) as "value", active,
-					case when EXISTS(SELECT ', v_table_id, ' FROM ', v_table, ' e WHERE active and e.', v_table_id, ' = s.', v_table_id, ') is not true then ''color: lightgray; font-style: italic;'' end as stylesheet
+					SELECT ',quote_ident(v_table_id),', 
+						concat(' , v_label , ') AS label, 
+						',v_name,' as name, 
+						', v_table_id , '::text as widgetname, 
+						', v_orderby, ' as orderby, 
+						''', v_selector_id , ''' as columnname, 
+						''check'' as widgettype, 
+						''boolean'' as "datatype",
+						EXISTS (SELECT ', v_selector_id, ' FROM ', v_selector, ' e WHERE e.', v_selector_id, ' = s.', v_table_id, ' and cur_user=current_user) as "value", 
+						active,
+						case when EXISTS(SELECT ', v_table_id, ' FROM ', v_table, ' e WHERE active and e.', v_table_id, ' = s.', v_table_id, ') is not true then ''color: lightgray; font-style: italic;'' end as stylesheet,
+						false as "hidden",
+						true as "iseditable",
+						''', v_tab.tabname, ''' as "tabname",
+						false as "ismandatory",
+						NULL as "tooltip",
+						NULL as "layoutname",
+						NULL as "layoutorder",
+						NULL as "isparent",
+						NULL as "isautoupdate",
+						NULL as "isfilter",
+						NULL as "selectedId",
+						NULL as "comboIds",
+						NULL as "comboNames"
 					FROM ', v_table ,' s WHERE TRUE ', v_fullfilter, ' ) a)b');
 		END IF;
 
@@ -391,6 +432,19 @@ BEGIN
 			v_formTabsAux := ('{"fields":' || v_formTabsAux || '}')::json;
 		END IF;
 
+		-- Extract fields and append to v_allFields
+		IF v_formTabsAux->'fields' IS NOT NULL THEN
+			v_allFields := (
+				SELECT json_agg(elem) FROM (
+					SELECT json_array_elements(v_allFields) AS elem
+					UNION ALL
+					SELECT json_array_elements(v_formTabsAux->'fields') AS elem
+				) t
+			);
+		END IF;
+		-- Remove fields from tab object
+		v_formTabsAux := (v_formTabsAux::jsonb - 'fields')::json;
+
 		-- setting active tab
 		IF v_currenttab = v_tab.tabname THEN
 			v_active = true;
@@ -399,16 +453,17 @@ BEGIN
 		END IF;
 
 		-- setting other variables of tab
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tabName', v_tab.tabname::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tableName', v_selector);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tabLabel', v_tab.label::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tooltip', v_tab.tooltip::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'selectorType', v_tab.formname::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'manageAll', v_manageall::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'typeaheadFilter', v_typeahead::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'selectionMode', v_selectionMode::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'typeaheadForced', v_typeaheadForced::TEXT);
-		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'hasCustomOrderBy', v_has_custom_order_by::TEXT);
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tabName', COALESCE(v_tab.tabname::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tableName', COALESCE(v_selector, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tabLabel', COALESCE(v_tab.label::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'tooltip', COALESCE(v_tab.tooltip::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'selectorType', COALESCE(v_tab.formname::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'manageAll', COALESCE(v_manageall::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'typeaheadFilter', COALESCE(v_typeahead::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'selectionMode', COALESCE(v_selectionMode::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'typeaheadForced', COALESCE(v_typeaheadForced::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'hasCustomOrderBy', COALESCE(v_has_custom_order_by::TEXT, NULL));
+		v_formTabsAux := gw_fct_json_object_set_key(v_formTabsAux, 'orderby', COALESCE(v_tab.orderby::TEXT, NULL));
 
 		-- Create tabs array
 		IF v_firsttab THEN
@@ -433,100 +488,100 @@ BEGIN
 
 		if v_selector_type='selector_mincut' then
 			-- GET GEOJSON
-		--v_om_mincut
-		SELECT jsonb_build_object(
-		    'type', 'FeatureCollection',
-		    'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-		) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(anl_the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'anl_the_geom'
-	  	) AS feature
-	  	FROM (SELECT id, ST_Transform(anl_the_geom, 4326) as anl_the_geom
-	  	FROM  v_om_mincut) row) features;
-		v_mincut_init = v_result;
+			--v_om_mincut
+			SELECT jsonb_build_object(
+				'type', 'FeatureCollection',
+				'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+			) INTO v_result
+				FROM (
+			SELECT jsonb_build_object(
+			 'type',       'Feature',
+			'geometry',   ST_AsGeoJSON(anl_the_geom)::jsonb,
+			'properties', to_jsonb(row) - 'anl_the_geom'
+			) AS feature
+			FROM (SELECT id, ST_Transform(anl_the_geom, 4326) as anl_the_geom
+			FROM  v_om_mincut) row) features;
+			v_mincut_init = v_result;
 
 			--v_om_mincut_valve proposed true
-            SELECT jsonb_build_object(
-		        'type', 'FeatureCollection',
-		        'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-		    ) INTO v_result
-                FROM (
-            SELECT jsonb_build_object(
-             'type',       'Feature',
-            'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-            'properties', to_jsonb(row) - 'the_geom'
-            ) AS feature
-            FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
-            FROM  v_om_mincut_valve WHERE proposed = true) row) features;
+			SELECT jsonb_build_object(
+				'type', 'FeatureCollection',
+				'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+			) INTO v_result
+				FROM (
+			SELECT jsonb_build_object(
+			 'type',       'Feature',
+			'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+			'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
+			FROM  v_om_mincut_valve WHERE proposed = true) row) features;
 
-            v_mincut_valve_proposed = v_result;
+			v_mincut_valve_proposed = v_result;
 
-            --v_om_mincut_valve proposed false
-            SELECT jsonb_build_object(
-		        'type', 'FeatureCollection',
-		        'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-		    ) INTO v_result
-                FROM (
-            SELECT jsonb_build_object(
-             'type',       'Feature',
-            'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-            'properties', to_jsonb(row) - 'the_geom'
-            ) AS feature
-            FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
-            FROM  v_om_mincut_valve WHERE proposed = false) row) features;
+			--v_om_mincut_valve proposed false
+			SELECT jsonb_build_object(
+				'type', 'FeatureCollection',
+				'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+			) INTO v_result
+				FROM (
+			SELECT jsonb_build_object(
+			 'type',       'Feature',
+			'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+			'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
+			FROM  v_om_mincut_valve WHERE proposed = false) row) features;
 
-            v_mincut_valve_not_proposed = v_result;
+			v_mincut_valve_not_proposed = v_result;
 
-		--v_om_mincut_node
-		SELECT jsonb_build_object(
-		    'type', 'FeatureCollection',
-		    'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-		) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom'
-	  	) AS feature
-	  	FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
-	  	FROM  v_om_mincut_node) row) features;
+			--v_om_mincut_node
+			SELECT jsonb_build_object(
+				'type', 'FeatureCollection',
+				'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+			) INTO v_result
+				FROM (
+			SELECT jsonb_build_object(
+			 'type',       'Feature',
+			'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+			'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
+			FROM  v_om_mincut_node) row) features;
 
-		v_mincut_node = v_result;
+			v_mincut_node = v_result;
 
-		--v_om_mincut_connec
-		SELECT jsonb_build_object(
-		    'type', 'FeatureCollection',
-		    'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-		) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom'
-	  	) AS feature
-	  	FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
-	  	FROM  v_om_mincut_connec) row) features;
+			--v_om_mincut_connec
+			SELECT jsonb_build_object(
+				'type', 'FeatureCollection',
+				'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+			) INTO v_result
+				FROM (
+			SELECT jsonb_build_object(
+			 'type',       'Feature',
+			'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+			'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT id, ST_Transform(the_geom, 4326) as the_geom
+			FROM  v_om_mincut_connec) row) features;
 
-		v_mincut_connec = v_result;
+			v_mincut_connec = v_result;
 
-		--v_om_mincut_arc
-		SELECT jsonb_build_object(
-		    'type', 'FeatureCollection',
-		    'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
-		) INTO v_result
-			FROM (
-	  	SELECT jsonb_build_object(
-	     'type',       'Feature',
-	    'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
-	    'properties', to_jsonb(row) - 'the_geom'
-	  	) AS feature
-	  	FROM (SELECT id, arc_id, ST_Transform(the_geom, 4326) as the_geom
-	  	FROM  v_om_mincut_arc) row) features;
+			--v_om_mincut_arc
+			SELECT jsonb_build_object(
+				'type', 'FeatureCollection',
+				'features', COALESCE(jsonb_agg(features.feature), '[]'::jsonb)
+			) INTO v_result
+				FROM (
+			SELECT jsonb_build_object(
+			 'type',       'Feature',
+			'geometry',   ST_AsGeoJSON(the_geom)::jsonb,
+			'properties', to_jsonb(row) - 'the_geom'
+			) AS feature
+			FROM (SELECT id, arc_id, ST_Transform(the_geom, 4326) as the_geom
+			FROM  v_om_mincut_arc) row) features;
 
-		v_mincut_arc = v_result;
+			v_mincut_arc = v_result;
 		end if;
 	END IF;
 
@@ -535,6 +590,7 @@ BEGIN
 
 	-- Check null
 	v_formTabs := COALESCE(v_formTabs, '[]');
+	v_allFields := COALESCE(v_allFields, '[]');
 	v_manageall := COALESCE(v_manageall, FALSE);
 	v_has_custom_order_by := COALESCE(v_has_custom_order_by, FALSE);
 	v_selectionMode = COALESCE(v_selectionMode, '');
@@ -576,25 +632,35 @@ BEGIN
 		DROP TABLE IF EXISTS temp_t_mincut;
 		DROP TABLE IF EXISTS temp_network;
 		-- Return formtabs
-		RETURN gw_fct_json_create_return(('{"status":"Accepted", "version":"'||v_version||'"'||
-			',"body":{"message":'||v_message||
-			',"form":{"formName":"", "formLabel":"", "currentTab":"'||v_currenttab||'", "formText":"", "formTabs":'||v_formTabs||', "style": '||v_stylesheet||'}'||
-			',"feature":{}'||
-			',"data":{
-				"userValues":'||v_uservalues||',
-				"geometry":'||v_geometry||',
-				"layerColumns":'||v_layerColumns||
-				(case when v_selector_type = 'selector_mincut' then ',
-					"tiled":'||v_tiled||',
-					"mincutInit":'||v_mincut_init||',
-					"mincutProposedValve":'||v_mincut_valve_proposed||',
-					"mincutNotProposedValve":'||v_mincut_valve_not_proposed||',
-					"mincutNode":'||v_mincut_node||',
-					"mincutConnec":'||v_mincut_connec||',
-					"mincutArc":'||v_mincut_arc else '' end ) ||
+		RETURN gw_fct_json_create_return((
+			'{"status":"Accepted", "version":"'||v_version||'"'||
+			',"body":{
+				"message":'||v_message||',
+				"form":{
+					"formName":"", 
+					"formLabel":"", 
+					"currentTab":"'||v_currenttab||'", 
+					"formText":"", 
+					"formTabs":'||v_formTabs||', 
+					"style": '||v_stylesheet||'
+				},
+				"feature":{},
+				"data":{
+					"fields":'||v_allFields||',
+					"userValues":'||v_uservalues||',
+					"geometry":'||v_geometry||',
+					"layerColumns":'||v_layerColumns||
+					(case when v_selector_type = 'selector_mincut' then ',
+						"tiled":'||v_tiled||',
+						"mincutInit":'||v_mincut_init||',
+						"mincutProposedValve":'||v_mincut_valve_proposed||',
+						"mincutNotProposedValve":'||v_mincut_valve_not_proposed||',
+						"mincutNode":'||v_mincut_node||',
+						"mincutConnec":'||v_mincut_connec||',
+						"mincutArc":'||v_mincut_arc else '' end ) ||
 				'}'||
 			'}'||
-		    '}')::json,2796, null, null, v_action::json);
+			'}')::json,2796, null, null, v_action::json);
 	END IF;
 
 	-- Exception handling
