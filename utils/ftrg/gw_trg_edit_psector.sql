@@ -118,13 +118,28 @@ BEGIN
 
 				-- arc & node insert is different from ud because UD has legacy of _sys_length & _sys_elev and the impossibility to remove it from old production environments
 				INSERT INTO audit_psector_arc_traceability
-				SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), psector_id, pa.state, doable, addparam, now(), current_user, 'Execute psector', arc.*
-				FROM plan_psector_x_arc pa JOIN arc USING (arc_id)
+				SELECT nextval('SCHEMA_NAME.audit_psector_arc_traceability_id_seq'), pa.psector_id, pa.state, pa.doable, pa.addparam, now(), current_user, 'Execute psector', a.arc_id, a.code, a.node_1, 
+				a.node_2, a.arccat_id, a.epa_type, a.sector_id, a.state, a.state_type, a.annotation, a.observ, a.comment, a._sys_length, a.custom_length, a.dma_id, a.presszone_id, a.soilcat_id, 
+				a.function_type, a.category_type, 
+				a.fluid_type, a.location_type, a.workcat_id, a.workcat_id_end, a.buildercat_id, a.builtdate, a.enddate, a.ownercat_id, a.muni_id, a.postcode, a.streetaxis_id, 
+				a.postnumber, a.postcomplement, a.streetaxis2_id, a.postnumber2, a.postcomplement2, a.descript, a.link, a.verified, a.the_geom, a.undelete, a.label_x, a.label_y,
+				a.label_rotation, a.publish, a.inventory, a.expl_id, a.num_value, a.feature_type, a.tstamp, a.lastupdate, a.lastupdate_user, a.insert_user, a.minsector_id, a.dqa_id, 
+				a.staticpressure, a.district_id, a.depth, a.adate, a.adescript, a.workcat_id_plan, a.asset_id, a.pavcat_id, a.nodetype_1, a.elevation1, a.depth1, 
+				a.staticpress1, a.nodetype_2, a.elevation2, a.depth2, a.staticpress2, a.om_state, a.conserv_state, a.parent_id, a.expl_id2, a.brand_id, a.model_id, 
+				a.serial_number, a.label_quadrant, a.macrominsector_id, a.streetname, a.streetname2
+				FROM plan_psector_x_arc pa JOIN arc a USING (arc_id)
 				WHERE psector_id=NEW.psector_id;
 
 				INSERT INTO audit_psector_node_traceability
-				SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), psector_id, pn.state, doable, addparam, now(), current_user, 'Execute psector', node.*
-				FROM plan_psector_x_node pn JOIN node USING (node_id)
+				SELECT nextval('SCHEMA_NAME.audit_psector_node_traceability_id_seq'), pn.psector_id, pn.state, doable, addparam, now(), current_user, 'Execute psector', n.node_id, n.code, n.elevation, n.depth, n.nodecat_id, 
+				n.epa_type, n.sector_id, n.arc_id, n.parent_id, n.state, n.state_type, n.annotation, n.observ, n.comment, n.dma_id, n.presszone_id, n.soilcat_id, 
+				n.function_type, n.category_type, n.fluid_type, n.location_type, n.workcat_id, n.workcat_id_end, n.buildercat_id, n.builtdate, n.enddate, n.ownercat_id, 
+				n.muni_id, n.postcode, n.streetaxis_id, n.postnumber, n.postcomplement, n.streetaxis2_id, n.postnumber2, n.postcomplement2, n.descript, n.link, 
+				n.verified, n.rotation, n.the_geom, n.undelete, n.label_x, n.label_y, n.label_rotation, n.publish, n.inventory, n.hemisphere, n.expl_id, n.num_value, 
+				n.feature_type, n.tstamp, n.lastupdate, n.lastupdate_user, n.insert_user, n.minsector_id, n.dqa_id, n.staticpressure, n.district_id, n.adate, 
+				n.adescript, n.accessibility, n.workcat_id_plan, n.asset_id, n.om_state, n.conserv_state, n.access_type, n.placement_type, n.expl_id2, 
+				n.brand_id, n.model_id, n.serial_number, n.label_quadrant, n.macrominsector_id, n.streetname, n.streetname2
+				FROM plan_psector_x_node pn JOIN node n USING (node_id)
 				WHERE psector_id=NEW.psector_id;
 
 			ELSIF v_projectype = 'UD' THEN
