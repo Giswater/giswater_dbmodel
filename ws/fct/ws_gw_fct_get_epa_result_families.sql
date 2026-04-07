@@ -16,11 +16,12 @@ v_version text;
 v_features json;
 v_families json;
 v_mapzones json;
+v_patterns json;
 
 
 rec TEXT;
 sql TEXT;
-result jsonb := '[]'::jsonb;
+result jsonb := '{}'::jsonb;
 zone_json jsonb;
 
 BEGIN
@@ -39,6 +40,7 @@ BEGIN
 			WHEN epa_type = 'PUMP' OR epa_type = 'VIRTUALPUMP' THEN 'PUMP'
 			ELSE 'PIPE'
 		END AS epa_type,
+		epa_type as giswater_epa_type,
 		arccat_id,
 		CASE
 			WHEN epa_type = 'VALVE' OR epa_type = 'VIRTUALVALVE' THEN addparam::json->>'valve_type'
@@ -50,30 +52,44 @@ BEGIN
 			ELSE 'OLD'
 		END AS cal_age,
 		dma_id,
-		presszone_id
+		presszone_id,
+		node_1,
+		node_2
 		FROM rpt_inp_arc
 		LEFT JOIN inp_family f ON "family" = family_id AND f.age IS NOT NULL
 		WHERE result_id = v_result_id
 	),
 	nodes AS (
-		SELECT node_id,
+		SELECT n.node_id,
 		CASE
-			WHEN epa_type = 'TANK' OR epa_type = 'RESERVOIR' THEN epa_type
+			WHEN n.epa_type = 'TANK' OR n.epa_type = 'RESERVOIR' THEN n.epa_type
 			ELSE 'JUNCTION'
 		END AS epa_type,
-		nodecat_id,
+		n.epa_type as giswater_epa_type,
+		n.nodecat_id,
 		CASE
-			WHEN epa_type = 'TANK' OR epa_type = 'RESERVOIR' THEN epa_type
+			WHEN n.epa_type = 'TANK' OR n.epa_type = 'RESERVOIR' THEN n.epa_type
 			ELSE 'JUNCTION'
 		END AS "family",
-		dma_id,
-		presszone_id
-		FROM rpt_inp_node
-		WHERE result_id = v_result_id
+		n.dma_id,
+		n.presszone_id,
+		lw.losses_weight
+		FROM rpt_inp_node n
+		LEFT JOIN (
+			SELECT node_id, SUM(arc_len) AS losses_weight
+			FROM (
+				SELECT node_1::text AS node_id, ST_Length(the_geom) AS arc_len FROM arc WHERE state = 1
+				UNION ALL
+				SELECT node_2::text AS node_id, ST_Length(the_geom) AS arc_len FROM arc WHERE state = 1
+			) s
+			GROUP BY node_id
+		) lw ON lw.node_id::text = n.node_id
+		WHERE n.result_id = v_result_id
 	)
-	SELECT 
-		arc_id AS feature_id, 
-		epa_type AS feature_epa_type, 
+	SELECT
+		arc_id AS feature_id,
+		epa_type AS feature_epa_type,
+		giswater_epa_type AS feature_giswater_epa_type,
 		arccat_id AS feature_catalog,
 		CASE
 			WHEN "family" IS NULL THEN NULL
@@ -81,32 +97,72 @@ BEGIN
 			ELSE concat("family", '_', cal_age)
 		END AS cal_family,
 		dma_id,
-		presszone_id
+		presszone_id,
+		NULL::numeric AS losses_weight,
+		node_1,
+		node_2
 	FROM arcs
 	UNION ALL
-	SELECT 
-		node_id AS feature_id, 
-		epa_type AS feature_epa_type, 
-		nodecat_id AS feature_catalog, 
-		epa_type AS cal_family, 
-		dma_id, 
-		presszone_id
+	SELECT
+		node_id AS feature_id,
+		epa_type AS feature_epa_type,
+		giswater_epa_type AS feature_giswater_epa_type,
+		nodecat_id AS feature_catalog,
+		epa_type AS cal_family,
+		dma_id,
+		presszone_id,
+		losses_weight,
+		NULL::text AS node_1,
+		NULL::text AS node_2
 	FROM nodes;
 
-	-- JSON with features
-	SELECT json_agg(
-		json_build_object(
-			'id', split_part(feature_id, '_', 1),
-			'epaId', feature_id,
-			'epaType', feature_epa_type,
-			'catalog', feature_catalog,
-			'family', cal_family,
-			'zones', json_build_object(
-				'dma', dma_id,
-				'presszone', presszone_id
-			)
-		)
-	) INTO v_features
+	-- JSON with features: id = first digit run (e.g. 3924522P0 -> 3924522, VN3925355 -> 3925355)
+	SELECT COALESCE(json_agg(
+		CASE
+			WHEN feature_epa_type = 'JUNCTION' THEN
+				json_build_object(
+					'id', NULLIF(substring(feature_id from '[0-9]+'), '')::bigint,
+					'epaId', feature_id,
+					'epaType', feature_epa_type,
+					'gwEpaType', feature_giswater_epa_type,
+					'catalog', feature_catalog,
+					'family', cal_family,
+					'zones', json_build_object(
+						'dma', dma_id,
+						'presszone', presszone_id
+					),
+					'lossesWeight', losses_weight
+				)
+			WHEN feature_epa_type in ('PIPE', 'PUMP', 'VALVE') THEN
+				json_build_object(
+					'id', NULLIF(substring(feature_id from '[0-9]+'), '')::bigint,
+					'epaId', feature_id,
+					'epaType', feature_epa_type,
+					'gwEpaType', feature_giswater_epa_type,
+					'catalog', feature_catalog,
+					'family', cal_family,
+					'zones', json_build_object(
+						'dma', dma_id,
+						'presszone', presszone_id
+					),
+					'node1', node_1,
+					'node2', node_2
+				)
+			ELSE
+				json_build_object(
+					'id', NULLIF(substring(feature_id from '[0-9]+'), '')::bigint,
+					'epaId', feature_id,
+					'epaType', feature_epa_type,
+					'gwEpaType', feature_giswater_epa_type,
+					'catalog', feature_catalog,
+					'family', cal_family,
+					'zones', json_build_object(
+						'dma', dma_id,
+						'presszone', presszone_id
+					)
+				)
+		END
+	), '[]'::json) INTO v_features
 	FROM temp_features;
 
 	-- JSON with all families that are in features
@@ -129,40 +185,63 @@ BEGIN
 		LEFT JOIN inp_family if_new ON ef.cal_family = concat(if_new.family_id, '_NEW') AND if_new.age IS NOT NULL
 		LEFT JOIN inp_family if_old ON ef.cal_family = concat(if_old.family_id, '_OLD') AND if_old.age IS NOT NULL
 	)
-	SELECT json_agg(
+	SELECT COALESCE(json_agg(
 		json_build_object(
 			'name', family_id,
-			'descript', descript
+			'description', descript,
+			'active', true
 		)
-	) INTO v_families
+	), '[]'::json) INTO v_families
 	FROM families;
 
 	-- JSON with all mapzones that are in features
-	FOR rec IN SELECT unnest(ARRAY['presszone', 'dma'])
+	FOR rec IN SELECT unnest(ARRAY['dma', 'presszone'])
     LOOP
-        -- Build dynamic SQL to get JSON for this table
-        sql := format($f$
-            SELECT json_build_object(
-                concat('%s', 's'),
-                json_agg(json_build_object(
-                    'id', %I,
-					'code', code,
-                    'name', name,
-                    'descript', descript,
-                    'geometry', ST_AsGeoJSON(the_geom, 4326)::json
-                ))
-            )
-            FROM %I t
-            WHERE EXISTS (
-                SELECT 1 FROM temp_features r WHERE r.%I = t.%I
-            )
-        $f$,
-        rec,                 -- key: "presszone" or "dma"
-        rec || '_id',        -- id column
-        rec,                 -- table
-        rec || '_id',        -- column in temp_features
-        rec || '_id'         -- column in mapzone table
-        );
+        -- Build dynamic SQL to get JSON for this table (dma includes pattern_id)
+        IF rec = 'dma' THEN
+            sql := format($f$
+                SELECT json_build_object(
+                    concat('%s', 's'),
+                    COALESCE(json_agg(json_build_object(
+                        'mapzone_id', %I,
+                        'name', name,
+                        'pattern_id', pattern_id,
+                        'geometry', ST_AsGeoJSON(the_geom, 4326)::json
+                    )), '[]'::json)
+                )
+                FROM %I t
+                WHERE EXISTS (
+                    SELECT 1 FROM temp_features r WHERE r.%I = t.%I
+                )
+            $f$,
+            rec,
+            rec || '_id',
+            rec,
+            rec || '_id',
+            rec || '_id'
+            );
+        ELSE
+            sql := format($f$
+                SELECT json_build_object(
+                    concat('%s', 's'),
+                    COALESCE(json_agg(json_build_object(
+                        'mapzone_id', %I,
+                        'name', name,
+                        'geometry', ST_AsGeoJSON(the_geom, 4326)::json
+                    )), '[]'::json)
+                )
+                FROM %I t
+                WHERE EXISTS (
+                    SELECT 1 FROM temp_features r WHERE r.%I = t.%I
+                )
+            $f$,
+            rec,
+            rec || '_id',
+            rec,
+            rec || '_id',
+            rec || '_id'
+            );
+        END IF;
 
         -- Execute SQL and store JSON for this table
         EXECUTE sql INTO zone_json;
@@ -173,15 +252,61 @@ BEGIN
         END IF;
     END LOOP;
 
-	v_mapzones := result;
-	
+	v_mapzones := COALESCE(result, '{}'::jsonb);
+
+	-- JSON with patterns (flattened factor_1..factor_18 per pattern_id, ordered by idrow, id)
+	WITH pattern_ids AS (
+		SELECT DISTINCT d.pattern_id
+		FROM rpt_inp_arc ria
+		JOIN dma d ON d.dma_id = ria.dma_id
+		WHERE ria.result_id = v_result_id
+		UNION
+		SELECT DISTINCT pattern_id
+		FROM rpt_inp_pattern_value
+		WHERE result_id = v_result_id
+	)
+	SELECT COALESCE(json_agg(json_build_object('id', pattern_id, 'values', values_arr)), '[]'::json) INTO v_patterns
+	FROM (
+		SELECT pattern_id,
+			array_agg(factor_val ORDER BY COALESCE(idrow, 0), id, factor_idx) AS values_arr
+		FROM (
+			SELECT p.id, p.pattern_id, p.idrow,
+				unnest(ARRAY[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]) AS factor_idx,
+				unnest(ARRAY[
+					p.factor_1, p.factor_2, p.factor_3, p.factor_4, p.factor_5, p.factor_6,
+					p.factor_7, p.factor_8, p.factor_9, p.factor_10, p.factor_11, p.factor_12,
+					p.factor_13, p.factor_14, p.factor_15, p.factor_16, p.factor_17, p.factor_18
+				]) AS factor_val
+			FROM rpt_inp_pattern_value p
+			WHERE result_id = v_result_id
+			AND p.pattern_id IN (SELECT pattern_id FROM pattern_ids)
+			UNION ALL
+			SELECT p.id, p.pattern_id, NULL::integer AS idrow,
+				unnest(ARRAY[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]) AS factor_idx,
+				unnest(ARRAY[
+					p.factor_1, p.factor_2, p.factor_3, p.factor_4, p.factor_5, p.factor_6,
+					p.factor_7, p.factor_8, p.factor_9, p.factor_10, p.factor_11, p.factor_12,
+					p.factor_13, p.factor_14, p.factor_15, p.factor_16, p.factor_17, p.factor_18
+				]) AS factor_val
+			FROM inp_pattern_value p
+			WHERE p.pattern_id IN (SELECT pattern_id FROM pattern_ids)
+			AND p.pattern_id NOT IN (
+				SELECT DISTINCT pattern_id
+				FROM rpt_inp_pattern_value
+				WHERE result_id = v_result_id
+			)
+		) unnested
+		WHERE factor_val IS NOT NULL
+		GROUP BY pattern_id
+	) sub;
+
 	-- Drop temp table
 	DROP TABLE IF EXISTS temp_features;
-	
+
 	-- Return
 	RETURN gw_fct_json_create_return(('{"status":"Accepted", "message":{"level":1, "text":"Analysis done successfully"}, "version":"'||v_version||'"'||
 			',"body":{"form":{}'||
-			',"data":{"result_id": "'||v_result_id||'", "features":'||v_features||', "families":'||v_families||', "mapzones":'||v_mapzones||
+			',"data":{"result_id": "'||v_result_id||'", "patterns":'||COALESCE(v_patterns::text, '[]')||', "families":'||COALESCE(v_families::text, '[]')||', "mapzones":'||COALESCE(v_mapzones::text, '{}')||', "features":'||COALESCE(v_features::text, '[]')||
 		'}}'||
 	'}')::json, 2302, null, null, null);
 
