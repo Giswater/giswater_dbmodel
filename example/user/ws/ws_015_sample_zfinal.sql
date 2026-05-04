@@ -45,11 +45,12 @@ UPDATE cat_feature_node SET graph_delimiter=NULL WHERE id='PRESSURE_METER';
 UPDATE cat_feature_node SET graph_delimiter='{SECTOR,DMA,PRESSZONE}' WHERE id='TANK';
 
 -- 01/05/2024
-UPDATE config_param_system SET value =
-'{"status":true, "values":[
-{"sourceTable":"ve_node_pr_reduc_valve", "query":"UPDATE presszone t SET head=top_elev + pressure_exit FROM ve_node_pr_reduc_valve s "},
-{"sourceTable":"ve_node_tank", "query":"UPDATE presszone t SET head=top_elev + hmax/2  FROM ve_node_tank s "}]}'
-WHERE parameter = 'epa_automatic_man2graph_values';
+UPDATE config_param_system
+	SET value='{"status":true, "values":[
+{"sourceTable":"ve_node_pr_reduc_valve", "query":"UPDATE presszone t SET head = CASE WHEN top_elev + pressure_exit IS NOT NULL THEN top_elev + pressure_exit ELSE t.head END FROM ve_node_pr_reduc_valve s "},
+{"sourceTable":"ve_node_pump", "query":"UPDATE presszone t SET head = CASE WHEN top_elev + pressure_exit IS NOT NULL THEN top_elev + pressure_exit ELSE t.head END FROM ve_node_pump s "},
+{"sourceTable":"ve_node_tank", "query":"UPDATE presszone t SET head= CASE WHEN invert_level + hmax IS NOT NULL THEN invert_level + hmax ELSE t.head END FROM ve_node_tank s "}]}'
+	WHERE "parameter"='epa_automatic_man2graph_values';
 
 
 UPDATE config_param_system SET value =
