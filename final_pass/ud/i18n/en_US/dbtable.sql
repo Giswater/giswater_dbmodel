@@ -360,7 +360,7 @@ UPDATE sys_table AS t SET alias = v.alias, descript = v.descript FROM (
     ('ve_node_virtual_node', 'Virtual_Node', 'Custom editable view for VIRTUAL_NODE'),
     ('ve_node_weir', 'Weir', 'Custom editable view for WEIR'),
     ('ve_node_wwtp', 'Wwtp', 'Custom editable view for WWTP'),
-    ('ve_plan_psector', 'Plan psector', 'Psector edit view'),
+    ('ve_plan_psector', NULL, 'Psector edit view'),
     ('ve_plan_psector_x_gully', NULL, 'Editable view to work with psector and gully'),
     ('ve_pol_chamber', NULL, 'Editable view for chamber polygons'),
     ('ve_pol_gully', 'Gully polygon', 'Editable view for gully polygons'),
@@ -425,7 +425,7 @@ UPDATE sys_table AS t SET alias = v.alias, descript = v.descript FROM (
     ('vi_xsections', NULL, 'Used to export to SWMM the information about xsections'),
     ('v_link_gully', NULL, 'Filtered view of links type connec'),
     ('v_man_gully', NULL, 'Shows editable information about gully management'),
-    ('v_plan_psector', NULL, 'View to show sectors planifieds'),
+    ('v_plan_psector', 'Plan psector', 'View to show sectors planifieds'),
     ('v_plan_psector_gully', 'Plan psector gully', 'View to show gullys related to psectors. Useful to show gullys which will be obsolete in psectors'),
     ('v_plan_result_arc', NULL, 'View related to cost results for arcs'),
     ('v_plan_result_node', NULL, 'View related to cost results for node'),
@@ -901,4 +901,3 @@ UPDATE sys_table AS t SET alias = v.alias, descript = v.descript FROM (
     ('v_value_relation', 'Domain value', 'Domain value table')
 ) AS v(id, alias, descript)
 WHERE t.id = v.id;
-
